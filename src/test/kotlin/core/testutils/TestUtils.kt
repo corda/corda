@@ -12,10 +12,8 @@ package core.testutils
 
 import contracts.*
 import core.*
-import core.crypto.DummyPublicKey
-import core.crypto.NullPublicKey
-import core.crypto.SecureHash
-import core.crypto.generateKeyPair
+import core.crypto.*
+import core.serialization.serialize
 import core.visualiser.GraphVisualiser
 import java.security.PublicKey
 import java.time.Instant
@@ -42,6 +40,8 @@ val BOB_KEY = generateKeyPair()
 val BOB = BOB_KEY.public
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
+
+val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY)
 
 val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
         MEGA_CORP_PUBKEY to MEGA_CORP,
@@ -205,22 +205,14 @@ open class TransactionForTest : AbstractTransactionForTest() {
 fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().apply { body() }
 
 class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
-    open inner class LedgerTransactionDSL : AbstractTransactionForTest() {
+    open inner class WireTransactionDSL : AbstractTransactionForTest() {
         private val inStates = ArrayList<StateRef>()
 
         fun input(label: String) {
             inStates.add(label.outputRef)
         }
 
-
-        /**
-         * Converts to a [LedgerTransaction] with the test institution map, and just assigns a random hash
-         * (i.e. pretend it was signed)
-         */
-        fun toLedgerTransaction(): LedgerTransaction {
-            val wtx = WireTransaction(inStates, outStates.map { it.state }, commands)
-            return wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
-        }
+        fun toWireTransaction() = WireTransaction(inStates, outStates.map { it.state }, commands)
     }
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
@@ -228,23 +220,23 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
 
     fun <C : ContractState> lookup(label: String) = StateAndRef(label.output as C, label.outputRef)
 
-    private inner class InternalLedgerTransactionDSL : LedgerTransactionDSL() {
-        fun finaliseAndInsertLabels(): LedgerTransaction {
-            val ltx = toLedgerTransaction()
+    private inner class InternalWireTransactionDSL : WireTransactionDSL() {
+        fun finaliseAndInsertLabels(): WireTransaction {
+            val wtx = toWireTransaction()
             for ((index, labelledState) in outStates.withIndex()) {
                 if (labelledState.label != null) {
-                    labelToRefs[labelledState.label] = StateRef(ltx.hash, index)
+                    labelToRefs[labelledState.label] = StateRef(wtx.id, index)
                     if (stateType.isInstance(labelledState.state)) {
                         labelToOutputs[labelledState.label] = labelledState.state as T
                     }
                     outputsToLabels[labelledState.state] = labelledState.label
                 }
             }
-            return ltx
+            return wtx
         }
     }
 
-    private val rootTxns = ArrayList<LedgerTransaction>()
+    private val rootTxns = ArrayList<WireTransaction>()
     private val labelToRefs = HashMap<String, StateRef>()
     private val labelToOutputs = HashMap<String, T>()
     private val outputsToLabels = HashMap<ContractState, String>()
@@ -255,42 +247,45 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
             val wtx = WireTransaction(emptyList(), outs, emptyList())
-            val ltx = wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
-                labelToRefs[label] = StateRef(ltx.hash, index)
+                labelToRefs[label] = StateRef(wtx.id, index)
                 outputsToLabels[state.state] = label
                 labelToOutputs[label] = state.state as T
             }
-            rootTxns.add(ltx)
+            rootTxns.add(wtx)
         }
 
         @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
         fun roots(body: Roots.() -> Unit) {}
         @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
-        fun transaction(body: LedgerTransactionDSL.() -> Unit) {}
+        fun transaction(body: WireTransactionDSL.() -> Unit) {}
     }
     fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
 
-    val txns = ArrayList<LedgerTransaction>()
-    private val txnToLabelMap = HashMap<LedgerTransaction, String>()
+    val txns = ArrayList<WireTransaction>()
+    private val txnToLabelMap = HashMap<SecureHash, String>()
 
-    fun transaction(label: String? = null, body: LedgerTransactionDSL.() -> Unit): LedgerTransaction {
-        val forTest = InternalLedgerTransactionDSL()
+    fun transaction(label: String? = null, body: WireTransactionDSL.() -> Unit): WireTransaction {
+        val forTest = InternalWireTransactionDSL()
         forTest.body()
-        val ltx = forTest.finaliseAndInsertLabels()
-        txns.add(ltx)
+        val wtx = forTest.finaliseAndInsertLabels()
+        txns.add(wtx)
         if (label != null)
-            txnToLabelMap[ltx] = label
-        return ltx
+            txnToLabelMap[wtx.id] = label
+        return wtx
     }
 
-    fun labelForTransaction(ltx: LedgerTransaction): String? = txnToLabelMap[ltx]
+    fun labelForTransaction(tx: WireTransaction): String? = txnToLabelMap[tx.id]
+    fun labelForTransaction(tx: LedgerTransaction): String? = txnToLabelMap[tx.hash]
 
     @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
     fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {}
 
-    fun toTransactionGroup() = TransactionGroup(txns.map { it }.toSet(), rootTxns.toSet())
+    fun toTransactionGroup() = TransactionGroup(
+            txns.map { it.toLedgerTransaction(MockIdentityService) }.toSet(),
+            rootTxns.map { it.toLedgerTransaction(MockIdentityService) }.toSet()
+    )
 
     class Failed(val index: Int, cause: Throwable) : Exception("Transaction $index didn't verify", cause)
 
@@ -300,8 +295,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             group.verify(MockContractFactory)
         } catch (e: TransactionVerificationException) {
             // Let the developer know the index of the transaction that failed.
-            val ltx: LedgerTransaction = txns.find { it.hash == e.tx.origHash }!!
-            throw Failed(txns.indexOf(ltx) + 1, e)
+            val wtx: WireTransaction = txns.find { it.id == e.tx.origHash }!!
+            throw Failed(txns.indexOf(wtx) + 1, e)
         }
     }
 
@@ -318,6 +313,20 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun visualise() {
         @Suppress("CAST_NEVER_SUCCEEDS")
         GraphVisualiser(this as TransactionGroupDSL<ContractState>).display()
+    }
+
+    fun signAll(): List<SignedTransaction> {
+        return txns.map { wtx ->
+            val allPubKeys = wtx.commands.flatMap { it.pubkeys }.toSet()
+            val bits = wtx.serialize()
+            require(bits == wtx.serialized)
+            val sigs = ArrayList<DigitalSignature.WithKey>()
+            for (key in ALL_TEST_KEYS) {
+                if (allPubKeys.contains(key.public))
+                    sigs += key.signWithECDSA(bits)
+            }
+            wtx.toSignedTransaction(sigs)
+        }
     }
 }
 
