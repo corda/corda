@@ -213,5 +213,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         immutables.forEach {
             register(it.java, ImmutableClassSerializer(it))
         }
+
+        // TODO: See if we can make Lazy<T> serialize properly so we can use "by lazy" in serialized object.
     }
 }
