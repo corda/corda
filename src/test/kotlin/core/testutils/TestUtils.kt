@@ -16,6 +16,7 @@ import core.crypto.DummyPublicKey
 import core.crypto.NullPublicKey
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
+import core.serialization.serialize
 import core.visualiser.GraphVisualiser
 import java.security.PublicKey
 import java.time.Instant
@@ -42,6 +43,8 @@ val BOB_KEY = generateKeyPair()
 val BOB = BOB_KEY.public
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
+
+val ALL_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY)
 
 val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
         MEGA_CORP_PUBKEY to MEGA_CORP,
@@ -212,14 +215,13 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             inStates.add(label.outputRef)
         }
 
-
         /**
          * Converts to a [LedgerTransaction] with the test institution map, and just assigns a random hash
          * (i.e. pretend it was signed)
          */
         fun toLedgerTransaction(): LedgerTransaction {
             val wtx = WireTransaction(inStates, outStates.map { it.state }, commands)
-            return wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
+            return wtx.toLedgerTransaction(MockIdentityService, wtx.serialize().hash)
         }
     }
 
@@ -318,6 +320,10 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun visualise() {
         @Suppress("CAST_NEVER_SUCCEEDS")
         GraphVisualiser(this as TransactionGroupDSL<ContractState>).display()
+    }
+
+    fun signAll(): List<SignedWireTransaction> {
+        return txns.map { it.toSignedTransaction(andSignWithKeys = ALL_KEYS, allowUnusedKeys = true) }
     }
 }
 

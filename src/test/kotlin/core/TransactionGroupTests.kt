@@ -127,4 +127,30 @@ class TransactionGroupTests {
             }
         }
     }
+
+    @Test
+    fun signGroup() {
+        val signedTxns: List<SignedWireTransaction> = transactionGroup {
+            transaction {
+                output("£1000") { A_THOUSAND_POUNDS }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
+            }
+
+            transaction {
+                input("£1000")
+                output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+            }
+
+            transaction {
+                input("alice's £1000")
+                arg(ALICE) { Cash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
+            }
+        }.signAll()
+
+        // Now go through the conversion -> verification path with them.
+        val ltxns = signedTxns.map { it.verifyToLedgerTransaction(MockIdentityService) }.toSet()
+        TransactionGroup(ltxns, emptySet()).verify(MockContractFactory)
+    }
 }
