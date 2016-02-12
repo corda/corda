@@ -88,7 +88,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             assertEquals(aliceResult.get(), bobResult.get())
 
-            txns.add(aliceResult.get().second)
+            txns.add(aliceResult.get().first)
             verify()
         }
     }
@@ -179,7 +179,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             // Bob is now finished and has the same transaction as Alice.
             val tx = bobFuture.get()
-            txns.add(tx.second)
+            txns.add(tx.first)
             verify()
 
             assertTrue(smm.stateMachines.isEmpty())

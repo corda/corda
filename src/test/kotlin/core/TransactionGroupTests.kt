@@ -74,8 +74,8 @@ class TransactionGroupTests {
             val e = assertFailsWith(TransactionConflictException::class) {
                 verify()
             }
-            assertEquals(StateRef(t.hash, 0), e.conflictRef)
-            assertEquals(setOf(conflict1, conflict2), setOf(e.tx1, e.tx2))
+            assertEquals(StateRef(t.id, 0), e.conflictRef)
+            assertEquals(setOf(conflict1, conflict2), setOf(e.tx1.toWireTransaction(), e.tx2.toWireTransaction()))
         }
     }
 
@@ -97,9 +97,11 @@ class TransactionGroupTests {
         // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
         // points nowhere.
         val ref = StateRef(SecureHash.randomSHA256(), 0)
-        tg.txns.add(LedgerTransaction(
-                listOf(ref), listOf(A_THOUSAND_POUNDS), listOf(AuthenticatedObject(listOf(BOB), emptyList(), Cash.Commands.Move())), SecureHash.randomSHA256())
-        )
+        tg.txns += TransactionBuilder().apply {
+            addInputState(ref)
+            addOutputState(A_THOUSAND_POUNDS)
+            addCommand(Cash.Commands.Move(), BOB)
+        }.toWireTransaction()
 
         val e = assertFailsWith(TransactionResolutionException::class) {
             tg.verify()

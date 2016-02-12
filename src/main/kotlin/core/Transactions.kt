@@ -57,17 +57,30 @@ import java.util.*
 data class WireTransaction(val inputs: List<StateRef>,
                            val outputs: List<ContractState>,
                            val commands: List<Command>) {
-    fun toLedgerTransaction(identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
+
+    // Cache the serialised form of the transaction and its hash to give us fast access to it.
+    @Volatile @Transient private var cachedBits: SerializedBytes<WireTransaction>? = null
+    val serialized: SerializedBytes<WireTransaction> get() = cachedBits ?: serialize().apply { cachedBits = this }
+    val id: SecureHash get() = serialized.hash
+    companion object {
+        fun deserialize(bits: SerializedBytes<WireTransaction>): WireTransaction {
+            val wtx = bits.deserialize()
+            wtx.cachedBits = bits
+            return wtx
+        }
+    }
+
+    fun toLedgerTransaction(identityService: IdentityService): LedgerTransaction {
         val authenticatedArgs = commands.map {
             val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
             AuthenticatedObject(it.pubkeys, institutions, it.data)
         }
-        return LedgerTransaction(inputs, outputs, authenticatedArgs, originalHash)
+        return LedgerTransaction(inputs, outputs, authenticatedArgs, id)
     }
 
     /** Serialises and returns this transaction as a [SignedWireTransaction] with no signatures attached. */
-    fun toSignedTransaction(withSigs: List<DigitalSignature.WithKey> = emptyList()): SignedWireTransaction {
-        return SignedWireTransaction(serialize(), withSigs)
+    fun toSignedTransaction(withSigs: List<DigitalSignature.WithKey>): SignedWireTransaction {
+        return SignedWireTransaction(serialized, withSigs)
     }
 
     override fun toString(): String {
@@ -85,7 +98,7 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
     init { check(sigs.isNotEmpty()) }
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
-    val tx: WireTransaction by lazy { txBits.deserialize() }
+    val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
 
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
     val id: SecureHash get() = txBits.hash
@@ -124,7 +137,7 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
      */
     fun verifyToLedgerTransaction(identityService: IdentityService): LedgerTransaction {
         verify()
-        return tx.toLedgerTransaction(identityService, id)
+        return tx.toLedgerTransaction(identityService)
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature */
@@ -278,13 +291,6 @@ data class LedgerTransaction(
 ) {
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(hash, index))
-
-    fun <T : ContractState> outRef(state: T): StateAndRef<T> {
-        val i = outputs.indexOf(state)
-        if (i == -1)
-            throw IllegalArgumentException("State not found in this transaction")
-        return outRef(i)
-    }
 
     fun toWireTransaction(): WireTransaction {
         val wtx = WireTransaction(inputs, outputs, commands.map { Command(it.value, it.signers) })
