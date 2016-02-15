@@ -4,7 +4,7 @@ set -eo pipefail
 
 root_dir=$(pwd)
 
-flags="${@}"
+flags="use-werror=true ${@}"
 
 is-mac() {
   if [[ $(uname -s) == "Darwin" || ${TRAVIS_OS_NAME} == "osx" ]]; then

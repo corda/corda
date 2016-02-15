@@ -46,8 +46,8 @@ endif
 ifeq ($(bootimage),true)
 	options := $(options)-bootimage
 	ifeq ($(bootimage-test),true)
-    # this option indicates that we should AOT-compile the test
-    # classes as well as the class library
+		# this option indicates that we should AOT-compile the test
+		# classes as well as the class library
 		options := $(options)-test
 	endif
 endif
@@ -124,6 +124,10 @@ bootimage-classpath = $(classpath-build)
 
 ifeq ($(bootimage-test),true)
 	bootimage-classpath = $(classpath-build):$(test-build)
+endif
+
+ifeq ($(use-werror),true)
+	werror = -Werror
 endif
 
 test-executable = $(shell pwd)/$(executable)
@@ -464,7 +468,7 @@ endif
 # note that we suppress the non-virtual-dtor warning because we never
 # use the delete operator, which means we don't need virtual
 # destructors:
-warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
+warnings = -Wall -Wextra $(werror) -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
@@ -492,7 +496,7 @@ converter-cflags = -D__STDC_CONSTANT_MACROS -std=c++0x -Iinclude/ -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
 	-DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_UNKNOWN \
-	-Wall -Wextra -Werror -Wunused-parameter -Winit-self -Wno-non-virtual-dtor
+	-Wall -Wextra $(werror) -Wunused-parameter -Winit-self -Wno-non-virtual-dtor
 
 cflags = $(build-cflags)
 
@@ -736,7 +740,7 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		mac-version := $(shell \
-			  if test -d $(sdk-dir)/MacOSX10.11.sdk; then echo 10.11; \
+				if test -d $(sdk-dir)/MacOSX10.11.sdk; then echo 10.11; \
 			elif test -d $(sdk-dir)/MacOSX10.10.sdk; then echo 10.10; \
 			elif test -d $(sdk-dir)/MacOSX10.9.sdk; then echo 10.9; \
 			elif test -d $(sdk-dir)/MacOSX10.8.sdk; then echo 10.8; \
