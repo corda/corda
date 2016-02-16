@@ -662,10 +662,10 @@ class MyClasspath : public Classpath {
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t, true);
 #else   // not AVIAN_OPENJDK_SRC
-#  ifdef PLATFORM_WINDOWS    
+#  ifdef PLATFORM_WINDOWS
     expect(t, loadLibrary(t, libraryPath, "msvcr100", true, true));
 #  endif
-    expect(t, loadLibrary(t, libraryPath, "verify", true, true));    
+    expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #endif  // not AVIAN_OPENJDK_SRC
 
@@ -1658,9 +1658,8 @@ int64_t JNICALL
     switch (type) {
     case 0: {  // name
       unsigned nameLength = fileNameLength(entry->start);
-      GcByteArray* array = makeByteArray(t, nameLength + 1);
+      GcByteArray* array = makeByteArray(t, nameLength);
       memcpy(array->body().begin(), fileName(entry->start), nameLength);
-      array->body()[nameLength] = 0;
       return reinterpret_cast<int64_t>(array);
     } break;
 
