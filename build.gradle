@@ -13,7 +13,7 @@ allprojects {
 }
 
 buildscript {
-    ext.kotlin_version = '1.0.0-rc-1036'
+    ext.kotlin_version = '1.0.0'
     ext.quasar_version = '0.7.4'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
