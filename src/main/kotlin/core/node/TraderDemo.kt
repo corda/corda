@@ -106,13 +106,17 @@ fun main(args: Array<String>) {
             val future = TwoPartyTradeProtocol.runBuyer(node.smm, timestampingAuthority, replyTo, 100.DOLLARS,
                     CommercialPaper.State::class.java, buyerSessionID)
 
-            future.whenComplete {
+            future success {
                 println()
                 println("Purchase complete - we are a happy customer! Final transaction is:")
                 println()
                 println(Emoji.renderIfSupported(it.tx))
                 println()
                 println("Waiting for another seller to connect. Or press Ctrl-C to shut me down.")
+            } failure {
+                println()
+                println("Something went wrong whilst trading!")
+                println()
             }
 
             node.net.send("test.junktrade.initiate", replyTo, buyerSessionID)
@@ -139,7 +143,7 @@ fun main(args: Array<String>) {
             val future = TwoPartyTradeProtocol.runSeller(node.smm, timestampingAuthority,
                     otherSide, commercialPaper, 100.DOLLARS, cpOwnerKey, sessionID)
 
-            future.whenComplete {
+            future success {
                 println()
                 println("Sale completed - we have a happy customer!")
                 println()
@@ -148,6 +152,10 @@ fun main(args: Array<String>) {
                 println(Emoji.renderIfSupported(it.tx))
                 println()
                 node.stop()
+            } failure {
+                println()
+                println("Something went wrong whilst trading!")
+                println()
             }
         }
         println()

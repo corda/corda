@@ -31,9 +31,19 @@ val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
  */
 fun random63BitValue(): Long = Math.abs(SecureRandom.getInstanceStrong().nextLong())
 
-fun <T> ListenableFuture<T>.whenComplete(executor: Executor? = null, body: (T) -> Unit) {
-    addListener(Runnable { body(get()) }, executor ?: RunOnCallerThread)
+// Some utilities for working with Guava listenable futures.
+fun <T> ListenableFuture<T>.then(executor: Executor, body: () -> Unit) = addListener(Runnable(body), executor)
+fun <T> ListenableFuture<T>.success(executor: Executor, body: (T) -> Unit) = then(executor) {
+    val r = try { get() } catch(e: Throwable) { return@then }
+    body(r)
 }
+fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Unit) = then(executor) {
+    try { get() } catch(e: Throwable) { body(e) }
+}
+infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = apply { then(RunOnCallerThread, body) }
+infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
+infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
+
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): SettableFuture<T> {
