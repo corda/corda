@@ -90,7 +90,7 @@ inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () ->
  *
  * val ii = state.locked { i }
  */
-class ThreadBox<T>(content: T, private val lock: Lock = ReentrantLock()) {
-    private val content = content
-    fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
+class ThreadBox<T>(content: T, val lock: Lock = ReentrantLock()) {
+    val content = content
+    inline fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
 }
