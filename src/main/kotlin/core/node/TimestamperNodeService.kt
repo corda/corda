@@ -13,10 +13,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.messaging.LegallyIdentifiableNode
-import core.messaging.MessageRecipients
-import core.messaging.MessagingService
-import core.messaging.ProtocolStateMachine
+import core.messaging.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -95,7 +92,6 @@ class TimestamperNodeService(private val net: MessagingService,
     }
 }
 
-@ThreadSafe
 class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val node: LegallyIdentifiableNode) : TimestamperService {
     override val identity: Party = node.identity
 
@@ -107,6 +103,25 @@ class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val no
 
         val maybeSignature = psm.sendAndReceive(TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0,
                 sessionID, req, DigitalSignature.LegallyIdentifiable::class.java)
+
+        // Check that the timestamping authority gave us back a valid signature and didn't break somehow
+        maybeSignature.validate { sig ->
+            sig.verifyWithECDSA(wtxBytes)
+            return sig
+        }
+    }
+}
+
+class TimestampingProtocol(private val node: LegallyIdentifiableNode,
+                           private val wtxBytes: SerializedBytes<WireTransaction>) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+    @Suspendable
+    override fun call(): DigitalSignature.LegallyIdentifiable {
+        val sessionID = random63BitValue()
+        val replyTopic = "${TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
+        val req = TimestampingMessages.Request(wtxBytes, serviceHub.networkService.myAddress, replyTopic)
+
+        val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(
+                TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
 
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
         maybeSignature.validate { sig ->

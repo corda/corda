@@ -18,7 +18,7 @@ import core.crypto.SecureHash
 import core.crypto.signWithECDSA
 import core.messaging.*
 import core.node.DataVendingService
-import core.node.TimestamperClient
+import core.node.TimestampingProtocol
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
@@ -55,16 +55,14 @@ object TwoPartyTradeProtocol {
                   otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
                   myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = Seller(otherSide, timestampingAuthority, assetToSell, price, myKeyPair, buyerSessionID)
-        smm.add("$TRADE_TOPIC.seller", seller)
-        return seller.resultFuture
+        return smm.add("$TRADE_TOPIC.seller", seller)
     }
 
     fun runBuyer(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
                  otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
                  sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = Buyer(otherSide, timestampingAuthority.identity, acceptablePrice, typeToBuy, sessionID)
-        smm.add("$TRADE_TOPIC.buyer", buyer)
-        return buyer.resultFuture
+        return smm.add("$TRADE_TOPIC.buyer", buyer)
     }
 
     class UnacceptablePriceException(val givenPrice: Amount) : Exception()
@@ -88,14 +86,14 @@ object TwoPartyTradeProtocol {
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount,
                       val myKeyPair: KeyPair,
-                      val buyerSessionID: Long) : ProtocolStateMachine<SignedTransaction>() {
+                      val buyerSessionID: Long) : ProtocolLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
 
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
             val ourSignature = signWithOurKey(partialTX)
-            val tsaSig = timestamp(partialTX)
+            val tsaSig = subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits))
 
             val signedTransaction = sendSignatures(partialTX, ourSignature, tsaSig)
 
@@ -103,7 +101,7 @@ object TwoPartyTradeProtocol {
         }
 
         @Suspendable
-        open fun receiveAndCheckProposedTransaction(): SignedTransaction {
+        private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             val sessionID = random63BitValue()
 
             // Make the first message we'll send to kick off the protocol.
@@ -137,7 +135,7 @@ object TwoPartyTradeProtocol {
         }
 
         @Suspendable
-        open fun checkDependencies(txToCheck: SignedTransaction) {
+        private  fun checkDependencies(txToCheck: SignedTransaction) {
             val toVerify = HashSet<LedgerTransaction>()
             val alreadyVerified = HashSet<LedgerTransaction>()
             val downloadedSignedTxns = ArrayList<SignedTransaction>()
@@ -249,15 +247,10 @@ object TwoPartyTradeProtocol {
             }
         }
 
-        open fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
+        private fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
 
         @Suspendable
-        open fun timestamp(partialTX: SignedTransaction): DigitalSignature.LegallyIdentifiable {
-            return TimestamperClient(this, timestampingAuthority).timestamp(partialTX.txBits)
-        }
-
-        @Suspendable
-        open fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
+        private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
                                 tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
             val fullySigned = partialTX + tsaSig + ourSignature
 
@@ -272,7 +265,8 @@ object TwoPartyTradeProtocol {
                      val timestampingAuthority: Party,
                      val acceptablePrice: Amount,
                      val typeToBuy: Class<out OwnableState>,
-                     val sessionID: Long) : ProtocolStateMachine<SignedTransaction>() {
+                     val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
+
         @Suspendable
         override fun call(): SignedTransaction {
             val tradeRequest = receiveAndValidateTradeRequest()
@@ -289,9 +283,9 @@ object TwoPartyTradeProtocol {
         }
 
         @Suspendable
-        open fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+        private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
             // Wait for a trade request to come in on our pre-provided session ID.
-            val maybeTradeRequest = receive(TRADE_TOPIC, sessionID, SellerTradeInfo::class.java)
+            val maybeTradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
 
             val tradeRequest = maybeTradeRequest.validate {
                 // What is the seller trying to sell us?
@@ -315,15 +309,15 @@ object TwoPartyTradeProtocol {
         }
 
         @Suspendable
-        open fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+        private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
             logger.trace { "Sending partially signed transaction to seller" }
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate { it }
+            return sendAndReceive<SignaturesFromSeller>(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx).validate { it }
         }
 
-        open fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
             for (k in cashSigningPubKeys) {
                 val priv = serviceHub.keyManagementService.toPrivate(k)
@@ -338,7 +332,7 @@ object TwoPartyTradeProtocol {
             return stx
         }
 
-        open fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
+        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionBuilder()
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
             val wallet = serviceHub.walletService.currentWallet

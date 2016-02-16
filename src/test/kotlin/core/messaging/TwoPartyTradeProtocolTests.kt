@@ -168,8 +168,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             )
 
             // Find the future representing the result of this state machine again.
-            assertEquals(1, smm.stateMachines.size)
-            var bobFuture = smm.stateMachines.filterIsInstance<TwoPartyTradeProtocol.Buyer>().first().resultFuture
+            var bobFuture = smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).single().second
 
             // Let Bob process his mailbox.
             assertTrue(bobsNode.pump(false))
@@ -179,7 +178,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             txns.add(stx.tx)
             verify()
 
-            assertTrue(smm.stateMachines.isEmpty())
+            assertTrue(smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).isEmpty())
         }
     }
 
@@ -239,7 +238,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Test
     fun `dependency with error`() {
         transactionGroupFor<ContractState> {
-            val (bobsWallet, fakeTxns) = fillUp(withError = true)
+            val bobsWallet = fillUp(withError = true).first
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = true)
             val (bobsAddress, bobsNode) = makeNode(inBackground = true)
