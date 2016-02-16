@@ -4,6 +4,8 @@ TODO
 
 .gradle
 /build/
+/contracts/build
+/core/build
 /docs/build/doctrees
 
 buyer
@@ -63,4 +65,3 @@ atlassian-ide-plugin.xml
 com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
-

@@ -1,0 +1,23 @@
+group 'com.r3cev.prototyping'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+
+    compile "org.slf4j:slf4j-jdk14:1.7.13"
+
+    compile("com.google.guava:guava:19.0")
+
+    // Quasar: for the bytecode rewriting for state machines.
+    compile("co.paralleluniverse:quasar-core:${quasar_version}:jdk8")
+//    quasar("co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar")
+}
