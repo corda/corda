@@ -18,9 +18,11 @@ import core.utilities.BriefLogFormatter
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -46,7 +48,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Test
     fun `trade cash for commercial paper`() {
         transactionGroupFor<ContractState> {
-            val bobsWallet = fillUp().first
+            val bobsWallet = fillUp(false).first
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = true)
             val (bobsAddress, bobsNode) = makeNode(inBackground = true)
@@ -91,7 +93,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Test
     fun `shut down and restore`() {
         transactionGroupFor<ContractState> {
-            val wallet = fillUp().first
+            val wallet = fillUp(false).first
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = false)
             var (bobsAddress, bobsNode) = makeNode(inBackground = false)
@@ -184,7 +186,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Test
     fun `check dependencies of the sale asset are resolved`() {
         transactionGroupFor<ContractState> {
-            val (bobsWallet, fakeTxns) = fillUp()
+            val (bobsWallet, fakeTxns) = fillUp(false)
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = true)
             val (bobsAddress, bobsNode) = makeNode(inBackground = true)
@@ -234,6 +236,52 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         }
     }
 
+    @Test
+    fun `dependency with error`() {
+        transactionGroupFor<ContractState> {
+            val (bobsWallet, fakeTxns) = fillUp(withError = true)
+
+            val (alicesAddress, alicesNode) = makeNode(inBackground = true)
+            val (bobsAddress, bobsNode) = makeNode(inBackground = true)
+            val timestamper  = network.setupTimestampingNode(false).first
+
+            val alicesServices = MockServices(net = alicesNode)
+            val bobsServices = MockServices(
+                    wallet = MockWalletService(bobsWallet.states),
+                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    net = bobsNode,
+                    storage = MockStorageService(isRecording = true)
+            )
+            loadFakeTxnsIntoStorage(bobsServices.storageService)
+
+            val buyerSessionID = random63BitValue()
+
+            val aliceResult = TwoPartyTradeProtocol.runSeller(
+                    StateMachineManager(alicesServices, backgroundThread),
+                    timestamper,
+                    bobsAddress,
+                    lookup("alice's paper"),
+                    1000.DOLLARS,
+                    ALICE_KEY,
+                    buyerSessionID
+            )
+            TwoPartyTradeProtocol.runBuyer(
+                    StateMachineManager(bobsServices, backgroundThread),
+                    timestamper,
+                    alicesAddress,
+                    1000.DOLLARS,
+                    CommercialPaper.State::class.java,
+                    buyerSessionID
+            )
+
+            val e = assertFailsWith<ExecutionException> {
+                aliceResult.get()
+            }
+            assertTrue(e.cause is TransactionVerificationException)
+            assertTrue(e.cause!!.cause!!.message!!.contains("at least one cash input"))
+        }
+    }
+
     private fun TransactionGroupDSL<ContractState>.loadFakeTxnsIntoStorage(ss: StorageService) {
         val txStorage = ss.validatedTransactions
         val map = signAll().associateBy { it.id }
@@ -243,7 +291,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             txStorage.putAll(map)
     }
 
-    private fun TransactionGroupDSL<ContractState>.fillUp(): Pair<Wallet, List<WireTransaction>> {
+    private fun TransactionGroupDSL<ContractState>.fillUp(withError: Boolean): Pair<Wallet, List<WireTransaction>> {
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
 
@@ -251,7 +299,8 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             // Issued money to itself.
             output("elbonian money 1") { 800.DOLLARS.CASH `issued by` MEGA_CORP `owned by` MEGA_CORP_PUBKEY }
             output("elbonian money 2") { 1000.DOLLARS.CASH `issued by` MEGA_CORP `owned by` MEGA_CORP_PUBKEY }
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            if (!withError)
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             timestamp(TEST_TX_TIME)
         }
 
