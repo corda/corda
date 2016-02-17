@@ -14,16 +14,16 @@ import contracts.Cash
 import contracts.sumCashBy
 import core.*
 import core.crypto.DigitalSignature
-import core.crypto.SecureHash
 import core.crypto.signWithECDSA
-import core.messaging.*
-import core.node.DataVendingService
+import core.messaging.LegallyIdentifiableNode
+import core.messaging.ProtocolLogic
+import core.messaging.SingleMessageRecipient
+import core.messaging.StateMachineManager
 import core.node.TimestampingProtocol
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Instant
-import java.util.*
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
@@ -116,135 +116,31 @@ object TwoPartyTradeProtocol {
 
                 checkDependencies(it)
 
+                // TODO: Verify that the transaction is contract-valid even though it lacks sufficient signatures.
+
                 requireThat {
                     "transaction sends us the right amount of cash" by (wtx.outputs.sumCashBy(myKeyPair.public) == price)
                     // There are all sorts of funny games a malicious secondary might play here, we should fix them:
                     //
                     // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
                     //   we're reusing keys! So don't reuse keys!
-                    // - This tx may not be valid according to the contracts of the input states, so we must resolve
-                    //   and fully audit the transaction chains to convince ourselves that it is actually valid.
                     // - This tx may include output states that impose odd conditions on the movement of the cash,
                     //   once we implement state pairing.
                     //
                     // but the goal of this code is not to be fully secure, but rather, just to find good ways to
                     // express protocol state machines on top of the messaging layer.
                 }
+
                 return it
             }
         }
 
         @Suspendable
-        private  fun checkDependencies(txToCheck: SignedTransaction) {
-            val toVerify = HashSet<LedgerTransaction>()
-            val alreadyVerified = HashSet<LedgerTransaction>()
-            val downloadedSignedTxns = ArrayList<SignedTransaction>()
-
-            fetchDependenciesAndCheckSignatures(txToCheck.tx.inputs, toVerify, alreadyVerified, downloadedSignedTxns)
-
-            TransactionGroup(toVerify, alreadyVerified).verify(serviceHub.storageService.contractPrograms)
-
-            // Now write all the transactions we just validated back to the database for next time, including
-            // signatures so we can serve up these transactions to other peers when we, in turn, send one that
-            // depends on them onto another peer.
-            //
-            // It may seem tempting to write transactions to the database as we receive them, instead of all at once
-            // here at the end. Doing it this way avoids cases where a transaction is in the database but its
-            // dependencies aren't, or an unvalidated and possibly broken tx is there.
-            serviceHub.storageService.validatedTransactions.putAll(downloadedSignedTxns.associateBy { it.id })
-        }
-
-        @Suspendable
-        private fun fetchDependenciesAndCheckSignatures(depsToCheck: List<StateRef>,
-                                                        toVerify: HashSet<LedgerTransaction>,
-                                                        alreadyVerified: HashSet<LedgerTransaction>,
-                                                        downloadedSignedTxns: ArrayList<SignedTransaction>) {
-            // A1. Create a work queue of transaction hashes waiting for resolution. Create a TransactionGroup.
-            //
-            // B1. Pop a hash. Look it up in the database. If it's not there, put the hash into a list for sending to
-            //     the other peer. If it is there, load it and put its outputs into the TransactionGroup as unverified
-            //     roots, because it's already been validated before.
-            // B2. If the queue is not empty, GOTO B1
-            // B3. If the request list is empty, GOTO D1
-            //
-            // C1. Send the request for hashes to the peer and wait for the response. Clear the request list.
-            // C2. For each transaction returned, verify that it does indeed hash to the requested transaction.
-            // C3. Add each transaction to the TransactionGroup.
-            // C4. Add each input state in each transaction to the work queue.
-            //
-            // D1. Verify the transaction group.
-            // D2. Write all the transactions in the group to the database.
-            // END
-            //
-            // Note: This protocol leaks private data. If you download a transaction and then do NOT request a
-            // dependency, it means you already have it, which in turn means you must have been involved with it before
-            // somehow, either in the tx itself or in any following spend of it. If there were no following spends, then
-            // your peer knows for sure that you were involved ... this is bad! The only obvious ways to fix this are
-            // something like onion routing of requests, secure hardware, or both.
-            //
-            // TODO: This needs to be factored out into a general subprotocol and subprotocol handling improved.
-
-            val workQ = ArrayList<StateRef>()
-            workQ.addAll(depsToCheck)
-
-            val nextRequests = ArrayList<SecureHash>()
-
-            val db = serviceHub.storageService.validatedTransactions
-
-            var limitCounter = 0
-            while (true) {
-                for (ref in workQ) {
-                    val stx: SignedTransaction? = db[ref.txhash]
-                    if (stx == null) {
-                        // Transaction wasn't found in our local database, so we have to ask for it.
-                        nextRequests.add(ref.txhash)
-                    } else {
-                        alreadyVerified.add(stx.verifyToLedgerTransaction(serviceHub.identityService))
-                    }
-                }
-                workQ.clear()
-
-                if (nextRequests.isEmpty())
-                    break
-
-                val sid = random63BitValue()
-                val fetchReq = DataVendingService.Request(nextRequests, serviceHub.networkService.myAddress, sid)
-                logger.info("Requesting ${nextRequests.size} dependency(s) for verification")
-                val maybeTxns: UntrustworthyData<ArrayList<SignedTransaction?>> =
-                        sendAndReceive("platform.fetch.tx", otherSide, 0, sid, fetchReq)
-
-                // Check for a buggy/malicious peer answering with something that we didn't ask for, and then
-                // verify the signatures on the transactions and look up the identities to get LedgerTransactions.
-                // Note that this doesn't run contracts: just checks the signatures match the data.
-                val stxns: List<SignedTransaction> = validateTXFetchResponse(maybeTxns, nextRequests)
-                nextRequests.clear()
-                val ltxns = stxns.map { it.verifyToLedgerTransaction(serviceHub.identityService) }
-
-                // Add to the TransactionGroup, pending verification.
-                toVerify.addAll(ltxns)
-                downloadedSignedTxns.addAll(stxns)
-
-                // And now add all the input states to the work queue for database or remote resolution.
-                workQ.addAll(ltxns.flatMap { it.inputs })
-
-                // And loop around ...
-                limitCounter += workQ.size
-                if (limitCounter > 5000)
-                    throw ExcessivelyLargeTransactionGraphException()
-            }
-        }
-
-        private fun validateTXFetchResponse(maybeTxns: UntrustworthyData<ArrayList<SignedTransaction?>>,
-                                            nextRequests: ArrayList<SecureHash>): List<SignedTransaction> {
-            return maybeTxns.validate { response ->
-                require(response.size == nextRequests.size)
-                val answers = response.requireNoNulls()
-                // Check transactions actually hash to what we requested, if this fails the remote node
-                // is a malicious protocol violator or buggy.
-                for ((index, stx) in answers.withIndex())
-                    require(stx.id == nextRequests[index])
-                answers
-            }
+        private fun checkDependencies(stx: SignedTransaction) {
+            // Download and check all the transactions that this transaction depends on, but do not check this
+            // transaction itself.
+            val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
+            subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
         }
 
         private fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
@@ -287,25 +183,25 @@ object TwoPartyTradeProtocol {
             // Wait for a trade request to come in on our pre-provided session ID.
             val maybeTradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
 
-            val tradeRequest = maybeTradeRequest.validate {
+            maybeTradeRequest.validate {
                 // What is the seller trying to sell us?
-                val assetTypeName = it.assetForSale.state.javaClass.name
-                logger.trace { "Got trade request for a $assetTypeName" }
+                val asset = it.assetForSale.state
+                val assetTypeName = asset.javaClass.name
+                logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
                 // Check the start message for acceptability.
                 check(it.sessionID > 0)
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
-                if (!typeToBuy.isInstance(it.assetForSale.state))
+                if (!typeToBuy.isInstance(asset))
                     throw AssetMismatchException(typeToBuy.name, assetTypeName)
 
-                return@validate it
-            }
+                // Check the transaction that contains the state which is being resolved.
+                // We only have a hash here, so if we don't know it already, we have to ask for it.
+                subProtocol(ResolveTransactionsProtocol(setOf(it.assetForSale.ref.txhash), otherSide))
 
-            // TODO: Either look up the stateref here in our local db, or accept a long chain of states and
-            // validate them to audit the other side and ensure it actually owns the state we are being offered!
-            // For now, just assume validity!
-            return tradeRequest
+                return it
+            }
         }
 
         @Suspendable

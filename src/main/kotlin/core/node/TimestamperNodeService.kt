@@ -36,9 +36,9 @@ class TimestampingMessages {
  */
 @ThreadSafe
 class TimestamperNodeService(private val net: MessagingService,
-                             private val identity: Party,
-                             private val signingKey: KeyPair,
-                             private val clock: Clock = Clock.systemDefaultZone(),
+                             val identity: Party,
+                             val signingKey: KeyPair,
+                             val clock: Clock = Clock.systemDefaultZone(),
                              val tolerance: Duration = 30.seconds) {
     companion object {
         val TIMESTAMPING_PROTOCOL_TOPIC = "platform.timestamping.request"
@@ -92,28 +92,27 @@ class TimestamperNodeService(private val net: MessagingService,
     }
 }
 
-class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val node: LegallyIdentifiableNode) : TimestamperService {
-    override val identity: Party = node.identity
-
-    @Suspendable
-    override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
-        val sessionID = random63BitValue()
-        val replyTopic = "${TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
-        val req = TimestampingMessages.Request(wtxBytes, psm.serviceHub.networkService.myAddress, replyTopic)
-
-        val maybeSignature = psm.sendAndReceive(TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0,
-                sessionID, req, DigitalSignature.LegallyIdentifiable::class.java)
-
-        // Check that the timestamping authority gave us back a valid signature and didn't break somehow
-        maybeSignature.validate { sig ->
-            sig.verifyWithECDSA(wtxBytes)
-            return sig
-        }
-    }
-}
-
+/**
+ * The TimestampingProtocol class is the client code that talks to a [TimestamperNodeService] on some remote node. It is a
+ * [ProtocolLogic], meaning it can either be a sub-protocol of some other protocol, or be driven independently.
+ *
+ * If you are not yourself authoring a protocol and want to timestamp something, the [TimestampingProtocol.Client] class
+ * implements the [TimestamperService] interface, meaning it can be passed to [TransactionBuilder.timestamp] to timestamp
+ * the built transaction. Please be aware that this will block, meaning it should not be used on a thread that is handling
+ * a network message: use it only from spare application threads that don't have to respond to anything.
+ */
 class TimestampingProtocol(private val node: LegallyIdentifiableNode,
                            private val wtxBytes: SerializedBytes<WireTransaction>) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+
+    class Client(private val stateMachineManager: StateMachineManager, private val node: LegallyIdentifiableNode) : TimestamperService {
+        override val identity: Party = node.identity
+
+        override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
+            return stateMachineManager.add("platform.timestamping", TimestampingProtocol(node, wtxBytes)).get()
+        }
+    }
+
+
     @Suspendable
     override fun call(): DigitalSignature.LegallyIdentifiable {
         val sessionID = random63BitValue()

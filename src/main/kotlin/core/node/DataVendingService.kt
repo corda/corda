@@ -60,6 +60,6 @@ class DataVendingService(private val net: MessagingService, private val storage:
     }
 
     private fun handleContractRequest(msg: Message) {
-        TODO("PLT-12: Basic module/sandbox system for contracts")
+        TODO("PLT-12: Basic module/sandbox system for contracts: $msg")
     }
 }

@@ -79,7 +79,11 @@ class CommercialPaper : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
-        val timestamp: TimestampCommand? = tx.getTimestampBy(DummyTimestampingAuthority.identity)
+
+        // Here, we match acceptable timestamp authorities by name. The list of acceptable TSAs (oracles) must be
+        // hard coded into the contract because otherwise we could fail to gain consensus, if nodes disagree about
+        // who or what is a trusted authority.
+        val timestamp: TimestampCommand? = tx.commands.getTimestampByName("The dummy timestamper", "Bank of Zurich")
 
         for (group in groups) {
             when (command.value) {

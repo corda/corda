@@ -161,7 +161,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     /**
      * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
      * To get the right signature from the timestamping service, use the [timestamp] method after building is
-     * finished.
+     * finished, or run use the [TimestampingProtocol] yourself.
      *
      * The window of time in which the final timestamp may lie is defined as [time] +/- [timeTolerance].
      * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
@@ -208,8 +208,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
      */
     fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
         require(commands.count { it.pubkeys.contains(sig.by) } > 0) { "Signature key doesn't match any command" }
-        val data = toWireTransaction().serialize()
-        sig.verifyWithECDSA(data.bits)
+        sig.verifyWithECDSA(toWireTransaction().serialize())
         currentSigs.add(sig)
     }
 

@@ -8,15 +8,15 @@
 
 package core.node
 
+import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
+import core.messaging.ProtocolLogic
 import core.messaging.SingleMessageRecipient
-import core.messaging.runOnNextMessage
-import core.messaging.send
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
@@ -74,6 +74,12 @@ fun main(args: Array<String>) {
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
+    if (listening && config.myLegalName != "Bank of Zurich") {
+        println("The buyer node must have a legal name of 'Bank of Zurich'. Please edit the config file.")
+        exitProcess(1)
+    }
+
+    // The timestamping node runs in the same process as the buyer protocol is run.
     val timestamperId = if (options.has(timestamperIdentityFile)) {
         val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(timestamperIdentityFile))
@@ -83,109 +89,132 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId) }
 
-    // Now do some fake nonsense just to give us some activity.
-
-    (node.services.walletService as E2ETestWalletService).fillWithSomeTestCash(1500.DOLLARS)
-
-    val timestampingAuthority = node.services.networkMapService.timestampingNodes.first()
     if (listening) {
-        // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
-        // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the
-        // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
-        //
-        // Note that currently, the two-party trade protocol doesn't actually resolve dependencies of transactions!
-        // Thus, we can make up whatever junk we like and trade non-existent cash/assets: the other side won't notice.
-        // Obviously, fixing that is the next step.
-        //
-        // As the seller initiates the DVP/two-party trade protocol, here, we will be the buyer.
-        node.net.addMessageHandler("test.junktrade") { msg, handlerRegistration ->
-            val replyTo = msg.data.deserialize<SingleMessageRecipient>(includeClassName = true)
-            val buyerSessionID = random63BitValue()
-            println("Got a new junk trade request, sending back session ID and starting buy protocol")
-            val future = TwoPartyTradeProtocol.runBuyer(node.smm, timestampingAuthority, replyTo, 1000.DOLLARS,
-                    CommercialPaper.State::class.java, buyerSessionID)
-
-            future success {
-                println()
-                println("Purchase complete - we are a happy customer! Final transaction is:")
-                println()
-                println(Emoji.renderIfSupported(it.tx))
-                println()
-                println("Waiting for another seller to connect. Or press Ctrl-C to shut me down.")
-            } failure {
-                println()
-                println("Something went wrong whilst trading!")
-                println()
-            }
-
-            node.net.send("test.junktrade.initiate", replyTo, buyerSessionID)
-        }
-        println()
-        println("Waiting for a seller to connect to us (run the other node) ...")
-        println()
+        node.smm.add("demo.buyer", TraderDemoProtocolBuyer()).get()   // This thread will halt forever here.
     } else {
-        // Grab a session ID for the fake trade from the other side, then kick off the seller and sell them some junk.
         if (!options.has(fakeTradeWithArg)) {
             println("Need the --fake-trade-with command line argument")
             exitProcess(1)
         }
         val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
         val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
-        node.net.runOnNextMessage("test.junktrade.initiate") { msg ->
-            val sessionID = msg.data.deserialize<Long>()
-
-            println("Got session ID back, now starting the sell protocol")
-
-            val cpOwnerKey = node.keyManagement.freshKey()
-            val commercialPaper = makeFakeCommercialPaper(node.storage, cpOwnerKey.public)
-
-            val future = TwoPartyTradeProtocol.runSeller(node.smm, timestampingAuthority,
-                    otherSide, commercialPaper, 1000.DOLLARS, cpOwnerKey, sessionID)
-
-            future success {
-                println()
-                println("Sale completed - we have a happy customer!")
-                println()
-                println("Final transaction is")
-                println()
-                println(Emoji.renderIfSupported(it.tx))
-                println()
-                node.stop()
-            } failure {
-                println()
-                println("Something went wrong whilst trading!")
-                println()
-            }
-        }
-        println()
-        println("Sending a message to the listening/buying node ...")
-        println()
-        node.net.send("test.junktrade", otherSide, node.net.myAddress, includeClassName = true)
+        node.smm.add("demo.seller", TraderDemoProtocolSeller(myNetAddr, otherSide)).get()
+        node.stop()
     }
 }
 
-fun makeFakeCommercialPaper(storageService: StorageService, ownedBy: PublicKey): StateAndRef<CommercialPaper.State> {
-    // Make a fake company that's issued its own paper.
-    val keyPair = generateKeyPair()
-    val party = Party("MegaCorp, Inc", keyPair.public)
+// We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
 
-    val issuance = run {
-        val tx = CommercialPaper().generateIssue(party.ref(1,2,3), 1100.DOLLARS, Instant.now() + 10.days)
-        tx.signWith(keyPair)
-        tx.toSignedTransaction(true)
+class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        // Give us some cash. Note that as nodes do not currently track forward pointers, we can spend the same cash over
+        // and over again and the double spends will never be detected! Fixing that is the next step.
+        (serviceHub.walletService as E2ETestWalletService).fillWithSomeTestCash(1500.DOLLARS)
+
+        while (true) {
+            // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
+            // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the
+            // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
+            //
+            // As the seller initiates the DVP/two-party trade protocol, here, we will be the buyer.
+            try {
+                println()
+                println("Waiting for a seller to connect to us!")
+
+                val hostname = receive<HostAndPort>("test.junktrade", 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
+                val newPartnerAddr = ArtemisMessagingService.makeRecipient(hostname)
+                val sessionID = random63BitValue()
+                println()
+                println("Got a new junk trade request from $newPartnerAddr, sending back a fresh session ID and starting buy protocol")
+                println()
+                send("test.junktrade", newPartnerAddr, 0, sessionID)
+
+                val tsa = serviceHub.networkMapService.timestampingNodes[0]
+                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, tsa.identity, 1000.DOLLARS,
+                        CommercialPaper.State::class.java, sessionID)
+                val tradeTX: SignedTransaction = subProtocol(buyer)
+
+                println()
+                println("Purchase complete - we are a happy customer! Final transaction is:")
+                println()
+                println(Emoji.renderIfSupported(tradeTX.tx))
+                println()
+                println("Waiting for another seller to connect. Or press Ctrl-C to shut me down.")
+            } catch(e: Exception) {
+                println()
+                println("Something went wrong whilst trading!")
+                println()
+                e.printStackTrace()
+            }
+        }
+    }
+}
+
+class TraderDemoProtocolSeller(val myAddress: HostAndPort,
+                               val otherSide: SingleMessageRecipient) : ProtocolLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        println()
+        println("Announcing ourselves to the buyer node!")
+        println()
+
+        val sessionID = sendAndReceive<Long>("test.junktrade", otherSide, 0, 0, myAddress).validate { it }
+
+        println()
+        println("Got session ID back, issuing and timestamping some commercial paper")
+
+        val tsa = serviceHub.networkMapService.timestampingNodes[0]
+        val cpOwnerKey = serviceHub.keyManagementService.freshKey()
+        val commercialPaper = makeFakeCommercialPaper(cpOwnerKey.public, tsa)
+
+        println()
+        println("Timestamped my commercial paper issuance, starting the trade protocol.")
+
+        val seller = TwoPartyTradeProtocol.Seller(otherSide, tsa, commercialPaper, 1000.DOLLARS, cpOwnerKey, sessionID)
+        val tradeTX: SignedTransaction = subProtocol(seller)
+
+        println()
+        println("Sale completed - we have a happy customer!")
+        println()
+        println("Final transaction is")
+        println()
+        println(Emoji.renderIfSupported(tradeTX.tx))
+        println()
     }
 
-    val move = run {
-        val tx = TransactionBuilder()
-        CommercialPaper().generateMove(tx, issuance.tx.outRef(0), ownedBy)
-        tx.signWith(keyPair)
-        tx.toSignedTransaction(true)
+    @Suspendable
+    fun makeFakeCommercialPaper(ownedBy: PublicKey, tsa: LegallyIdentifiableNode): StateAndRef<CommercialPaper.State> {
+        // Make a fake company that's issued its own paper.
+        val keyPair = generateKeyPair()
+        val party = Party("MegaCorp, Inc", keyPair.public)
+
+        val issuance = run {
+            val tx = CommercialPaper().generateIssue(party.ref(1,2,3), 1100.DOLLARS, Instant.now() + 10.days)
+
+            tx.setTime(Instant.now(), tsa.identity, 30.seconds)
+            val tsaSig = subProtocol(TimestampingProtocol(tsa, tx.toWireTransaction().serialized))
+            tx.checkAndAddSignature(tsaSig)
+
+            tx.signWith(keyPair)
+            tx.toSignedTransaction(true)
+        }
+
+        val move = run {
+            val tx = TransactionBuilder()
+            CommercialPaper().generateMove(tx, issuance.tx.outRef(0), ownedBy)
+            tx.signWith(keyPair)
+            tx.toSignedTransaction(true)
+        }
+
+        with(serviceHub.storageService) {
+            validatedTransactions[issuance.id] = issuance
+            validatedTransactions[move.id] = move
+        }
+
+        return move.tx.outRef(0)
     }
 
-    storageService.validatedTransactions[issuance.id] = issuance
-    storageService.validatedTransactions[move.id] = move
-
-    return move.tx.outRef(0)
 }
 
 private fun loadConfigFile(configFile: Path): NodeConfiguration {
@@ -219,22 +248,15 @@ private fun loadConfigFile(configFile: Path): NodeConfiguration {
 private fun createDefaultConfigFile(configFile: Path?, defaultLegalName: String) {
     Files.write(configFile,
             """
-        # Node configuration: adjust below as needed, then delete this comment.
+        # Node configuration: give the buyer node the name 'Bank of Zurich' (no quotes)
+        # The seller node can be named whatever you like.
+
         myLegalName = $defaultLegalName
         """.trimIndent().toByteArray())
 }
 
 private fun printHelp() {
     println("""
-
-    To run the listening node, alias "alpha" to "localhost" in your
-    /etc/hosts file and then try a command line like this:
-
-      --dir=alpha --service-fake-trades --network-address=alpha
-
-    To run the node that initiates a trade, alias "beta" to "localhost"
-    in your /etc/hosts file and then try a command line like this:
-
-      --dir=beta --fake-trade-with=alpha --network-address=beta:31338 --timestamper-identity-file=alpha/identity-public --timestamper-address=alpha
+    Please refer to the documentation in docs/build/index.html to learn how to run the demo.
     """.trimIndent())
 }

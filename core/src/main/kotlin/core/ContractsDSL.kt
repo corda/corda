@@ -130,3 +130,19 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority:
     return timestampCmds.singleOrNull()?.value as? TimestampCommand
 }
 
+/**
+ * Returns a timestamp that was signed by any of the the named authorities, or returns null if missing.
+ * Note that matching here is done by (verified, legal) name, not by public key. Any signature by any
+ * party with a name that matches (case insensitively) any of the given names will yield a match.
+ */
+fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: String): TimestampCommand? {
+    val timestampCmd = filter { it.value is TimestampCommand }.singleOrNull() ?: return null
+    val tsaNames = timestampCmd.signingParties.map { it.name.toLowerCase() }
+    val acceptableNames = names.map { it.toLowerCase() }
+    val acceptableNameFound = tsaNames.intersect(acceptableNames).isNotEmpty()
+    if (acceptableNameFound)
+        return timestampCmd.value as TimestampCommand
+    else
+        return null
+}
+

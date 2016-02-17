@@ -61,7 +61,6 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
     class TestPSM(val server: LegallyIdentifiableNode, val now: Instant) : ProtocolLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
-            val client = TimestamperClient(psm, server)
             val ptx = TransactionBuilder().apply {
                 addInputState(StateRef(SecureHash.randomSHA256(), 0))
                 addOutputState(100.DOLLARS.CASH)
@@ -69,7 +68,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
             ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), server.identity.owningKey)
             val wtx = ptx.toWireTransaction()
             // This line will invoke sendAndReceive to interact with the network.
-            val sig = client.timestamp(wtx.serialize())
+            val sig = subProtocol(TimestampingProtocol(server, wtx.serialized))
             ptx.checkAndAddSignature(sig)
             return true
         }

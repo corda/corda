@@ -27,6 +27,8 @@ object TestUtils {
     val keypair = generateKeyPair()
     val keypair2 = generateKeyPair()
 }
+// A dummy time at which we will be pretending test transactions are created.
+val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY = TestUtils.keypair
@@ -46,11 +48,9 @@ val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, Dum
 
 val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
         MEGA_CORP_PUBKEY to MEGA_CORP,
-        MINI_CORP_PUBKEY to MINI_CORP
+        MINI_CORP_PUBKEY to MINI_CORP,
+        DUMMY_TIMESTAMPER.identity.owningKey to DUMMY_TIMESTAMPER.identity
 )
-
-// A dummy time at which we will be pretending test transactions are created.
-val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
 // In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
 // a sandbox. For unit tests we just have a hard-coded list.
