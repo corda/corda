@@ -316,8 +316,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         GraphVisualiser(this as TransactionGroupDSL<ContractState>).display()
     }
 
-    fun signAll(vararg extraKeys: KeyPair): List<SignedTransaction> {
-        return txns.map { wtx ->
+    fun signAll(txnsToSign: List<WireTransaction> = txns, vararg extraKeys: KeyPair): List<SignedTransaction> {
+        return txnsToSign.map { wtx ->
             val allPubKeys = wtx.commands.flatMap { it.pubkeys }.toMutableSet()
             val bits = wtx.serialize()
             require(bits == wtx.serialized)
