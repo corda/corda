@@ -16,7 +16,6 @@ import core.ThreadBox
 import core.crypto.sha256
 import core.node.TimestamperNodeService
 import core.utilities.loggerFor
-import java.security.KeyPair
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
@@ -188,11 +187,11 @@ class InMemoryNetwork {
         }
 
         override fun stop() {
-            running = false
             if (backgroundThread != null) {
                 backgroundThread.interrupt()
                 backgroundThread.join()
             }
+            running = false
             netNodeHasShutdown(handle)
         }
 
