@@ -23,6 +23,7 @@ import core.testutils.RecordingMap
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
+import org.slf4j.LoggerFactory
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -67,7 +68,7 @@ class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletSer
 }
 
 @ThreadSafe
-class MockStorageService(val isRecording: Boolean = false) : StorageService {
+class MockStorageService(val recordingAs: Map<String, String>? = null) : StorageService {
     override val myLegalIdentityKey: KeyPair = generateKeyPair()
     override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public)
 
@@ -83,8 +84,8 @@ class MockStorageService(val isRecording: Boolean = false) : StorageService {
         synchronized(tables) {
             return tables.getOrPut(tableName) {
                 val map = Collections.synchronizedMap(HashMap<Any, Any>())
-                if (isRecording)
-                    RecordingMap(map)
+                if (recordingAs != null && recordingAs[tableName] != null)
+                    RecordingMap(map, LoggerFactory.getLogger("recordingmap.${recordingAs[tableName]}"))
                 else
                     map
             } as MutableMap<K, V>
