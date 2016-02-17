@@ -261,7 +261,12 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                         // Bob's transactions are valid, so she commits to the database
                         RecordingMap.Put(bobsFakeCash[1].id, bobsSignedTxns[bobsFakeCash[1].id]),
                         RecordingMap.Put(bobsFakeCash[2].id, bobsSignedTxns[bobsFakeCash[2].id]),
-                        RecordingMap.Put(bobsFakeCash[0].id, bobsSignedTxns[bobsFakeCash[0].id])
+                        RecordingMap.Put(bobsFakeCash[0].id, bobsSignedTxns[bobsFakeCash[0].id]),
+                        // Now she verifies the transaction is contract-valid (not signature valid) which means
+                        // looking up the states again.
+                        RecordingMap.Get(bobsFakeCash[1].id),
+                        RecordingMap.Get(bobsFakeCash[2].id),
+                        RecordingMap.Get(alicesFakePaper[0].id)
                 )
                 assertEquals(expected, records)
             }

@@ -23,6 +23,7 @@ import core.node.TimestampingProtocol
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.SignatureException
 import java.time.Instant
 
 /**
@@ -110,26 +111,31 @@ object TwoPartyTradeProtocol {
             val maybeSTX = sendAndReceive<SignedTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
 
             maybeSTX.validate {
-                it.verifySignatures()
+                // Check that the tx proposed by the buyer is valid.
+                val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
+                if (missingSigs != setOf(myKeyPair.public, timestampingAuthority.identity.owningKey))
+                    throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
+
                 val wtx: WireTransaction = it.tx
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
                 checkDependencies(it)
 
-                // TODO: Verify that the transaction is contract-valid even though it lacks sufficient signatures.
+                // This verifies that the transaction is contract-valid, even though it is missing signatures.
+                serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService))
 
-                requireThat {
-                    "transaction sends us the right amount of cash" by (wtx.outputs.sumCashBy(myKeyPair.public) == price)
-                    // There are all sorts of funny games a malicious secondary might play here, we should fix them:
-                    //
-                    // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
-                    //   we're reusing keys! So don't reuse keys!
-                    // - This tx may include output states that impose odd conditions on the movement of the cash,
-                    //   once we implement state pairing.
-                    //
-                    // but the goal of this code is not to be fully secure, but rather, just to find good ways to
-                    // express protocol state machines on top of the messaging layer.
-                }
+                if (wtx.outputs.sumCashBy(myKeyPair.public) != price)
+                    throw IllegalArgumentException("Transaction is not sending us the right amounnt of cash")
+
+                // There are all sorts of funny games a malicious secondary might play here, we should fix them:
+                //
+                // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
+                //   we're reusing keys! So don't reuse keys!
+                // - This tx may include output states that impose odd conditions on the movement of the cash,
+                //   once we implement state pairing.
+                //
+                // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
+                // express protocol state machines on top of the messaging layer.
 
                 return it
             }
@@ -220,12 +226,7 @@ object TwoPartyTradeProtocol {
                 ptx.signWith(KeyPair(k, priv))
             }
 
-            val stx = ptx.toSignedTransaction(checkSufficientSignatures = false)
-            stx.verifySignatures()  // Verifies that we generated a signed transaction correctly.
-
-            // TODO: Could run verify() here to make sure the only signature missing is the sellers.
-
-            return stx
+            return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {

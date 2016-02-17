@@ -23,7 +23,6 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
  * [nonVerifiedRoots] set. Transactions in the non-verified set are ignored other than for looking up input states.
  */
 class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerifiedRoots: Set<LedgerTransaction>) {
-
     /**
      * Verifies the group and returns the set of resolved transactions.
      */

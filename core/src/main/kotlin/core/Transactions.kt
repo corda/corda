@@ -121,18 +121,25 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>, val s
 
     /**
      * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found matches
-     * the set of pubkeys in the commands.
+     * the set of pubkeys in the commands. If any signatures are missing, either throws an exception (by default) or
+     * returns the list of keys that have missing signatures, depending on the parameter.
      *
-     * @throws SignatureException if the signature is invalid or does not match.
+     * @throws SignatureException if a signature is invalid, does not match or if any signature is missing.
      */
-    fun verify() {
+    fun verify(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
         verifySignatures()
         // Verify that every command key was in the set that we just verified: there should be no commands that were
         // unverified.
         val cmdKeys = tx.commands.flatMap { it.pubkeys }.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
-        if (!sigKeys.containsAll(cmdKeys))
-            throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${(cmdKeys - sigKeys).map { it.toStringShort() }}")
+        if (sigKeys == cmdKeys)
+            return emptySet()
+
+        val missing = cmdKeys - sigKeys
+        if (throwIfSignaturesAreMissing)
+            throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${missing.map { it.toStringShort() }}")
+        else
+            return missing
     }
 
     /**

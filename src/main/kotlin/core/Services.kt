@@ -8,13 +8,10 @@
 
 package core
 
-import co.paralleluniverse.fibers.Suspendable
-import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.NetworkMap
-import core.serialization.SerializedBytes
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -113,4 +110,17 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapService: NetworkMap
+
+    /**
+     * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map
+     * the [SignedTransaction]s the DB gives back into [LedgerTransaction]s, and then runs the smart contracts for the
+     * transaction. If no exception is thrown, the transaction is valid.
+     */
+    fun verifyTransaction(ltx: LedgerTransaction) {
+        val dependencies = ltx.inputs.map {
+            storageService.validatedTransactions[it.txhash] ?: throw TransactionResolutionException(it.txhash)
+        }
+        val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService) }
+        TransactionGroup(setOf(ltx), ltxns.toSet()).verify(storageService.contractPrograms)
+    }
 }
