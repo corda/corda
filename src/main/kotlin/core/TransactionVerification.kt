@@ -9,6 +9,7 @@
 package core
 
 import core.crypto.SecureHash
+import core.utilities.loggerFor
 import java.util.*
 
 class TransactionResolutionException(val hash: SecureHash) : Exception()
@@ -23,6 +24,9 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
  * [nonVerifiedRoots] set. Transactions in the non-verified set are ignored other than for looking up input states.
  */
 class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerifiedRoots: Set<LedgerTransaction>) {
+    companion object {
+        val logger = loggerFor<TransactionGroup>()
+    }
 
     /**
      * Verifies the group and returns the set of resolved transactions.
@@ -55,6 +59,9 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
 
         for (tx in resolved)
             tx.verify(programMap)
+
+        logger.trace("Successfully run the contracts for ${resolved.size} transaction(s)")
+
         return resolved
     }
 
