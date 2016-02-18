@@ -36,6 +36,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
     }
 
+    class ExcessivelyLargeTransactionGraph() : Exception()
+
     // Transactions to verify after the dependencies.
     private var stx: SignedTransaction? = null
     private var wtx: WireTransaction? = null
@@ -123,9 +125,10 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
             // And loop around ...
             // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a guess.
+            // TODO: Unit test the DoS limit.
             limitCounter += nextRequests.size
             if (limitCounter > 5000)
-                throw TwoPartyTradeProtocol.ExcessivelyLargeTransactionGraphException()
+                throw ExcessivelyLargeTransactionGraph()
         }
     }
 }

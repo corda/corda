@@ -70,7 +70,6 @@ object TwoPartyTradeProtocol {
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
-    class ExcessivelyLargeTransactionGraphException() : Exception()
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     class SellerTradeInfo(
