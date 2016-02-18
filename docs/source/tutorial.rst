@@ -637,7 +637,7 @@ the exact message).
 
 
 Adding a generation API to your contract
---------------------------------------
+----------------------------------------
 
 Contract classes **must** provide a verify function, but they may optionally also provide helper functions to simplify
 their usage. A simple class of functions most contracts provide are *generation functions*, which either create or
