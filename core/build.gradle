@@ -4,6 +4,23 @@ version '1.0-SNAPSHOT'
 apply plugin: 'java'
 apply plugin: 'kotlin'
 
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        // Dokka (JavaDoc equivalent for Kotlin) download is a big download and also
+        // can interfere with the Kotlin compiler if it gets out of sync, version wise.
+        // To generate API docs, uncomment this line, then uncomment 'apply plugin' line
+        // below, and then run 'gradle dokka' and look in core/build/dokka/core/index.html
+
+        // classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.7"
+    }
+}
+
+// apply plugin: 'org.jetbrains.dokka'
+
 repositories {
     mavenCentral()
 }
@@ -19,5 +36,4 @@ dependencies {
 
     // Quasar: for the bytecode rewriting for state machines.
     compile("co.paralleluniverse:quasar-core:${quasar_version}:jdk8")
-//    quasar("co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar")
 }
