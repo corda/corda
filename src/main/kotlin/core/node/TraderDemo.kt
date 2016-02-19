@@ -15,7 +15,7 @@ import contracts.protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
-import core.messaging.ProtocolLogic
+import core.protocols.ProtocolLogic
 import core.messaging.SingleMessageRecipient
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter

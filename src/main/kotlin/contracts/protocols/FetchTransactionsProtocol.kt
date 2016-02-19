@@ -11,9 +11,9 @@ package contracts.protocols
 import co.paralleluniverse.fibers.Suspendable
 import core.SignedTransaction
 import core.crypto.SecureHash
-import core.messaging.ProtocolLogic
+import core.protocols.ProtocolLogic
 import core.messaging.SingleMessageRecipient
-import core.messaging.UntrustworthyData
+import core.utilities.UntrustworthyData
 import core.node.DataVendingService
 import core.random63BitValue
 import java.util.*

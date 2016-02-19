@@ -14,7 +14,7 @@ import core.SignedTransaction
 import core.TransactionGroup
 import core.WireTransaction
 import core.crypto.SecureHash
-import core.messaging.ProtocolLogic
+import core.protocols.ProtocolLogic
 import core.messaging.SingleMessageRecipient
 import java.util.*
 

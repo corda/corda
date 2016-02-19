@@ -14,6 +14,7 @@ import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
 import core.messaging.*
+import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize

@@ -12,6 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
 import core.messaging.*
+import core.protocols.ProtocolLogic
 import core.serialization.serialize
 import core.testutils.ALICE
 import core.testutils.ALICE_KEY
