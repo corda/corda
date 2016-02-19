@@ -1,6 +1,5 @@
 package core
 
-import core.Party
 import java.security.PublicKey
 
 /**
