@@ -9,16 +9,20 @@
 package contracts;
 
 import core.*;
-import core.TransactionForVerification.*;
-import core.crypto.*;
-import org.jetbrains.annotations.*;
+import core.TransactionForVerification.InOutGroup;
+import core.crypto.NullPublicKey;
+import core.crypto.SecureHash;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.security.*;
-import java.time.*;
-import java.util.*;
+import java.security.PublicKey;
+import java.time.Instant;
+import java.util.List;
 
-import static core.ContractsDSLKt.*;
-import static kotlin.collections.CollectionsKt.*;
+import static core.ContractsDSLKt.requireSingleCommand;
+import static kotlin.collections.CollectionsKt.single;
+
+
 
 
 /**
@@ -226,7 +230,7 @@ public class JavaCommercialPaper implements Contract {
         return new TransactionBuilder().withItems(state,  new Command( new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
-    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException  {
+    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
         new Cash().generateSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
         tx.addInputState(paper.getRef());
         tx.addCommand(new Command( new Commands.Redeem(), paper.getState().getOwner()));
