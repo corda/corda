@@ -24,6 +24,7 @@ import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.utilities.ProgressTracker
 import core.utilities.trace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -51,6 +52,8 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Timeouts
  * TODO: Surfacing of exceptions via an API and/or management UI
  * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
+ * TODO: Make Kryo (de)serialize markers for heavy objects that are currently in the service hub. This avoids mistakes
+ *       where services are temporarily put on the stack.
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
@@ -65,7 +68,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     // class that inserts itself into a ThreadLocal. That then gets caught in fiber serialisation, which we don't
     // want because it can't get recreated properly. It turns out there's no good workaround for this! All the obvious
     // approaches fail. Pending resolution of https://github.com/puniverse/quasar/issues/153 we just disable
-    // checkpointing when unit tests are run inside Gradle. The right fix is probably to make Quasar's
+    // checkpointing when unit tests are run inside Gradle. The right fix is probably to stop Quasar's
     // bit-too-clever-for-its-own-good ThreadLocal serialisation trick. It already wasted far more time than it can
     // ever recover.
     val checkpointing: Boolean get() = !System.err.javaClass.name.contains("LinePerThreadBufferingOutputStream")
@@ -205,6 +208,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
         // We're back! Check if the fiber is finished and if so, clean up.
         if (psm.isTerminated) {
+            psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
             _stateMachines.remove(psm.logic)
             checkpointsMap.remove(prevCheckpointKey)
         }
