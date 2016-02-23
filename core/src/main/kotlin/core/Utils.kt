@@ -19,6 +19,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.reflect.KProperty
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
@@ -93,4 +94,20 @@ inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () ->
 class ThreadBox<T>(content: T, val lock: Lock = ReentrantLock()) {
     val content = content
     inline fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
+}
+
+/**
+ * A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property
+ * will not be serialized to disk, and if it's missing (or the first time it's accessed), the initializer will be
+ * used to set it up. Note that the initializer will be called with the TransientProperty object locked.
+ */
+class TransientProperty<T>(private val initializer: () -> T) {
+    @Transient private var v: T? = null
+
+    @Synchronized
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        if (v == null)
+            v = initializer()
+        return v!!
+    }
 }
