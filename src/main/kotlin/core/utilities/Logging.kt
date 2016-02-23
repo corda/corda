@@ -71,12 +71,22 @@ class BriefLogFormatter : Formatter() {
             loggerRefs.add(logger)
         }
 
-        fun initVerbose(vararg packages: String) {
+        /**
+         * Takes a set of strings identifying logger names for which the logging level should be configured.
+         * If the logger name starts with a + or an ordinary character, the level is set to [Level.ALL]. If it starts
+         * with a - then logging is switched off.
+         */
+        fun initVerbose(vararg loggerNames: String) {
             init()
             loggerRefs[0].handlers[0].level = Level.ALL
-            for (spec in packages) {
-                val logger = Logger.getLogger(spec)
-                logger.level = Level.ALL
+            for (spec in loggerNames) {
+                val (name, level) = when (spec[0]) {
+                    '+' -> spec.substring(1) to Level.FINEST
+                    '-' -> spec.substring(1) to Level.OFF
+                    else -> spec to Level.ALL
+                }
+                val logger = Logger.getLogger(name)
+                logger.level = level
                 loggerRefs.add(logger)
             }
         }
