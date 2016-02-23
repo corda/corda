@@ -59,6 +59,9 @@ class E2ETestWalletService(private val services: ServiceHub) : WalletService {
             return@map issuance.toSignedTransaction(true)
         }
 
+        // TODO: Centralise the process of transaction acceptance and filtering into the wallet, then move this out.
+        services.storageService.validatedTransactions.putAll(transactions.associateBy { it.id })
+
         val statesAndRefs = transactions.map {
             StateAndRef(it.tx.outputs[0] as OwnableState, StateRef(it.id, 0))
         }

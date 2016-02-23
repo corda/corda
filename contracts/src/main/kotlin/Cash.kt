@@ -104,7 +104,7 @@ class Cash : Contract {
                 // literally anyone with access to the network can issue cash claims of arbitrary amounts! It is up
                 // to the recipient to decide if the backing party is trustworthy or not, via some
                 // as-yet-unwritten identity service. See ADP-22 for discussion.
-                val outputsInstitution = outputs.map { it.deposit.party }.singleOrNull()
+                val outputsInstitution = outputs.map { it.deposit.party }.distinct().singleOrNull()
                 if (outputsInstitution != null) {
                     requireThat {
                         "the issue command has a nonce" by (issueCommand.value.nonce != 0L)

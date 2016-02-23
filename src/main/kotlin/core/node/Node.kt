@@ -9,7 +9,9 @@
 package core.node
 
 import com.google.common.net.HostAndPort
+import contracts.*
 import core.*
+import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.*
 import core.serialization.deserialize
@@ -67,6 +69,22 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
         override val identityService: IdentityService get() = identity
     }
 
+    // TODO: This will be obsoleted by "PLT-12: Basic module/sandbox system for contracts"
+    private val contractFactory = object : ContractFactory {
+        private val contracts = mapOf(
+                CASH_PROGRAM_ID to Cash::class.java,
+                CP_PROGRAM_ID to CommercialPaper::class.java,
+                CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
+                DUMMY_PROGRAM_ID to DummyContract::class.java
+        )
+
+        override fun <T : Contract> get(hash: SecureHash): T {
+            val c = contracts[hash] ?: throw UnknownContractException()
+            @Suppress("UNCHECKED_CAST")
+            return c.newInstance() as T
+        }
+    }
+
     val storage: StorageService
     val smm: StateMachineManager
     val net: ArtemisMessagingService
@@ -106,6 +124,10 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
         else
             listOf(storage.myLegalIdentity)
         identity = FixedIdentityService(knownIdentities)
+
+        // This object doesn't need to be referenced from this class because it registers handlers on the network
+        // service and so that keeps it from being collected.
+        DataVendingService(net, storage)
 
         net.start()
     }
@@ -149,7 +171,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
 
         log.info("Node owned by ${identity.name} starting up ...")
 
-        return object : StorageService {
+        val ss = object : StorageService {
             private val tables = HashMap<String, MutableMap<Any, Any>>()
 
             @Suppress("UNCHECKED_CAST")
@@ -160,9 +182,15 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
                 }
             }
 
+            override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+                get() = getMap("validated-transactions")
+
+            override val contractPrograms = contractFactory
             override val myLegalIdentity = identity
             override val myLegalIdentityKey = keypair
         }
+
+        return ss
     }
 
     private fun alreadyRunningNodeCheck() {

@@ -48,8 +48,12 @@ open class TestWithInMemoryNetwork {
     // Keep calling "pump" in rounds until every node in the network reports that it had nothing to do
     fun <T> runNetwork(body: () -> T): T {
         val result = body()
-        while (pumpAll(false).any { it }) {}
+        runNetwork()
         return result
+    }
+
+    fun runNetwork() {
+        while (pumpAll(false).any { it }) {}
     }
 }
 

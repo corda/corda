@@ -13,10 +13,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.messaging.LegallyIdentifiableNode
-import core.messaging.MessageRecipients
-import core.messaging.MessagingService
-import core.messaging.ProtocolStateMachine
+import core.messaging.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -39,9 +36,9 @@ class TimestampingMessages {
  */
 @ThreadSafe
 class TimestamperNodeService(private val net: MessagingService,
-                             private val identity: Party,
-                             private val signingKey: KeyPair,
-                             private val clock: Clock = Clock.systemDefaultZone(),
+                             val identity: Party,
+                             val signingKey: KeyPair,
+                             val clock: Clock = Clock.systemDefaultZone(),
                              val tolerance: Duration = 30.seconds) {
     companion object {
         val TIMESTAMPING_PROTOCOL_TOPIC = "platform.timestamping.request"
@@ -95,23 +92,41 @@ class TimestamperNodeService(private val net: MessagingService,
     }
 }
 
-@ThreadSafe
-class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val node: LegallyIdentifiableNode) : TimestamperService {
-    override val identity: Party = node.identity
+/**
+ * The TimestampingProtocol class is the client code that talks to a [TimestamperNodeService] on some remote node. It is a
+ * [ProtocolLogic], meaning it can either be a sub-protocol of some other protocol, or be driven independently.
+ *
+ * If you are not yourself authoring a protocol and want to timestamp something, the [TimestampingProtocol.Client] class
+ * implements the [TimestamperService] interface, meaning it can be passed to [TransactionBuilder.timestamp] to timestamp
+ * the built transaction. Please be aware that this will block, meaning it should not be used on a thread that is handling
+ * a network message: use it only from spare application threads that don't have to respond to anything.
+ */
+class TimestampingProtocol(private val node: LegallyIdentifiableNode,
+                           private val wtxBytes: SerializedBytes<WireTransaction>) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+
+    class Client(private val stateMachineManager: StateMachineManager, private val node: LegallyIdentifiableNode) : TimestamperService {
+        override val identity: Party = node.identity
+
+        override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
+            return stateMachineManager.add("platform.timestamping", TimestampingProtocol(node, wtxBytes)).get()
+        }
+    }
+
 
     @Suspendable
-    override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
+    override fun call(): DigitalSignature.LegallyIdentifiable {
         val sessionID = random63BitValue()
         val replyTopic = "${TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
-        val req = TimestampingMessages.Request(wtxBytes, psm.serviceHub.networkService.myAddress, replyTopic)
+        val req = TimestampingMessages.Request(wtxBytes, serviceHub.networkService.myAddress, replyTopic)
 
-        val maybeSignature = psm.sendAndReceive(TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0,
-                sessionID, req, DigitalSignature.LegallyIdentifiable::class.java)
+        val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(
+                TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
 
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
-        val signature = maybeSignature.validate { it.verifyWithECDSA(wtxBytes) }
-
-        return signature
+        maybeSignature.validate { sig ->
+            sig.verifyWithECDSA(wtxBytes)
+            return sig
+        }
     }
 }
 

@@ -65,7 +65,7 @@ We use continuations for the following reasons:
 
 * It allows us to write code that is free of callbacks, that looks like ordinary sequential code.
 * A suspended continuation takes far less memory than a suspended thread. It can be as low as a few hundred bytes.
-  In contrast a suspended Java stack can easily be 1mb in size.
+  In contrast a suspended Java thread stack can easily be 1mb in size.
 * It frees the developer from thinking (much) about persistence and serialisation.
 
 A *state machine* is a piece of code that moves through various *states*. These are not the same as states in the data
@@ -140,7 +140,7 @@ each side.
                        val assetToSell: StateAndRef<OwnableState>,
                        val price: Amount,
                        val myKeyPair: KeyPair,
-                       val buyerSessionID: Long) : ProtocolStateMachine<SignedTransaction>() {
+                       val buyerSessionID: Long) : ProtocolLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
@@ -156,7 +156,7 @@ each side.
                       val timestampingAuthority: Party,
                       val acceptablePrice: Amount,
                       val typeToBuy: Class<out OwnableState>,
-                      val sessionID: Long) : ProtocolStateMachine<SignedTransaction>() {
+                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
@@ -249,7 +249,7 @@ Let's implement the ``Seller.call`` method. This will be invoked by the platform
 
       // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
       val ourSignature = signWithOurKey(partialTX)
-      val tsaSig = timestamp(partialTX)
+      val tsaSig = subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits))
 
       val stx: SignedTransaction = sendSignatures(partialTX, ourSignature, tsaSig)
 
@@ -259,6 +259,12 @@ Here we see the outline of the procedure. We receive a proposed trade transactio
 valid. Then we sign with our own key, request a timestamping authority to assert with another signature that the
 timestamp in the transaction (if any) is valid, and finally we send back both our signature and the TSA's signature.
 Finally, we hand back to the code that invoked the protocol the finished transaction in a couple of different forms.
+
+.. note:: ``ProtocolLogic`` classes can be composed together. Here, we see the use of the ``subProtocol`` method, which
+   is given an instance of ``TimestampingProtocol``. This protocol will run to completion and yield a result, almost
+   as if it's a regular method call. In fact, under the hood, all the ``subProtocol`` method does is pass the current
+   fiber object into the newly created object and then run ``call()`` on it ... so it basically _is_ just a method call.
+   This is where we can see the benefits of using continuations/fibers as a programming model.
 
 Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
@@ -273,28 +279,37 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
           // Make the first message we'll send to kick off the protocol.
           val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
 
-          val maybePartialTX = sendAndReceive(TRADE_TOPIC, buyerSessionID, sessionID, hello, SignedTransaction::class.java)
-          val partialTX = maybePartialTX.validate {
-                it.verifySignatures()
-                logger.trace { "Received partially signed transaction" }
-                val wtx: WireTransaction = it.tx
+          val maybeSTX = sendAndReceive<SignedTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
 
-                requireThat {
-                    "transaction sends us the right amount of cash" by (wtx.outputs.sumCashBy(myKeyPair.public) == price)
-                    // There are all sorts of funny games a malicious secondary might play here, we should fix them:
-                    //
-                    // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
-                    //   we're reusing keys! So don't reuse keys!
-                    // - This tx may not be valid according to the contracts of the input states, so we must resolve
-                    //   and fully audit the transaction chains to convince ourselves that it is actually valid.
-                    // - This tx may include output states that impose odd conditions on the movement of the cash,
-                    //   once we implement state pairing.
-                    //
-                    // but the goal of this code is not to be fully secure, but rather, just to find good ways to
-                    // express protocol state machines on top of the messaging layer.
-                }
+          maybeSTX.validate {
+              // Check that the tx proposed by the buyer is valid.
+              val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
+              if (missingSigs != setOf(myKeyPair.public, timestampingAuthority.identity.owningKey))
+                  throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
+
+              val wtx: WireTransaction = it.tx
+              logger.trace { "Received partially signed transaction: ${it.id}" }
+
+              checkDependencies(it)
+
+              // This verifies that the transaction is contract-valid, even though it is missing signatures.
+              serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService))
+
+              if (wtx.outputs.sumCashBy(myKeyPair.public) != price)
+                  throw IllegalArgumentException("Transaction is not sending us the right amounnt of cash")
+
+              // There are all sorts of funny games a malicious secondary might play here, we should fix them:
+              //
+              // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
+              //   we're reusing keys! So don't reuse keys!
+              // - This tx may include output states that impose odd conditions on the movement of the cash,
+              //   once we implement state pairing.
+              //
+              // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
+              // express protocol state machines on top of the messaging layer.
+
+              return it
           }
-          return partialTX
       }
 
 That's pretty straightforward. We generate a session ID to identify what's happening on the seller side, fill out
@@ -305,12 +320,7 @@ the initial protocol message, and then call ``sendAndReceive``. This function ta
 - The thing to send. It'll be serialised and sent automatically.
 - Finally a type argument, which is the kind of object we're expecting to receive from the other side.
 
-It returns a simple wrapper class, ``UntrustworthyData<SignedTransaction>``, which is just a marker class that reminds
-us that the data came from a potentially malicious external source and may have been tampered with or be unexpected in
-other ways. It doesn't add any functionality, but acts as a reminder to "scrub" the data before use. Here, our scrubbing
-simply involves checking the signatures on it. Then we could go ahead and do some more involved checks.
-
-Once sendAndReceive is called, the call method will be suspended into a continuation. When it gets back we'll do a log
+Once ``sendAndReceive`` is called, the call method will be suspended into a continuation. When it gets back we'll do a log
 message. The buyer is supposed to send us a transaction with all the right inputs/outputs/commands in return, with their
 cash put into the transaction and their signature on it authorising the movement of the cash.
 
@@ -323,6 +333,39 @@ cash put into the transaction and their signature on it authorising the movement
    doing things like creating threads from inside these calls would be a bad idea. They should only contain business
    logic.
 
+You get back a simple wrapper class, ``UntrustworthyData<SignedTransaction>``, which is just a marker class that reminds
+us that the data came from a potentially malicious external source and may have been tampered with or be unexpected in
+other ways. It doesn't add any functionality, but acts as a reminder to "scrub" the data before use. Here, our scrubbing
+simply involves checking the signatures on it. Then we go ahead and check all the dependencies of this partial
+transaction for validity. Here's the code to do that:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      @Suspendable
+      private fun checkDependencies(stx: SignedTransaction) {
+          // Download and check all the transactions that this transaction depends on, but do not check this
+          // transaction itself.
+          val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
+          subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
+      }
+
+This is simple enough: we mark the method as ``@Suspendable`` because we're going to invoke a sub-protocol, extract the
+IDs of the transactions the proposed transaction depends on, and then uses a protocol provided by the system to download
+and check them all. This protocol does a breadth-first search over the dependency graph, bottoming out at issuance
+transactions that don't have any inputs themselves. Once the node has audited the transaction history, all the dependencies
+are committed to the node's local database so they won't be checked again next time.
+
+.. note:: Transaction dependency resolution assumes that the peer you got the transaction from has all of the
+   dependencies itself. It must do, otherwise it could not have convinced itself that the dependencies were themselves
+   valid. It's important to realise that requesting only the transactions we require is a privacy leak, because if
+   we don't download a transaction from the peer, they know we must have already seen it before. Fixing this privacy
+   leak will come later.
+
+After the dependencies, we check the proposed trading transaction for validity by running the contracts for that as
+well (but having handled the fact that some signatures are missing ourselves).
+
 Here's the rest of the code:
 
 .. container:: codeset
@@ -332,17 +375,9 @@ Here's the rest of the code:
       open fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
 
       @Suspendable
-      open fun timestamp(partialTX: SignedTransaction): DigitalSignature.LegallyIdentifiable {
-          return TimestamperClient(this, timestampingAuthority).timestamp(partialTX.txBits)
-      }
-
-      @Suspendable
       open fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
                               tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
           val fullySigned = partialTX + tsaSig + ourSignature
-          fullySigned.verify()
-
-          // TODO: We should run it through our full TransactionGroup of all transactions here.
 
           logger.trace { "Built finished transaction, sending back to secondary!" }
 
@@ -352,8 +387,8 @@ Here's the rest of the code:
 
 It's should be all pretty straightforward: here, ``txBits`` is the raw byte array representing the transaction.
 
-In ``sendSignatures``, we take the two signatures we calculated, then add them to the partial transaction we were sent
-and verify that the signatures all make sense. This should never fail: it's just a sanity check. Finally, we wrap the
+In ``sendSignatures``, we take the two signatures we calculated, then add them to the partial transaction we were sent.
+We provide an overload for the + operator so signatures can be added to a SignedTransaction easily. Finally, we wrap the
 two signatures in a simple wrapper message class and send it back. The send won't block waiting for an acknowledgement,
 but the underlying message queue software will retry delivery if the other side has gone away temporarily.
 
@@ -389,25 +424,27 @@ OK, let's do the same for the buyer side:
       @Suspendable
       open fun receiveAndValidateTradeRequest(): SellerTradeInfo {
           // Wait for a trade request to come in on our pre-provided session ID.
-          val maybeTradeRequest = receive(TRADE_TOPIC, sessionID, SellerTradeInfo::class.java)
+          val maybeTradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
 
-          val tradeRequest = maybeTradeRequest.validate {
+          maybeTradeRequest.validate {
               // What is the seller trying to sell us?
-              val assetTypeName = it.assetForSale.state.javaClass.name
-              logger.trace { "Got trade request for a $assetTypeName" }
+              val asset = it.assetForSale.state
+              val assetTypeName = asset.javaClass.name
+              logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
               // Check the start message for acceptability.
               check(it.sessionID > 0)
               if (it.price > acceptablePrice)
                   throw UnacceptablePriceException(it.price)
-              if (!typeToBuy.isInstance(it.assetForSale.state))
+              if (!typeToBuy.isInstance(asset))
                   throw AssetMismatchException(typeToBuy.name, assetTypeName)
-          }
 
-          // TODO: Either look up the stateref here in our local db, or accept a long chain of states and
-          // validate them to audit the other side and ensure it actually owns the state we are being offered!
-          // For now, just assume validity!
-          return tradeRequest
+              // Check the transaction that contains the state which is being resolved.
+              // We only have a hash here, so if we don't know it already, we have to ask for it.
+              subProtocol(ResolveTransactionsProtocol(setOf(it.assetForSale.ref.txhash), otherSide))
+
+              return it
+          }
       }
 
       @Suspendable
@@ -416,7 +453,7 @@ OK, let's do the same for the buyer side:
 
           // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-          return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate {}
+          return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate { it }
       }
 
       open fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
@@ -426,12 +463,7 @@ OK, let's do the same for the buyer side:
               ptx.signWith(KeyPair(k, priv))
           }
 
-          val stx = ptx.toSignedTransaction(checkSufficientSignatures = false)
-          stx.verifySignatures()  // Verifies that we generated a signed transaction correctly.
-
-          // TODO: Could run verify() here to make sure the only signature missing is the sellers.
-
-          return stx
+          return ptx.toSignedTransaction(checkSufficientSignatures = false)
       }
 
       open fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {

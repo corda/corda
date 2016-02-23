@@ -71,12 +71,14 @@ class BriefLogFormatter : Formatter() {
             loggerRefs.add(logger)
         }
 
-        fun initVerbose(packageSpec: String = "") {
+        fun initVerbose(vararg packages: String) {
             init()
             loggerRefs[0].handlers[0].level = Level.ALL
-            val logger = Logger.getLogger(packageSpec)
-            logger.level = Level.ALL
-            loggerRefs.add(logger)
+            for (spec in packages) {
+                val logger = Logger.getLogger(spec)
+                logger.level = Level.ALL
+                loggerRefs.add(logger)
+            }
         }
     }
 }

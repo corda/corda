@@ -12,6 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.signWithECDSA
+import core.crypto.toStringShort
 import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
@@ -83,6 +84,9 @@ data class WireTransaction(val inputs: List<StateRef>,
         return SignedTransaction(serialized, withSigs)
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(id, index))
+
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
@@ -117,18 +121,25 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>, val s
 
     /**
      * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found matches
-     * the set of pubkeys in the commands.
+     * the set of pubkeys in the commands. If any signatures are missing, either throws an exception (by default) or
+     * returns the list of keys that have missing signatures, depending on the parameter.
      *
-     * @throws SignatureException if the signature is invalid or does not match.
+     * @throws SignatureException if a signature is invalid, does not match or if any signature is missing.
      */
-    fun verify() {
+    fun verify(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
         verifySignatures()
         // Verify that every command key was in the set that we just verified: there should be no commands that were
         // unverified.
         val cmdKeys = tx.commands.flatMap { it.pubkeys }.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
-        if (!sigKeys.containsAll(cmdKeys))
-            throw SignatureException("Missing signatures on the transaction for: ${cmdKeys - sigKeys}")
+        if (sigKeys == cmdKeys)
+            return emptySet()
+
+        val missing = cmdKeys - sigKeys
+        if (throwIfSignaturesAreMissing)
+            throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${missing.map { it.toStringShort() }}")
+        else
+            return missing
     }
 
     /**
@@ -157,7 +168,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     /**
      * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
      * To get the right signature from the timestamping service, use the [timestamp] method after building is
-     * finished.
+     * finished, or run use the [TimestampingProtocol] yourself.
      *
      * The window of time in which the final timestamp may lie is defined as [time] +/- [timeTolerance].
      * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
@@ -204,8 +215,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
      */
     fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
         require(commands.count { it.pubkeys.contains(sig.by) } > 0) { "Signature key doesn't match any command" }
-        val data = toWireTransaction().serialize()
-        sig.verifyWithECDSA(data.bits)
+        sig.verifyWithECDSA(toWireTransaction().serialize())
         currentSigs.add(sig)
     }
 

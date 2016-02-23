@@ -187,11 +187,11 @@ class InMemoryNetwork {
         }
 
         override fun stop() {
-            running = false
             if (backgroundThread != null) {
                 backgroundThread.interrupt()
                 backgroundThread.join()
             }
+            running = false
             netNodeHasShutdown(handle)
         }
 
@@ -221,10 +221,7 @@ class InMemoryNetwork {
 
         private fun pumpInternal(block: Boolean): Boolean {
             val q = getQueueForHandle(handle)
-            val message = if (block) q.take() else q.poll()
-
-            if (message == null)
-                return false
+            val message = (if (block) q.take() else q.poll()) ?: return false
 
             val deliverTo = state.locked {
                 val h = handlers.filter { if (it.topic.isBlank()) true else message.topic == it.topic }

@@ -8,12 +8,10 @@
 
 package core
 
-import co.paralleluniverse.fibers.Suspendable
-import core.crypto.DigitalSignature
+import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.NetworkMap
-import core.serialization.SerializedBytes
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -81,6 +79,18 @@ interface StorageService {
     fun <K,V> getMap(tableName: String): MutableMap<K, V>
 
     /**
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
+     */
+    val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+
+    /**
+     * A map of program hash->contract class type, used for verification.
+     */
+    val contractPrograms: ContractFactory
+
+    /**
      * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
      * first installed.
      */
@@ -100,4 +110,17 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapService: NetworkMap
+
+    /**
+     * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map
+     * the [SignedTransaction]s the DB gives back into [LedgerTransaction]s, and then runs the smart contracts for the
+     * transaction. If no exception is thrown, the transaction is valid.
+     */
+    fun verifyTransaction(ltx: LedgerTransaction) {
+        val dependencies = ltx.inputs.map {
+            storageService.validatedTransactions[it.txhash] ?: throw TransactionResolutionException(it.txhash)
+        }
+        val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService) }
+        TransactionGroup(setOf(ltx), ltxns.toSet()).verify(storageService.contractPrograms)
+    }
 }
