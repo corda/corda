@@ -10,11 +10,11 @@
     <option name="TEST_OBJECT" value="package" />
     <option name="VM_PARAMETERS" value="-ea -Dco.paralleluniverse.fibers.verifyInstrumentation -javaagent:lib/quasar.jar" />
     <option name="PARAMETERS" value="" />
-    <option name="WORKING_DIRECTORY" value="file://$MODULE_DIR$" />
+    <option name="WORKING_DIRECTORY" value="" />
     <option name="ENV_VARIABLES" />
     <option name="PASS_PARENT_ENVS" value="true" />
     <option name="TEST_SEARCH_SCOPE">
-      <value defaultName="singleModule" />
+      <value defaultName="moduleWithDependencies" />
     </option>
     <envs />
     <patterns />
