@@ -12,7 +12,7 @@ import core.TransientProperty
 import rx.Observable
 import rx.Subscription
 import rx.lang.kotlin.BehaviourSubject
-import rx.subjects.BehaviorSubject
+import rx.subjects.PublishSubject
 import java.util.*
 
 // TODO: Expose the concept of errors.
@@ -159,8 +159,8 @@ class ProgressTracker(vararg steps: Step) {
         return currentStep
     }
 
-    // These two fields won't be serialized.
-    private val _changes by TransientProperty { BehaviorSubject.create<Change>(Change.Position(UNSTARTED)) }
+    // This field won't be serialized.
+    private val _changes by TransientProperty { PublishSubject.create<Change>() }
 
     /**
      * An observable stream of changes: includes child steps, resets and any changes emitted by individual steps (e.g.

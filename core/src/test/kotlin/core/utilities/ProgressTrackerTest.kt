@@ -58,6 +58,7 @@ class ProgressTrackerTest {
     @Test
     fun `cannot go beyond end`() {
         pt.currentStep = SimpleSteps.FOUR
+        pt.nextStep()
         assertFails { pt.nextStep() }
     }
 
@@ -70,13 +71,20 @@ class ProgressTrackerTest {
             stepNotification += it
         }
 
+        fun assertNextStep(step: ProgressTracker.Step) {
+            assertEquals(step, (stepNotification.pollFirst() as ProgressTracker.Change.Position).newStep)
+        }
+
         pt.currentStep = SimpleSteps.ONE
+        assertNextStep(SimpleSteps.ONE)
+
         pt.childrenFor[SimpleSteps.TWO] = pt2
         pt.nextStep()
-
-        assertEquals(ChildSteps.AYY, pt.nextStep())
-        assertEquals(ChildSteps.AYY, (stepNotification.pollFirst() as ProgressTracker.Change.Position).newStep)
         assertEquals(SimpleSteps.TWO, (stepNotification.pollFirst() as ProgressTracker.Change.Structural).parent)
+        assertNextStep(SimpleSteps.TWO)
+
+        assertEquals(ChildSteps.AYY, pt2.nextStep())
+        assertNextStep(ChildSteps.AYY)
         assertEquals(ChildSteps.BEE, pt2.nextStep())
     }
 
