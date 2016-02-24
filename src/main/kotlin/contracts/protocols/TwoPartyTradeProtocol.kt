@@ -16,10 +16,11 @@ import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
 import core.messaging.LegallyIdentifiableNode
-import core.protocols.ProtocolLogic
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
 import core.node.TimestampingProtocol
+import core.protocols.ProtocolLogic
+import core.utilities.ProgressTracker
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
@@ -86,22 +87,40 @@ object TwoPartyTradeProtocol {
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount,
                       val myKeyPair: KeyPair,
-                      val buyerSessionID: Long) : ProtocolLogic<SignedTransaction>() {
+                      val buyerSessionID: Long,
+                      override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
+
+        companion object {
+            object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
+            object VERIFYING : ProgressTracker.Step("Verifying transaction proposal")
+            object SIGNING : ProgressTracker.Step("Signing transaction")
+            object TIMESTAMPING : ProgressTracker.Step("Timestamping transaction")
+            object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to buyer")
+
+            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, TIMESTAMPING, SENDING_SIGS)
+        }
+
         @Suspendable
         override fun call(): SignedTransaction {
             val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
 
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
             val ourSignature = signWithOurKey(partialTX)
-            val tsaSig = subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits))
+            val tsaSig = timestamp(partialTX)
 
-            val signedTransaction = sendSignatures(partialTX, ourSignature, tsaSig)
+            return sendSignatures(partialTX, ourSignature, tsaSig)
+        }
 
-            return signedTransaction
+        @Suspendable
+        private fun timestamp(partialTX: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+            progressTracker.currentStep = TIMESTAMPING
+            return subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits))
         }
 
         @Suspendable
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
+            progressTracker.currentStep = AWAITING_PROPOSAL
+
             val sessionID = random63BitValue()
 
             // Make the first message we'll send to kick off the protocol.
@@ -109,7 +128,11 @@ object TwoPartyTradeProtocol {
 
             val maybeSTX = sendAndReceive<SignedTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
 
+            progressTracker.currentStep = VERIFYING
+
             maybeSTX.validate {
+                progressTracker.nextStep()
+
                 // Check that the tx proposed by the buyer is valid.
                 val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
                 if (missingSigs != setOf(myKeyPair.public, timestampingAuthority.identity.owningKey))
@@ -148,11 +171,16 @@ object TwoPartyTradeProtocol {
             subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
         }
 
-        private fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
+        @Suspendable
+        open fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
+            progressTracker.currentStep = SIGNING
+            return myKeyPair.signWithECDSA(partialTX.txBits)
+        }
 
         @Suspendable
         private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
                                 tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+            progressTracker.currentStep = SENDING_SIGS
             val fullySigned = partialTX + tsaSig + ourSignature
 
             logger.trace { "Built finished transaction, sending back to secondary!" }
@@ -168,14 +196,24 @@ object TwoPartyTradeProtocol {
                      val typeToBuy: Class<out OwnableState>,
                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
 
+        object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
+        object VERIFYING : ProgressTracker.Step("Verifying seller assets")
+        object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
+        object SWAPPING_SIGNATURES : ProgressTracker.Step("Swapping signatures with the seller")
+
+        override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES)
+
         @Suspendable
         override fun call(): SignedTransaction {
             val tradeRequest = receiveAndValidateTradeRequest()
+
+            progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
             val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+
             val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
-            logger.trace { "Got signatures from seller, verifying ... "}
+            logger.trace { "Got signatures from seller, verifying ... " }
             val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
             fullySigned.verify()
 
@@ -185,9 +223,11 @@ object TwoPartyTradeProtocol {
 
         @Suspendable
         private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+            progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
             val maybeTradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
 
+            progressTracker.currentStep = VERIFYING
             maybeTradeRequest.validate {
                 // What is the seller trying to sell us?
                 val asset = it.assetForSale.state
@@ -211,6 +251,7 @@ object TwoPartyTradeProtocol {
 
         @Suspendable
         private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+            progressTracker.currentStep = SWAPPING_SIGNATURES
             logger.trace { "Sending partially signed transaction to seller" }
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.

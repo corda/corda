@@ -11,6 +11,7 @@ package core.protocols
 import co.paralleluniverse.fibers.Suspendable
 import core.ServiceHub
 import core.messaging.MessageRecipients
+import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData
 import org.slf4j.Logger
 
@@ -37,6 +38,7 @@ abstract class ProtocolLogic<T> {
 
     /** This is where you should log things to. */
     val logger: Logger get() = psm.logger
+
     /** Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts */
     val serviceHub: ServiceHub get() = psm.serviceHub
 
@@ -58,9 +60,32 @@ abstract class ProtocolLogic<T> {
      */
     @Suspendable fun <R> subProtocol(subLogic: ProtocolLogic<R>): R {
         subLogic.psm = psm
-        return subLogic.call()
+        maybeWireUpProgressTracking(subLogic)
+        val r = subLogic.call()
+        // It's easy to forget this when writing protocols so we just step it to the DONE state when it completes.
+        subLogic.progressTracker?.currentStep = ProgressTracker.DONE
+        return r
     }
 
+    private fun maybeWireUpProgressTracking(subLogic: ProtocolLogic<*>) {
+        val ours = progressTracker
+        val theirs = subLogic.progressTracker
+        if (ours != null && theirs != null)
+            ours.childrenFor[ours.currentStep] = theirs
+    }
+
+    /**
+     * Override this to provide a [ProgressTracker]. If one is provided and stepped, the framework will do something
+     * helpful with the progress reports. If this protocol is invoked as a sub-protocol of another, then the
+     * tracker will be made a child of the current step in the parent. If it's null, this protocol doesn't track
+     * progress.
+     *
+     * Note that this has to return a tracker before the protocol is invoked. You can't change your mind half way
+     * through.
+     */
+    open val progressTracker: ProgressTracker? = null
+
+    /** This is where you fill out your business logic. */
     @Suspendable
     abstract fun call(): T
 }

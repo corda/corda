@@ -55,7 +55,9 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:3.0.1"
     compile "org.slf4j:slf4j-jdk14:1.7.13"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version") {
+        force = true
+    }
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -63,9 +65,11 @@ dependencies {
         force = true     // Conflict between Quasar and Artemis
     }
 
+    // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:4.9"
 
-    compile("com.esotericsoftware:kryo:3.0.3")
+    // Kryo: object graph serialization.
+    compile "com.esotericsoftware:kryo:3.0.3"
     compile "de.javakaffee:kryo-serializers:0.37"
 
     // Quasar: for the bytecode rewriting for state machines.
@@ -78,7 +82,10 @@ dependencies {
     }
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
 
-    // For visualisation
+    // JAnsi: for drawing things to the terminal in nicely coloured ways.
+    compile "org.fusesource.jansi:jansi:1.11"
+
+    // GraphStream: For visualisation
     compile "org.graphstream:gs-core:1.3"
     compile "org.graphstream:gs-ui:1.3"
     compile("com.intellij:forms_rt:7.0.3") {
@@ -91,6 +98,10 @@ dependencies {
 // slower but you get a much better error message if you forget to annotate a method with @Suspendable that needs it.
 //
 // In Java 9 (hopefully) the requirement to annotate methods as @Suspendable will go away.
+
+applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
+mainClassName = 'core.node.TraderDemoKt'
+
 tasks.withType(Test) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
     jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
@@ -98,19 +109,4 @@ tasks.withType(Test) {
 tasks.withType(JavaExec) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
     jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
-}
-
-mainClassName = 'core.node.TraderDemoKt'
-
-task runDemoBuyer(type: JavaExec, dependsOn: ':classes') {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'core.node.TraderDemoKt'
-    args = ['--dir=buyer', '--service-fake-trades', '--network-address=localhost']
-}
-
-task runDemoSeller(type: JavaExec, dependsOn: ':classes') {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'core.node.TraderDemoKt'
-    args = ['--dir=seller', '--fake-trade-with=localhost', '--network-address=localhost:31338',
-            '--timestamper-identity-file=buyer/identity-public', '--timestamper-address=localhost']
 }

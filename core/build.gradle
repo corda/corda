@@ -26,13 +26,20 @@ repositories {
 }
 
 dependencies {
+    compile 'junit:junit:4.12'
+
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
+    // SLF4J: Logging framework.
     compile "org.slf4j:slf4j-jdk14:1.7.13"
 
-    compile("com.google.guava:guava:19.0")
+    // Guava: Google utilities library.
+    compile "com.google.guava:guava:19.0"
+
+    // RxJava: observable streams of events.
+    compile "io.reactivex:rxkotlin:0.40.1"
 
     // Quasar: for the bytecode rewriting for state machines.
     compile("co.paralleluniverse:quasar-core:${quasar_version}:jdk8")

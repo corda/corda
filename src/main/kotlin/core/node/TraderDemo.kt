@@ -13,13 +13,16 @@ import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
+import core.crypto.DigitalSignature
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
-import core.protocols.ProtocolLogic
 import core.messaging.SingleMessageRecipient
+import core.protocols.ProtocolLogic
 import core.serialization.deserialize
+import core.utilities.ANSIProgressRenderer
 import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
+import core.utilities.ProgressTracker
 import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +35,6 @@ import kotlin.system.exitProcess
 // TRADING DEMO
 //
 // Please see docs/build/html/running-the-trading-demo.html
-
 
 fun main(args: Array<String>) {
     val parser = OptionParser()
@@ -60,7 +62,8 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    BriefLogFormatter.initVerbose("platform.trade")
+    // Suppress the Artemis MQ noise, and activate the demo logging.
+    BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
     val dir = Paths.get(options.valueOf(dirArg))
     val configFile = dir.resolve("config")
@@ -90,7 +93,9 @@ fun main(args: Array<String>) {
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId) }
 
     if (listening) {
-        node.smm.add("demo.buyer", TraderDemoProtocolBuyer()).get()   // This thread will halt forever here.
+        val buyer = TraderDemoProtocolBuyer()
+        ANSIProgressRenderer.progressTracker = buyer.progressTracker
+        node.smm.add("demo.buyer", buyer).get()   // This thread will halt forever here.
     } else {
         if (!options.has(fakeTradeWithArg)) {
             println("Need the --fake-trade-with command line argument")
@@ -98,7 +103,9 @@ fun main(args: Array<String>) {
         }
         val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
         val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
-        node.smm.add("demo.seller", TraderDemoProtocolSeller(myNetAddr, otherSide)).get()
+        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
+        ANSIProgressRenderer.progressTracker = seller.progressTracker
+        node.smm.add("demo.seller", seller).get()
         node.stop()
     }
 }
@@ -106,6 +113,12 @@ fun main(args: Array<String>) {
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
 
 class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
+    companion object {
+        object WAITING_FOR_SELLER_TO_CONNECT : ProgressTracker.Step("Waiting for seller to connect to us")
+        object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
+    }
+    override val progressTracker = ProgressTracker(WAITING_FOR_SELLER_TO_CONNECT, STARTING_BUY)
+
     @Suspendable
     override fun call() {
         // Give us some cash. Note that as nodes do not currently track forward pointers, we can spend the same cash over
@@ -119,15 +132,11 @@ class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
             //
             // As the seller initiates the DVP/two-party trade protocol, here, we will be the buyer.
             try {
-                println()
-                println("Waiting for a seller to connect to us!")
-
+                progressTracker.currentStep = WAITING_FOR_SELLER_TO_CONNECT
                 val hostname = receive<HostAndPort>("test.junktrade", 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
                 val newPartnerAddr = ArtemisMessagingService.makeRecipient(hostname)
                 val sessionID = random63BitValue()
-                println()
-                println("Got a new junk trade request from $newPartnerAddr, sending back a fresh session ID and starting buy protocol")
-                println()
+                progressTracker.currentStep = STARTING_BUY
                 send("test.junktrade", newPartnerAddr, 0, sessionID)
 
                 val tsa = serviceHub.networkMapService.timestampingNodes[0]
@@ -135,52 +144,58 @@ class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
                         CommercialPaper.State::class.java, sessionID)
                 val tradeTX: SignedTransaction = subProtocol(buyer)
 
-                println()
-                println("Purchase complete - we are a happy customer! Final transaction is:")
-                println()
-                println(Emoji.renderIfSupported(tradeTX.tx))
-                println()
-                println("Waiting for another seller to connect. Or press Ctrl-C to shut me down.")
+                logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
+                        "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
             } catch(e: Exception) {
-                println()
-                println("Something went wrong whilst trading!")
-                println()
-                e.printStackTrace()
+                logger.error("Something went wrong whilst trading!", e)
             }
         }
     }
 }
 
 class TraderDemoProtocolSeller(val myAddress: HostAndPort,
-                               val otherSide: SingleMessageRecipient) : ProtocolLogic<Unit>() {
+                               val otherSide: SingleMessageRecipient,
+                               override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
+    companion object {
+        object ANNOUNCING : ProgressTracker.Step("Announcing to the buyer node")
+        object SELF_ISSUING : ProgressTracker.Step("Got session ID back, issuing and timestamping some commercial paper")
+        object TRADING : ProgressTracker.Step("Starting the trade protocol")
+
+        // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
+        // point: by setting up the tracker in advance, the user can see what's coming in more detail, instead of being
+        // surprised when it appears as a new set of tasks below the current one.
+        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING).apply {
+            childrenFor[TRADING] = TwoPartyTradeProtocol.Seller.tracker()
+        }
+    }
+
     @Suspendable
     override fun call() {
-        println()
-        println("Announcing ourselves to the buyer node!")
-        println()
+        progressTracker.currentStep = ANNOUNCING
 
         val sessionID = sendAndReceive<Long>("test.junktrade", otherSide, 0, 0, myAddress).validate { it }
 
-        println()
-        println("Got session ID back, issuing and timestamping some commercial paper")
+        progressTracker.currentStep = SELF_ISSUING
 
         val tsa = serviceHub.networkMapService.timestampingNodes[0]
         val cpOwnerKey = serviceHub.keyManagementService.freshKey()
         val commercialPaper = makeFakeCommercialPaper(cpOwnerKey.public, tsa)
 
-        println()
-        println("Timestamped my commercial paper issuance, starting the trade protocol.")
+        progressTracker.currentStep = TRADING
 
-        val seller = TwoPartyTradeProtocol.Seller(otherSide, tsa, commercialPaper, 1000.DOLLARS, cpOwnerKey, sessionID)
+        val seller = object : TwoPartyTradeProtocol.Seller(otherSide, tsa, commercialPaper, 1000.DOLLARS,
+                                                           cpOwnerKey, sessionID, progressTracker.childrenFor[TRADING]!!) {
+            override fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
+                val s = super.signWithOurKey(partialTX)
+                // Fake delay to make it look like we're doing something more intensive than we really are, to show
+                // the progress tracking framework.
+                Thread.sleep(2000)
+                return s
+            }
+        }
         val tradeTX: SignedTransaction = subProtocol(seller)
 
-        println()
-        println("Sale completed - we have a happy customer!")
-        println()
-        println("Final transaction is")
-        println()
-        println(Emoji.renderIfSupported(tradeTX.tx))
-        println()
+        logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
     }
 
     @Suspendable
