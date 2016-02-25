@@ -185,6 +185,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
             override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
                 get() = getMap("validated-transactions")
 
+            override val attachments: AttachmentStorage = NodeAttachmentStorage(dir.resolve("attachments"))
             override val contractPrograms = contractFactory
             override val myLegalIdentity = identity
             override val myLegalIdentityKey = keypair

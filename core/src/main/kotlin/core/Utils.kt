@@ -12,6 +12,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import org.slf4j.Logger
+import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.SecureRandom
 import java.time.Duration
 import java.time.temporal.Temporal
@@ -45,6 +48,7 @@ infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = 
 infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
 
+fun <R> Path.use(block: (InputStream) -> R): R = Files.newInputStream(this).use(block)
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): SettableFuture<T> {

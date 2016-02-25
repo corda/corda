@@ -8,10 +8,7 @@
 
 package core
 
-import core.crypto.DigitalSignature
-import core.crypto.SecureHash
-import core.crypto.generateKeyPair
-import core.crypto.signWithECDSA
+import core.crypto.*
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMap
 import core.messaging.NetworkMap
@@ -24,6 +21,10 @@ import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -31,6 +32,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.ZoneId
 import java.util.*
+import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -67,6 +69,34 @@ class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletSer
     override val currentWallet = Wallet(states)
 }
 
+class MockAttachmentStorage : AttachmentStorage {
+    val files = HashMap<SecureHash, ByteArray>()
+
+    override fun openAttachment(id: SecureHash): Attachment? {
+        val f = files[id] ?: return null
+        return object : Attachment {
+            override fun open(): JarInputStream = JarInputStream(ByteArrayInputStream(f))
+            override val id: SecureHash = id
+        }
+    }
+
+    override fun importAttachment(jar: InputStream): SecureHash {
+        // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
+        require(jar !is JarInputStream)
+
+        val bytes = run {
+            val s = ByteArrayOutputStream()
+            jar.copyTo(s)
+            s.toByteArray()
+        }
+        val sha256 = bytes.sha256()
+        if (files.containsKey(sha256))
+            throw FileAlreadyExistsException(File("!! MOCK FILE NAME"))
+        files[sha256] = bytes
+        return sha256
+    }
+}
+
 @ThreadSafe
 class MockStorageService(val recordingAs: Map<String, String>? = null) : StorageService {
     override val myLegalIdentityKey: KeyPair = generateKeyPair()
@@ -78,6 +108,8 @@ class MockStorageService(val recordingAs: Map<String, String>? = null) : Storage
         get() = getMap("validated-transactions")
 
     override val contractPrograms = MockContractFactory
+
+    override val attachments: AttachmentStorage = MockAttachmentStorage()
 
     @Suppress("UNCHECKED_CAST")
     override fun <K, V> getMap(tableName: String): MutableMap<K, V> {

@@ -48,8 +48,6 @@ configurations.all() {
 }
 
 dependencies {
-    testCompile 'junit:junit:4.12'
-
     compile project(':contracts')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
@@ -96,6 +94,10 @@ dependencies {
     compile("commons-logging:commons-logging:1.2") {
         force = true
     }
+
+    // Unit testing helpers.
+    testCompile 'junit:junit:4.12'
+    testCompile 'com.google.jimfs:jimfs:1.1'   // in memory java.nio filesystem.
 }
 
 // These lines tell Gradle to add a couple of JVM command line arguments to unit test and program runs, which set up
