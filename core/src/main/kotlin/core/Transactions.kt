@@ -57,12 +57,13 @@ import java.util.*
 /** Transaction ready for serialisation, without any signatures attached. */
 data class WireTransaction(val inputs: List<StateRef>,
                            val outputs: List<ContractState>,
-                           val commands: List<Command>) {
+                           val commands: List<Command>) : NamedByHash {
 
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
     @Volatile @Transient private var cachedBits: SerializedBytes<WireTransaction>? = null
     val serialized: SerializedBytes<WireTransaction> get() = cachedBits ?: serialize().apply { cachedBits = this }
-    val id: SecureHash get() = serialized.hash
+    override val id: SecureHash get() = serialized.hash
+
     companion object {
         fun deserialize(bits: SerializedBytes<WireTransaction>): WireTransaction {
             val wtx = bits.deserialize()
@@ -98,14 +99,15 @@ data class WireTransaction(val inputs: List<StateRef>,
 }
 
 /** Container for a [WireTransaction] and attached signatures. */
-data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
+data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
+                             val sigs: List<DigitalSignature.WithKey>) : NamedByHash {
     init { check(sigs.isNotEmpty()) }
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
     val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
 
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
-    val id: SecureHash get() = txBits.hash
+    override val id: SecureHash get() = txBits.hash
 
     /**
      * Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
