@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Running the trading demo &mdash; R3 Prototyping 0.1 documentation</title>
+  <title>Running the trading demo &mdash; R3 Prototyping latest documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
+    <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
         <link rel="next" title="Writing a contract" href="tutorial.html"/>
         <link rel="prev" title="Networking and messaging" href="messaging.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.1
+                latest
               </div>
             
           
@@ -150,21 +150,21 @@ can learn about in <a class="reference internal" href="protocol-state-machines.h
 <p>The node has only currently been tested on MacOS X and Ubuntu Linux. If you have success on other platforms, please
 let us know.</p>
 <p>Now, open two terminals, and in the first run::</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">gradlew</span> <span class="n">runDemoBuyer</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">buyer</span>
 </pre></div>
 </div>
-<p>It will create a directory named &#8220;buyer&#8221; and ask you to edit the configuration file inside. Open up <code class="docutils literal"><span class="pre">buyer/config</span></code>
-in your favourite text editor and give the node a legal identity of &#8220;Big Buyer Corp, Inc&#8221; or whatever else you feel like.
-The actual text string is not important. Now run the gradle command again, and it should start up and wait for
-a seller to connect.</p>
+<p>It will compile things, if necessary, then create a directory named &#8220;buyer&#8221; with a bunch of files inside and start
+the node. You should see it waiting for a trade to begin.</p>
 <p>In the second terminal, run:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">gradlew</span> <span class="n">runDemoSeller</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">seller</span>
 </pre></div>
 </div>
-<p>and repeat the process, this time calling the node ... something else.</p>
 <p>You should see some log lines scroll past, and within a few seconds the messages &#8220;Purchase complete - we are a
 happy customer!&#8221; and &#8220;Sale completed - we have a happy customer!&#8221; should be printed.</p>
 <p>If it doesn&#8217;t work, jump on the mailing list and let us know.</p>
+<p>For Windows users, the contents of the shell script are very trivial and can easily be done by hand from a command
+window. Essentially, it just runs Gradle to create the startup scripts, and then starts the node with one set of
+flags or another.</p>
 </div>
 
 
@@ -208,7 +208,7 @@ happy customer!&#8221; and &#8220;Sale completed - we have a happy customer!&#82
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1',
+            VERSION:'latest',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Writing a contract &mdash; R3 Prototyping 0.1 documentation</title>
+  <title>Writing a contract &mdash; R3 Prototyping latest documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
+    <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
         <link rel="next" title="Protocol state machines" href="protocol-state-machines.html"/>
         <link rel="prev" title="Running the trading demo" href="running-the-trading-demo.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.1
+                latest
               </div>
             
           
@@ -99,7 +99,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#understanding-fungibility">Understanding fungibility</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#checking-the-requirements">Checking the requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-test-your-contract">How to test your contract</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#adding-a-crafting-api-to-your-contract">Adding a crafting API to your contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-a-generation-api-to-your-contract">Adding a generation API to your contract</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#non-asset-oriented-based-smart-contracts">Non-asset-oriented based smart contracts</a></li>
 </ul>
 </li>
@@ -725,25 +725,25 @@ an exception will be thrown indicating which transaction failed and why. In the 
 again to ensure the third transaction fails with a message that contains &#8220;must have matured&#8221; (it doesn&#8217;t have to be
 the exact message).</p>
 </div>
-<div class="section" id="adding-a-crafting-api-to-your-contract">
-<h2>Adding a crafting API to your contract<a class="headerlink" href="#adding-a-crafting-api-to-your-contract" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="adding-a-generation-api-to-your-contract">
+<h2>Adding a generation API to your contract<a class="headerlink" href="#adding-a-generation-api-to-your-contract" title="Permalink to this headline">¶</a></h2>
 <p>Contract classes <strong>must</strong> provide a verify function, but they may optionally also provide helper functions to simplify
-their usage. A simple class of functions most contracts provide are <em>crafting functions</em>, which either generate or
+their usage. A simple class of functions most contracts provide are <em>generation functions</em>, which either create or
 modify a transaction to perform certain actions (an action is normally mappable 1:1 to a command, but doesn&#8217;t have to
 be so).</p>
-<p>Crafting may involve complex logic. For example, the cash contract has a <code class="docutils literal"><span class="pre">craftSpend</span></code> method that is given a set of
+<p>Generation may involve complex logic. For example, the cash contract has a <code class="docutils literal"><span class="pre">generateSpend</span></code> method that is given a set of
 cash states and chooses a way to combine them together to satisfy the amount of money that is being sent. In the
 immutable-state model that we are using ledger entries (states) can only be created and deleted, but never modified.
 Therefore to send $1200 when we have only $900 and $500 requires combining both states together, and then creating
 two new output states of $1200 and $200 back to ourselves. This latter state is called the <em>change</em> and is a concept
 that should be familiar to anyone who has worked with Bitcoin.</p>
-<p>As another example, we can imagine code that implements a netting algorithm may craft complex transactions that must
+<p>As another example, we can imagine code that implements a netting algorithm may generate complex transactions that must
 be signed by many people. Whilst such code might be too big for a single utility method (it&#8217;d probably be sized more
 like a module), the basic concept is the same: preparation of a transaction using complex logic.</p>
 <p>For our commercial paper contract however, the things that can be done with it are quite simple. Let&#8217;s start with
 a method to wrap up the issuance process:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">TransactionBuilder</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">generateIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">TransactionBuilder</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">state</span> <span class="p">=</span> <span class="n">State</span><span class="p">(</span><span class="n">issuance</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">TransactionBuilder</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
 <span class="p">}</span>
@@ -757,7 +757,7 @@ It allows you to add inputs, outputs and commands to it and is designed to be pa
 multiple contracts.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Crafting methods should ideally be written to compose with each other, that is, they should take a
+<p class="last">Generation methods should ideally be written to compose with each other, that is, they should take a
 <code class="docutils literal"><span class="pre">TransactionBuilder</span></code> as an argument instead of returning one, unless you are sure it doesn&#8217;t make sense to
 combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
 would just introduce complexity that isn&#8217;t likely to be worth it, so we return a fresh object each time: instead,
@@ -774,7 +774,7 @@ any <code class="docutils literal"><span class="pre">ContractStateRef</span></co
 for you.</p>
 <p>What about moving the paper, i.e. reassigning ownership to someone else?</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftMove</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">newOwner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">generateMove</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">newOwner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addInputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">ref</span><span class="p">)</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addOutputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">copy</span><span class="p">(</span><span class="n">owner</span> <span class="p">=</span> <span class="n">newOwner</span><span class="p">))</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addArg</span><span class="p">(</span><span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Move</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">))</span>
@@ -784,7 +784,7 @@ for you.</p>
 </div>
 <p>Here, the method takes a pre-existing <code class="docutils literal"><span class="pre">TransactionBuilder</span></code> and adds to it. This is correct because typically
 you will want to combine a sale of CP atomically with the movement of some other asset, such as cash. So both
-craft methods should operate on the same transaction. You can see an example of this being done in the unit tests
+generate methods should operate on the same transaction. You can see an example of this being done in the unit tests
 for the commercial paper contract.</p>
 <p>The paper is given to us as a <code class="docutils literal"><span class="pre">StateAndRef&lt;CommercialPaper.State&gt;</span></code> object. This is exactly what it sounds like:
 a small object that has a (copy of) a state object, and also the (txhash, index) that indicates the location of this
@@ -792,9 +792,9 @@ state on the ledger.</p>
 <p>Finally, we can do redemption.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span class="n">@Throws</span><span class="p">(</span><span class="n">InsufficientBalanceException</span><span class="o">::</span><span class="k">class</span><span class="p">)</span>
-<span class="k">fun</span> <span class="nf">craftRedeem</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">wallet</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;&gt;)</span> <span class="p">{</span>
+<span class="k">fun</span> <span class="nf">generateRedeem</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">wallet</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;&gt;)</span> <span class="p">{</span>
     <span class="c1">// Add the cash movement using the states in our wallet.</span>
-    <span class="n">Cash</span><span class="p">().</span><span class="n">craftSpend</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">faceValue</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">wallet</span><span class="p">)</span>
+    <span class="n">Cash</span><span class="p">().</span><span class="n">generateSpend</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">faceValue</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">wallet</span><span class="p">)</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addInputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">ref</span><span class="p">)</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addArg</span><span class="p">(</span><span class="n">WireCommand</span><span class="p">(</span><span class="n">CommercialPaper</span><span class="p">.</span><span class="n">Commands</span><span class="p">.</span><span class="n">Redeem</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">))</span>
 <span class="p">}</span>
@@ -819,12 +819,9 @@ paper.</p>
 is recognised by the network. The most important next step is for the participating entities to sign it using the
 <code class="docutils literal"><span class="pre">signWith()</span></code> method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
 signature inside the <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>. Once all parties have signed, you can call <code class="docutils literal"><span class="pre">TransactionBuilder.toSignedTransaction()</span></code>
-to get a <code class="docutils literal"><span class="pre">SignedWireTransaction</span></code> object. This is an immutable form of the transaction that&#8217;s ready for <em>timestamping</em>.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Timestamping and passing around of partial transactions for group signing is not yet fully implemented.
-This tutorial will be updated once it is.</p>
-</div>
+to get a <code class="docutils literal"><span class="pre">SignedTransaction</span></code> object. This is an immutable form of the transaction that&#8217;s ready for <em>timestamping</em>,
+which can be done using a <code class="docutils literal"><span class="pre">TimestamperClient</span></code>. To learn more about that, please refer to the
+<a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a> document.</p>
 <p>You can see how transactions flow through the different stages of construction by examining the commercial paper
 unit tests.</p>
 </div>
@@ -902,7 +899,7 @@ be implemented once in a separate contract, with the controlling data being held
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1',
+            VERSION:'latest',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

@@ -25,3 +25,7 @@
 .codeset > .highlight-java {
     display: none;
 }
+
+.wy-nav-content {
+    max-width: 1000px;
+}
