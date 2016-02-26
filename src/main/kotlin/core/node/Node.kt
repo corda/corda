@@ -14,9 +14,12 @@ import core.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.*
+import core.node.servlets.AttachmentUploadServlet
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.utilities.loggerFor
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.servlet.ServletContextHandler
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
@@ -47,12 +50,12 @@ class NodeConfiguration(private val properties: Properties) {
  * loads important data off disk and starts listening for connections.
  *
  * @param dir A [Path] to a location on disk where working files can be found or stored.
- * @param myNetAddr The host and port that this server will use. It can't find out its own external hostname, so you
+ * @param p2pPort The host and port that this server will use. It can't find out its own external hostname, so you
  *                  have to specify that yourself.
  * @param configuration This is typically loaded from a .properties file
  * @param timestamperAddress If null, this node will become a timestamping node, otherwise, it will use that one.
  */
-class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeConfiguration,
+class Node(val dir: Path, val p2pPort: HostAndPort, val configuration: NodeConfiguration,
            timestamperAddress: LegallyIdentifiableNode?) {
     private val log = loggerFor<Node>()
 
@@ -92,6 +95,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
     val keyManagement: E2ETestKeyManagementService
     val inNodeTimestampingService: TimestamperNodeService?
     val identity: IdentityService
+    val webServer: Server
 
     // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
     // when our process shuts down, but we try in stop() anyway just to be nice.
@@ -102,7 +106,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
 
         storage = makeStorageService(dir)
         smm = StateMachineManager(services, serverThread)
-        net = ArtemisMessagingService(dir, myNetAddr)
+        net = ArtemisMessagingService(dir, p2pPort)
         wallet = E2ETestWalletService(services)
         keyManagement = E2ETestKeyManagementService()
 
@@ -129,16 +133,34 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
 
+        // Start up the MQ service.
         net.start()
+
+        webServer = initWebServer()
+    }
+
+    private fun initWebServer(): Server {
+        val port = p2pPort.port + 1   // TODO: Move this into the node config file.
+        val server = Server(port)
+        val handler = ServletContextHandler()
+        handler.setAttribute("storage", storage)
+        handler.addServlet(AttachmentUploadServlet::class.java, "/attachments/upload")
+        server.handler = handler
+        server.start()
+        return server
     }
 
     fun stop() {
+        webServer.stop()
         net.stop()
         serverThread.shutdownNow()
         nodeFileLock!!.release()
     }
 
     fun makeStorageService(dir: Path): StorageService {
+        val attachmentsDir = dir.resolve("attachments")
+        try { Files.createDirectory(attachmentsDir) } catch (e: java.nio.file.FileAlreadyExistsException) {}
+
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -185,7 +207,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
             override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
                 get() = getMap("validated-transactions")
 
-            override val attachments: AttachmentStorage = NodeAttachmentStorage(dir.resolve("attachments"))
+            override val attachments: AttachmentStorage = NodeAttachmentStorage(attachmentsDir)
             override val contractPrograms = contractFactory
             override val myLegalIdentity = identity
             override val myLegalIdentityKey = keypair

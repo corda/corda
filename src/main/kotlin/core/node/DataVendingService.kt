@@ -8,6 +8,8 @@
 
 package core.node
 
+import contracts.protocols.FetchAttachmentsProtocol
+import contracts.protocols.FetchTransactionsProtocol
 import core.StorageService
 import core.crypto.SecureHash
 import core.messaging.Message
@@ -16,6 +18,7 @@ import core.messaging.SingleMessageRecipient
 import core.messaging.send
 import core.serialization.deserialize
 import core.utilities.loggerFor
+import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -33,15 +36,12 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class DataVendingService(private val net: MessagingService, private val storage: StorageService) {
     companion object {
-        val TX_FETCH_TOPIC = "platform.fetch.tx"
-        val CONTRACT_FETCH_TOPIC = "platform.fetch.contract"
-
         val logger = loggerFor<DataVendingService>()
     }
 
     init {
-        net.addMessageHandler("$TX_FETCH_TOPIC.0") { msg, registration -> handleTXRequest(msg) }
-        net.addMessageHandler("$CONTRACT_FETCH_TOPIC.0") { msg, registration -> handleContractRequest(msg) }
+        net.addMessageHandler("${FetchTransactionsProtocol.TOPIC}.0") { msg, registration -> handleTXRequest(msg) }
+        net.addMessageHandler("${FetchAttachmentsProtocol.TOPIC}.0") { msg, registration -> handleAttachmentRequest(msg) }
     }
 
     // TODO: Give all messages a respond-to address+session ID automatically.
@@ -56,10 +56,22 @@ class DataVendingService(private val net: MessagingService, private val storage:
                 logger.info("Got request for unknown tx $it")
             tx
         }
-        net.send("$TX_FETCH_TOPIC.${req.sessionID}", req.responseTo, answers)
+        net.send("${FetchTransactionsProtocol.TOPIC}.${req.sessionID}", req.responseTo, answers)
     }
 
-    private fun handleContractRequest(msg: Message) {
-        TODO("PLT-12: Basic module/sandbox system for contracts: $msg")
+    private fun handleAttachmentRequest(msg: Message) {
+        // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
+        val req = msg.data.deserialize<Request>()
+        require(req.hashes.isNotEmpty())
+        val answers: List<ByteArray?> = req.hashes.map {
+            val jar: InputStream? = storage.attachments.openAttachment(it)?.open()
+            if (jar == null) {
+                logger.info("Got request for unknown attachment $it")
+                null
+            } else {
+                jar.readBytes()
+            }
+        }
+        net.send("${FetchAttachmentsProtocol.TOPIC}.${req.sessionID}", req.responseTo, answers)
     }
 }

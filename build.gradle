@@ -15,6 +15,7 @@ buildscript {
     ext.quasar_version = '0.7.4'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
+    ext.jetty_version = '9.3.7.v20160115'
 
     repositories {
         mavenCentral()
@@ -94,6 +95,11 @@ dependencies {
     compile("commons-logging:commons-logging:1.2") {
         force = true
     }
+
+    // Web stuff: for HTTP[S] servlets
+    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    compile "javax.servlet:javax.servlet-api:3.1.0"
+    compile "commons-fileupload:commons-fileupload:1.3.1"
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
