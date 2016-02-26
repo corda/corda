@@ -71,13 +71,15 @@ class NodeAttachmentStorage(val storePath: Path) : AttachmentStorage {
     override fun openAttachment(id: SecureHash): Attachment? {
         val path = storePath.resolve(id.toString())
         if (!Files.exists(path)) return null
-        var stream = Files.newInputStream(path)
-        // This is just an optional safety check. If it slows things down too much it can be disabled.
-        if (id is SecureHash.SHA256 && checkAttachmentsOnLoad)
-            stream = HashCheckingStream(id, path, stream)
-        log.debug("Opening attachment $id")
         return object : Attachment {
-            override fun open(): InputStream = stream
+            override fun open(): InputStream {
+                var stream = Files.newInputStream(path)
+                // This is just an optional safety check. If it slows things down too much it can be disabled.
+                if (id is SecureHash.SHA256 && checkAttachmentsOnLoad)
+                    stream = HashCheckingStream(id, path, stream)
+                log.debug("Opening attachment $id")
+                return stream
+            }
             override val id: SecureHash = id
             override fun equals(other: Any?) = other is Attachment && other.id == id
             override fun hashCode(): Int = id.hashCode()
