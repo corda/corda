@@ -33,6 +33,8 @@ class FetchAttachmentsProtocol(requests: Set<SecureHash>,
         return object : Attachment {
             override fun open(): InputStream = ByteArrayInputStream(wire)
             override val id: SecureHash = wire.sha256()
+            override fun equals(other: Any?) = (other is Attachment) && other.id == id
+            override fun hashCode(): Int = id.hashCode()
         }
     }
 

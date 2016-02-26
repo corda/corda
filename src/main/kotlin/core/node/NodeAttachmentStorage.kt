@@ -8,6 +8,7 @@
 
 package core.node
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
@@ -30,6 +31,9 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeAttachmentStorage(val storePath: Path) : AttachmentStorage {
     private val log = loggerFor<NodeAttachmentStorage>()
+
+    @VisibleForTesting
+    var checkAttachmentsOnLoad = true
 
     init {
         require(Files.isDirectory(storePath)) { "$storePath must be a directory" }
@@ -69,12 +73,14 @@ class NodeAttachmentStorage(val storePath: Path) : AttachmentStorage {
         if (!Files.exists(path)) return null
         var stream = Files.newInputStream(path)
         // This is just an optional safety check. If it slows things down too much it can be disabled.
-        if (id is SecureHash.SHA256)
+        if (id is SecureHash.SHA256 && checkAttachmentsOnLoad)
             stream = HashCheckingStream(id, path, stream)
         log.debug("Opening attachment $id")
         return object : Attachment {
             override fun open(): InputStream = stream
             override val id: SecureHash = id
+            override fun equals(other: Any?) = other is Attachment && other.id == id
+            override fun hashCode(): Int = id.hashCode()
         }
     }
 
