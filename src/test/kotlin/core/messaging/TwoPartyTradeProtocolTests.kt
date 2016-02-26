@@ -24,7 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-// TODO: Refactor this test some more to cut down on messy setup duplication.
+// TODO: Refactor this test to use the MockNode class, which will clean this file up significantly.
 
 /**
  * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do

@@ -27,6 +27,8 @@ import java.time.ZoneId
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+// TODO: Refactor this to use MockNode.
+
 class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
     lateinit var myMessaging: Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging>
     lateinit var serviceMessaging: Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging>
