@@ -90,7 +90,7 @@ fun main(args: Array<String>) {
         LegallyIdentifiableNode(ArtemisMessagingService.makeRecipient(addr), party)
     } else null
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId) }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId).start() }
 
     if (listening) {
         val buyer = TraderDemoProtocolBuyer()
