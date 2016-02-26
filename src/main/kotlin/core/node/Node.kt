@@ -73,10 +73,9 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         return this
     }
 
-    fun stop() {
+    override fun stop() {
         webServer.stop()
-        net.stop()
-        serverThread.shutdownNow()
+        super.stop()
         nodeFileLock!!.release()
     }
 

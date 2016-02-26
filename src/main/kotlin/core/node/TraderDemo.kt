@@ -251,7 +251,7 @@ private fun loadConfigFile(configFile: Path): NodeConfiguration {
         Properties().apply { load(it) }
     }
 
-    val config = NodeConfiguration(configProps)
+    val config = NodeConfigurationFromProperties(configProps)
 
     // Make sure admin did actually edit at least the legal name.
     if (config.myLegalName == defaultLegalName)

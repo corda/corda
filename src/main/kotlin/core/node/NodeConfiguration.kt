@@ -10,6 +10,10 @@ package core.node
 
 import java.util.*
 
+interface NodeConfiguration {
+    val myLegalName: String
+}
+
 /**
  * A simple wrapper around a plain old Java .properties file. The keys have the same name as in the source code.
  *
@@ -17,6 +21,6 @@ import java.util.*
  * We want to be able to configure via a GUI too, so an ability to round-trip whitespace, comments etc when machine
  * editing the file is a must-have.
  */
-class NodeConfiguration(private val properties: Properties) {
-    val myLegalName: String by properties
+class NodeConfigurationFromProperties(private val properties: Properties) : NodeConfiguration {
+    override val myLegalName: String by properties
 }

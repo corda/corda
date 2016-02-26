@@ -45,7 +45,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     // We will run as much stuff in this thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
-    val serverThread = Executors.newSingleThreadExecutor()
+    protected open val serverThread = Executors.newSingleThreadExecutor()
 
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
@@ -55,6 +55,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
     }
+
+    val legallyIdentifableAddress: LegallyIdentifiableNode get() = LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
 
     // TODO: This will be obsoleted by "PLT-12: Basic module/sandbox system for contracts"
     protected val contractFactory = object : ContractFactory {
@@ -111,6 +113,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         DataVendingService(net, storage)
 
         return this
+    }
+
+    open fun stop() {
+        net.stop()
+        serverThread.shutdownNow()
     }
 
     protected abstract fun makeMessagingService(): MessagingService

@@ -21,10 +21,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 open class TestWithInMemoryNetwork {
-    val nodes: MutableMap<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode> = HashMap()
-    lateinit var network: InMemoryNetwork
+    val nodes: MutableMap<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging> = HashMap()
+    lateinit var network: InMemoryMessagingNetwork
 
-    fun makeNode(inBackground: Boolean = false): Pair<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode> {
+    fun makeNode(inBackground: Boolean = false): Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging> {
         // The manuallyPumped = true bit means that we must call the pump method on the system in order to
         val (address, builder) = network.createNode(!inBackground)
         val node = builder.start().get()
@@ -34,7 +34,7 @@ open class TestWithInMemoryNetwork {
 
     @Before
     fun setupNetwork() {
-        network = InMemoryNetwork()
+        network = InMemoryMessagingNetwork()
         nodes.clear()
     }
 
@@ -43,7 +43,7 @@ open class TestWithInMemoryNetwork {
         network.stop()
     }
 
-    fun pumpAll(blocking: Boolean) = network.nodes.map { it.pump(blocking) }
+    fun pumpAll(blocking: Boolean) = network.endpoints.map { it.pump(blocking) }
 
     // Keep calling "pump" in rounds until every node in the network reports that it had nothing to do
     fun <T> runNetwork(body: () -> T): T {
