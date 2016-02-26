@@ -10,6 +10,7 @@
 
 package core.testutils
 
+import com.google.common.base.Throwables
 import contracts.*
 import core.*
 import core.crypto.*
@@ -22,6 +23,15 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
+
+/** If an exception is thrown by the body, rethrows the root cause exception. */
+inline fun <R> rootCauseExceptions(body: () -> R) : R {
+    try {
+        return body()
+    } catch(e: Exception) {
+        throw Throwables.getRootCause(e)
+    }
+}
 
 object TestUtils {
     val keypair = generateKeyPair()
