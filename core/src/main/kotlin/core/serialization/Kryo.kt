@@ -17,6 +17,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import core.SignedTransaction
+import core.WireTransaction
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256
@@ -82,6 +83,9 @@ inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRY
 inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T {
     return this.bits.deserialize(kryo, includeClassName)
 }
+// The more specific deserialize version results in the bytes being cached, which is faster.
+@JvmName("SerializedBytesWireTransaction")
+fun SerializedBytes<WireTransaction>.deserialize(): WireTransaction = WireTransaction.deserialize(this)
 inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
 
 /**
