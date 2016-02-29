@@ -85,8 +85,15 @@ data class WireTransaction(val inputs: List<StateRef>,
         return SignedTransaction(serialized, withSigs)
     }
 
+    /** Returns a [StateAndRef] for the given output index. */
     @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(id, index))
+    fun <T : ContractState> outRef(index: Int): StateAndRef<T> {
+        require(index >= 0 && index < outputs.size)
+        return StateAndRef(outputs[index] as T, StateRef(id, index))
+    }
+
+    /** Returns a [StateAndRef] for the requested output state, or throws [IllegalArgumentException] if not found. */
+    fun <T : ContractState> outRef(state: ContractState): StateAndRef<T> = outRef(outputs.indexOfOrThrow(state))
 
     override fun toString(): String {
         val buf = StringBuilder()
