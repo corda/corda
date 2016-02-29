@@ -55,6 +55,7 @@ interface WalletService {
  * interface if/when one is developed.
  */
 interface KeyManagementService {
+    /** Returns a snapshot of the current pubkey->privkey mapping. */
     val keys: Map<PublicKey, PrivateKey>
 
     fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key")

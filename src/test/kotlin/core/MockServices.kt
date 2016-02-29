@@ -58,11 +58,20 @@ object MockIdentityService : IdentityService {
     override fun partyFromKey(key: PublicKey): Party? = TEST_KEYS_TO_CORP_MAP[key]
 }
 
-class MockKeyManagementService(
-        override val keys: Map<PublicKey, PrivateKey>,
-        val nextKeys: MutableList<KeyPair> = arrayListOf(generateKeyPair())
-) : KeyManagementService {
-    override fun freshKey() = nextKeys.removeAt(nextKeys.lastIndex)
+class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementService {
+    override val keys: MutableMap<PublicKey, PrivateKey>
+
+    init {
+        keys = initialKeys.map { it.public to it.private }.toMap(HashMap())
+    }
+
+    val nextKeys = LinkedList<KeyPair>()
+
+    override fun freshKey(): KeyPair {
+        val k = nextKeys.poll() ?: generateKeyPair()
+        keys[k.public] = k.private
+        return k
+    }
 }
 
 class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletService {

@@ -55,7 +55,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val alicesServices = MockServices(net = alicesNode)
             val bobsServices = MockServices(
                     wallet = MockWalletService(bobsWallet.states),
-                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    keyManagement = MockKeyManagementService(BOB_KEY),
                     net = bobsNode,
                     storage = MockStorageService()
             )
@@ -105,7 +105,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val alicesServices = MockServices(wallet = null, keyManagement = null, net = alicesNode)
             var bobsServices = MockServices(
                     wallet = MockWalletService(wallet.states),
-                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    keyManagement = MockKeyManagementService(BOB_KEY),
                     net = bobsNode,
                     storage = bobsStorage
             )
@@ -198,7 +198,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             )
             val bobsServices = MockServices(
                     wallet = MockWalletService(bobsWallet.states),
-                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    keyManagement = MockKeyManagementService(BOB_KEY),
                     net = bobsNode,
                     storage = MockStorageService(mapOf("validated-transactions" to "bob"))
             )
@@ -286,7 +286,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val alicesServices = MockServices(net = alicesNode)
             val bobsServices = MockServices(
                     wallet = MockWalletService(bobsWallet.states),
-                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    keyManagement = MockKeyManagementService(BOB_KEY),
                     net = bobsNode,
                     storage = MockStorageService(mapOf("validated-transactions" to "bob"))
             )
@@ -336,7 +336,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val alicesServices = MockServices(net = alicesNode)
             val bobsServices = MockServices(
                     wallet = MockWalletService(bobsWallet.states),
-                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    keyManagement = MockKeyManagementService(BOB_KEY),
                     net = bobsNode,
                     storage = MockStorageService(mapOf("validated-transactions" to "bob"))
             )

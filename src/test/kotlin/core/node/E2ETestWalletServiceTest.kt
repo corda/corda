@@ -16,17 +16,18 @@ import core.ServiceHub
 import core.testutils.ALICE
 import core.testutils.ALICE_KEY
 import org.junit.Test
-import java.security.KeyPair
 import java.util.*
 import kotlin.test.assertEquals
 
 class E2ETestWalletServiceTest {
+    val kms = MockKeyManagementService()
     val services: ServiceHub = MockServices(
-        keyManagement = MockKeyManagementService(emptyMap(), arrayListOf<KeyPair>(ALICE_KEY, ALICE_KEY, ALICE_KEY))
+        keyManagement = kms
     )
 
     @Test fun splits() {
         val wallet = E2ETestWalletService(services)
+        kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
         wallet.fillWithSomeTestCash(100.DOLLARS, 3, 3, Random(0L))
 
