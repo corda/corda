@@ -66,7 +66,7 @@ data class WireTransaction(val inputs: List<StateRef>,
 
     companion object {
         fun deserialize(bits: SerializedBytes<WireTransaction>): WireTransaction {
-            val wtx = bits.deserialize()
+            val wtx = bits.bits.deserialize<WireTransaction>()
             wtx.cachedBits = bits
             return wtx
         }

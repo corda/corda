@@ -24,35 +24,35 @@ import javax.annotation.concurrent.ThreadSafe
 import kotlin.concurrent.thread
 
 /**
- * An in-memory network allows you to manufacture [InMemoryNode]s for a set of participants. Each
- * [InMemoryNode] maintains a queue of messages it has received, and a background thread that dispatches
+ * An in-memory network allows you to manufacture [InMemoryMessaging]s for a set of participants. Each
+ * [InMemoryMessaging] maintains a queue of messages it has received, and a background thread that dispatches
  * messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
  * case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
  * testing).
  */
 @ThreadSafe
-class InMemoryNetwork {
+class InMemoryMessagingNetwork {
     private var counter = 0   // -1 means stopped.
-    private val handleNodeMap = HashMap<Handle, InMemoryNode>()
+    private val handleEndpointMap = HashMap<Handle, InMemoryMessaging>()
     // All messages are kept here until the messages are pumped off the queue by a caller to the node class.
     // Queues are created on-demand when a message is sent to an address: the receiving node doesn't have to have
     // been created yet. If the node identified by the given handle has gone away/been shut down then messages
     // stack up here waiting for it to come back. The intent of this is to simulate a reliable messaging network.
     private val messageQueues = HashMap<Handle, LinkedBlockingQueue<Message>>()
 
-    val nodes: List<InMemoryNode> @Synchronized get() = handleNodeMap.values.toList()
+    val endpoints: List<InMemoryMessaging> @Synchronized get() = handleEndpointMap.values.toList()
 
     /**
      * Creates a node and returns the new object that identifies its location on the network to senders, and the
-     * [InMemoryNode] that the recipient/in-memory node uses to receive messages and send messages itself.
+     * [InMemoryMessaging] that the recipient/in-memory node uses to receive messages and send messages itself.
      *
-     * If [manuallyPumped] is set to true, then you are expected to call the [InMemoryNode.pump] method on the [InMemoryNode]
+     * If [manuallyPumped] is set to true, then you are expected to call the [InMemoryMessaging.pump] method on the [InMemoryMessaging]
      * in order to cause the delivery of a single message, which will occur on the thread of the caller. If set to false
      * then this class will set up a background thread to deliver messages asynchronously, if the handler specifies no
      * executor.
      */
     @Synchronized
-    fun createNode(manuallyPumped: Boolean): Pair<Handle, MessagingServiceBuilder<InMemoryNode>> {
+    fun createNode(manuallyPumped: Boolean): Pair<Handle, MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate."}
         val builder = createNodeWithID(manuallyPumped, counter) as Builder
         counter++
@@ -61,19 +61,19 @@ class InMemoryNetwork {
     }
 
     /** Creates a node at the given address: useful if you want to recreate a node to simulate a restart */
-    fun createNodeWithID(manuallyPumped: Boolean, id: Int): MessagingServiceBuilder<InMemoryNode> {
+    fun createNodeWithID(manuallyPumped: Boolean, id: Int): MessagingServiceBuilder<InMemoryMessaging> {
         return Builder(manuallyPumped, Handle(id))
     }
 
     @Synchronized
-    private fun netSend(message: Message, recipients: MessageRecipients) {
+    private fun msgSend(message: Message, recipients: MessageRecipients) {
         when (recipients) {
             is Handle -> getQueueForHandle(recipients).add(message)
 
             is AllPossibleRecipients -> {
                 // This means all possible recipients _that the network knows about at the time_, not literally everyone
                 // who joins into the indefinite future.
-                for (handle in handleNodeMap.keys)
+                for (handle in handleEndpointMap.keys)
                     getQueueForHandle(handle).add(message)
             }
             else -> throw IllegalArgumentException("Unknown type of recipient handle")
@@ -82,7 +82,7 @@ class InMemoryNetwork {
 
     @Synchronized
     private fun netNodeHasShutdown(handle: Handle) {
-        handleNodeMap.remove(handle)
+        handleEndpointMap.remove(handle)
     }
 
     @Synchronized
@@ -93,21 +93,21 @@ class InMemoryNetwork {
     fun stop() {
         val nodes = synchronized(this) {
             counter = -1
-            handleNodeMap.values.toList()
+            handleEndpointMap.values.toList()
         }
 
         for (node in nodes)
             node.stop()
 
-        handleNodeMap.clear()
+        handleEndpointMap.clear()
         messageQueues.clear()
     }
 
-    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : MessagingServiceBuilder<InMemoryNode> {
-        override fun start(): ListenableFuture<InMemoryNode> {
-            synchronized(this@InMemoryNetwork) {
-                val node = InMemoryNode(manuallyPumped, id)
-                handleNodeMap[id] = node
+    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : MessagingServiceBuilder<InMemoryMessaging> {
+        override fun start(): ListenableFuture<InMemoryMessaging> {
+            synchronized(this@InMemoryMessagingNetwork) {
+                val node = InMemoryMessaging(manuallyPumped, id)
+                handleEndpointMap[id] = node
                 return Futures.immediateFuture(node)
             }
         }
@@ -122,7 +122,7 @@ class InMemoryNetwork {
     private var timestampingAdvert: LegallyIdentifiableNode? = null
 
     @Synchronized
-    fun setupTimestampingNode(manuallyPumped: Boolean): Pair<LegallyIdentifiableNode, InMemoryNode> {
+    fun setupTimestampingNode(manuallyPumped: Boolean): Pair<LegallyIdentifiableNode, InMemoryMessaging> {
         check(timestampingAdvert == null)
         val (handle, builder) = createNode(manuallyPumped)
         val node = builder.start().get()
@@ -132,14 +132,14 @@ class InMemoryNetwork {
     }
 
     /**
-     * An [InMemoryNode] provides a [MessagingService] that isn't backed by any kind of network or disk storage
+     * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage
      * system, but just uses regular queues on the heap instead. It is intended for unit testing and developer convenience
      * when all entities on 'the network' are being simulated in-process.
      *
      * An instance can be obtained by creating a builder and then using the start method.
      */
     @ThreadSafe
-    inner class InMemoryNode(private val manuallyPumped: Boolean, private val handle: Handle): MessagingService {
+    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle): MessagingService {
         inner class Handler(val executor: Executor?, val topic: String,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
         @Volatile
@@ -172,7 +172,7 @@ class InMemoryNetwork {
                 Pair(handler, items)
             }
             for (it in items)
-                netSend(it, handle)
+                msgSend(it, handle)
             return handler
         }
 
@@ -183,7 +183,7 @@ class InMemoryNetwork {
 
         override fun send(message: Message, target: MessageRecipients) {
             check(running)
-            netSend(message, target)
+            msgSend(message, target)
         }
 
         override fun stop() {
@@ -245,7 +245,7 @@ class InMemoryNetwork {
                     try {
                         handler.callback(message, handler)
                     } catch(e: Exception) {
-                        loggerFor<InMemoryNetwork>().error("Caught exception in handler for $this/${handler.topic}", e)
+                        loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topic}", e)
                     }
                 }
             }

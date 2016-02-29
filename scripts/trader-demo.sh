@@ -24,7 +24,7 @@ elif [[ "$mode" == "seller" ]]; then
         echo "myLegalName = Bank of Giza" >seller/config
     fi
 
-    build/install/r3prototyping/bin/r3prototyping --dir=seller --fake-trade-with=localhost --network-address=localhost:31338 --timestamper-identity-file=buyer/identity-public --timestamper-address=localhost
+    build/install/r3prototyping/bin/r3prototyping --dir=seller --fake-trade-with=localhost --network-address=localhost:31340 --timestamper-identity-file=buyer/identity-public --timestamper-address=localhost
 else
     echo "Run like this, one in each tab:"
     echo
