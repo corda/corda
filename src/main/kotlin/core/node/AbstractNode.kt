@@ -86,7 +86,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         storage = makeStorageService(dir)
         net = makeMessagingService()
         smm = StateMachineManager(services, serverThread)
-        wallet = E2ETestWalletService(services)
+        wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
 
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are

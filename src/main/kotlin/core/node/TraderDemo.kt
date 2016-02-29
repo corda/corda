@@ -123,7 +123,7 @@ class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
     override fun call() {
         // Give us some cash. Note that as nodes do not currently track forward pointers, we can spend the same cash over
         // and over again and the double spends will never be detected! Fixing that is the next step.
-        (serviceHub.walletService as E2ETestWalletService).fillWithSomeTestCash(1500.DOLLARS)
+        (serviceHub.walletService as NodeWalletService).fillWithSomeTestCash(1500.DOLLARS)
 
         while (true) {
             // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band

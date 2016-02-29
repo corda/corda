@@ -75,6 +75,13 @@ class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementServi
 }
 
 class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletService {
+    override val cashBalances: Map<Currency, Amount>
+        get() = TODO("Use NodeWalletService instead")
+
+    override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
+        TODO("Use NodeWalletService instead")
+    }
+
     override val currentWallet = Wallet(states)
 }
 

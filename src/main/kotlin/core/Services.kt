@@ -16,6 +16,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.util.*
 
 /**
  * This file defines various 'services' which are not currently fleshed out. A service is a module that provides
@@ -45,6 +46,25 @@ interface WalletService {
      * keys in this wallet, you must inform the wallet service so it can update its internal state.
      */
     val currentWallet: Wallet
+
+    /**
+     * Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+     * which we have no cash evaluate to null, not 0.
+     */
+    val cashBalances: Map<Currency, Amount>
+
+    /**
+     * Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
+     * new states that they create. You should only insert transactions that have been successfully verified here!
+     *
+     * Returns the new wallet that resulted from applying the transactions (note: it may quickly become out of date).
+     *
+     * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
+     */
+    fun notifyAll(txns: Iterable<WireTransaction>): Wallet
+
+    /** Same as notifyAll but with a single transaction. */
+    fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
 }
 
 /**
