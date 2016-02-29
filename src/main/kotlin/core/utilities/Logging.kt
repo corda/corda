@@ -17,6 +17,7 @@ import java.util.logging.Formatter
 import java.util.logging.Level
 import java.util.logging.LogRecord
 import java.util.logging.Logger
+import kotlin.reflect.KClass
 
 // A couple of inlined utility functions: the first is just a syntax convenience, the second lets us use
 // Kotlin's string interpolation efficiently: the message is never calculated/concatenated together unless
@@ -90,5 +91,8 @@ class BriefLogFormatter : Formatter() {
                 loggerRefs.add(logger)
             }
         }
+
+        fun loggingOn(vararg classes: KClass<*>) = initVerbose(*classes.map { "+" + it.java.`package`.name }.toTypedArray())
+        fun loggingOff(vararg classes: KClass<*>) = initVerbose(*classes.map { "-" + it.java.`package`.name }.toTypedArray())
     }
 }
