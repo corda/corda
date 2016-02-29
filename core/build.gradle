@@ -42,5 +42,9 @@ dependencies {
     compile "io.reactivex:rxkotlin:0.40.1"
 
     // Quasar: for the bytecode rewriting for state machines.
-    compile("co.paralleluniverse:quasar-core:${quasar_version}:jdk8")
+    compile "co.paralleluniverse:quasar-core:${quasar_version}:jdk8"
+
+    // Apache JEXL: An embeddable expression evaluation library.
+    // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
+    compile "org.apache.commons:commons-jexl3:3.0"
 }
