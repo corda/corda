@@ -16,6 +16,7 @@
 
 package core.node
 
+import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.MoreExecutors
 import core.messaging.InMemoryMessagingNetwork
@@ -38,7 +39,7 @@ import java.util.concurrent.ExecutorService
  */
 class MockNetwork {
     private var counter = 0
-    val filesystem = Jimfs.newFileSystem()
+    val filesystem = Jimfs.newFileSystem(Configuration.unix())
     val messagingNetwork = InMemoryMessagingNetwork()
 
     private val _nodes = ArrayList<MockNode>()

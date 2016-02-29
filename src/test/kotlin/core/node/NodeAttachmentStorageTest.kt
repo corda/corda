@@ -8,6 +8,7 @@
 
 package core.node
 
+import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import core.crypto.SecureHash
 import core.use
@@ -30,7 +31,7 @@ class NodeAttachmentStorageTest {
 
     @Before
     fun setUp() {
-        fs = Jimfs.newFileSystem()
+        fs = Jimfs.newFileSystem(Configuration.unix())
     }
 
     @Test
