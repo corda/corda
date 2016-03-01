@@ -92,6 +92,8 @@ class BriefLogFormatter : Formatter() {
             }
         }
 
+        fun loggingOn(vararg names: String) = initVerbose(*names)
+        fun loggingOff(vararg names: String) = initVerbose(*names.map { "-" + it }.toTypedArray())
         fun loggingOn(vararg classes: KClass<*>) = initVerbose(*classes.map { "+" + it.java.`package`.name }.toTypedArray())
         fun loggingOff(vararg classes: KClass<*>) = initVerbose(*classes.map { "-" + it.java.`package`.name }.toTypedArray())
     }
