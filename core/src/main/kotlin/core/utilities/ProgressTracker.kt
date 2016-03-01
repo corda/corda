@@ -65,8 +65,13 @@ class ProgressTracker(vararg steps: Step) {
         override val label: String get() = currentLabel
     }
 
-    object UNSTARTED : Step("Unstarted")
-    object DONE : Step("Done")
+    // Sentinel objects. Overrides equals() to survive process restarts and serialization.
+    object UNSTARTED : Step("Unstarted") {
+        override fun equals(other: Any?) = other is UNSTARTED
+    }
+    object DONE : Step("Done") {
+        override fun equals(other: Any?) = other is DONE
+    }
 
     /** The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted. */
     val steps = arrayOf(UNSTARTED, *steps, DONE)

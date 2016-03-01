@@ -68,6 +68,7 @@ val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
  * to get the original object back.
  */
 class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
+    // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bits.sha256() }
 
     fun writeToFile(path: Path) = Files.write(path, bits)
