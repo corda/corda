@@ -83,7 +83,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var net: MessagingService
 
     open fun start(): AbstractNode {
-        storage = makeStorageService(dir)
+        log.info("Node starting up ...")
+        storage = initialiseStorageService(dir)
         net = makeMessagingService()
         smm = StateMachineManager(services, serverThread)
         wallet = NodeWalletService(services)
@@ -100,19 +101,23 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         }
         (services.networkMapService as MockNetworkMap).timestampingNodes.add(tsid)
 
-        // We don't have any identity infrastructure right now, so we just throw together the only two identities we
-        // know about: our own, and the identity of the remote timestamper node (if any).
-        val knownIdentities = if (timestamperAddress != null)
-            listOf(storage.myLegalIdentity, timestamperAddress.identity)
-        else
-            listOf(storage.myLegalIdentity)
-        identity = FixedIdentityService(knownIdentities)
+        identity = makeIdentityService()
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
 
         return this
+    }
+
+    protected open fun makeIdentityService(): IdentityService {
+        // We don't have any identity infrastructure right now, so we just throw together the only two identities we
+        // know about: our own, and the identity of the remote timestamper node (if any).
+        val knownIdentities = if (timestamperAddress != null)
+            listOf(storage.myLegalIdentity, timestamperAddress.identity)
+        else
+            listOf(storage.myLegalIdentity)
+        return FixedIdentityService(knownIdentities)
     }
 
     open fun stop() {
@@ -122,9 +127,36 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected abstract fun makeMessagingService(): MessagingService
 
-    protected fun makeStorageService(dir: Path): StorageService {
+    protected open fun initialiseStorageService(dir: Path): StorageService {
         val attachments = makeAttachmentStorage(dir)
+        val (identity, keypair) = obtainKeyPair(dir)
+        return constructStorageService(attachments, identity, keypair)
+    }
 
+    protected open fun constructStorageService(attachments: NodeAttachmentStorage, identity: Party, keypair: KeyPair) =
+            StorageServiceImpl(attachments, identity, keypair)
+
+    open inner class StorageServiceImpl(attachments: NodeAttachmentStorage, identity: Party, keypair: KeyPair) : StorageService {
+        protected val tables = HashMap<String, MutableMap<Any, Any>>()
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
+            // TODO: This should become a database.
+            synchronized(tables) {
+                return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
+            }
+        }
+
+        override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+            get() = getMap("validated-transactions")
+
+        override val attachments: AttachmentStorage = attachments
+        override val contractPrograms = contractFactory
+        override val myLegalIdentity = identity
+        override val myLegalIdentityKey = keypair
+    }
+
+    private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -133,7 +165,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val privKeyFile = dir.resolve(PRIVATE_KEY_FILE_NAME)
         val pubIdentityFile = dir.resolve(PUBLIC_IDENTITY_FILE_NAME)
 
-        val (identity, keypair) = if (!Files.exists(privKeyFile)) {
+        return if (!Files.exists(privKeyFile)) {
             log.info("Identity key not found, generating fresh key!")
             val keypair: KeyPair = generateKeyPair()
             keypair.serialize().writeToFile(privKeyFile)
@@ -154,30 +186,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             val keypair = Files.readAllBytes(privKeyFile).deserialize<KeyPair>()
             Pair(myIdentity, keypair)
         }
-
-        log.info("Node owned by ${identity.name} starting up ...")
-
-        val ss = object : StorageService {
-            private val tables = HashMap<String, MutableMap<Any, Any>>()
-
-            @Suppress("UNCHECKED_CAST")
-            override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
-                // TODO: This should become a database.
-                synchronized(tables) {
-                    return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
-                }
-            }
-
-            override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
-                get() = getMap("validated-transactions")
-
-            override val attachments: AttachmentStorage = attachments
-            override val contractPrograms = contractFactory
-            override val myLegalIdentity = identity
-            override val myLegalIdentityKey = keypair
-        }
-
-        return ss
     }
 
     private fun makeAttachmentStorage(dir: Path): NodeAttachmentStorage {

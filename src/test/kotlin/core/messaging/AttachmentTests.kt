@@ -90,8 +90,8 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val n0 = network.createNode(null) { path, config, net, ts ->
-            object : MockNetwork.MockNode(path, config, net, ts) {
+        val n0 = network.createNode(null) { path, config, mock, ts ->
+            object : MockNetwork.MockNode(path, config, mock, ts) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
                     (storage.attachments as NodeAttachmentStorage).checkAttachmentsOnLoad = false
