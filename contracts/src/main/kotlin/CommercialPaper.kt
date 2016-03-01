@@ -83,7 +83,7 @@ class CommercialPaper : Contract {
         // Here, we match acceptable timestamp authorities by name. The list of acceptable TSAs (oracles) must be
         // hard coded into the contract because otherwise we could fail to gain consensus, if nodes disagree about
         // who or what is a trusted authority.
-        val timestamp: TimestampCommand? = tx.commands.getTimestampByName("The dummy timestamper", "Bank of Zurich")
+        val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Bank of Zurich")
 
         for (group in groups) {
             when (command.value) {

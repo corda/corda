@@ -25,5 +25,5 @@ interface TimestamperService {
 // The timestamper itself is implemented in the unit test part of the code (in TestUtils.kt).
 object DummyTimestampingAuthority {
     val key = generateKeyPair()
-    val identity = Party("The dummy timestamper", key.public)
+    val identity = Party("Mock Company 0", key.public)
 }
