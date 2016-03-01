@@ -29,7 +29,7 @@ sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits)
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
         @JvmStatic
-        fun parse(str: String) = BaseEncoding.base16().decode(str.toLowerCase()).let {
+        fun parse(str: String) = BaseEncoding.base16().decode(str.toUpperCase()).let {
             when (it.size) {
                 32 -> SHA256(it)
                 else -> throw IllegalArgumentException("Provided string is not 32 bytes in base 16 (hex): $str")
