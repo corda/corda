@@ -110,6 +110,7 @@ class LabeledOutput(val label: String?, val state: ContractState) {
 infix fun ContractState.label(label: String) = LabeledOutput(label, this)
 
 abstract class AbstractTransactionForTest {
+    protected val attachments = ArrayList<SecureHash>()
     protected val outStates = ArrayList<LabeledOutput>()
     protected val commands  = ArrayList<Command>()
 
@@ -117,6 +118,10 @@ abstract class AbstractTransactionForTest {
 
     protected fun commandsToAuthenticatedObjects(): List<AuthenticatedObject<CommandData>> {
         return commands.map { AuthenticatedObject(it.pubkeys, it.pubkeys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, it.data) }
+    }
+
+    fun attachment(attachmentID: SecureHash) {
+        attachments.add(attachmentID)
     }
 
     fun arg(vararg key: PublicKey, c: () -> CommandData) {
@@ -223,7 +228,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             inStates.add(label.outputRef)
         }
 
-        fun toWireTransaction() = WireTransaction(inStates, outStates.map { it.state }, commands)
+        fun toWireTransaction() = WireTransaction(inStates, attachments, outStates.map { it.state }, commands)
     }
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
@@ -257,7 +262,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     inner class Roots {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
-            val wtx = WireTransaction(emptyList(), outs, emptyList())
+            val wtx = WireTransaction(emptyList(), emptyList(), outs, emptyList())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
                 labelToRefs[label] = StateRef(wtx.id, index)

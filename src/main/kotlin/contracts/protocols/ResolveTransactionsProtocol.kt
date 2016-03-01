@@ -14,9 +14,11 @@ import core.SignedTransaction
 import core.TransactionGroup
 import core.WireTransaction
 import core.crypto.SecureHash
-import core.protocols.ProtocolLogic
 import core.messaging.SingleMessageRecipient
+import core.protocols.ProtocolLogic
 import java.util.*
+
+// NB: This code is unit tested by TwoPartyTradeProtocolTests
 
 /**
  * This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
@@ -100,7 +102,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // (2) If the identity service changes the assumed identity of one of the public keys, it's possible
         // that the "tx in db is valid" invariant is violated if one of the contracts checks the identity! Should
         // the db contain the identities that were resolved when the transaction was first checked, or should we
-        // accept this kind of change is possible?
+        // accept this kind of change is possible? Most likely solution is for identity data to be an attachment.
 
         val nextRequests = LinkedHashSet<SecureHash>()   // Keep things unique but ordered, for unit test stability.
         nextRequests.addAll(depsToCheck)
@@ -109,6 +111,9 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         while (nextRequests.isNotEmpty()) {
             val (fromDisk, downloads) = subProtocol(FetchTransactionsProtocol(nextRequests, otherSide))
             nextRequests.clear()
+
+            // TODO: This could be done in parallel with other fetches for extra speed.
+            resolveMissingAttachments(downloads)
 
             // Resolve any legal identities from known public keys in the signatures.
             val downloadedTxns = downloads.map { it.verifyToLedgerTransaction(serviceHub.identityService) }
@@ -130,5 +135,13 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
             if (limitCounter > 5000)
                 throw ExcessivelyLargeTransactionGraph()
         }
+    }
+
+    @Suspendable
+    private fun resolveMissingAttachments(downloads: List<SignedTransaction>) {
+        val missingAttachments = downloads.flatMap { stx ->
+            stx.tx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
+        }
+        subProtocol(FetchAttachmentsProtocol(missingAttachments.toSet(), otherSide))
     }
 }
