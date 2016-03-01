@@ -9,7 +9,6 @@
 package core
 
 import core.crypto.SecureHash
-import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.NetworkMap
 import java.io.InputStream
@@ -82,14 +81,6 @@ interface KeyManagementService {
 
     /** Generates a new random key and adds it to the exposed map. */
     fun freshKey(): KeyPair
-}
-
-// Smart contracts may wish to specify explicitly which timestamping authorities are trusted to assert the time.
-// We define a dummy authority here to allow to us to develop prototype contracts in the absence of a real authority.
-// The timestamper itself is implemented in the unit test part of the code (in TestUtils.kt).
-object DummyTimestampingAuthority {
-    val key = generateKeyPair()
-    val identity = Party("The dummy timestamper", key.public)
 }
 
 /**
