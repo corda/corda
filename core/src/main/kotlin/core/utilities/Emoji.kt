@@ -20,6 +20,7 @@ object Emoji {
     const val CODE_RIGHT_ARROW = "\u27a1\ufe0f"
     const val CODE_LEFT_ARROW = "\u2b05\ufe0f"
     const val CODE_GREEN_TICK = "\u2705"
+    const val CODE_PAPERCLIP = "\ud83d\udcce"
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -32,6 +33,7 @@ object Emoji {
     val newspaper: String get() = if (emojiMode.get() != null) "$CODE_NEWSPAPER  " else ""
     val rightArrow: String get() = if (emojiMode.get() != null) "$CODE_RIGHT_ARROW  " else ""
     val leftArrow: String get() = if (emojiMode.get() != null) "$CODE_LEFT_ARROW  " else ""
+    val paperclip: String get() = if (emojiMode.get() != null) "$CODE_PAPERCLIP  " else ""
 
     fun renderIfSupported(obj: Any): String {
         if (!hasEmojiTerminal)
