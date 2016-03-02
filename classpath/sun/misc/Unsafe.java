@@ -96,6 +96,14 @@ public final class Unsafe {
     putLongVolatile(o, offset, x);
   }
 
+  public double getDouble(Object o, long offset) {
+    return getDoubleVolatile(o, offset);
+  }
+
+  public void putDouble(Object o, long offset, double x) {
+    putDoubleVolatile(o, offset, x);
+  }
+
   public native void putOrderedLong(Object o, long offset, long x);
 
   public native void putOrderedInt(Object o, long offset, int x);

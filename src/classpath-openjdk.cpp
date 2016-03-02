@@ -3093,6 +3093,20 @@ extern "C" AVIAN_EXPORT void JNICALL
   fieldAtOffset<int64_t>(o, offset) = value;
 }
 
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putDouble__Ljava_lang_Object_2JD(Thread*,
+                                                       object,
+                                                       uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset;
+  memcpy(&offset, arguments + 2, 8);
+  jdouble value;
+  memcpy(&value, arguments + 4, 8);
+
+  fieldAtOffset<jdouble>(o, offset) = value;
+}
+
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_sun_misc_Unsafe_pageSize(Thread*, object, uintptr_t*)
 {
