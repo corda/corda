@@ -29,6 +29,8 @@ class CrowdFundTests {
             pledges = ArrayList<CrowdFund.Pledge>()
     )
 
+    val attachments = MockStorageService().attachments
+
     @Test
     fun `key mismatch at issue`() {
         transactionGroup {
@@ -114,7 +116,7 @@ class CrowdFundTests {
                 timestamp(DUMMY_TIMESTAMPER)
             }
             val stx = ptx.toSignedTransaction()
-            stx.verifyToLedgerTransaction(MockIdentityService)
+            stx.verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         // let's give Alice some funds that she can invest
@@ -134,7 +136,7 @@ class CrowdFundTests {
             ptx.timestamp(DUMMY_TIMESTAMPER)
             val stx = ptx.toSignedTransaction()
             // this verify passes - the transaction contains an output cash, necessary to verify the fund command
-            stx.verifyToLedgerTransaction(MockIdentityService)
+            stx.verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         // Won't be validated.
@@ -150,7 +152,7 @@ class CrowdFundTests {
             ptx.signWith(MINI_CORP_KEY)
             ptx.timestamp(DUMMY_TIMESTAMPER)
             val stx = ptx.toSignedTransaction()
-            return stx.verifyToLedgerTransaction(MockIdentityService)
+            return stx.verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         val tooEarlyClose = makeFundedTX(TEST_TX_TIME + 6.days)

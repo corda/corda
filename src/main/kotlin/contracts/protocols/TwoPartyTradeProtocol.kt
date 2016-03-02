@@ -144,7 +144,7 @@ object TwoPartyTradeProtocol {
                 checkDependencies(it)
 
                 // This verifies that the transaction is contract-valid, even though it is missing signatures.
-                serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService))
+                serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments))
 
                 if (wtx.outputs.sumCashBy(myKeyPair.public) != price)
                     throw IllegalArgumentException("Transaction is not sending us the right amounnt of cash")

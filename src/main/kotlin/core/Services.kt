@@ -164,7 +164,7 @@ interface ServiceHub {
         val dependencies = ltx.inputs.map {
             storageService.validatedTransactions[it.txhash] ?: throw TransactionResolutionException(it.txhash)
         }
-        val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService) }
+        val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService, storageService.attachments) }
         TransactionGroup(setOf(ltx), ltxns.toSet()).verify(storageService.contractPrograms)
     }
 }

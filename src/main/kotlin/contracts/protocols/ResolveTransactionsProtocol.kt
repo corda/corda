@@ -9,10 +9,7 @@
 package contracts.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.LedgerTransaction
-import core.SignedTransaction
-import core.TransactionGroup
-import core.WireTransaction
+import core.*
 import core.crypto.SecureHash
 import core.messaging.SingleMessageRecipient
 import core.protocols.ProtocolLogic
@@ -63,9 +60,9 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
         if (stx != null) {
             // Check the signatures on the stx first.
-            toVerify += stx!!.verifyToLedgerTransaction(serviceHub.identityService)
+            toVerify += stx!!.verifyToLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
         } else if (wtx != null) {
-            wtx!!.toLedgerTransaction(serviceHub.identityService)
+            wtx!!.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
         }
 
         // Run all the contracts and throw an exception if any of them reject.
@@ -116,10 +113,14 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
             resolveMissingAttachments(downloads)
 
             // Resolve any legal identities from known public keys in the signatures.
-            val downloadedTxns = downloads.map { it.verifyToLedgerTransaction(serviceHub.identityService) }
+            val downloadedTxns = downloads.map {
+                it.verifyToLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
+            }
 
             // Do the same for transactions loaded from disk (i.e. we checked them previously).
-            val loadedTxns = fromDisk.map { it.verifyToLedgerTransaction(serviceHub.identityService) }
+            val loadedTxns = fromDisk.map {
+                it.verifyToLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
+            }
 
             toVerify.addAll(downloadedTxns)
             alreadyVerified.addAll(loadedTxns)

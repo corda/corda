@@ -150,7 +150,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
 
     protected fun run(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
-        val tx = TransactionForVerification(inStates, outStates.map { it.state }, cmds, SecureHash.randomSHA256())
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.randomSHA256())
         tx.verify(MockContractFactory)
     }
 
@@ -299,8 +299,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {}
 
     fun toTransactionGroup() = TransactionGroup(
-            txns.map { it.toLedgerTransaction(MockIdentityService) }.toSet(),
-            rootTxns.map { it.toLedgerTransaction(MockIdentityService) }.toSet()
+            txns.map { it.toLedgerTransaction(MockIdentityService, MockStorageService().attachments) }.toSet(),
+            rootTxns.map { it.toLedgerTransaction(MockIdentityService, MockStorageService().attachments) }.toSet()
     )
 
     class Failed(val index: Int, cause: Throwable) : Exception("Transaction $index didn't verify", cause)
