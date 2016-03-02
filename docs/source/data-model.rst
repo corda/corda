@@ -30,17 +30,23 @@ arguments to the verify function. Each command has a list of **public keys** ass
 that the transaction is signed by every key listed in the commands before the contracts start to execute. Public keys
 may be random/identityless for privacy, or linked to a well known legal identity via a *public key infrastructure* (PKI).
 
-Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it's up to the
-contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
-maximise flexibility for the contract developer.
+Commands are always embedded inside a transaction. Sometimes, there's a larger piece of data that can be reused across
+many different transactions. For this use case, we have **attachments**. Every transaction can refer to zero or more
+attachments by hash. Attachments are always ZIP/JAR files, which may contain arbitrary content. Contract code can then
+access the attachments by opening them as a JarInputStream (this is temporary and will change later).
+
+Note that there is nothing that explicitly binds together specific inputs, outputs, commands or attachments. Instead
+it's up to the contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This
+is done to maximise flexibility for the contract developer.
 
 Transactions may sometimes need to provide a contract with data from the outside world. Examples may include stock
 prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
 facts are called **oracles** and they provide facts to the ledger by signing transactions that contain commands they
-recognise. The commands contain the fact and the signature shows agreement to that fact. Time is also modelled as
-a fact, with the signature of a special kind of oracle called a **timestamping authority** (TSA). A TSA signs
-a transaction if a pre-defined timestamping command in it defines a after/before time window that includes "true
-time" (i.e. GPS time as calibrated to the US Naval Observatory).
+recognise, or by creating signed attachments. The commands contain the fact and the signature shows agreement to that fact.
+Time is also modelled as a fact, with the signature of a special kind of oracle called a **timestamping authority** (TSA).
+A TSA signs a transaction if a pre-defined timestamping command in it defines a after/before time window that includes
+"true time" (i.e. GPS time as calibrated to the US Naval Observatory). An oracle may prefer to generate a signed
+attachment if the fact it's creating is relatively static and may be referred to over and over again.
 
 As the same terminology often crops up in different distributed ledger designs, let's compare this to other
 distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
