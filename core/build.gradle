@@ -7,7 +7,6 @@ apply plugin: 'kotlin'
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
     dependencies {
         // Dokka (JavaDoc equivalent for Kotlin) download is a big download and also
@@ -22,7 +21,12 @@ buildscript {
 // apply plugin: 'org.jetbrains.dokka'
 
 repositories {
+    mavenLocal()
     mavenCentral()
+    jcenter()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
 }
 
 dependencies {
@@ -40,6 +44,10 @@ dependencies {
 
     // RxJava: observable streams of events.
     compile "io.reactivex:rxkotlin:0.40.1"
+
+    // Kryo: object graph serialization.
+    compile "com.esotericsoftware:kryo:3.0.3"
+    compile "de.javakaffee:kryo-serializers:0.37"
 
     // Quasar: for the bytecode rewriting for state machines.
     compile "co.paralleluniverse:quasar-core:${quasar_version}:jdk8"

@@ -100,9 +100,10 @@ data class WireTransaction(val inputs: List<StateRef>,
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
-        for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:   $input")
-        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:  $output")
-        for (command in commands) buf.appendln("${Emoji.diamond}COMMAND: $command")
+        for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
+        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $output")
+        for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
+        for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
     }
 }

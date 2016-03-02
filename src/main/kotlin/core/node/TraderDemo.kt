@@ -14,6 +14,7 @@ import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.DigitalSignature
+import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
@@ -31,6 +32,7 @@ import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import kotlin.system.exitProcess
+import kotlin.test.assertEquals
 
 // TRADING DEMO
 //
@@ -93,7 +95,14 @@ fun main(args: Array<String>) {
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId).start() }
 
     if (listening) {
-        val buyer = TraderDemoProtocolBuyer()
+        // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
+        // Buyer will fetch the attachment from the seller.
+        val attachmentsPath = (node.storage.attachments as NodeAttachmentStorage).let {
+            it.automaticallyExtractAttachments = true
+            it.storePath
+        }
+
+        val buyer = TraderDemoProtocolBuyer(attachmentsPath)
         ANSIProgressRenderer.progressTracker = buyer.progressTracker
         node.smm.add("demo.buyer", buyer).get()   // This thread will halt forever here.
     } else {
@@ -101,6 +110,15 @@ fun main(args: Array<String>) {
             println("Need the --fake-trade-with command line argument")
             exitProcess(1)
         }
+
+        // Make sure we have the transaction prospectus attachment loaded into our store.
+        if (node.storage.attachments.openAttachment(TraderDemoProtocolSeller.PROSPECTUS_HASH) == null) {
+            TraderDemoProtocolSeller::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
+                val id = node.storage.attachments.importAttachment(it)
+                assertEquals(TraderDemoProtocolSeller.PROSPECTUS_HASH, id)
+            }
+        }
+
         val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
         val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
         val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
@@ -112,7 +130,7 @@ fun main(args: Array<String>) {
 
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
 
-class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
+class TraderDemoProtocolBuyer(private val attachmentsPath: Path) : ProtocolLogic<Unit>() {
     companion object {
         object WAITING_FOR_SELLER_TO_CONNECT : ProgressTracker.Step("Waiting for seller to connect to us")
         object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
@@ -146,9 +164,28 @@ class TraderDemoProtocolBuyer() : ProtocolLogic<Unit>() {
 
                 logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
                         "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
+
+                logIssuanceAttachment(tradeTX)
             } catch(e: Exception) {
                 logger.error("Something went wrong whilst trading!", e)
             }
+        }
+    }
+
+    private fun logIssuanceAttachment(tradeTX: SignedTransaction) {
+        // Find the original CP issuance.
+        val search = TransactionGraphSearch(serviceHub.storageService.validatedTransactions, listOf(tradeTX.tx))
+        search.query = TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java)
+        val cpIssuance = search.call().single()
+
+        cpIssuance.attachments.first().let {
+            val p = attachmentsPath.toAbsolutePath().resolve("$it.jar")
+            logger.info("""
+
+The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:
+$p
+
+${Emoji.renderIfSupported(cpIssuance)}""")
         }
     }
 }
@@ -157,6 +194,8 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
                                val otherSide: SingleMessageRecipient,
                                override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
     companion object {
+        val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
+
         object ANNOUNCING : ProgressTracker.Step("Announcing to the buyer node")
         object SELF_ISSUING : ProgressTracker.Step("Got session ID back, issuing and timestamping some commercial paper")
         object TRADING : ProgressTracker.Step("Starting the trade protocol")
@@ -179,7 +218,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         val tsa = serviceHub.networkMapService.timestampingNodes[0]
         val cpOwnerKey = serviceHub.keyManagementService.freshKey()
-        val commercialPaper = makeFakeCommercialPaper(cpOwnerKey.public, tsa)
+        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, tsa)
 
         progressTracker.currentStep = TRADING
 
@@ -199,19 +238,25 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
     }
 
     @Suspendable
-    fun makeFakeCommercialPaper(ownedBy: PublicKey, tsa: LegallyIdentifiableNode): StateAndRef<CommercialPaper.State> {
+    fun selfIssueSomeCommercialPaper(ownedBy: PublicKey, tsa: LegallyIdentifiableNode): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
         val keyPair = generateKeyPair()
-        val party = Party("MegaCorp, Inc", keyPair.public)
+        val party = Party("Bank of London", keyPair.public)
 
         val issuance = run {
             val tx = CommercialPaper().generateIssue(party.ref(1,2,3), 1100.DOLLARS, Instant.now() + 10.days)
 
+            // TODO: Consider moving these two steps below into generateIssue.
+
+            // Attach the prospectus.
+            tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!)
+
+            // Timestamp it, all CP must be timestamped.
             tx.setTime(Instant.now(), tsa.identity, 30.seconds)
             val tsaSig = subProtocol(TimestampingProtocol(tsa, tx.toWireTransaction().serialized))
             tx.checkAndAddSignature(tsaSig)
-
             tx.signWith(keyPair)
+
             tx.toSignedTransaction(true)
         }
 
