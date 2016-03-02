@@ -134,7 +134,30 @@ public class UnsafeTest {
              == 1.23456789012345D);
   }
 
-  public static void main(String[] args) {
+  private static class Data {
+    public long longField;
+    public double doubleField;
+  }
+
+  private static void unsafeObject(Unsafe u) throws Exception {
+    final long longOffset = u.objectFieldOffset
+      (Data.class.getField("longField"));
+
+    final long doubleOffset = u.objectFieldOffset
+      (Data.class.getField("doubleField"));
+
+    Data data = new Data();
+
+    u.putLong(data, longOffset, 0x1234567890ABCDEFL);
+
+    u.putDouble(data, doubleOffset, 1.23456789012345D);
+
+    expect(u.getLong(data, longOffset) == 0x1234567890ABCDEFL);
+
+    expect(u.getDouble(data, doubleOffset) == 1.23456789012345D);
+  }
+
+  public static void main(String[] args) throws Exception {
     System.out.println("method count is "
                        + Unsafe.class.getDeclaredMethods().length);
 
@@ -143,5 +166,6 @@ public class UnsafeTest {
     unsafeCatch(u);
     unsafeMemory(u);
     unsafeArray(u);
+    unsafeObject(u);
   }
 }
