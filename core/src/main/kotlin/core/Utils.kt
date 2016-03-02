@@ -8,10 +8,12 @@
 
 package core
 
+import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import org.slf4j.Logger
+import java.io.BufferedInputStream
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,6 +23,7 @@ import java.time.temporal.Temporal
 import java.util.concurrent.Executor
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
+import java.util.zip.ZipInputStream
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -120,5 +123,33 @@ class TransientProperty<T>(private val initializer: () -> T) {
         if (v == null)
             v = initializer()
         return v!!
+    }
+}
+
+/**
+ * Given a path to a zip file, extracts it to the given directory.
+ */
+fun extractZipFile(zipPath: Path, toPath: Path) {
+    if (!Files.exists(toPath))
+        Files.createDirectories(toPath)
+
+    ZipInputStream(BufferedInputStream(Files.newInputStream(zipPath))).use { zip ->
+        while (true) {
+            val e = zip.nextEntry ?: break
+            val outPath = toPath.resolve(e.name)
+
+            // Security checks: we should reject a zip that contains tricksy paths that try to escape toPath.
+            if (!outPath.normalize().startsWith(toPath))
+                throw IllegalStateException("ZIP contained a path that resolved incorrectly: ${e.name}")
+
+            if (e.isDirectory) {
+                Files.createDirectories(outPath)
+                continue
+            }
+            Files.newOutputStream(outPath).use { out ->
+                ByteStreams.copy(zip, out)
+            }
+            zip.closeEntry()
+        }
     }
 }
