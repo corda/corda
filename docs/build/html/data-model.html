@@ -93,6 +93,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-trading-demo.html">Running the trading demo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -173,16 +174,21 @@ the platform does not interpret itself, but which can parameterise execution of 
 arguments to the verify function. Each command has a list of <strong>public keys</strong> associated with it. The platform ensures
 that the transaction is signed by every key listed in the commands before the contracts start to execute. Public keys
 may be random/identityless for privacy, or linked to a well known legal identity via a <em>public key infrastructure</em> (PKI).</p>
-<p>Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it&#8217;s up to the
-contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
-maximise flexibility for the contract developer.</p>
+<p>Commands are always embedded inside a transaction. Sometimes, there&#8217;s a larger piece of data that can be reused across
+many different transactions. For this use case, we have <strong>attachments</strong>. Every transaction can refer to zero or more
+attachments by hash. Attachments are always ZIP/JAR files, which may contain arbitrary content. Contract code can then
+access the attachments by opening them as a JarInputStream (this is temporary and will change later).</p>
+<p>Note that there is nothing that explicitly binds together specific inputs, outputs, commands or attachments. Instead
+it&#8217;s up to the contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This
+is done to maximise flexibility for the contract developer.</p>
 <p>Transactions may sometimes need to provide a contract with data from the outside world. Examples may include stock
 prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
 facts are called <strong>oracles</strong> and they provide facts to the ledger by signing transactions that contain commands they
-recognise. The commands contain the fact and the signature shows agreement to that fact. Time is also modelled as
-a fact, with the signature of a special kind of oracle called a <strong>timestamping authority</strong> (TSA). A TSA signs
-a transaction if a pre-defined timestamping command in it defines a after/before time window that includes &#8220;true
-time&#8221; (i.e. GPS time as calibrated to the US Naval Observatory).</p>
+recognise, or by creating signed attachments. The commands contain the fact and the signature shows agreement to that fact.
+Time is also modelled as a fact, with the signature of a special kind of oracle called a <strong>timestamping authority</strong> (TSA).
+A TSA signs a transaction if a pre-defined timestamping command in it defines a after/before time window that includes
+&#8220;true time&#8221; (i.e. GPS time as calibrated to the US Naval Observatory). An oracle may prefer to generate a signed
+attachment if the fact it&#8217;s creating is relatively static and may be referred to over and over again.</p>
 <p>As the same terminology often crops up in different distributed ledger designs, let&#8217;s compare this to other
 distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
 differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/">the R3 wiki</a>, but to summarise, the driving
