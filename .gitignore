@@ -5,6 +5,7 @@ TODO
 .gradle
 /build/
 /contracts/build
+/sandbox/build
 /core/build
 /docs/build/doctrees
 

@@ -1,3 +1,4 @@
 rootProject.name = 'r3prototyping'
 include 'contracts'
 include 'core'
+include 'sandbox'
