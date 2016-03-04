@@ -12,7 +12,9 @@ import core.crypto.SecureHash
 import core.crypto.toStringShort
 import core.serialization.OpaqueBytes
 import core.serialization.serialize
+import java.io.FileNotFoundException
 import java.io.InputStream
+import java.io.OutputStream
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -169,4 +171,25 @@ class UnknownContractException : Exception()
 interface Attachment : NamedByHash {
     fun open(): InputStream
     fun openAsJAR() = JarInputStream(open())
+
+    /**
+     * Finds the named file case insensitively and copies it to the output stream.
+     *
+     * @throws FileNotFoundException if the given path doesn't exist in the attachment.
+     */
+    fun extractFile(path: String, outputTo: OutputStream) {
+        val p = path.toLowerCase()
+        openAsJAR().use { jar ->
+            while (true) {
+                val e = jar.nextJarEntry ?: break
+                // TODO: Normalise path separators here for more platform independence, as zip doesn't mandate a type.
+                if (e.name.toLowerCase() == p) {
+                    jar.copyTo(outputTo)
+                    return
+                }
+                jar.closeEntry()
+            }
+        }
+        throw FileNotFoundException()
+    }
 }
