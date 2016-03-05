@@ -63,7 +63,7 @@ class NodeWalletServiceTest {
             Cash().generateIssue(this, 100.DOLLARS, MEGA_CORP.ref(1), freshKey.public)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction()
-        val myOutput = usefulTX.verifyToLedgerTransaction(MockIdentityService).outRef<Cash.State>(0)
+        val myOutput = usefulTX.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments).outRef<Cash.State>(0)
 
         // A tx that spends our money.
         val spendTX = TransactionBuilder().apply {

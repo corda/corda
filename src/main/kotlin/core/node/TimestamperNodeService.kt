@@ -13,7 +13,10 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.messaging.*
+import core.messaging.LegallyIdentifiableNode
+import core.messaging.MessageRecipients
+import core.messaging.MessagingService
+import core.messaging.StateMachineManager
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.serialization.deserialize

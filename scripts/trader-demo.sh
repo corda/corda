@@ -21,7 +21,7 @@ if [[ "$mode" == "buyer" ]]; then
 elif [[ "$mode" == "seller" ]]; then
     if [ ! -d seller ]; then
         mkdir seller
-        echo "myLegalName = Bank of Giza" >seller/config
+        echo "myLegalName = Bank of London" >seller/config
     fi
 
     build/install/r3prototyping/bin/r3prototyping --dir=seller --fake-trade-with=localhost --network-address=localhost:31340 --timestamper-identity-file=buyer/identity-public --timestamper-address=localhost

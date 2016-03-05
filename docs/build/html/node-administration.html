@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Getting set up &mdash; R3 Prototyping latest documentation</title>
+  <title>Node administration &mdash; R3 Prototyping latest documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
-        <link rel="next" title="Data model" href="data-model.html"/>
-        <link rel="prev" title="What’s included?" href="inthebox.html"/> 
+        <link rel="next" title="Writing a contract" href="tutorial.html"/>
+        <link rel="prev" title="Running the trading demo" href="running-the-trading-demo.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -84,15 +84,14 @@
                 <p class="caption"><span class="caption-text">Overview</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Getting set up</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#if-intellij-complains-about-lack-of-an-sdk">If IntelliJ complains about lack of an SDK</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#doing-it-without-intellij">Doing it without IntelliJ</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-trading-demo.html">Running the trading demo</a></li>
-<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Node administration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#uploading-and-downloading-attachments">Uploading and downloading attachments</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -134,11 +133,11 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Getting set up</li>
+    <li>Node administration</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/getting-set-up.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/node-administration.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -148,43 +147,34 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="getting-set-up">
-<h1>Getting set up<a class="headerlink" href="#getting-set-up" title="Permalink to this headline">¶</a></h1>
-<p>Install the Oracle JDK 8u45 or higher. OpenJDK will probably also work but I&#8217;m not testing with that.</p>
-<p>Then install IntelliJ version 15 community edition:</p>
-<blockquote>
-<div><a class="reference external" href="https://www.jetbrains.com/idea/download/">https://www.jetbrains.com/idea/download/</a></div></blockquote>
-<p>Upgrade the Kotlin plugin to the latest version (1.0-beta-4584) by clicking &#8220;Configure &gt; Plugins&#8221; in the opening screen,
-then clicking &#8220;Install JetBrains plugin&#8221;, then searching for Kotlin, then hitting &#8220;Upgrade&#8221; and then &#8220;Restart&#8221;.</p>
-<p>Choose &#8220;Check out from version control&#8221; and use this git URL</p>
-<blockquote>
-<div><a class="reference external" href="https://your_username&#64;bitbucket.org/R3-CEV/r3repository.git">https://your_username&#64;bitbucket.org/R3-CEV/r3repository.git</a></div></blockquote>
-<p>Agree to the defaults for importing a Gradle project. Wait for it to think and download the dependencies.</p>
-<p>Right click on the tests directory, click &#8220;Run -&gt; All Tests&#8221; (note: NOT the first item in the submenu that has the
-gradle logo next to it).</p>
-<p>The code should build, the unit tests should show as all green.</p>
-<p>You can catch up with the latest code by selecting &#8220;VCS -&gt; Update Project&#8221; in the menu.</p>
-<div class="section" id="if-intellij-complains-about-lack-of-an-sdk">
-<h2>If IntelliJ complains about lack of an SDK<a class="headerlink" href="#if-intellij-complains-about-lack-of-an-sdk" title="Permalink to this headline">¶</a></h2>
-<p>If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:</p>
-<blockquote>
-<div>Configure -&gt; Project Defaults -&gt; Project Structure</div></blockquote>
-<p>on that tab:</p>
-<blockquote>
-<div>Project Settings / Project</div></blockquote>
-<p>click on New… next to the red &lt;No SDK&gt; symbol, and select JDK.  It should then pop up and show the latest JDK it has
-found at something like</p>
-<blockquote>
-<div>jdk1.8.0_xx…/Contents/Home</div></blockquote>
-<p>Also select Project language level: as 8.  Click OK.  Open should now work.</p>
+  <div class="section" id="node-administration">
+<h1>Node administration<a class="headerlink" href="#node-administration" title="Permalink to this headline">¶</a></h1>
+<p>When a node is running, it exposes an embedded web server that lets you monitor it, upload and download attachments,
+access a REST API and so on.</p>
+<div class="section" id="uploading-and-downloading-attachments">
+<h2>Uploading and downloading attachments<a class="headerlink" href="#uploading-and-downloading-attachments" title="Permalink to this headline">¶</a></h2>
+<p>Attachments are files that add context to and influence the behaviour of transactions. They are always identified by
+hash and they are public, in that they propagate through the network to wherever they are needed.</p>
+<p>All attachments are zip files. Thus to upload a file to the ledger you must first wrap it into a zip (or jar) file. Then
+you can upload it by running this command from a UNIX terminal:</p>
+<div class="highlight-shell"><div class="highlight"><pre>curl -F <span class="nv">myfile</span><span class="o">=</span>@path/to/my/file.zip http://localhost:31338/attachments/upload
+</pre></div>
 </div>
-<div class="section" id="doing-it-without-intellij">
-<h2>Doing it without IntelliJ<a class="headerlink" href="#doing-it-without-intellij" title="Permalink to this headline">¶</a></h2>
-<p>If you don&#8217;t want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:</p>
-<ul class="simple">
-<li>Run <code class="docutils literal"><span class="pre">./gradlew</span> <span class="pre">test</span></code> to run the unit tests.</li>
-<li>Run <code class="docutils literal"><span class="pre">git</span> <span class="pre">pull</span></code> to upgrade</li>
-</ul>
+<p>The attachment will be identified by the SHA-256 hash of the contents, which you can get by doing:</p>
+<div class="highlight-shell"><div class="highlight"><pre>shasum -a <span class="m">256</span> file.zip
+</pre></div>
+</div>
+<p>on a Mac or by using <code class="docutils literal"><span class="pre">sha256sum</span></code> on Linux. Alternatively, check the node logs. There is presently no way to manage
+attachments from a GUI.</p>
+<p>An attachment may be downloaded by fetching:</p>
+<div class="highlight-shell"><div class="highlight"><pre>http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9
+</pre></div>
+</div>
+<p>where DECD... is of course replaced with the hash identifier of your own attachment. Because attachments are always
+containers, you can also fetch a specific file within the attachment by appending its path, like this:</p>
+<div class="highlight-shell"><div class="highlight"><pre>http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9/path/within/zip.txt
+</pre></div>
+</div>
 </div>
 </div>
 
@@ -195,10 +185,10 @@ found at something like</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="data-model.html" class="btn btn-neutral float-right" title="Data model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="tutorial.html" class="btn btn-neutral float-right" title="Writing a contract" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="inthebox.html" class="btn btn-neutral" title="What’s included?" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="running-the-trading-demo.html" class="btn btn-neutral" title="Running the trading demo" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -63,6 +63,8 @@ class CommercialPaperTestsGeneric {
     @Parameterized.Parameter
     lateinit var thisTest: ICommercialPaperTestTemplate
 
+    val attachments = MockStorageService().attachments
+
     @Test
     fun ok() {
         trade().verify()
@@ -162,7 +164,7 @@ class CommercialPaperTestsGeneric {
     }
 
     fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), SecureHash.randomSHA256())
+        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*states), emptyList(), SecureHash.randomSHA256())
         return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.hash, index)) })
     }
 
@@ -176,7 +178,7 @@ class CommercialPaperTestsGeneric {
                 timestamp(DUMMY_TIMESTAMPER)
             }
             val stx = ptx.toSignedTransaction()
-            stx.verifyToLedgerTransaction(MockIdentityService)
+            stx.verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
@@ -193,7 +195,7 @@ class CommercialPaperTestsGeneric {
             ptx.signWith(MINI_CORP_KEY)
             ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
-            stx.verifyToLedgerTransaction(MockIdentityService)
+            stx.verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         // Won't be validated.
@@ -209,7 +211,7 @@ class CommercialPaperTestsGeneric {
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)
             ptx.timestamp(DUMMY_TIMESTAMPER)
-            return ptx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService)
+            return ptx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)

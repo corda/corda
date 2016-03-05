@@ -22,11 +22,15 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ExecutionException
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -62,7 +66,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         transactionGroupFor<ContractState> {
             val (aliceNode, bobNode) = net.createTwoNodes()
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.legallyIdentifableAddress.identity).second
+            val alicesFakePaper = fillUpForSeller(false, aliceNode.legallyIdentifableAddress.identity, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
@@ -104,7 +108,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val timestamperAddr = aliceNode.legallyIdentifableAddress
 
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
-            val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity).second
+            val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
@@ -218,9 +222,18 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val timestamperAddr = aliceNode.legallyIdentifableAddress
             val bobNode = makeNodeWithTracking("bob")
 
+            // Insert a prospectus type attachment into the commercial paper transaction.
+            val stream = ByteArrayOutputStream()
+            JarOutputStream(stream).use {
+                it.putNextEntry(ZipEntry("Prospectus.txt"))
+                it.write("Our commercial paper is top notch stuff".toByteArray())
+                it.closeEntry()
+            }
+            val attachmentID = aliceNode.storage.attachments.importAttachment(ByteArrayInputStream(stream.toByteArray()))
+
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
-            val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity).second
+            val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity, attachmentID).second
             val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -260,6 +273,13 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                         RecordingMap.Get(bobsFakeCash[0].id)
                 )
                 assertEquals(expected, records)
+
+                // Bob has downloaded the attachment.
+                bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
+                    it.nextJarEntry
+                    val contents = it.reader().readText()
+                    assertTrue(contents.contains("Our commercial paper is top notch stuff"))
+                }
             }
 
             // And from Alice's perspective ...
@@ -314,7 +334,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
         val bobKey = bobNode.keyManagement.freshKey()
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public).second
-        val alicesFakePaper = fillUpForSeller(aliceError, timestamperAddr.identity).second
+        val alicesFakePaper = fillUpForSeller(aliceError, timestamperAddr.identity, null).second
 
         insertFakeTransactions(bobsBadCash, bobNode.services, bobNode.storage.myLegalIdentityKey, bobKey)
         insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
@@ -401,7 +421,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
-    private fun TransactionGroupDSL<ContractState>.fillUpForSeller(withError: Boolean, timestamper: Party): Pair<Wallet, List<WireTransaction>> {
+    private fun TransactionGroupDSL<ContractState>.fillUpForSeller(withError: Boolean, timestamper: Party, attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
         val ap = transaction {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), ALICE, 1200.DOLLARS, TEST_TX_TIME + 7.days)
@@ -409,6 +429,8 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)
                 arg(timestamper.owningKey) { TimestampCommand(TEST_TX_TIME, 30.seconds) }
+            if (attachmentID != null)
+                attachment(attachmentID)
         }
 
         val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))

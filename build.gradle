@@ -12,7 +12,8 @@ allprojects {
 
 buildscript {
     ext.kotlin_version = '1.0.0'
-    ext.quasar_version = '0.7.4'
+    // TODO: Reset to 0.7.5 when released. We need the snapshot for a TLS serialization related fix.
+    ext.quasar_version = '0.7.5-SNAPSHOT'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
     ext.jetty_version = '9.3.7.v20160115'
@@ -28,7 +29,7 @@ buildscript {
 
 
 repositories {
-    // mavenLocal()
+    mavenLocal()
     mavenCentral()
     maven {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
@@ -67,12 +68,7 @@ dependencies {
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:4.9"
 
-    // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:3.0.3"
-    compile "de.javakaffee:kryo-serializers:0.37"
-
     // Quasar: for the bytecode rewriting for state machines.
-    compile("co.paralleluniverse:quasar-core:${quasar_version}:jdk8")
     quasar("co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar")
 
     // Artemis: for reliable p2p message queues.

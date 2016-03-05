@@ -14,6 +14,8 @@ import java.util.*
 class TransactionResolutionException(val hash: SecureHash) : Exception()
 class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
 
+// TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
+
 /**
  * A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
  * verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
@@ -49,7 +51,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
                 // Look up the output in that transaction by index.
                 inputs.add(ltx.outputs[ref.index])
             }
-            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.commands, tx.hash))
+            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.hash))
         }
 
         for (tx in resolved)
@@ -62,12 +64,17 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
 /** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
 data class TransactionForVerification(val inStates: List<ContractState>,
                                       val outStates: List<ContractState>,
+                                      val attachments: List<Attachment>,
                                       val commands: List<AuthenticatedObject<CommandData>>,
                                       val origHash: SecureHash) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
 
     /**
+     * Runs the contracts for this transaction.
+     *
+     * TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.
+     *
      * @throws TransactionVerificationException if a contract throws an exception, the original is in the cause field
      * @throws IllegalStateException if a state refers to an unknown contract.
      */
@@ -77,6 +84,7 @@ data class TransactionForVerification(val inStates: List<ContractState>,
         // throws an exception, the entire transaction is invalid.
         val programHashes = (inStates.map { it.programRef } + outStates.map { it.programRef }).toSet()
         for (hash in programHashes) {
+            // TODO: Change this interface to ensure that attachment JARs are put on the classpath before execution.
             val program: Contract = programMap[hash]
             try {
                 program.verify(this)

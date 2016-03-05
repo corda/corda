@@ -30,7 +30,7 @@ import java.util.*
  * Views of a transaction as it progresses through the pipeline, from bytes loaded from disk/network to the object
  * tree passed into a contract.
  *
- * SignedWireTransaction wraps a serialized WireTransaction. It contains one or more ECDSA signatures, each one from
+ * SignedTransaction wraps a serialized WireTransaction. It contains one or more ECDSA signatures, each one from
  * a public key that is mentioned inside a transaction command.
  *
  * WireTransaction is a transaction in a form ready to be serialised/unserialised. A WireTransaction can be hashed
@@ -51,11 +51,13 @@ import java.util.*
  * All the above refer to inputs using a (txhash, output index) pair.
  *
  * TransactionForVerification is the same as LedgerTransaction but with the input states looked up from a local
- * database and replaced with the real objects. TFV is the form that is finally fed into the contracts.
+ * database and replaced with the real objects. Likewise, attachments are fully resolved at this point.
+ * TFV is the form that is finally fed into the contracts.
  */
 
 /** Transaction ready for serialisation, without any signatures attached. */
 data class WireTransaction(val inputs: List<StateRef>,
+                           val attachments: List<SecureHash>,
                            val outputs: List<ContractState>,
                            val commands: List<Command>) : NamedByHash {
 
@@ -70,14 +72,6 @@ data class WireTransaction(val inputs: List<StateRef>,
             wtx.cachedBits = bits
             return wtx
         }
-    }
-
-    fun toLedgerTransaction(identityService: IdentityService): LedgerTransaction {
-        val authenticatedArgs = commands.map {
-            val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
-            AuthenticatedObject(it.pubkeys, institutions, it.data)
-        }
-        return LedgerTransaction(inputs, outputs, authenticatedArgs, id)
     }
 
     /** Serialises and returns this transaction as a [SignedTransaction] with no signatures attached. */
@@ -98,9 +92,10 @@ data class WireTransaction(val inputs: List<StateRef>,
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
-        for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:   $input")
-        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:  $output")
-        for (command in commands) buf.appendln("${Emoji.diamond}COMMAND: $command")
+        for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
+        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $output")
+        for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
+        for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
     }
 }
@@ -151,15 +146,6 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
             return missing
     }
 
-    /**
-     * Calls [verify] to check all required signatures are present, and then uses the passed [IdentityService] to call
-     * [WireTransaction.toLedgerTransaction] to look up well known identities from pubkeys.
-     */
-    fun verifyToLedgerTransaction(identityService: IdentityService): LedgerTransaction {
-        verify()
-        return tx.toLedgerTransaction(identityService)
-    }
-
     /** Returns the same transaction but with an additional (unchecked) signature */
     fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
 
@@ -169,6 +155,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
 class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf(),
+                         private val attachments: MutableList<SecureHash> = arrayListOf(),
                          private val outputs: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<Command> = arrayListOf()) {
 
@@ -254,7 +241,8 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         currentSigs.add(sig)
     }
 
-    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(outputs), ArrayList(commands))
+    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
+            ArrayList(outputs), ArrayList(commands))
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
@@ -270,6 +258,11 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     fun addInputState(ref: StateRef) {
         check(currentSigs.isEmpty())
         inputs.add(ref)
+    }
+
+    fun addAttachment(attachment: Attachment) {
+        check(currentSigs.isEmpty())
+        attachments.add(attachment.id)
     }
 
     fun addOutputState(state: ContractState) {
@@ -291,16 +284,21 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     fun inputStates(): List<StateRef> = ArrayList(inputs)
     fun outputStates(): List<ContractState> = ArrayList(outputs)
     fun commands(): List<Command> = ArrayList(commands)
+    fun attachments(): List<SecureHash> = ArrayList(attachments)
 }
 
 /**
  * A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
  * It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
  * with the commands from the wire, and verified/looked up.
+ *
+ * TODO: This class needs a bit more thought. Should inputs be fully resolved by this point too?
  */
 data class LedgerTransaction(
         /** The input states which will be consumed/invalidated by the execution of this transaction. */
         val inputs: List<StateRef>,
+        /** A list of [Attachment] objects identified by the transaction that are needed for this transaction to verify. */
+        val attachments: List<Attachment>,
         /** The states that will be generated by the execution of this transaction. */
         val outputs: List<ContractState>,
         /** Arbitrary data passed to the program of each input state. */
@@ -312,7 +310,7 @@ data class LedgerTransaction(
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(hash, index))
 
     fun toWireTransaction(): WireTransaction {
-        val wtx = WireTransaction(inputs, outputs, commands.map { Command(it.value, it.signers) })
+        val wtx = WireTransaction(inputs, attachments.map { it.id }, outputs, commands.map { Command(it.value, it.signers) })
         check(wtx.serialize().hash == hash)
         return wtx
     }
