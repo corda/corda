@@ -6,22 +6,23 @@
  * All other rights reserved.
  */
 
-package core.node
+package demos
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
-import protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
+import core.node.Node
+import core.node.NodeConfiguration
+import core.node.NodeConfigurationFromProperties
 import core.node.services.ArtemisMessagingService
 import core.node.services.NodeAttachmentService
 import core.node.services.NodeWalletService
-import protocols.TimestampingProtocol
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
@@ -29,6 +30,8 @@ import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
 import core.utilities.ProgressTracker
 import joptsimple.OptionParser
+import protocols.TimestampingProtocol
+import protocols.TwoPartyTradeProtocol
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
