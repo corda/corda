@@ -45,7 +45,7 @@ class DataUploadServlet : HttpServlet() {
         val messages = ArrayList<String>()
         while (iterator.hasNext()) {
             val item = iterator.next()
-            if (!acceptor.acceptableFileExtensions.any { item.name.endsWith(it) }) {
+            if (item.name != null && !acceptor.acceptableFileExtensions.any { item.name.endsWith(it) }) {
                 resp.sendError(HttpServletResponse.SC_BAD_REQUEST,
                         "${item.name}: Must be have a filename ending in one of: ${acceptor.acceptableFileExtensions}")
                 return
