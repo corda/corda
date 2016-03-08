@@ -15,9 +15,9 @@ import com.esotericsoftware.kryo.io.Input
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import core.node.services.ServiceHub
 import core.crypto.SecureHash
 import core.crypto.sha256
+import core.node.services.ServiceHub
 import core.protocols.ProtocolLogic
 import core.protocols.ProtocolStateMachine
 import core.serialization.THREAD_LOCAL_KRYO
@@ -54,6 +54,7 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
  * TODO: Make Kryo (de)serialize markers for heavy objects that are currently in the service hub. This avoids mistakes
  *       where services are temporarily put on the stack.
+ * TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
