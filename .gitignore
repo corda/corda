@@ -8,6 +8,8 @@ TODO
 /core/build
 /docs/build/doctrees
 
+lib/dokka.jar
+
 buyer
 seller
 
