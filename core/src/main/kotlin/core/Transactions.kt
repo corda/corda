@@ -200,7 +200,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         check(commands.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
         val data = toWireTransaction().serialize()
-        currentSigs.add(key.signWithECDSA(data.bits))
+        addSignatureUnchecked(key.signWithECDSA(data.bits))
     }
 
     /**
@@ -211,8 +211,23 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
+        checkSignature(sig)
+        addSignatureUnchecked(sig)
+    }
+
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    fun checkSignature(sig: DigitalSignature.WithKey) {
         require(commands.count { it.pubkeys.contains(sig.by) } > 0) { "Signature key doesn't match any command" }
-        sig.verifyWithECDSA(toWireTransaction().serialize())
+        sig.verifyWithECDSA(toWireTransaction().serialized)
+    }
+
+    /** Adds the signature directly to the transaction, without checking it for validity. */
+    fun addSignatureUnchecked(sig: DigitalSignature.WithKey) {
         currentSigs.add(sig)
     }
 
@@ -239,7 +254,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         // boundary of t.notAfter and network latency pushes us over the edge. By "synchronised" here we mean relative
         // to GPS time i.e. the United States Naval Observatory.
         val sig = timestamper.timestamp(toWireTransaction().serialize())
-        currentSigs.add(sig)
+        addSignatureUnchecked(sig)
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
