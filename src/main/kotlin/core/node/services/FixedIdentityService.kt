@@ -8,7 +8,7 @@
 
 package core.node.services
 
-import core.IdentityService
+import core.node.services.IdentityService
 import core.Party
 import java.security.PublicKey
 
