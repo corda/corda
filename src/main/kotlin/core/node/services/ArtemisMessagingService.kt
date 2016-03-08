@@ -12,6 +12,7 @@ import com.google.common.net.HostAndPort
 import core.RunOnCallerThread
 import core.ThreadBox
 import core.messaging.*
+import core.node.Node
 import core.utilities.loggerFor
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -68,6 +69,8 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
 
         /** Temp helper until network map is established. */
         fun makeRecipient(hostAndPort: HostAndPort): SingleMessageRecipient = Address(hostAndPort)
+        fun makeRecipient(hostname: String) = makeRecipient(toHostAndPort(hostname))
+        fun toHostAndPort(hostname: String) = HostAndPort.fromString(hostname).withDefaultPort(Node.DEFAULT_PORT)
     }
 
     private lateinit var mq: EmbeddedActiveMQ
