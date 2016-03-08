@@ -48,6 +48,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected open val serverThread = Executors.newSingleThreadExecutor()
 
+    // Objects in this list will be scanned by the DataUploadServlet and can be handed new data via HTTP.
+    // Don't mutate this after startup.
+    protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
+    val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
+
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
         override val networkMapService: NetworkMap = MockNetworkMap()
@@ -85,7 +90,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     open fun start(): AbstractNode {
         log.info("Node starting up ...")
+
         storage = initialiseStorageService(dir)
+
         net = makeMessagingService()
         smm = StateMachineManager(services, serverThread)
         wallet = NodeWalletService(services)
@@ -130,6 +137,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected open fun initialiseStorageService(dir: Path): StorageService {
         val attachments = makeAttachmentStorage(dir)
+        _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
         return constructStorageService(attachments, identity, keypair)
     }
@@ -195,7 +203,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             Files.createDirectory(attachmentsDir)
         } catch (e: FileAlreadyExistsException) {
         }
-        val attachments = NodeAttachmentService(attachmentsDir)
-        return attachments
+        return NodeAttachmentService(attachmentsDir)
     }
 }

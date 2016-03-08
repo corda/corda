@@ -15,6 +15,7 @@ import com.google.common.io.CountingInputStream
 import core.Attachment
 import core.crypto.SecureHash
 import core.extractZipFile
+import core.node.AcceptsFileUpload
 import core.utilities.loggerFor
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -30,7 +31,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.
  */
 @ThreadSafe
-class NodeAttachmentService(val storePath: Path) : AttachmentStorage {
+class NodeAttachmentService(val storePath: Path) : AttachmentStorage, AcceptsFileUpload {
     private val log = loggerFor<NodeAttachmentService>()
 
     @VisibleForTesting
@@ -140,4 +141,9 @@ class NodeAttachmentService(val storePath: Path) : AttachmentStorage {
             }
         }
     }
+
+    // Implementations for AcceptsFileUpload
+    override val dataTypePrefix = "attachment"
+    override val acceptableFileExtensions = listOf(".jar", ".zip")
+    override fun upload(data: InputStream) = importAttachment(data).toString()
 }

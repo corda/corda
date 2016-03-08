@@ -15,7 +15,7 @@ you can upload it by running this command from a UNIX terminal:
 
 .. sourcecode:: shell
 
-   curl -F myfile=@path/to/my/file.zip http://localhost:31338/attachments/upload
+   curl -F myfile=@path/to/my/file.zip http://localhost:31338/upload/attachment
 
 The attachment will be identified by the SHA-256 hash of the contents, which you can get by doing:
 
@@ -23,8 +23,8 @@ The attachment will be identified by the SHA-256 hash of the contents, which you
 
    shasum -a 256 file.zip
 
-on a Mac or by using ``sha256sum`` on Linux. Alternatively, check the node logs. There is presently no way to manage
-attachments from a GUI.
+on a Mac or by using ``sha256sum`` on Linux. Alternatively, the hash will be returned to you when you upload the
+attachment.
 
 An attachment may be downloaded by fetching:
 
