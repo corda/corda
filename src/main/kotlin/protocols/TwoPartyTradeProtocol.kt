@@ -18,7 +18,7 @@ import core.crypto.signWithECDSA
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
-import core.node.services.TimestampingProtocol
+import protocols.TimestampingProtocol
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import core.utilities.trace

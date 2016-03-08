@@ -9,28 +9,21 @@
 package core.node.services
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import co.paralleluniverse.fibers.Suspendable
-import core.*
+import core.Party
+import core.TimestampCommand
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.messaging.LegallyIdentifiableNode
-import core.messaging.MessageRecipients
 import core.messaging.MessagingService
-import core.messaging.StateMachineManager
-import core.protocols.ProtocolLogic
-import core.serialization.SerializedBytes
+import core.seconds
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.until
 import org.slf4j.LoggerFactory
+import protocols.TimestampingProtocol
 import java.security.KeyPair
 import java.time.Clock
 import java.time.Duration
 import javax.annotation.concurrent.ThreadSafe
-
-class TimestampingMessages {
-    // TODO: Improve the messaging api to have a notion of sender+replyTo topic (optional?)
-    data class Request(val tx: SerializedBytes<WireTransaction>, val replyTo: MessageRecipients, val replyToTopic: String)
-}
 
 /**
  * This class implements the server side of the timestamping protocol, using the local clock. A future version might
@@ -54,7 +47,7 @@ class NodeTimestamperService(private val net: MessagingService,
         require(identity.owningKey == signingKey.public)
         net.addMessageHandler(TIMESTAMPING_PROTOCOL_TOPIC + ".0", null) { message, r ->
             try {
-                val req = message.data.deserialize<TimestampingMessages.Request>()
+                val req = message.data.deserialize<TimestampingProtocol.Request>()
                 val signature = processRequest(req)
                 val msg = net.createMessage(req.replyToTopic, signature.serialize().bits)
                 net.send(msg, req.replyTo)
@@ -67,7 +60,7 @@ class NodeTimestamperService(private val net: MessagingService,
     }
 
     @VisibleForTesting
-    fun processRequest(req: TimestampingMessages.Request): DigitalSignature.LegallyIdentifiable {
+    fun processRequest(req: TimestampingProtocol.Request): DigitalSignature.LegallyIdentifiable {
         // We don't bother verifying signatures anything about the transaction here: we simply don't need to see anything
         // except the relevant command, and a future privacy upgrade should ensure we only get a torn-off command
         // rather than the full transaction.
@@ -93,44 +86,6 @@ class NodeTimestamperService(private val net: MessagingService,
             throw TimestampingError.NotOnTimeException()
 
         return signingKey.signWithECDSA(req.tx.bits, identity)
-    }
-}
-
-/**
- * The TimestampingProtocol class is the client code that talks to a [NodeTimestamperService] on some remote node. It is a
- * [ProtocolLogic], meaning it can either be a sub-protocol of some other protocol, or be driven independently.
- *
- * If you are not yourself authoring a protocol and want to timestamp something, the [TimestampingProtocol.Client] class
- * implements the [TimestamperService] interface, meaning it can be passed to [TransactionBuilder.timestamp] to timestamp
- * the built transaction. Please be aware that this will block, meaning it should not be used on a thread that is handling
- * a network message: use it only from spare application threads that don't have to respond to anything.
- */
-class TimestampingProtocol(private val node: LegallyIdentifiableNode,
-                           private val wtxBytes: SerializedBytes<WireTransaction>) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
-
-    class Client(private val stateMachineManager: StateMachineManager, private val node: LegallyIdentifiableNode) : TimestamperService {
-        override val identity: Party = node.identity
-
-        override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
-            return stateMachineManager.add("platform.timestamping", TimestampingProtocol(node, wtxBytes)).get()
-        }
-    }
-
-
-    @Suspendable
-    override fun call(): DigitalSignature.LegallyIdentifiable {
-        val sessionID = random63BitValue()
-        val replyTopic = "${NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
-        val req = TimestampingMessages.Request(wtxBytes, serviceHub.networkService.myAddress, replyTopic)
-
-        val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(
-                NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
-
-        // Check that the timestamping authority gave us back a valid signature and didn't break somehow
-        maybeSignature.validate { sig ->
-            sig.verifyWithECDSA(wtxBytes)
-            return sig
-        }
     }
 }
 

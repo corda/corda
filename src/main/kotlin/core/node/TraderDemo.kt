@@ -21,7 +21,7 @@ import core.messaging.SingleMessageRecipient
 import core.node.services.ArtemisMessagingService
 import core.node.services.NodeAttachmentStorage
 import core.node.services.NodeWalletService
-import core.node.services.TimestampingProtocol
+import protocols.TimestampingProtocol
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer

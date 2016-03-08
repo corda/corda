@@ -12,7 +12,9 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
 import core.messaging.*
-import core.node.services.*
+import core.node.services.NodeTimestamperService
+import core.node.services.ServiceHub
+import core.node.services.TimestampingError
 import core.protocols.ProtocolLogic
 import core.serialization.serialize
 import core.testutils.ALICE
@@ -21,6 +23,7 @@ import core.testutils.CASH
 import core.utilities.BriefLogFormatter
 import org.junit.Before
 import org.junit.Test
+import protocols.TimestampingProtocol
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
@@ -94,14 +97,14 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         // Zero commands is not OK.
         assertFailsWith(TimestampingError.RequiresExactlyOneCommand::class) {
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingMessages.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
         }
         // More than one command is not OK.
         assertFailsWith(TimestampingError.RequiresExactlyOneCommand::class) {
             ptx.addCommand(TimestampCommand(clock.instant(), 30.seconds), ALICE)
             ptx.addCommand(TimestampCommand(clock.instant(), 40.seconds), ALICE)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingMessages.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
         }
     }
 
@@ -111,7 +114,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
             val now = clock.instant()
             ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), ALICE)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingMessages.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
         }
     }
 
@@ -121,7 +124,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
             val now = clock.instant()
             ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), ALICE)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingMessages.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
         }
     }
 
@@ -130,7 +133,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         val now = clock.instant()
         ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), ALICE)
         val wtx = ptx.toWireTransaction()
-        val sig = service.processRequest(TimestampingMessages.Request(wtx.serialize(), myMessaging.first, "ignored"))
+        val sig = service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
         ptx.checkAndAddSignature(sig)
         ptx.toSignedTransaction(false).verifySignatures()
     }
