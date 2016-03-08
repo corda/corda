@@ -23,4 +23,12 @@ echo
 java -jar lib/dokka.jar -output docs/build/html/api src/main/kotlin core/src/main/kotlin contracts/src/main/kotlin  | grep -v "No documentation for"
 
 echo
+echo "Writing robots.txt"
+echo
+
+cat <<EOF >docs/build/html/robots.txt
+User-agent: *
+Disallow: /
+EOF
+
 echo "Done"
