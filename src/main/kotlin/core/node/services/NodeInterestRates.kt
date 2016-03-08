@@ -13,8 +13,10 @@ import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
 import core.messaging.send
 import core.node.AbstractNode
+import core.node.AcceptsFileUpload
 import core.serialization.deserialize
 import protocols.RatesFixProtocol
+import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
 import java.time.LocalDate
@@ -31,13 +33,6 @@ import javax.annotation.concurrent.ThreadSafe
  * for signing.
  */
 object NodeInterestRates {
-    val INITIAL_FIXES = parseFile("""
-        LIBOR 2016-03-16 30 = 0.678
-        LIBOR 2016-03-16 60 = 0.655
-        EURIBOR 2016-03-15 30 = 0.123
-        EURIBOR 2016-03-15 60 = 0.111
-        """.trimIndent())
-
     /** Parses a string of the form "LIBOR 16-March-2016 30 = 0.678" into a [FixOf] and [Fix] */
     fun parseOneRate(s: String): Pair<FixOf, Fix> {
         val (key, value) = s.split('=').map { it.trim() }
@@ -65,7 +60,7 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(node: AbstractNode) {
+    class Service(node: AbstractNode) : AcceptsFileUpload {
         val ss = node.services.storageService
         val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey)
         val net = node.services.networkService
@@ -90,6 +85,29 @@ object NodeInterestRates {
                 net.send("${RatesFixProtocol.TOPIC}.query.${request.sessionID}", request.replyTo, answers)
             }
         }
+
+        // File upload support
+        override val dataTypePrefix = "interest-rates"
+        override val acceptableFileExtensions = listOf(".rates", ".txt")
+
+        override fun upload(data: InputStream): String {
+            val fixes: Map<FixOf, Fix> = data.
+                    bufferedReader().
+                    readLines().
+                    map { it.trim() }.
+                    // Filter out comment and empty lines.
+                    filterNot { it.startsWith("#") || it.isBlank() }.
+                    map { parseOneRate(it) }.
+                    associate { it.first to it.second }
+
+            // TODO: Save the uploaded fixes to the storage service and reload on construction.
+
+            // This assignment is thread safe because knownFixes is volatile and the oracle code always snapshots
+            // the pointer to the stack before working with the map.
+            oracle.knownFixes = fixes
+
+            return "Accepted ${fixes.size} new interest rate fixes"
+        }
     }
 
     /**
@@ -102,7 +120,7 @@ object NodeInterestRates {
         }
 
         /** The fix data being served by this oracle. */
-        @Transient var knownFixes = INITIAL_FIXES
+        @Transient var knownFixes = emptyMap<FixOf, Fix>()
             set(value) {
                 require(value.isNotEmpty())
                 field = value

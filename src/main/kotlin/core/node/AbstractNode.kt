@@ -92,11 +92,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         log.info("Node starting up ...")
 
         storage = initialiseStorageService(dir)
-
         net = makeMessagingService()
         smm = StateMachineManager(services, serverThread)
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
+        makeInterestRateOracleService()
 
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
         // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
@@ -116,6 +116,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         DataVendingService(net, storage)
 
         return this
+    }
+
+    protected fun makeInterestRateOracleService() {
+        // Constructing the service registers message handlers that ensure the service won't be garbage collected.
+        // TODO: Once the service has data, automatically register with the network map service (once built).
+        _servicesThatAcceptUploads += NodeInterestRates.Service(this)
     }
 
     protected open fun makeIdentityService(): IdentityService {
