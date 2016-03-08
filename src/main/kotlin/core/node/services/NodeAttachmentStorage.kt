@@ -6,14 +6,14 @@
  * All other rights reserved.
  */
 
-package core.node
+package core.node.services
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import core.Attachment
-import core.AttachmentStorage
+import core.node.services.AttachmentStorage
 import core.crypto.SecureHash
 import core.extractZipFile
 import core.utilities.loggerFor

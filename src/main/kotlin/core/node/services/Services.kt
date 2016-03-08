@@ -6,8 +6,9 @@
  * All other rights reserved.
  */
 
-package core
+package core.node.services
 
+import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.messaging.NetworkMap

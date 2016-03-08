@@ -10,6 +10,7 @@ package contracts
 
 import core.*
 import core.crypto.SecureHash
+import core.node.services.DummyTimestampingAuthority
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*

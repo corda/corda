@@ -14,6 +14,7 @@ import com.google.common.base.Throwables
 import contracts.*
 import core.*
 import core.crypto.*
+import core.node.services.DummyTimestampingAuthority
 import core.serialization.serialize
 import core.visualiser.GraphVisualiser
 import java.security.KeyPair

@@ -8,7 +8,7 @@
 
 package core.node.servlets
 
-import core.StorageService
+import core.node.services.StorageService
 import core.utilities.loggerFor
 import org.apache.commons.fileupload.servlet.ServletFileUpload
 import javax.servlet.http.HttpServlet

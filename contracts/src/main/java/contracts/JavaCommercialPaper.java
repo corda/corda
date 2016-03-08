@@ -12,6 +12,7 @@ import core.*;
 import core.TransactionForVerification.InOutGroup;
 import core.crypto.NullPublicKey;
 import core.crypto.SecureHash;
+import core.node.services.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

@@ -6,7 +6,7 @@
  * All other rights reserved.
  */
 
-package core.node
+package core.node.services
 
 import com.google.common.net.HostAndPort
 import core.RunOnCallerThread
@@ -133,7 +133,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         inboundConsumer = session.createConsumer("inbound").setMessageHandler { message: ClientMessage ->
             // This code runs for every inbound message.
             if (!message.containsProperty(TOPIC_PROPERTY)) {
-                log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
+                log.warn("Received message without a ${TOPIC_PROPERTY} property, ignoring")
                 // TODO: Figure out whether we always need to acknowledge messages, even when invalid.
                 return@setMessageHandler
             }

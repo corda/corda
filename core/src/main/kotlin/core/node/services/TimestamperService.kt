@@ -1,6 +1,16 @@
-package core
+/*
+ * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
+ * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
+ * set forth therein.
+ *
+ * All other rights reserved.
+ */
+
+package core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import core.Party
+import core.WireTransaction
 import core.crypto.DigitalSignature
 import core.crypto.generateKeyPair
 import core.serialization.SerializedBytes

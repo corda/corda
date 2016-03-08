@@ -15,7 +15,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import core.ServiceHub
+import core.node.services.ServiceHub
 import core.crypto.SecureHash
 import core.crypto.sha256
 import core.protocols.ProtocolLogic

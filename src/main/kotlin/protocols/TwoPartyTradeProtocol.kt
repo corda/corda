@@ -6,7 +6,7 @@
  * All other rights reserved.
  */
 
-package contracts.protocols
+package protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
@@ -18,7 +18,7 @@ import core.crypto.signWithECDSA
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
-import core.node.TimestampingProtocol
+import core.node.services.TimestampingProtocol
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import core.utilities.trace
@@ -57,14 +57,14 @@ object TwoPartyTradeProtocol {
                   otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
                   myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = Seller(otherSide, timestampingAuthority, assetToSell, price, myKeyPair, buyerSessionID)
-        return smm.add("$TRADE_TOPIC.seller", seller)
+        return smm.add("${TRADE_TOPIC}.seller", seller)
     }
 
     fun runBuyer(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
                  otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
                  sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = Buyer(otherSide, timestampingAuthority.identity, acceptablePrice, typeToBuy, sessionID)
-        return smm.add("$TRADE_TOPIC.buyer", buyer)
+        return smm.add("${TRADE_TOPIC}.buyer", buyer)
     }
 
     class UnacceptablePriceException(val givenPrice: Amount) : Exception()
@@ -179,7 +179,7 @@ object TwoPartyTradeProtocol {
 
         @Suspendable
         private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+                                   tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
             val fullySigned = partialTX + tsaSig + ourSignature
 

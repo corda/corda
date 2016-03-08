@@ -11,6 +11,7 @@ package core.node
 import com.google.common.net.HostAndPort
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
+import core.node.services.ArtemisMessagingService
 import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.AttachmentUploadServlet
 import core.utilities.loggerFor

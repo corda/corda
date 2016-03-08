@@ -11,10 +11,10 @@ package core.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import core.DummyTimestampingAuthority
+import core.node.services.DummyTimestampingAuthority
 import core.ThreadBox
 import core.crypto.sha256
-import core.node.TimestamperNodeService
+import core.node.services.TimestamperNodeService
 import core.utilities.loggerFor
 import java.time.Instant
 import java.util.*

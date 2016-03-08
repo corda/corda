@@ -6,11 +6,11 @@
  * All other rights reserved.
  */
 
-package core.node
+package core.node.services
 
-import contracts.protocols.FetchAttachmentsProtocol
-import contracts.protocols.FetchTransactionsProtocol
-import core.StorageService
+import protocols.FetchAttachmentsProtocol
+import protocols.FetchTransactionsProtocol
+import core.node.services.StorageService
 import core.crypto.SecureHash
 import core.messaging.Message
 import core.messaging.MessagingService

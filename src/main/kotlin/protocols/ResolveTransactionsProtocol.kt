@@ -6,7 +6,7 @@
  * All other rights reserved.
  */
 
-package contracts.protocols
+package protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import core.*

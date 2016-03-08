@@ -9,7 +9,7 @@
 package core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.ServiceHub
+import core.node.services.ServiceHub
 import core.messaging.MessageRecipients
 import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData

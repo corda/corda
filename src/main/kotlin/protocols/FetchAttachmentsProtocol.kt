@@ -6,7 +6,7 @@
  * All other rights reserved.
  */
 
-package contracts.protocols
+package protocols
 
 import core.Attachment
 import core.crypto.SecureHash

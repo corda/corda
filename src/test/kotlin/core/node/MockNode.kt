@@ -23,6 +23,7 @@ import core.Party
 import core.messaging.InMemoryMessagingNetwork
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
+import core.node.services.FixedIdentityService
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.utilities.loggerFor
 import org.slf4j.Logger

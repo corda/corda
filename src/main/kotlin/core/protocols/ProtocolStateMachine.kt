@@ -14,7 +14,7 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import core.ServiceHub
+import core.node.services.ServiceHub
 import core.messaging.MessageRecipients
 import core.messaging.StateMachineManager
 import core.serialization.createKryo

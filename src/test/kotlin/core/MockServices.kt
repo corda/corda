@@ -12,8 +12,8 @@ import core.crypto.*
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMap
 import core.messaging.NetworkMap
-import core.node.DataVendingService
 import core.node.TimestampingError
+import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.testutils.RecordingMap

@@ -8,6 +8,7 @@
 
 package core
 
+import core.node.services.AttachmentStorage
 import java.io.FileNotFoundException
 
 /**

@@ -6,9 +6,9 @@
  * All other rights reserved.
  */
 
-package core.node
+package core.node.services
 
-import core.KeyManagementService
+import core.node.services.KeyManagementService
 import core.ThreadBox
 import core.crypto.generateKeyPair
 import java.security.KeyPair

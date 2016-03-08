@@ -10,6 +10,8 @@ package core.node
 
 import contracts.Cash
 import core.*
+import core.node.services.NodeWalletService
+import core.node.services.ServiceHub
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import org.junit.After

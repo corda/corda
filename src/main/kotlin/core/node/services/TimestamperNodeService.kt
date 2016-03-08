@@ -6,7 +6,7 @@
  * All other rights reserved.
  */
 
-package core.node
+package core.node.services
 
 import co.paralleluniverse.common.util.VisibleForTesting
 import co.paralleluniverse.fibers.Suspendable
@@ -17,6 +17,8 @@ import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessageRecipients
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
+import core.node.TimestampingError
+import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.serialization.deserialize

@@ -8,13 +8,13 @@
 
 package core.messaging
 
-import contracts.protocols.FetchAttachmentsProtocol
-import contracts.protocols.FetchDataProtocol
+import protocols.FetchAttachmentsProtocol
+import protocols.FetchDataProtocol
 import core.Attachment
 import core.crypto.SecureHash
 import core.crypto.sha256
 import core.node.MockNetwork
-import core.node.NodeAttachmentStorage
+import core.node.services.NodeAttachmentStorage
 import core.serialization.OpaqueBytes
 import core.testutils.rootCauseExceptions
 import core.utilities.BriefLogFormatter

@@ -11,6 +11,7 @@ package core.node
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import core.crypto.SecureHash
+import core.node.services.NodeAttachmentStorage
 import core.use
 import org.junit.Before
 import org.junit.Test

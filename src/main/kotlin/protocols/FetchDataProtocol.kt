@@ -6,13 +6,13 @@
  * All other rights reserved.
  */
 
-package contracts.protocols
+package protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import core.NamedByHash
 import core.crypto.SecureHash
 import core.messaging.SingleMessageRecipient
-import core.node.DataVendingService
+import core.node.services.DataVendingService
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.utilities.UntrustworthyData

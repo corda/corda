@@ -10,12 +10,11 @@ package core.messaging
 
 import contracts.Cash
 import contracts.CommercialPaper
-import contracts.protocols.TwoPartyTradeProtocol
+import protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.SecureHash
 import core.node.MockNetwork
-import core.node.NodeAttachmentStorage
-import core.node.NodeWalletService
+import core.node.services.*
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import org.junit.After

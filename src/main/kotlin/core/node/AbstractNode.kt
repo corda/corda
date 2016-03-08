@@ -21,6 +21,7 @@ import core.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.*
+import core.node.services.*
 import core.serialization.deserialize
 import core.serialization.serialize
 import org.slf4j.Logger
