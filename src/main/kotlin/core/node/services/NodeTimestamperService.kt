@@ -39,7 +39,7 @@ class TimestampingMessages {
  * See the doc site to learn more about timestamping authorities (nodes) and the role they play in the data model.
  */
 @ThreadSafe
-class TimestamperNodeService(private val net: MessagingService,
+class NodeTimestamperService(private val net: MessagingService,
                              val identity: Party,
                              val signingKey: KeyPair,
                              val clock: Clock = Clock.systemDefaultZone(),
@@ -47,7 +47,7 @@ class TimestamperNodeService(private val net: MessagingService,
     companion object {
         val TIMESTAMPING_PROTOCOL_TOPIC = "platform.timestamping.request"
 
-        private val logger = LoggerFactory.getLogger(TimestamperNodeService::class.java)
+        private val logger = LoggerFactory.getLogger(NodeTimestamperService::class.java)
     }
 
     init {
@@ -97,7 +97,7 @@ class TimestamperNodeService(private val net: MessagingService,
 }
 
 /**
- * The TimestampingProtocol class is the client code that talks to a [TimestamperNodeService] on some remote node. It is a
+ * The TimestampingProtocol class is the client code that talks to a [NodeTimestamperService] on some remote node. It is a
  * [ProtocolLogic], meaning it can either be a sub-protocol of some other protocol, or be driven independently.
  *
  * If you are not yourself authoring a protocol and want to timestamp something, the [TimestampingProtocol.Client] class
@@ -120,11 +120,11 @@ class TimestampingProtocol(private val node: LegallyIdentifiableNode,
     @Suspendable
     override fun call(): DigitalSignature.LegallyIdentifiable {
         val sessionID = random63BitValue()
-        val replyTopic = "${TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
+        val replyTopic = "${NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
         val req = TimestampingMessages.Request(wtxBytes, serviceHub.networkService.myAddress, replyTopic)
 
         val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(
-                TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
+                NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
 
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
         maybeSignature.validate { sig ->

@@ -79,7 +79,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
-    var inNodeTimestampingService: TimestamperNodeService? = null
+    var inNodeTimestampingService: NodeTimestamperService? = null
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
 
@@ -97,7 +97,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             inNodeTimestampingService = null
             timestamperAddress
         } else {
-            inNodeTimestampingService = TimestamperNodeService(net, storage.myLegalIdentity, storage.myLegalIdentityKey)
+            inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey)
             LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
         }
         (services.networkMapService as MockNetworkMap).timestampingNodes.add(tsid)

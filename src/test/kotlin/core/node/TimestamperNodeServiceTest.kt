@@ -33,7 +33,7 @@ import kotlin.test.assertTrue
 class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
     lateinit var myMessaging: Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging>
     lateinit var serviceMessaging: Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging>
-    lateinit var service: TimestamperNodeService
+    lateinit var service: NodeTimestamperService
 
     val ptx = TransactionBuilder().apply {
         addInputState(StateRef(SecureHash.randomSHA256(), 0))
@@ -59,7 +59,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         serverKey = timestampingNodeID.identity.owningKey
 
         // And a separate one to be tested directly, to make the unit tests a bit faster.
-        service = TimestamperNodeService(serviceMessaging.second, Party("Unit test suite", ALICE), ALICE_KEY)
+        service = NodeTimestamperService(serviceMessaging.second, Party("Unit test suite", ALICE), ALICE_KEY)
     }
 
     class TestPSM(val server: LegallyIdentifiableNode, val now: Instant) : ProtocolLogic<Boolean>() {
@@ -82,7 +82,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
     fun successWithNetwork() {
         val psm = runNetwork {
             val smm = StateMachineManager(MockServices(net = myMessaging.second), RunOnCallerThread)
-            val logName = TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC
+            val logName = NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC
             val psm = TestPSM(mockServices.networkMapService.timestampingNodes[0], clock.instant())
             smm.add(logName, psm)
         }
