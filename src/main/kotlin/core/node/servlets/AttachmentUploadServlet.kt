@@ -8,9 +8,11 @@
 
 package core.node.servlets
 
+import core.crypto.SecureHash
 import core.node.services.StorageService
 import core.utilities.loggerFor
 import org.apache.commons.fileupload.servlet.ServletFileUpload
+import java.util.*
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
@@ -30,6 +32,7 @@ class AttachmentUploadServlet : HttpServlet() {
 
         val upload = ServletFileUpload()
         val iterator = upload.getItemIterator(req)
+        val ids = ArrayList<SecureHash>()
         while (iterator.hasNext()) {
             val item = iterator.next()
             if (!item.name.endsWith(".jar")) {
@@ -45,7 +48,12 @@ class AttachmentUploadServlet : HttpServlet() {
             item.openStream().use {
                 val id = storage.attachments.importAttachment(it)
                 log.info("${item.name} successfully inserted into the attachment store with id $id")
+                ids += id
             }
         }
+
+        // Send back the hashes as a convenience for the user.
+        val writer = resp.writer
+        ids.forEach { writer.println(it) }
     }
 }

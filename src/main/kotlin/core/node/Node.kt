@@ -60,7 +60,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         val server = Server(port)
         val handler = ServletContextHandler()
         handler.setAttribute("storage", storage)
-        handler.addServlet(AttachmentUploadServlet::class.java, "/attachments")
+        handler.addServlet(AttachmentUploadServlet::class.java, "/attachments/upload")
         handler.addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
         server.handler = handler
         server.start()

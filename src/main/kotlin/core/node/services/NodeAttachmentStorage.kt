@@ -13,7 +13,6 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import core.Attachment
-import core.node.services.AttachmentStorage
 import core.crypto.SecureHash
 import core.extractZipFile
 import core.utilities.loggerFor
@@ -106,16 +105,21 @@ class NodeAttachmentStorage(val storePath: Path) : AttachmentStorage {
         try {
             // Move into place atomically or fail if that isn't possible. We don't want a half moved attachment to
             // be exposed to parallel threads. This gives us thread safety.
+            if (!Files.exists(finalPath))
+                log.info("Stored new attachment $id")
+            else
+                log.info("Replacing attachment $id - only bother doing this if you're trying to repair file corruption")
             Files.move(tmp, finalPath, StandardCopyOption.ATOMIC_MOVE)
         } finally {
             Files.deleteIfExists(tmp)
         }
-        log.info("Stored new attachment $id")
         if (automaticallyExtractAttachments) {
             val extractTo = storePath.resolve("${id}.jar")
             try {
                 Files.createDirectory(extractTo)
                 extractZipFile(finalPath, extractTo)
+            } catch(e: java.nio.file.FileAlreadyExistsException) {
+                log.trace("Did not extract attachment jar to directory because it already exists")
             } catch(e: Exception) {
                 log.error("Failed to extract attachment jar $id, ", e)
                 // TODO: Delete the extractTo directory here.
