@@ -1,0 +1,33 @@
+<HTML>
+<HEAD>
+<title>StateMachineManager.<init> - r3prototyping</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href="../index.html">core.messaging</a>&nbsp;/&nbsp;<a href="index.html">StateMachineManager</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">StateMachineManager</span><span class="symbol">(</span><span class="identifier" id="core.messaging.StateMachineManager$<init>(core.node.services.ServiceHub, java.util.concurrent.Executor)/serviceHub">serviceHub</span><span class="symbol">:</span>&nbsp;<a href="../../core.node.services/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">, </span><span class="identifier" id="core.messaging.StateMachineManager$<init>(core.node.services.ServiceHub, java.util.concurrent.Executor)/runInThread">runInThread</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">)</span></code><br/>
+<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../../core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
+Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
+<p>An implementation of this class will persist state machines to long term storage so they can survive process restarts
+and, if run with a single-threaded executor, will ensure no two state machines run concurrently with each other
+(bad for performance, good for programmer mental health).</p>
+<p>A "state machine" is a class with a single call method. The call method and any others it invokes are rewritten by
+a bytecode rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.</p>
+<p>TODO: Session IDs should be set up and propagated automatically, on demand.
+TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
+continuation is always unique?
+TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
+TODO: Timeouts
+TODO: Surfacing of exceptions via an API and/or management UI
+TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message cant hurt
+TODO: Make Kryo (de)serialize markers for heavy objects that are currently in the service hub. This avoids mistakes
+where services are temporarily put on the stack.
+TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

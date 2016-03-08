@@ -1,0 +1,19 @@
+<HTML>
+<HEAD>
+<title>AttachmentStorage.openAttachment - r3prototyping</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href="index.html">AttachmentStorage</a>&nbsp;/&nbsp;<a href=".">openAttachment</a><br/>
+<br/>
+<h1>openAttachment</h1>
+<a name="core.node.services.AttachmentStorage$openAttachment(core.crypto.SecureHash)"></a>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">openAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AttachmentStorage$openAttachment(core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<span class="identifier">SecureHash</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Attachment</span><span class="symbol">?</span></code><br/>
+<p>Returns a newly opened stream for the given locally stored attachment, or null if no such attachment is known.
+The returned stream must be closed when you are done with it to avoid resource leaks. You should probably wrap
+the result in a <a href="#">JarInputStream</a> unless youre sending it somewhere, there is a convenience helper for this
+on <a href="#">Attachment</a>.</p>
+<br/>
+<br/>
+</BODY>
+</HTML>

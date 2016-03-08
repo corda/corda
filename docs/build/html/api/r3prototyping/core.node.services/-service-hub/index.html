@@ -1,0 +1,72 @@
+<HTML>
+<HEAD>
+<title>ServiceHub - r3prototyping</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">ServiceHub</a><br/>
+<br/>
+<h1>ServiceHub</h1>
+<code><span class="keyword">interface </span><span class="identifier">ServiceHub</span></code><br/>
+<p>A service hub simply vends references to the other services a node has. Some of those services may be missing or
+mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
+functionality and you dont want to hard-code which types in the interface.</p>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="identity-service.html">identityService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">identityService</span><span class="symbol">: </span><span class="identifier">IdentityService</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="key-management-service.html">keyManagementService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">keyManagementService</span><span class="symbol">: </span><a href="../-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-service.html">networkMapService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="../../core.messaging/-network-map/index.html"><span class="identifier">NetworkMap</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-service.html">networkService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkService</span><span class="symbol">: </span><a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="storage-service.html">storageService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">storageService</span><span class="symbol">: </span><a href="../-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="wallet-service.html">walletService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">walletService</span><span class="symbol">: </span><a href="../-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="verify-transaction.html">verifyTransaction</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="core.node.services.ServiceHub$verifyTransaction(core.LedgerTransaction)/ltx">ltx</span><span class="symbol">:</span>&nbsp;<span class="identifier">LedgerTransaction</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a <a href="#">LedgerTransaction</a>, looks up all its dependencies in the local database, uses the identity service to map
+the <a href="#">SignedTransaction</a>s the DB gives back into <a href="#">LedgerTransaction</a>s, and then runs the smart contracts for the
+transaction. If no exception is thrown, the transaction is valid.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,33 @@
+<HTML>
+<HEAD>
+<title>core.protocols - r3prototyping</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href=".">core.protocols</a><br/>
+<br/>
+<h2>Package core.protocols</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-protocol-logic/index.html">ProtocolLogic</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A sub-class of <a href="-protocol-logic/index.html">ProtocolLogic</a> implements a protocol flow using direct, straight line blocking code. Thus you
+can write complex protocol logic in an ordinary fashion, without having to think about callbacks, restarting after
+a node crash, how many instances of your protocol there are running and so on.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-protocol-state-machine/index.html">ProtocolStateMachine</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ProtocolStateMachine</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Fiber</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code><p>A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a <a href="-protocol-logic/index.html">ProtocolLogic</a> instance.
+For any given flow there is only one PSM, even if that protocol invokes subprotocols.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

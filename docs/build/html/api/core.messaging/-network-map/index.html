@@ -1,0 +1,44 @@
+<HTML>
+<HEAD>
+<title>NetworkMap - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.messaging</a>&nbsp;/&nbsp;<a href=".">NetworkMap</a><br/>
+<br/>
+<h1>NetworkMap</h1>
+<code><span class="keyword">interface </span><span class="identifier">NetworkMap</span></code><br/>
+<p>A network map contains lists of nodes on the network along with information about their identity keys, services
+they provide and host names or IP addresses where they can be connected to. A reasonable architecture for the
+network map service might be one like the Tor directory authorities, where several nodes linked by RAFT or Paxos
+elect a leader and that leader distributes signed documents describing the network layout. Those documents can
+then be cached by every node and thus a network map can be retrieved given only a single successful peer connection.</p>
+<p>This interface assumes fast, synchronous access to an in-memory map.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="timestamping-nodes.html">timestampingNodes</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-mock-network-map/index.html">MockNetworkMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">MockNetworkMap</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NetworkMap</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

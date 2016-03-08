@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<title>core.serialization - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">core.serialization</a><br/>
+<br/>
+<h2>Package core.serialization</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-immutable-class-serializer/index.html">ImmutableClassSerializer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ImmutableClassSerializer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code><p>Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
+set via the constructor and the class is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-opaque-bytes/index.html">OpaqueBytes</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">OpaqueBytes</span></code><p>A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect.
+In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
+functionality to Java, but it wont arrive for a few years yet</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-serialized-bytes/index.html">SerializedBytes</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SerializedBytes</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a></code><p>A type safe wrapper around a byte array that contains a serialised object. You can call <a href="kotlin.-byte-array/deserialize.html">SerializedBytes.deserialize</a>
+to get the original object back.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="kotlin.-byte-array/index.html">kotlin.ByteArray</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-t-h-r-e-a-d_-l-o-c-a-l_-k-r-y-o.html">THREAD_LOCAL_KRYO</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">THREAD_LOCAL_KRYO</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
+simple, totally non-extensible binary (sub)format.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="create-kryo.html">createKryo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createKryo</span><span class="symbol">(</span><span class="identifier" id="core.serialization$createKryo()/k">k</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;Kryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="deserialize.html">deserialize</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="core.serialization$deserialize(core.serialization.OpaqueBytes, , kotlin.Boolean)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">, </span><span class="identifier" id="core.serialization$deserialize(core.serialization.OpaqueBytes, , kotlin.Boolean)/includeClassName">includeClassName</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><br/>
+<code><span class="keyword">fun </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="serialize.html">serialize</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="core.serialization$serialize(core.serialization.serialize.T, , kotlin.Boolean)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">, </span><span class="identifier" id="core.serialization$serialize(core.serialization.serialize.T, , kotlin.Boolean)/includeClassName">includeClassName</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Can be called on any object to convert it to a byte array (wrapped by <a href="-serialized-bytes/index.html">SerializedBytes</a>), regardless of whether
+the type is marked as serializable or was designed for it (so be careful)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
