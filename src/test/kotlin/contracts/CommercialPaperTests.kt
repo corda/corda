@@ -10,8 +10,8 @@ package contracts
 
 import core.*
 import core.crypto.SecureHash
-import core.node.TimestampingError
 import core.node.services.DummyTimestampingAuthority
+import core.node.services.TimestampingError
 import core.testutils.*
 import org.junit.Test
 import org.junit.runner.RunWith

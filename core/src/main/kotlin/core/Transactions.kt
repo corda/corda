@@ -13,8 +13,8 @@ import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.signWithECDSA
 import core.crypto.toStringShort
-import core.node.TimestampingError
 import core.node.services.TimestamperService
+import core.node.services.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize

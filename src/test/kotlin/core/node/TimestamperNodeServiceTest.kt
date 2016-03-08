@@ -12,10 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
 import core.messaging.*
-import core.node.services.ServiceHub
-import core.node.services.TimestamperNodeService
-import core.node.services.TimestampingMessages
-import core.node.services.TimestampingProtocol
+import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.serialize
 import core.testutils.ALICE

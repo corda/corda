@@ -17,8 +17,6 @@ import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessageRecipients
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
-import core.node.TimestampingError
-import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
