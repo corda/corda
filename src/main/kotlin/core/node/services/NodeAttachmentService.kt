@@ -30,8 +30,8 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.
  */
 @ThreadSafe
-class NodeAttachmentStorage(val storePath: Path) : AttachmentStorage {
-    private val log = loggerFor<NodeAttachmentStorage>()
+class NodeAttachmentService(val storePath: Path) : AttachmentStorage {
+    private val log = loggerFor<NodeAttachmentService>()
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true

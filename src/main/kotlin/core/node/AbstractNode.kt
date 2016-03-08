@@ -134,10 +134,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return constructStorageService(attachments, identity, keypair)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentStorage, identity: Party, keypair: KeyPair) =
+    protected open fun constructStorageService(attachments: NodeAttachmentService, identity: Party, keypair: KeyPair) =
             StorageServiceImpl(attachments, identity, keypair)
 
-    open inner class StorageServiceImpl(attachments: NodeAttachmentStorage, identity: Party, keypair: KeyPair) : StorageService {
+    open inner class StorageServiceImpl(attachments: NodeAttachmentService, identity: Party, keypair: KeyPair) : StorageService {
         protected val tables = HashMap<String, MutableMap<Any, Any>>()
 
         @Suppress("UNCHECKED_CAST")
@@ -189,13 +189,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeAttachmentStorage(dir: Path): NodeAttachmentStorage {
+    private fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
         val attachmentsDir = dir.resolve("attachments")
         try {
             Files.createDirectory(attachmentsDir)
         } catch (e: FileAlreadyExistsException) {
         }
-        val attachments = NodeAttachmentStorage(attachmentsDir)
+        val attachments = NodeAttachmentService(attachmentsDir)
         return attachments
     }
 }

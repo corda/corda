@@ -10,7 +10,6 @@ package core.messaging
 
 import contracts.Cash
 import contracts.CommercialPaper
-import protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.SecureHash
 import core.node.MockNetwork
@@ -21,6 +20,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import protocols.TwoPartyTradeProtocol
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -195,7 +195,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         return net.createNode(null) { path, config, net, tsNode ->
             object : MockNetwork.MockNode(path, config, net, tsNode) {
                 // That constructs the storage service object in a customised way ...
-                override fun constructStorageService(attachments: NodeAttachmentStorage, identity: Party, keypair: KeyPair): StorageServiceImpl {
+                override fun constructStorageService(attachments: NodeAttachmentService, identity: Party, keypair: KeyPair): StorageServiceImpl {
                     // By tweaking the standard StorageServiceImpl class ...
                     return object : StorageServiceImpl(attachments, identity, keypair) {
                         // To use RecordingMaps instead of ordinary HashMaps.

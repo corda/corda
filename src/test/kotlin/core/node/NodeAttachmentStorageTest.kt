@@ -11,7 +11,7 @@ package core.node
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import core.crypto.SecureHash
-import core.node.services.NodeAttachmentStorage
+import core.node.services.NodeAttachmentService
 import core.use
 import org.junit.Before
 import org.junit.Test
@@ -40,7 +40,7 @@ class NodeAttachmentStorageTest {
         val testJar = makeTestJar()
         val expectedHash = SecureHash.sha256(Files.readAllBytes(testJar))
 
-        val storage = NodeAttachmentStorage(fs.getPath("/"))
+        val storage = NodeAttachmentService(fs.getPath("/"))
         val id =  testJar.use { storage.importAttachment(it) }
         assertEquals(expectedHash, id)
 
@@ -57,7 +57,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
-        val storage = NodeAttachmentStorage(fs.getPath("/"))
+        val storage = NodeAttachmentService(fs.getPath("/"))
         testJar.use { storage.importAttachment(it) }
         assertFailsWith<java.nio.file.FileAlreadyExistsException> {
             testJar.use { storage.importAttachment(it) }
@@ -67,13 +67,13 @@ class NodeAttachmentStorageTest {
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
-        val storage = NodeAttachmentStorage(fs.getPath("/"))
+        val storage = NodeAttachmentService(fs.getPath("/"))
         val id = testJar.use { storage.importAttachment(it) }
 
         // Corrupt the file in the store.
         Files.write(fs.getPath("/", id.toString()), "arggghhhh".toByteArray(), StandardOpenOption.WRITE)
 
-        val e = assertFailsWith<NodeAttachmentStorage.OnDiskHashMismatch> {
+        val e = assertFailsWith<NodeAttachmentService.OnDiskHashMismatch> {
             storage.openAttachment(id)!!.open().use { it.readBytes() }
         }
         assertEquals(e.file, storage.storePath.resolve(id.toString()))

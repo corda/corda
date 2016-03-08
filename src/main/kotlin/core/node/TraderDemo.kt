@@ -19,7 +19,7 @@ import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.node.services.ArtemisMessagingService
-import core.node.services.NodeAttachmentStorage
+import core.node.services.NodeAttachmentService
 import core.node.services.NodeWalletService
 import protocols.TimestampingProtocol
 import core.protocols.ProtocolLogic
@@ -101,7 +101,7 @@ fun main(args: Array<String>) {
     if (listening) {
         // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
         // Buyer will fetch the attachment from the seller.
-        val attachmentsPath = (node.storage.attachments as NodeAttachmentStorage).let {
+        val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
             it.automaticallyExtractAttachments = true
             it.storePath
         }
