@@ -163,5 +163,7 @@ object NodeInterestRates {
         }
     }
 
-    class UnknownFix(val fix: FixOf) : Exception()
+    class UnknownFix(val fix: FixOf) : Exception() {
+        override fun toString() = "Unknown fix: $fix"
+    }
 }
