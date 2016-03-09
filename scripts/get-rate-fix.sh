@@ -7,7 +7,9 @@ if [ ! -e ./gradlew ]; then
     exit 1
 fi
 
-if [ ! -d build/install/r3prototyping/bin/get-rate-fix ]; then
+bin="build/install/r3prototyping/bin/get-rate-fix"
+
+if [ ! -e $bin ]; then
     ./gradlew installDist
 fi
 
@@ -19,4 +21,4 @@ fi
 # Upload the rates to the buyer node
 curl -F rates=@scripts/example.rates.txt http://localhost:31338/upload/interest-rates
 
-build/install/r3prototyping/bin/get-rate-fix --network-address=localhost:31300 --oracle=localhost --oracle-identity-file=buyer/identity-public
+$bin --network-address=localhost:31300 --oracle=localhost --oracle-identity-file=buyer/identity-public

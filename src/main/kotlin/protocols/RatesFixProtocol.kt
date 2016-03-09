@@ -14,6 +14,7 @@ import core.crypto.DigitalSignature
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.protocols.ProtocolLogic
+import core.utilities.ProgressTracker
 import java.math.BigDecimal
 import java.util.*
 
@@ -34,7 +35,13 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
                             private val rateTolerance: BigDecimal) : ProtocolLogic<Unit>() {
     companion object {
         val TOPIC = "platform.rates.interest.fix"
+
+        class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
+        object WORKING : ProgressTracker.Step("Working with data returned by oracle")
+        object SIGNING : ProgressTracker.Step("Requesting transaction signature from interest rate oracle")
     }
+
+    override val progressTracker = ProgressTracker(QUERYING(fixOf.name), WORKING, SIGNING)
 
     class FixOutOfRange(val byAmount: BigDecimal) : Exception()
 

@@ -79,12 +79,11 @@ fun main(args: Array<String>) {
     val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance)
     ANSIProgressRenderer.progressTracker = protocol.progressTracker
     node.smm.add("demo.ratefix", protocol).get()
+    node.stop()
 
     // Show the user the output.
     println("Got rate fix")
     println()
     print(Emoji.renderIfSupported(tx.toWireTransaction()))
     println(tx.toSignedTransaction().sigs)
-
-    node.stop()
 }
