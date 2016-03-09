@@ -15,7 +15,7 @@ you can upload it by running this command from a UNIX terminal:
 
 .. sourcecode:: shell
 
-   curl -F myfile=@path/to/my/file.zip http://localhost:31338/attachments/upload
+   curl -F myfile=@path/to/my/file.zip http://localhost:31338/upload/attachment
 
 The attachment will be identified by the SHA-256 hash of the contents, which you can get by doing:
 
@@ -23,8 +23,8 @@ The attachment will be identified by the SHA-256 hash of the contents, which you
 
    shasum -a 256 file.zip
 
-on a Mac or by using ``sha256sum`` on Linux. Alternatively, check the node logs. There is presently no way to manage
-attachments from a GUI.
+on a Mac or by using ``sha256sum`` on Linux. Alternatively, the hash will be returned to you when you upload the
+attachment.
 
 An attachment may be downloaded by fetching:
 
@@ -39,3 +39,24 @@ containers, you can also fetch a specific file within the attachment by appendin
 
    http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9/path/within/zip.txt
 
+Uploading interest rate fixes
+-----------------------------
+
+If you would like to operate an interest rate fixing service (oracle), you can upload fix data by uploading data in
+a simple text format to the ``/upload/interest-rates`` path on the web server.
+
+The file looks like this::
+
+    # Some pretend noddy rate fixes, for the interest rate oracles.
+
+    LIBOR 2016-03-16 30 = 0.678
+    LIBOR 2016-03-16 60 = 0.655
+    EURIBOR 2016-03-15 30 = 0.123
+    EURIBOR 2016-03-15 60 = 0.111
+
+The columns are:
+
+* Name of the fix
+* Date of the fix
+* The tenor / time to maturity in days
+* The interest rate itself

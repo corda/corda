@@ -13,7 +13,7 @@ import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
 import core.node.servlets.AttachmentDownloadServlet
-import core.node.servlets.AttachmentUploadServlet
+import core.node.servlets.DataUploadServlet
 import core.utilities.loggerFor
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet.ServletContextHandler
@@ -59,8 +59,8 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         val port = p2pAddr.port + 1   // TODO: Move this into the node config file.
         val server = Server(port)
         val handler = ServletContextHandler()
-        handler.setAttribute("storage", storage)
-        handler.addServlet(AttachmentUploadServlet::class.java, "/attachments/upload")
+        handler.setAttribute("node", this)
+        handler.addServlet(DataUploadServlet::class.java, "/upload/*")
         handler.addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
         server.handler = handler
         server.start()

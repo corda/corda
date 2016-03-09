@@ -119,3 +119,17 @@ tasks.withType(JavaExec) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
     jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
 }
+
+// Package up the other demo programs.
+task getRateFixDemo(type: CreateStartScripts) {
+    mainClassName = "demos.RateFixDemoKt"
+    applicationName = "get-rate-fix"
+    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(getRateFixDemo)
+    fileMode = 0755
+}

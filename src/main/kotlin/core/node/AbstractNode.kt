@@ -48,6 +48,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected open val serverThread = Executors.newSingleThreadExecutor()
 
+    // Objects in this list will be scanned by the DataUploadServlet and can be handed new data via HTTP.
+    // Don't mutate this after startup.
+    protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
+    val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
+
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
         override val networkMapService: NetworkMap = MockNetworkMap()
@@ -85,11 +90,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     open fun start(): AbstractNode {
         log.info("Node starting up ...")
+
         storage = initialiseStorageService(dir)
         net = makeMessagingService()
         smm = StateMachineManager(services, serverThread)
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
+        makeInterestRateOracleService()
 
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
         // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
@@ -111,6 +118,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return this
     }
 
+    protected fun makeInterestRateOracleService() {
+        // Constructing the service registers message handlers that ensure the service won't be garbage collected.
+        // TODO: Once the service has data, automatically register with the network map service (once built).
+        _servicesThatAcceptUploads += NodeInterestRates.Service(this)
+    }
+
     protected open fun makeIdentityService(): IdentityService {
         // We don't have any identity infrastructure right now, so we just throw together the only two identities we
         // know about: our own, and the identity of the remote timestamper node (if any).
@@ -130,6 +143,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected open fun initialiseStorageService(dir: Path): StorageService {
         val attachments = makeAttachmentStorage(dir)
+        _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
         return constructStorageService(attachments, identity, keypair)
     }
@@ -195,7 +209,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             Files.createDirectory(attachmentsDir)
         } catch (e: FileAlreadyExistsException) {
         }
-        val attachments = NodeAttachmentService(attachmentsDir)
-        return attachments
+        return NodeAttachmentService(attachmentsDir)
     }
 }
