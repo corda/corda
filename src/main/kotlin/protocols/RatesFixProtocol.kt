@@ -27,11 +27,11 @@ import java.util.*
  *
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
-class RatesFixProtocol(private val tx: TransactionBuilder,
-                       private val oracle: LegallyIdentifiableNode,
-                       private val fixOf: FixOf,
-                       private val expectedRate: BigDecimal,
-                       private val rateTolerance: BigDecimal) : ProtocolLogic<Unit>() {
+open class RatesFixProtocol(protected val tx: TransactionBuilder,
+                            private val oracle: LegallyIdentifiableNode,
+                            private val fixOf: FixOf,
+                            private val expectedRate: BigDecimal,
+                            private val rateTolerance: BigDecimal) : ProtocolLogic<Unit>() {
     companion object {
         val TOPIC = "platform.rates.interest.fix"
     }
@@ -46,7 +46,16 @@ class RatesFixProtocol(private val tx: TransactionBuilder,
         val fix = query()
         checkFixIsNearExpected(fix)
         tx.addCommand(fix, oracle.identity.owningKey)
+        beforeSigning(fix)
         tx.addSignatureUnchecked(sign())
+    }
+
+    /**
+     * You can override this to perform any additional work needed after the fix is added to the transaction but
+     * before it's sent back to the oracle for signing (for example, adding output states that depend on the fix).
+     */
+    @Suspendable
+    protected open fun beforeSigning(fix: Fix) {
     }
 
     private fun checkFixIsNearExpected(fix: Fix) {
