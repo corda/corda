@@ -16,6 +16,7 @@
 
 package core.node
 
+import com.codahale.metrics.MetricRegistry
 import contracts.*
 import core.*
 import core.crypto.SecureHash
@@ -60,6 +61,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
+        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     }
 
     val legallyIdentifableAddress: LegallyIdentifiableNode get() = LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)

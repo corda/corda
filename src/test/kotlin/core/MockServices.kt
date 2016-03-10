@@ -8,6 +8,7 @@
 
 package core
 
+import com.codahale.metrics.MetricRegistry
 import core.crypto.*
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMapService
@@ -168,6 +169,8 @@ class MockServices(
         get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()
+
+    override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
 
     init {
         if (net != null && storage != null) {

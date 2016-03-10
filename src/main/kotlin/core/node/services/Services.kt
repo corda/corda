@@ -8,6 +8,7 @@
 
 package core.node.services
 
+import com.codahale.metrics.MetricRegistry
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
@@ -144,6 +145,12 @@ interface AttachmentStorage {
 }
 
 /**
+ * Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
+ * This is not an interface because it is too lightweight to bother mocking out.
+ */
+class MonitoringService(val metrics: MetricRegistry)
+
+/**
  * A service hub simply vends references to the other services a node has. Some of those services may be missing or
  * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
  * functionality and you don't want to hard-code which types in the interface.
@@ -155,6 +162,7 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapService: NetworkMapService
+    val monitoringService: MonitoringService
 
     /**
      * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map
