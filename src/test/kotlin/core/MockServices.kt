@@ -10,8 +10,8 @@ package core
 
 import core.crypto.*
 import core.messaging.MessagingService
-import core.messaging.MockNetworkMap
-import core.messaging.NetworkMap
+import core.messaging.MockNetworkMapService
+import core.messaging.NetworkMapService
 import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
@@ -154,7 +154,7 @@ class MockServices(
         val net: MessagingService? = null,
         val identity: IdentityService? = MockIdentityService,
         val storage: StorageService? = MockStorageService(),
-        val networkMap: NetworkMap? = MockNetworkMap()
+        val networkMap: NetworkMapService? = MockNetworkMapService()
 ) : ServiceHub {
     override val walletService: WalletService
         get() = wallet ?: throw UnsupportedOperationException()
@@ -164,7 +164,7 @@ class MockServices(
         get() = identity ?: throw UnsupportedOperationException()
     override val networkService: MessagingService
         get() = net ?: throw UnsupportedOperationException()
-    override val networkMapService: NetworkMap
+    override val networkMapService: NetworkMapService
         get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()

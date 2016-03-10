@@ -23,11 +23,11 @@ data class LegallyIdentifiableNode(val address: SingleMessageRecipient, val iden
  *
  * This interface assumes fast, synchronous access to an in-memory map.
 */
-interface NetworkMap {
+interface NetworkMapService {
     val timestampingNodes: List<LegallyIdentifiableNode>
 }
 
 // TODO: Move this to the test tree once a real network map is implemented and this scaffolding is no longer needed.
-class MockNetworkMap : NetworkMap {
+class MockNetworkMapService : NetworkMapService {
     override val timestampingNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
 }

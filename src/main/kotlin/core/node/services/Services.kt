@@ -11,7 +11,7 @@ package core.node.services
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
-import core.messaging.NetworkMap
+import core.messaging.NetworkMapService
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -154,7 +154,7 @@ interface ServiceHub {
     val identityService: IdentityService
     val storageService: StorageService
     val networkService: MessagingService
-    val networkMapService: NetworkMap
+    val networkMapService: NetworkMapService
 
     /**
      * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map

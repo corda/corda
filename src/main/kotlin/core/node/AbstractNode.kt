@@ -55,7 +55,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
-        override val networkMapService: NetworkMap = MockNetworkMap()
+        override val networkMapService: NetworkMapService = MockNetworkMapService()
         override val storageService: StorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -107,7 +107,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey)
             LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
         }
-        (services.networkMapService as MockNetworkMap).timestampingNodes.add(tsid)
+        (services.networkMapService as MockNetworkMapService).timestampingNodes.add(tsid)
 
         identity = makeIdentityService()
 
