@@ -4,6 +4,34 @@ Node administration
 When a node is running, it exposes an embedded web server that lets you monitor it, upload and download attachments,
 access a REST API and so on.
 
+Monitoring your node
+--------------------
+
+Like most Java servers, the node exports various useful metrics and management operations via the industry-standard
+`JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard _in-process_ API
+for registering so-called _MBeans_ ... objects whose properties and methods are intended for server management. It does
+not require any particular network protocol for export. So this data can be exported from the node in various ways:
+some monitoring systems provide a "Java Agent", which is essentially a JVM plugin that finds all the MBeans and sends
+them out to a statistics collector over the network. For those systems, follow the instructions provided by the vendor.
+
+Sometimes though, you just want raw access to the data and operations itself. So nodes export them over HTTP on the
+`/monitoring/json` HTTP endpoint, using a program called `Jolokia <https://jolokia.org/>`_. Jolokia defines the JSON
+and REST formats for accessing MBeans, and provides client libraries to work with that protocol as well.
+
+Here are a few ways to build dashboards and extract monitoring data for a node:
+
+* `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
+  scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
+  in Docker and can be started with a single command.
+* `JMXTrans <https://github.com/jmxtrans/jmxtrans>`_ is another tool for Graphite, this time, it's got its own agent
+  (JVM plugin) which reads a custom config file and exports only the named data. It's more configurable than
+  JMX2Graphite and doesn't require a separate process, as the JVM will write directly to Graphite.
+* *Java Mission Control* is a desktop app that can connect to a target JVM that has the right command line flags set
+  (or always, if running locally). You can explore what data is available, create graphs of those metrics, and invoke
+  management operations like forcing a garbage collection.
+* Cloud metrics services like New Relic also understand JMX, typically, by providing their own agent that uploads the
+  data to their service on a regular schedule.
+
 Uploading and downloading attachments
 -------------------------------------
 

@@ -70,6 +70,7 @@ fun main(args: Array<String>) {
     val myNetAddr = ArtemisMessagingService.toHostAndPort(options.valueOf(networkAddressArg))
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
+        override val exportJMXto: String = "http"
     }
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, null).start() }
 

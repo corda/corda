@@ -16,7 +16,9 @@ import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.DataUploadServlet
 import core.utilities.loggerFor
 import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.webapp.WebAppContext
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
@@ -58,11 +60,28 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     private fun initWebServer(): Server {
         val port = p2pAddr.port + 1   // TODO: Move this into the node config file.
         val server = Server(port)
-        val handler = ServletContextHandler()
-        handler.setAttribute("node", this)
-        handler.addServlet(DataUploadServlet::class.java, "/upload/*")
-        handler.addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
-        server.handler = handler
+
+        val handlerCollection = HandlerCollection()
+
+        // Export JMX monitoring statistics and data over REST/JSON.
+        if (configuration.exportJMXto.split(',').contains("http")) {
+            handlerCollection.addHandler(WebAppContext().apply {
+                // Find the jolokia WAR file on the classpath.
+                contextPath = "/monitoring/json"
+                val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
+                war = classpath.first { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
+            })
+        }
+
+        // Data upload and download to services (attachments, rates oracles etc)
+        handlerCollection.addHandler(ServletContextHandler().apply {
+            contextPath = "/"
+            setAttribute("storage", storage)
+            addServlet(DataUploadServlet::class.java, "/upload/*")
+            addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
+        })
+
+        server.handler = handlerCollection
         server.start()
         return server
     }

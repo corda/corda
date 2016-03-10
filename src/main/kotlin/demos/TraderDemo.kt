@@ -17,6 +17,7 @@ import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
+import core.node.DefaultConfiguration
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromProperties
@@ -299,11 +300,11 @@ private fun loadConfigFile(configFile: Path): NodeConfiguration {
         askAdminToEditConfig(configFile)
     }
 
-    val configProps = configFile.toFile().reader().use {
-        Properties().apply { load(it) }
+    val config = configFile.toFile().reader().use {
+        NodeConfigurationFromProperties(
+            Properties(DefaultConfiguration.toProperties()).apply { load(it) }
+        )
     }
-
-    val config = NodeConfigurationFromProperties(configProps)
 
     // Make sure admin did actually edit at least the legal name.
     if (config.myLegalName == defaultLegalName)
