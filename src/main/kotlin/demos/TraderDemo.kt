@@ -12,7 +12,6 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
 import core.*
-import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
@@ -230,16 +229,8 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         progressTracker.currentStep = TRADING
 
-        val seller = object : TwoPartyTradeProtocol.Seller(otherSide, tsa, commercialPaper, 1000.DOLLARS,
-                                                           cpOwnerKey, sessionID, progressTracker.childrenFor[TRADING]!!) {
-            override fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
-                val s = super.signWithOurKey(partialTX)
-                // Fake delay to make it look like we're doing something more intensive than we really are, to show
-                // the progress tracking framework.
-                Thread.sleep(2000)
-                return s
-            }
-        }
+        val seller = TwoPartyTradeProtocol.Seller(otherSide, tsa, commercialPaper, 1000.DOLLARS, cpOwnerKey, sessionID,
+                progressTracker.childrenFor[TRADING]!!)
         val tradeTX: SignedTransaction = subProtocol(seller)
 
         logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
