@@ -1,0 +1,6 @@
+# Some pretend noddy rate fixes, for the interest rate oracles.
+
+LIBOR 2016-03-16 30 = 0.678
+LIBOR 2016-03-16 60 = 0.655
+EURIBOR 2016-03-15 30 = 0.123
+EURIBOR 2016-03-15 60 = 0.111

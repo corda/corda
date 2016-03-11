@@ -4,6 +4,7 @@ version '1.0-SNAPSHOT'
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
+apply plugin: 'project-report'
 
 allprojects {
     sourceCompatibility = 1.8
@@ -16,7 +17,8 @@ buildscript {
     ext.quasar_version = '0.7.5-SNAPSHOT'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
-    ext.jetty_version = '9.3.7.v20160115'
+    ext.jetty_version = '9.1.1.v20140108'
+    ext.jersey_version = '2.22.2'
 
     repositories {
         mavenCentral()
@@ -41,13 +43,8 @@ configurations {
     quasar
 }
 
-// This block makes Gradle print an error and refuse to continue if we get multiple versions of the same library
-// included simultaneously.
-configurations.all() {
-    resolutionStrategy {
-        failOnVersionConflict()
-    }
-}
+// To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
+// build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
     compile project(':contracts')
@@ -55,26 +52,20 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:3.0.1"
     compile "org.slf4j:slf4j-jdk14:1.7.13"
 
-    compile("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version") {
-        force = true
-    }
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
-    compile("com.google.guava:guava:19.0") {
-        force = true     // Conflict between Quasar and Artemis
-    }
+    compile "com.google.guava:guava:19.0"
 
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:4.9"
 
     // Quasar: for the bytecode rewriting for state machines.
-    quasar("co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar")
+    quasar "co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar"
 
     // Artemis: for reliable p2p message queues.
-    compile("org.apache.activemq:artemis-server:${artemis_version}") {
-        exclude group: "com.google.guava", module: "guava"   // Artemis is on Guava 18
-    }
+    compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
@@ -88,14 +79,33 @@ dependencies {
     }
 
     // Force commons logging to version 1.2 to override Artemis, which pulls in 1.1.3 (ARTEMIS-424)
-    compile("commons-logging:commons-logging:1.2") {
-        force = true
-    }
+    compile "commons-logging:commons-logging:1.2"
 
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
+    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
     compile "javax.servlet:javax.servlet-api:3.1.0"
+    compile "org.jolokia:jolokia-agent-war:2.0.0-M1"
     compile "commons-fileupload:commons-fileupload:1.3.1"
+
+    // Jersey for JAX-RS implementation for use in Jetty
+    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+    // NOTE there is a Jackson version clash between jersey-media-json-jackson (v2.5.4) and jackson-module-kotlin (v.2.5.5)
+    // Have not found an Issue in the issue tracker for Jersey for this issue
+    compile ("org.glassfish.jersey.media:jersey-media-json-jackson:${jersey_version}") {
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+    }
+    compile ("com.fasterxml.jackson.module:jackson-module-kotlin:2.5.5-2") {
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+    }
+    compile "com.fasterxml.jackson.core:jackson-annotations:2.5.5"
+
+    // Coda Hale's Metrics: for monitoring of key statistics
+    compile "io.dropwizard.metrics:metrics-core:3.1.2"
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
@@ -109,7 +119,7 @@ dependencies {
 // In Java 9 (hopefully) the requirement to annotate methods as @Suspendable will go away.
 
 applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
-mainClassName = 'core.node.TraderDemoKt'
+mainClassName = 'demos.TraderDemoKt'
 
 tasks.withType(Test) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
@@ -118,4 +128,18 @@ tasks.withType(Test) {
 tasks.withType(JavaExec) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
     jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
+}
+
+// Package up the other demo programs.
+task getRateFixDemo(type: CreateStartScripts) {
+    mainClassName = "demos.RateFixDemoKt"
+    applicationName = "get-rate-fix"
+    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(getRateFixDemo)
+    fileMode = 0755
 }

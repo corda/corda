@@ -1,0 +1,169 @@
+<HTML>
+<HEAD>
+<title>ProtocolLogic - r3prototyping</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href="../index.html">core.protocols</a>&nbsp;/&nbsp;<a href=".">ProtocolLogic</a><br/>
+<br/>
+<h1>ProtocolLogic</h1>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<p>A sub-class of ProtocolLogic implements a protocol flow using direct, straight line blocking code. Thus you
+can write complex protocol logic in an ordinary fashion, without having to think about callbacks, restarting after
+a node crash, how many instances of your protocol there are running and so on.</p>
+<p>Invoking the network will cause the call stack to be suspended onto the heap and then serialized to a database using
+the Quasar fibers framework. Because of this, if you need access to data that might change over time, you should
+request it just-in-time via the <a href="service-hub.html">serviceHub</a> property which is provided. Dont try and keep data you got from a
+service across calls to send/receive/sendAndReceive because the world might change in arbitrary ways out from
+underneath you, for instance, if the node is restarted or reconfigured</p>
+<p>Additionally, be aware of what data you pin either via the stack or in your ProtocolLogic implementation. Very large
+objects or datasets will hurt performance by increasing the amount of data stored in each checkpoint.</p>
+<p>If youd like to use another ProtocolLogic class as a component of your own, construct it on the fly and then pass
+it to the <a href="sub-protocol.html">subProtocol</a> method. It will return the result of that protocol when it completes.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ProtocolLogic</span><span class="symbol">(</span><span class="symbol">)</span></code><p>A sub-class of ProtocolLogic implements a protocol flow using direct, straight line blocking code. Thus you
+can write complex protocol logic in an ordinary fashion, without having to think about callbacks, restarting after
+a node crash, how many instances of your protocol there are running and so on.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="logger.html">logger</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">Logger</span></code><p>This is where you should log things to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="progress-tracker.html">progressTracker</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><span class="identifier">ProgressTracker</span><span class="symbol">?</span></code><p>Override this to provide a <a href="#">ProgressTracker</a>. If one is provided and stepped, the framework will do something
+helpful with the progress reports. If this protocol is invoked as a sub-protocol of another, then the
+tracker will be made a child of the current step in the parent. If its null, this protocol doesnt track
+progress.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="psm.html">psm</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">psm</span><span class="symbol">: </span><a href="../-protocol-state-machine/index.html"><span class="identifier">ProtocolStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code><p>Reference to the <a href="#">Fiber</a> instance that is the top level controller for the entire flow.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="service-hub.html">serviceHub</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../core.node.services/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="call.html">call</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><p>This is where you fill out your business logic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="receive.html">receive</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="send-and-receive.html">sendAndReceive</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="sub-protocol.html">subProtocol</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">subProtocol</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$subProtocol(core.protocols.ProtocolLogic((core.protocols.ProtocolLogic.subProtocol.R)))/subLogic">subLogic</span><span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code><p>Invokes the given subprotocol by simply passing through this ProtocolLogics reference to the
+<a href="../-protocol-state-machine/index.html">ProtocolStateMachine</a> and then calling the <a href="call.html">call</a> method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../protocols/-two-party-trade-protocol/-buyer/index.html">Buyer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Buyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">SignedTransaction</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../protocols/-fetch-data-protocol/index.html">FetchDataProtocol</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FetchDataProtocol</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span><span class="symbol">, </span><span class="identifier">W</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../protocols/-fetch-data-protocol/-result/index.html"><span class="identifier">Result</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>An abstract protocol for fetching typed data from a remote peer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../protocols/-resolve-transactions-protocol/index.html">ResolveTransactionsProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
+their dependencies, and verifies them together using a single <a href="#">TransactionGroup</a>. If no exception is thrown, then
+all the transactions have been successfully verified and inserted into the local database.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../protocols/-two-party-trade-protocol/-seller/index.html">Seller</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Seller</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">SignedTransaction</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../protocols/-timestamping-protocol/index.html">TimestampingProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TimestampingProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">LegallyIdentifiable</span><span class="symbol">&gt;</span></code><p>The TimestampingProtocol class is the client code that talks to a <a href="../../core.node.services/-node-timestamper-service/index.html">NodeTimestamperService</a> on some remote node. It is a
+ProtocolLogic, meaning it can either be a sub-protocol of some other protocol, or be driven independently.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../demos/-trader-demo-protocol-buyer/index.html">TraderDemoProtocolBuyer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TraderDemoProtocolBuyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../demos/-trader-demo-protocol-seller/index.html">TraderDemoProtocolSeller</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TraderDemoProtocolSeller</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

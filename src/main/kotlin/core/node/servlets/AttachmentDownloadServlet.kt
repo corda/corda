@@ -8,7 +8,7 @@
 
 package core.node.servlets
 
-import core.StorageService
+import core.node.services.StorageService
 import core.crypto.SecureHash
 import core.utilities.loggerFor
 import java.io.FileNotFoundException

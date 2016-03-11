@@ -1,0 +1,85 @@
+<HTML>
+<HEAD>
+<title>NodeWalletService - r3prototyping</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">NodeWalletService</a><br/>
+<br/>
+<h1>NodeWalletService</h1>
+<code><span class="identifier">@ThreadSafe</span> <span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><br/>
+<p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
+states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NodeWalletService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeWalletService$<init>(core.node.services.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
+states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="cash-balances.html">cashBalances</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Amount</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+which we have no cash evaluate to null, not 0.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="current-wallet.html">currentWallet</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">currentWallet</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Returns a read-only snapshot of the wallet at the time the call is made. Note that if you consume states or
+keys in this wallet, you must inform the wallet service so it can update its internal state.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="fill-with-some-test-cash.html">fillWithSomeTestCash</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeWalletService$fillWithSomeTestCash(core.Amount, kotlin.Int, kotlin.Int, java.util.Random)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<span class="identifier">Amount</span><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeWalletService$fillWithSomeTestCash(core.Amount, kotlin.Int, kotlin.Int, java.util.Random)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="core.node.services.NodeWalletService$fillWithSomeTestCash(core.Amount, kotlin.Int, kotlin.Int, java.util.Random)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="core.node.services.NodeWalletService$fillWithSomeTestCash(core.Amount, kotlin.Int, kotlin.Int, java.util.Random)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
+to the wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="notify-all.html">notifyAll</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeWalletService$notifyAll(kotlin.collections.Iterable((core.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">WireTransaction</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
+new states that they create. You should only insert transactions that have been successfully verified here</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-wallet-service/notify.html">notify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="core.node.services.WalletService$notify(core.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<span class="identifier">WireTransaction</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Same as notifyAll but with a single transaction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

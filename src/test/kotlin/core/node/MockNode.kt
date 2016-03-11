@@ -23,6 +23,7 @@ import core.Party
 import core.messaging.InMemoryMessagingNetwork
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
+import core.node.services.FixedIdentityService
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.utilities.loggerFor
 import org.slf4j.Logger
@@ -94,6 +95,7 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
             Files.createDirectories(path.resolve("attachments"))
         val config = object : NodeConfiguration {
             override val myLegalName: String = "Mock Company $id"
+            override val exportJMXto: String = ""
         }
         val fac = factory ?: { p, n, n2, l -> MockNode(p, n, n2, l, id) }
         val node = fac(path, config, this, withTimestamper).start()

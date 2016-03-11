@@ -8,20 +8,28 @@
 
 package core.node
 
+import api.Config
 import com.google.common.net.HostAndPort
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
+import core.node.services.ArtemisMessagingService
 import core.node.servlets.AttachmentDownloadServlet
-import core.node.servlets.AttachmentUploadServlet
+import core.node.servlets.DataUploadServlet
 import core.utilities.loggerFor
 import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.webapp.WebAppContext
+import org.glassfish.jersey.server.ServerProperties
+import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import kotlin.reflect.KClass
 
 class ConfigurationException(message: String) : Exception(message)
 
@@ -57,13 +65,45 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     private fun initWebServer(): Server {
         val port = p2pAddr.port + 1   // TODO: Move this into the node config file.
         val server = Server(port)
-        val handler = ServletContextHandler()
-        handler.setAttribute("storage", storage)
-        handler.addServlet(AttachmentUploadServlet::class.java, "/attachments")
-        handler.addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
-        server.handler = handler
+
+        val handlerCollection = HandlerCollection()
+
+        // Export JMX monitoring statistics and data over REST/JSON.
+        if (configuration.exportJMXto.split(',').contains("http")) {
+            handlerCollection.addHandler(WebAppContext().apply {
+                // Find the jolokia WAR file on the classpath.
+                contextPath = "/monitoring/json"
+                setInitParameter("mimeType", "application/json")
+                val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
+                war = classpath.first { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
+            })
+        }
+
+        // API, data upload and download to services (attachments, rates oracles etc)
+        handlerCollection.addHandler(ServletContextHandler().apply {
+            contextPath = "/"
+            setAttribute("storage", storage)
+            addServlet(DataUploadServlet::class.java, "/upload/*")
+            addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
+
+            setAttribute("services", services)
+            val jerseyServlet = addServlet(ServletContainer::class.java, "/api/*")
+            // Give the app a slightly better name in JMX rather than a randomly generated one
+            jerseyServlet.setInitParameter(ServerProperties.APPLICATION_NAME, "node.api")
+            jerseyServlet.setInitParameter(ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED, "true")
+            jerseyServlet.initOrder = 0 // Initialise at server start
+            // Add your API provider classes (annotated for JAX-RS) here
+            setProviders(jerseyServlet, Config::class)
+        })
+
+        server.handler = handlerCollection
         server.start()
         return server
+    }
+
+    private fun setProviders(jerseyServlet: ServletHolder, vararg providerClasses: KClass<out Any>) {
+        val providerClassNames = providerClasses.map { it.java.canonicalName }.joinToString()
+        jerseyServlet.setInitParameter(ServerProperties.PROVIDER_CLASSNAMES, providerClassNames)
     }
 
     override fun start(): Node {

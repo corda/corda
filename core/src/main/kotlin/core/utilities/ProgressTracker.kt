@@ -11,7 +11,7 @@ package core.utilities
 import core.TransientProperty
 import rx.Observable
 import rx.Subscription
-import rx.lang.kotlin.BehaviourSubject
+import rx.subjects.BehaviorSubject
 import rx.subjects.PublishSubject
 import java.util.*
 
@@ -54,7 +54,7 @@ class ProgressTracker(vararg steps: Step) {
 
     /** This class makes it easier to relabel a step on the fly, to provide transient information. */
     open class RelabelableStep(currentLabel: String) : Step(currentLabel) {
-        override val changes = BehaviourSubject<Change>()
+        override val changes = BehaviorSubject.create<Change>()
 
         var currentLabel: String = currentLabel
             set(value) {

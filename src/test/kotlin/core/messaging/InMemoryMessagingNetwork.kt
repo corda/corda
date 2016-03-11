@@ -11,10 +11,10 @@ package core.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import core.DummyTimestampingAuthority
+import core.node.services.DummyTimestampingAuthority
 import core.ThreadBox
 import core.crypto.sha256
-import core.node.TimestamperNodeService
+import core.node.services.NodeTimestamperService
 import core.utilities.loggerFor
 import java.time.Instant
 import java.util.*
@@ -126,7 +126,7 @@ class InMemoryMessagingNetwork {
         check(timestampingAdvert == null)
         val (handle, builder) = createNode(manuallyPumped)
         val node = builder.start().get()
-        TimestamperNodeService(node, DummyTimestampingAuthority.identity, DummyTimestampingAuthority.key)
+        NodeTimestamperService(node, DummyTimestampingAuthority.identity, DummyTimestampingAuthority.key)
         timestampingAdvert = LegallyIdentifiableNode(handle, DummyTimestampingAuthority.identity)
         return Pair(timestampingAdvert!!, node)
     }

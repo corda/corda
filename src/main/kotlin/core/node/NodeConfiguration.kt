@@ -9,9 +9,26 @@
 package core.node
 
 import java.util.*
+import kotlin.reflect.declaredMemberProperties
 
 interface NodeConfiguration {
     val myLegalName: String
+    val exportJMXto: String
+}
+
+object DefaultConfiguration : NodeConfiguration {
+    override val myLegalName: String = "Vast Global MegaCorp"
+    override val exportJMXto: String = ""   // can be "http" or empty
+
+    fun toProperties(): Properties {
+        val settings = DefaultConfiguration::class.declaredMemberProperties.map { it.name to it.get(this@DefaultConfiguration).toString() }
+        val p = Properties().apply {
+            for (setting in settings) {
+                setProperty(setting.first, setting.second)
+            }
+        }
+        return p
+    }
 }
 
 /**
@@ -22,5 +39,6 @@ interface NodeConfiguration {
  * editing the file is a must-have.
  */
 class NodeConfigurationFromProperties(private val properties: Properties) : NodeConfiguration {
-    override val myLegalName: String by properties
+    override val myLegalName: String get() = properties.getProperty("myLegalName")
+    override val exportJMXto: String get() = properties.getProperty("exportJMXto")
 }

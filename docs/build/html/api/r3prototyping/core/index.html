@@ -1,0 +1,31 @@
+<HTML>
+<HEAD>
+<title>core - r3prototyping</title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">r3prototyping</a>&nbsp;/&nbsp;<a href=".">core</a><br/>
+<br/>
+<h2>Package core</h2>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="to-ledger-transaction.html">toLedgerTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">WireTransaction</span><span class="symbol">.</span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="core$toLedgerTransaction(core.WireTransaction, core.node.services.IdentityService, core.node.services.AttachmentStorage)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<span class="identifier">IdentityService</span><span class="symbol">, </span><span class="identifier" id="core$toLedgerTransaction(core.WireTransaction, core.node.services.IdentityService, core.node.services.AttachmentStorage)/attachmentStorage">attachmentStorage</span><span class="symbol">:</span>&nbsp;<a href="../core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">LedgerTransaction</span></code><p>Looks up identities and attachments from storage to generate a <a href="#">LedgerTransaction</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verify-to-ledger-transaction.html">verifyToLedgerTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">SignedTransaction</span><span class="symbol">.</span><span class="identifier">verifyToLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="core$verifyToLedgerTransaction(core.SignedTransaction, core.node.services.IdentityService, core.node.services.AttachmentStorage)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<span class="identifier">IdentityService</span><span class="symbol">, </span><span class="identifier" id="core$verifyToLedgerTransaction(core.SignedTransaction, core.node.services.IdentityService, core.node.services.AttachmentStorage)/attachmentStorage">attachmentStorage</span><span class="symbol">:</span>&nbsp;<a href="../core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">LedgerTransaction</span></code><p>Calls <a href="#">verify</a> to check all required signatures are present, and then uses the passed <a href="#">IdentityService</a> to call
+<a href="to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a> to look up well known identities from pubkeys.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

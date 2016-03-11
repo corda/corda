@@ -99,6 +99,7 @@ fun PrivateKey.signWithECDSA(bitsToSign: ByteArray, publicKey: PublicKey): Digit
 }
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToSign, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
+fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA(bitsToSign.bits, party)
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
     check(public == party.owningKey)
     val sig = signWithECDSA(bitsToSign)
