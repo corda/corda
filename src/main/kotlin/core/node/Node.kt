@@ -9,6 +9,7 @@
 package core.node
 
 import api.Config
+import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
@@ -29,6 +30,7 @@ import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import javax.management.ObjectName
 import kotlin.reflect.KClass
 
 class ConfigurationException(message: String) : Exception(message)
@@ -112,6 +114,21 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         webServer = initWebServer()
         // Start up the MQ service.
         (net as ArtemisMessagingService).start()
+        // Begin exporting our own metrics via JMX.
+        JmxReporter.
+                forRegistry(services.monitoringService.metrics).
+                inDomain("com.r3cev.corda").
+                createsObjectNamesWith { type, domain, name ->
+                    // Make the JMX hierarchy a bit better organised.
+                    val category = name.substringBefore('.')
+                    val subName = name.substringAfter('.', "")
+                    if (subName == "")
+                        ObjectName("$domain:name=$category")
+                    else
+                        ObjectName("$domain:type=$category,name=$subName")
+                }.
+                build().
+                start()
         return this
     }
 

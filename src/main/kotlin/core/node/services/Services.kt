@@ -8,6 +8,8 @@
 
 package core.node.services
 
+import com.codahale.metrics.MetricRegistry
+import contracts.Cash
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
@@ -32,6 +34,18 @@ import java.util.*
 data class Wallet(val states: List<StateAndRef<OwnableState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state is T } as List<StateAndRef<T>>
+
+    /**
+     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+     * which we have no cash evaluate to null (not present in map), not 0.
+     */
+    val cashBalances: Map<Currency, Amount> get() = states.
+                // Select the states we own which are cash, ignore the rest, take the amounts.
+                mapNotNull { (it.state as? Cash.State)?.amount }.
+                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
+                groupBy { it.currency }.
+                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
+                mapValues { it.value.sumOrThrow() }
 }
 
 /**
@@ -144,6 +158,12 @@ interface AttachmentStorage {
 }
 
 /**
+ * Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
+ * This is not an interface because it is too lightweight to bother mocking out.
+ */
+class MonitoringService(val metrics: MetricRegistry)
+
+/**
  * A service hub simply vends references to the other services a node has. Some of those services may be missing or
  * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
  * functionality and you don't want to hard-code which types in the interface.
@@ -155,6 +175,7 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapService: NetworkMapService
+    val monitoringService: MonitoringService
 
     /**
      * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map
