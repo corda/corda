@@ -3,15 +3,16 @@ What's included?
 
 The current prototype consists of a small amount of code that defines:
 
-* Key data structures
+* Key data structures.
 * Algorithms that work with them, such as serialising, hashing, signing, and verification of the signatures.
-* Three smart contracts that implement a notion of a cash claim, a basic commercial paper and a crowdfunding contract.
-  These are simplified versions of the real things.
+* Two smart contracts that implement a notion of a cash claim and basic commercial paper (implemented twice, in two
+  different programming languages). These are simplified versions of the real things.
 * Unit tests that check the algorithms do what is expected, and which verify the behaviour of the smart contracts.
 * API documentation and tutorials (what you're reading)
-* A simple standalone node that uses an embedded message queue broker as its P2P messaging layer
+* A simple standalone node that uses an embedded message queue broker as its P2P messaging layer.
 * A trading demo that runs the node in either a listening/buying mode, or a connecting/selling mode, and swaps some
-  fake commercial paper assets for some self-issued IOU cash.
+  fake commercial paper assets for some self-issued IOU cash, using a generic *protocol framework*.
+* It also includes two oracles: one for precise timestamping and another for interest rate swaps.
 
 Some things it does not currently include but should gain later are:
 
@@ -27,8 +28,9 @@ You can browse `the JIRA bug tracker <https://r3-cev.atlassian.net/>`_.
 The prototype's goal is rapid exploration of ideas. Therefore in places it takes shortcuts that a production system
 would not in order to boost productivity:
 
-* It uses a serialization framework instead of a well specified, vendor neutral protocol.
+* It uses an object graph serialization framework instead of a well specified, vendor neutral protocol.
 * It uses secp256r1, an obsolete elliptic curve.
+* It uses the default, out of the box Apache Artemis MQ protocol instead of AMQP/1.0 (although switching should be easy)
 
 Contracts
 ---------
