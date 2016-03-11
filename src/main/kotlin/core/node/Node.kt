@@ -20,9 +20,9 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
-import org.eclipse.jetty.webapp.WebAppContext
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
@@ -73,6 +73,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             handlerCollection.addHandler(WebAppContext().apply {
                 // Find the jolokia WAR file on the classpath.
                 contextPath = "/monitoring/json"
+                setInitParameter("mimeType", "application/json")
                 val classpath = System.getProperty("java.class.path").split(System.getProperty("path.separator"))
                 war = classpath.first { it.contains("jolokia-agent-war-2") && it.endsWith(".war") }
             })
