@@ -8,6 +8,7 @@
 
 package core.node.services
 
+import com.codahale.metrics.Gauge
 import contracts.Cash
 import core.*
 import core.utilities.loggerFor
@@ -39,16 +40,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
      * Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
      * which we have no cash evaluate to null, not 0.
      */
-    override val cashBalances: Map<Currency, Amount>
-        get() = mutex.locked { wallet }.let { wallet ->
-            wallet.states.
-                // Select the states we own which are cash, ignore the rest, take the amounts.
-                mapNotNull { (it.state as? Cash.State)?.amount }.
-                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-                groupBy { it.currency }.
-                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-                mapValues { it.value.sumOrThrow() }
-        }
+    override val cashBalances: Map<Currency, Amount> get() = mutex.locked { wallet }.cashBalances
 
     override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
         val ourKeys = services.keyManagementService.keys.keys
@@ -71,6 +63,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
             // time, until we get to the result (this is perhaps a bit inefficient, but it's functional and easily
             // unit tested).
             wallet = txns.fold(currentWallet) { current, tx -> current.update(tx, ourKeys) }
+            exportCashBalancesViaMetrics(wallet)
             return wallet
         }
     }
@@ -98,6 +91,29 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
         }
 
         return Wallet(newStates)
+    }
+
+    private class BalanceMetric : Gauge<Long> {
+        @Volatile var pennies = 0L
+        override fun getValue(): Long? = pennies
+    }
+
+    private val balanceMetrics = HashMap<Currency, BalanceMetric>()
+
+    private fun exportCashBalancesViaMetrics(wallet: Wallet) {
+        // This is just for demo purposes. We probably shouldn't expose balances via JMX in a real node as that might
+        // be commercially sensitive info that the sysadmins aren't even meant to know.
+        //
+        // Note: exported as pennies.
+        val m = services.monitoringService.metrics
+        for (balance in wallet.cashBalances) {
+            val metric = balanceMetrics.getOrPut(balance.key) {
+                val newMetric = BalanceMetric()
+                m.register("WalletBalances.${balance.key}Pennies", newMetric)
+                newMetric
+            }
+            metric.pennies = balance.value.pennies
+        }
     }
 
     /**
