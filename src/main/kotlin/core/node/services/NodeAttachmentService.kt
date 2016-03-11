@@ -8,6 +8,7 @@
 
 package core.node.services
 
+import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
@@ -31,11 +32,20 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.
  */
 @ThreadSafe
-class NodeAttachmentService(val storePath: Path) : AttachmentStorage, AcceptsFileUpload {
+class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
     private val log = loggerFor<NodeAttachmentService>()
 
     @VisibleForTesting
     var checkAttachmentsOnLoad = true
+
+    private val attachmentCount = metrics.counter("Attachments")
+
+    init {
+        attachmentCount.inc(countAttachments())
+    }
+
+    // Just count all non-directories in the attachment store, and assume the admin hasn't dumped any junk there.
+    private fun countAttachments() = Files.list(storePath).filter { Files.isRegularFile(it) }.count()
 
     /**
      * If true, newly inserted attachments will be unzipped to a subdirectory of the [storePath]. This is intended for
@@ -77,22 +87,25 @@ class NodeAttachmentService(val storePath: Path) : AttachmentStorage, AcceptsFil
         }
     }
 
+    // Deliberately not an inner class to avoid holding a reference to the attachments service.
+    private class AttachmentImpl(override val id: SecureHash,
+                                 private val path: Path,
+                                 private val checkOnLoad: Boolean) : Attachment {
+        override fun open(): InputStream {
+            var stream = Files.newInputStream(path)
+            // This is just an optional safety check. If it slows things down too much it can be disabled.
+            if (id is SecureHash.SHA256 && checkOnLoad)
+                stream = HashCheckingStream(id, path, stream)
+            return stream
+        }
+        override fun equals(other: Any?) = other is Attachment && other.id == id
+        override fun hashCode(): Int = id.hashCode()
+    }
+
     override fun openAttachment(id: SecureHash): Attachment? {
         val path = storePath.resolve(id.toString())
         if (!Files.exists(path)) return null
-        return object : Attachment {
-            override fun open(): InputStream {
-                var stream = Files.newInputStream(path)
-                // This is just an optional safety check. If it slows things down too much it can be disabled.
-                if (id is SecureHash.SHA256 && checkAttachmentsOnLoad)
-                    stream = HashCheckingStream(id, path, stream)
-                log.debug("Opening attachment $id")
-                return stream
-            }
-            override val id: SecureHash = id
-            override fun equals(other: Any?) = other is Attachment && other.id == id
-            override fun hashCode(): Int = id.hashCode()
-        }
+        return AttachmentImpl(id, path, checkAttachmentsOnLoad)
     }
 
     override fun importAttachment(jar: InputStream): SecureHash {
@@ -106,10 +119,12 @@ class NodeAttachmentService(val storePath: Path) : AttachmentStorage, AcceptsFil
         try {
             // Move into place atomically or fail if that isn't possible. We don't want a half moved attachment to
             // be exposed to parallel threads. This gives us thread safety.
-            if (!Files.exists(finalPath))
+            if (!Files.exists(finalPath)) {
                 log.info("Stored new attachment $id")
-            else
+                attachmentCount.inc()
+            } else {
                 log.info("Replacing attachment $id - only bother doing this if you're trying to repair file corruption")
+            }
             Files.move(tmp, finalPath, StandardCopyOption.ATOMIC_MOVE)
         } finally {
             Files.deleteIfExists(tmp)

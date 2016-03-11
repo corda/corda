@@ -211,6 +211,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             Files.createDirectory(attachmentsDir)
         } catch (e: FileAlreadyExistsException) {
         }
-        return NodeAttachmentService(attachmentsDir)
+        return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
     }
 }

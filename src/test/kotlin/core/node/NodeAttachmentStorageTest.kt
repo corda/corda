@@ -8,6 +8,7 @@
 
 package core.node
 
+import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import core.crypto.SecureHash
@@ -40,7 +41,7 @@ class NodeAttachmentStorageTest {
         val testJar = makeTestJar()
         val expectedHash = SecureHash.sha256(Files.readAllBytes(testJar))
 
-        val storage = NodeAttachmentService(fs.getPath("/"))
+        val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
         val id =  testJar.use { storage.importAttachment(it) }
         assertEquals(expectedHash, id)
 
@@ -57,7 +58,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
-        val storage = NodeAttachmentService(fs.getPath("/"))
+        val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
         testJar.use { storage.importAttachment(it) }
         assertFailsWith<java.nio.file.FileAlreadyExistsException> {
             testJar.use { storage.importAttachment(it) }
@@ -67,7 +68,7 @@ class NodeAttachmentStorageTest {
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
-        val storage = NodeAttachmentService(fs.getPath("/"))
+        val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
         val id = testJar.use { storage.importAttachment(it) }
 
         // Corrupt the file in the store.
