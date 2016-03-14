@@ -72,15 +72,15 @@ may let you cast the returned future to an object that lets you get status info.
 </tr>
 <tr>
 <td>
-<a href="-mock-network-map/index.html">MockNetworkMap</a></td>
+<a href="-mock-network-map-service/index.html">MockNetworkMapService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">MockNetworkMap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-network-map/index.html"><span class="identifier">NetworkMap</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">MockNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="-network-map/index.html">NetworkMap</a></td>
+<a href="-network-map-service/index.html">NetworkMapService</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">NetworkMap</span></code><p>A network map contains lists of nodes on the network along with information about their identity keys, services
+<code><span class="keyword">interface </span><span class="identifier">NetworkMapService</span></code><p>A network map contains lists of nodes on the network along with information about their identity keys, services
 they provide and host names or IP addresses where they can be connected to. A reasonable architecture for the
 network map service might be one like the Tor directory authorities, where several nodes linked by RAFT or Paxos
 elect a leader and that leader distributes signed documents describing the network layout. Those documents can

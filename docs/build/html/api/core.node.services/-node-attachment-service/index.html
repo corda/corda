@@ -7,7 +7,7 @@
 <a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">NodeAttachmentService</a><br/>
 <br/>
 <h1>NodeAttachmentService</h1>
-<code><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a></code><br/>
+<code><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><a href="../../core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></code><br/>
 <p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
 <br/>
 <br/>
@@ -29,7 +29,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">NodeAttachmentService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path)/storePath">storePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span></code><p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
+<code><span class="identifier">NodeAttachmentService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path, )/storePath">storePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path, )/metrics">metrics</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span></code><p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
 </td>
 </tr>
 </tbody>
@@ -37,6 +37,13 @@
 <h3>Properties</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="acceptable-file-extensions.html">acceptableFileExtensions</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>What file extensions are acceptable for the file to be handed to upload()</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="automatically-extract-attachments.html">automaticallyExtractAttachments</a></td>
@@ -51,6 +58,19 @@ will not have any effect).</p>
 <a href="check-attachments-on-load.html">checkAttachmentsOnLoad</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">checkAttachmentsOnLoad</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="data-type-prefix.html">dataTypePrefix</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></code><p>A string that prefixes the URLs, e.g. "attachments" or "interest-rates". Should be OK for URLs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="metrics.html">metrics</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">metrics</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -79,6 +99,14 @@ operation due to the need to copy the bytes to disk and hash them along the way.
 The returned stream must be closed when you are done with it to avoid resource leaks. You should probably wrap
 the result in a <a href="http://docs.oracle.com/javase/6/docs/api/java/util/jar/JarInputStream.html">JarInputStream</a> unless youre sending it somewhere, there is a convenience helper for this
 on <a href="../../core/-attachment/index.html">Attachment</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="upload.html">upload</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Accepts the data in the given input stream, and returns some sort of useful return message that will be sent
+back to the user in the response.</p>
 </td>
 </tr>
 </tbody>

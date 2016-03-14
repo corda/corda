@@ -26,6 +26,13 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="../core.node/-accepts-file-upload/index.html">core.node.AcceptsFileUpload</a></td>
+<td>
+<p>A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../core.messaging/-all-possible-recipients.html">core.messaging.AllPossibleRecipients</a></td>
 <td>
 <p>A special base class for the set of all possible recipients, without having to identify who they all are.</p>
@@ -70,12 +77,6 @@ of how attachments are meant to be used include:</p>
 <td>
 <p>An attachment store records potentially large binary objects, identified by their hash. Note that attachments are
 immutable and can never be erased once inserted</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../core.node.servlets/-attachment-upload-servlet/index.html">core.node.servlets.AttachmentUploadServlet</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -136,6 +137,14 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
+<a href="../api/-config/index.html">api.Config</a></td>
+<td>
+<p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
+and to organise serializers / deserializers for java.time.* classes as necessary</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../core.node/-configuration-exception/index.html">core.node.ConfigurationException</a></td>
 <td>
 </td>
@@ -177,10 +186,23 @@ return the funds to the pledge-makers (if the target has not been reached).</p>
 </tr>
 <tr>
 <td>
+<a href="../core.node.servlets/-data-upload-servlet/index.html">core.node.servlets.DataUploadServlet</a></td>
+<td>
+<p>Accepts binary streams, finds the right <a href="../core.node/-accepts-file-upload/index.html">AcceptsFileUpload</a> implementor and hands the stream off to it.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../core.node.services/-data-vending-service/index.html">core.node.services.DataVendingService</a></td>
 <td>
 <p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
 glue that sits between the network layer and the database layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-default-configuration/index.html">core.node.DefaultConfiguration</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -250,6 +272,20 @@ attachments are saved to local storage automatically.</p>
 <a href="../protocols/-fetch-transactions-protocol/index.html">protocols.FetchTransactionsProtocol</a></td>
 <td>
 <p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-fix/index.html">core.Fix</a></td>
+<td>
+<p>A <a href="../core/-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-fix-of/index.html">core.FixOf</a></td>
+<td>
+<p>A <a href="../core/-fix-of/index.html">FixOf</a> identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc)</p>
 </td>
 </tr>
 <tr>
@@ -384,8 +420,16 @@ may let you cast the returned future to an object that lets you get status info.
 </tr>
 <tr>
 <td>
-<a href="../core.messaging/-mock-network-map/index.html">core.messaging.MockNetworkMap</a></td>
+<a href="../core.messaging/-mock-network-map-service/index.html">core.messaging.MockNetworkMapService</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-monitoring-service/index.html">core.node.services.MonitoringService</a></td>
+<td>
+<p>Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
+This is not an interface because it is too lightweight to bother mocking out.</p>
 </td>
 </tr>
 <tr>
@@ -397,7 +441,7 @@ may let you cast the returned future to an object that lets you get status info.
 </tr>
 <tr>
 <td>
-<a href="../core.messaging/-network-map/index.html">core.messaging.NetworkMap</a></td>
+<a href="../core.messaging/-network-map-service/index.html">core.messaging.NetworkMapService</a></td>
 <td>
 <p>A network map contains lists of nodes on the network along with information about their identity keys, services
 they provide and host names or IP addresses where they can be connected to. A reasonable architecture for the
@@ -432,6 +476,14 @@ loads important data off disk and starts listening for connections.</p>
 <a href="../core.node/-node-configuration-from-properties/index.html">core.node.NodeConfigurationFromProperties</a></td>
 <td>
 <p>A simple wrapper around a plain old Java .properties file. The keys have the same name as in the source code.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-node-interest-rates/index.html">core.node.services.NodeInterestRates</a></td>
+<td>
+<p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
+rate fix (e.g. LIBOR, EURIBOR ...).</p>
 </td>
 </tr>
 <tr>
@@ -529,6 +581,16 @@ For any given flow there is only one PSM, even if that protocol invokes subproto
 <td>
 <a href="../core.crypto/java.security.-public-key/index.html">java.security.PublicKey</a> (extensions in package core.crypto)</td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-rates-fix-protocol/index.html">protocols.RatesFixProtocol</a></td>
+<td>
+<p>This protocol queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the
+fix in the transaction and then proceeds to get the oracle to sign it. Although the <a href="../protocols/-rates-fix-protocol/call.html">call</a> method combines the query
+and signing step, you can run the steps individually by constructing this object and then using the public methods
+for each step.</p>
 </td>
 </tr>
 <tr>

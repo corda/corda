@@ -130,6 +130,16 @@ progress.</p>
 </tr>
 <tr>
 <td>
+<a href="../../protocols/-rates-fix-protocol/index.html">RatesFixProtocol</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RatesFixProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the
+fix in the transaction and then proceeds to get the oracle to sign it. Although the <a href="../../protocols/-rates-fix-protocol/call.html">call</a> method combines the query
+and signing step, you can run the steps individually by constructing this object and then using the public methods
+for each step.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../protocols/-resolve-transactions-protocol/index.html">ResolveTransactionsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all

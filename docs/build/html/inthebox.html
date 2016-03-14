@@ -102,11 +102,11 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
-<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 </ul>
 
@@ -156,15 +156,16 @@
 <h1>What&#8217;s included?<a class="headerlink" href="#what-s-included" title="Permalink to this headline">¶</a></h1>
 <p>The current prototype consists of a small amount of code that defines:</p>
 <ul class="simple">
-<li>Key data structures</li>
+<li>Key data structures.</li>
 <li>Algorithms that work with them, such as serialising, hashing, signing, and verification of the signatures.</li>
-<li>Three smart contracts that implement a notion of a cash claim, a basic commercial paper and a crowdfunding contract.
-These are simplified versions of the real things.</li>
+<li>Two smart contracts that implement a notion of a cash claim and basic commercial paper (implemented twice, in two
+different programming languages). These are simplified versions of the real things.</li>
 <li>Unit tests that check the algorithms do what is expected, and which verify the behaviour of the smart contracts.</li>
 <li>API documentation and tutorials (what you&#8217;re reading)</li>
-<li>A simple standalone node that uses an embedded message queue broker as its P2P messaging layer</li>
+<li>A simple standalone node that uses an embedded message queue broker as its P2P messaging layer.</li>
 <li>A trading demo that runs the node in either a listening/buying mode, or a connecting/selling mode, and swaps some
-fake commercial paper assets for some self-issued IOU cash.</li>
+fake commercial paper assets for some self-issued IOU cash, using a generic <em>protocol framework</em>.</li>
+<li>It also includes two oracles: one for precise timestamping and another for interest rate swaps.</li>
 </ul>
 <p>Some things it does not currently include but should gain later are:</p>
 <ul class="simple">
@@ -179,8 +180,9 @@ fake commercial paper assets for some self-issued IOU cash.</li>
 <p>The prototype&#8217;s goal is rapid exploration of ideas. Therefore in places it takes shortcuts that a production system
 would not in order to boost productivity:</p>
 <ul class="simple">
-<li>It uses a serialization framework instead of a well specified, vendor neutral protocol.</li>
+<li>It uses an object graph serialization framework instead of a well specified, vendor neutral protocol.</li>
 <li>It uses secp256r1, an obsolete elliptic curve.</li>
+<li>It uses the default, out of the box Apache Artemis MQ protocol instead of AMQP/1.0 (although switching should be easy)</li>
 </ul>
 <div class="section" id="contracts">
 <h2>Contracts<a class="headerlink" href="#contracts" title="Permalink to this headline">¶</a></h2>

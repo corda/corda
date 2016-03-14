@@ -38,12 +38,12 @@ Read on to learn:
 
    tutorial
    protocol-state-machines
+   oracles
 
 .. toctree::
    :maxdepth: 2
    :caption: Appendix
 
    visualiser
-   roadmap
    codestyle
 

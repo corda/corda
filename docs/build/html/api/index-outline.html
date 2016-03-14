@@ -62,6 +62,7 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="core.node/-abstract-node/_services-that-accept-uploads.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">_servicesThatAcceptUploads</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/configuration.html"><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="core.node/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/construct-storage-service.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">constructStorageService</span><span class="symbol">(</span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, core.Party, java.security.KeyPair)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="core.node.services/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a><span class="symbol">, </span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, core.Party, java.security.KeyPair)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, core.Party, java.security.KeyPair)/keypair">keypair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.node/-abstract-node/-storage-service-impl/index.html"><span class="identifier">StorageServiceImpl</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/contract-factory.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">contractFactory</span><span class="symbol">: </span><a href="core/-contract-factory/index.html"><span class="identifier">ContractFactory</span></a></a></a><br/>
@@ -73,16 +74,32 @@
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/legally-identifable-address.html"><span class="keyword">val </span><span class="identifier">legallyIdentifableAddress</span><span class="symbol">: </span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/log.html"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/make-identity-service.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeIdentityService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-abstract-node/make-interest-rate-oracle-service.html"><span class="keyword">protected</span> <span class="keyword">fun </span><span class="identifier">makeInterestRateOracleService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/make-messaging-service.html"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/net.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/server-thread.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">serverThread</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ExecutorService.html"><span class="identifier">ExecutorService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/services.html"><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="core.node.services/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-abstract-node/services-that-accept-uploads.html"><span class="keyword">val </span><span class="identifier">servicesThatAcceptUploads</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/smm.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">smm</span><span class="symbol">: </span><a href="core.messaging/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/start.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.node/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/stop.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/storage.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/timestamper-address.html"><span class="keyword">val </span><span class="identifier">timestamperAddress</span><span class="symbol">: </span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">?</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/wallet.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">wallet</span><span class="symbol">: </span><a href="core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/index.html"><span class="keyword">interface </span><span class="identifier">AcceptsFileUpload</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/acceptable-file-extensions.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/data-type-prefix.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/upload.html"><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.AcceptsFileUpload$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -187,19 +204,6 @@
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node.services/-attachment-storage/import-attachment.html"><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">importAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AttachmentStorage$importAttachment(java.io.InputStream)/jar">jar</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-attachment-storage/open-attachment.html"><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">openAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AttachmentStorage$openAttachment(core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">?</span></a></a><br/>
-</BODY>
-</HTML>
-</ul>
-<a href="docs/build/html/api/index"><a href="core.node.servlets/-attachment-upload-servlet/index.html"><span class="keyword">class </span><span class="identifier">AttachmentUploadServlet</span></a></a><br/>
-<ul>
-<HTML>
-<HEAD>
-<title>Module Contents</title>
-<link rel="stylesheet" href="style.css">
-</HEAD>
-<BODY>
-<a href="docs/build/html/api/index"><a href="core.node.servlets/-attachment-upload-servlet/-init-.html"><span class="identifier">AttachmentUploadServlet</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
-<a href="docs/build/html/api/index"><a href="core.node.servlets/-attachment-upload-servlet/do-post.html"><span class="keyword">fun </span><span class="identifier">doPost</span><span class="symbol">(</span><span class="identifier" id="core.node.servlets.AttachmentUploadServlet$doPost(, )/req">req</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="core.node.servlets.AttachmentUploadServlet$doPost(, )/resp">resp</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -425,6 +429,44 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="api/-config/index.html"><span class="keyword">class </span><span class="identifier">Config</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/-init-.html"><span class="identifier">Config</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="api/-config/-local-date-deserializer/index.html"><span class="keyword">object </span><span class="identifier">LocalDateDeserializer</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/-local-date-deserializer/deserialize.html"><span class="keyword">fun </span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="api.Config.LocalDateDeserializer$deserialize(, )/parser">parser</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="api.Config.LocalDateDeserializer$deserialize(, )/context">context</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="api/-config/-to-string-serializer/index.html"><span class="keyword">object </span><span class="identifier">ToStringSerializer</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/-to-string-serializer/serialize.html"><span class="keyword">fun </span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="api.Config.ToStringSerializer$serialize(kotlin.Any, , )/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="api.Config.ToStringSerializer$serialize(kotlin.Any, , )/generator">generator</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="api.Config.ToStringSerializer$serialize(kotlin.Any, , )/provider">provider</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="api/-config/default-object-mapper.html"><span class="keyword">val </span><span class="identifier">defaultObjectMapper</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="api/-config/get-context.html"><span class="keyword">fun </span><span class="identifier">getContext</span><span class="symbol">(</span><span class="identifier" id="api.Config$getContext(java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
 <a href="docs/build/html/api/index"><a href="core.node/-configuration-exception/index.html"><span class="keyword">class </span><span class="identifier">ConfigurationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
 <ul>
 <HTML>
@@ -586,6 +628,19 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="core.node.servlets/-data-upload-servlet/index.html"><span class="keyword">class </span><span class="identifier">DataUploadServlet</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.servlets/-data-upload-servlet/-init-.html"><span class="identifier">DataUploadServlet</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.servlets/-data-upload-servlet/do-post.html"><span class="keyword">fun </span><span class="identifier">doPost</span><span class="symbol">(</span><span class="identifier" id="core.node.servlets.DataUploadServlet$doPost(, )/req">req</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="core.node.servlets.DataUploadServlet$doPost(, )/resp">resp</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
 <a href="docs/build/html/api/index"><a href="core.node.services/-data-vending-service/index.html"><span class="keyword">class </span><span class="identifier">DataVendingService</span></a></a><br/>
 <ul>
 <HTML>
@@ -611,6 +666,20 @@
 </HTML>
 </ul>
 <a href="docs/build/html/api/index"><a href="core.node.services/-data-vending-service/logger.html"><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/index.html"><span class="keyword">object </span><span class="identifier">DefaultConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/export-j-m-xto.html"><span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/my-legal-name.html"><span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/to-properties.html"><span class="keyword">fun </span><span class="identifier">toProperties</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -859,6 +928,35 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="core/-fix/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Fix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core/-command-data.html"><span class="identifier">CommandData</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core/-fix/-init-.html"><span class="identifier">Fix</span><span class="symbol">(</span><span class="identifier" id="core.Fix$<init>(core.FixOf, java.math.BigDecimal)/of">of</span><span class="symbol">:</span>&nbsp;<a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">, </span><span class="identifier" id="core.Fix$<init>(core.FixOf, java.math.BigDecimal)/value">value</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix/of.html"><span class="keyword">val </span><span class="identifier">of</span><span class="symbol">: </span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix/value.html"><span class="keyword">val </span><span class="identifier">value</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixOf</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/-init-.html"><span class="identifier">FixOf</span><span class="symbol">(</span><span class="identifier" id="core.FixOf$<init>(kotlin.String, java.time.LocalDate, java.time.Duration)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.FixOf$<init>(kotlin.String, java.time.LocalDate, java.time.Duration)/forDay">forDay</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="core.FixOf$<init>(kotlin.String, java.time.LocalDate, java.time.Duration)/ofTenor">ofTenor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/for-day.html"><span class="keyword">val </span><span class="identifier">forDay</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/name.html"><span class="keyword">val </span><span class="identifier">name</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/of-tenor.html"><span class="keyword">val </span><span class="identifier">ofTenor</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
 <a href="docs/build/html/api/index"><a href="core.node.services/-fixed-identity-service/index.html"><span class="keyword">class </span><span class="identifier">FixedIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></a></a><br/>
 <ul>
 <HTML>
@@ -1011,7 +1109,7 @@
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map/index.html"><span class="keyword">class </span><span class="identifier">MockNetworkMap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.messaging/-network-map/index.html"><span class="identifier">NetworkMap</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map-service/index.html"><span class="keyword">class </span><span class="identifier">MockNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.messaging/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -1019,8 +1117,21 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map/-init-.html"><span class="identifier">MockNetworkMap</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
-<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map/timestamping-nodes.html"><span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map-service/-init-.html"><span class="identifier">MockNetworkMapService</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map-service/timestamping-nodes.html"><span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-monitoring-service/index.html"><span class="keyword">class </span><span class="identifier">MonitoringService</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-monitoring-service/-init-.html"><span class="identifier">MonitoringService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.MonitoringService$<init>()/metrics">metrics</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-monitoring-service/metrics.html"><span class="keyword">val </span><span class="identifier">metrics</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -1036,7 +1147,7 @@
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.messaging/-network-map/index.html"><span class="keyword">interface </span><span class="identifier">NetworkMap</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-network-map-service/index.html"><span class="keyword">interface </span><span class="identifier">NetworkMapService</span></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -1044,7 +1155,7 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.messaging/-network-map/timestamping-nodes.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-network-map-service/timestamping-nodes.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -1067,7 +1178,7 @@
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/index.html"><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/index.html"><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -1075,7 +1186,7 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/-init-.html"><span class="identifier">NodeAttachmentService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path)/storePath">storePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/-init-.html"><span class="identifier">NodeAttachmentService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path, )/storePath">storePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path, )/metrics">metrics</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/-on-disk-hash-mismatch/index.html"><span class="keyword">class </span><span class="identifier">OnDiskHashMismatch</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
 <ul>
 <HTML>
@@ -1091,11 +1202,15 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/acceptable-file-extensions.html"><span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/automatically-extract-attachments.html"><span class="keyword">var </span><span class="identifier">automaticallyExtractAttachments</span><span class="symbol">: </span><span class="identifier">Boolean</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/check-attachments-on-load.html"><span class="keyword">var </span><span class="identifier">checkAttachmentsOnLoad</span><span class="symbol">: </span><span class="identifier">Boolean</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/data-type-prefix.html"><span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/import-attachment.html"><span class="keyword">fun </span><span class="identifier">importAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$importAttachment(java.io.InputStream)/jar">jar</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/metrics.html"><span class="keyword">val </span><span class="identifier">metrics</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/open-attachment.html"><span class="keyword">fun </span><span class="identifier">openAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$openAttachment(core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">?</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/store-path.html"><span class="keyword">val </span><span class="identifier">storePath</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/upload.html"><span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -1107,6 +1222,7 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
+<a href="docs/build/html/api/index"><a href="core.node/-node-configuration/export-j-m-xto.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-node-configuration/my-legal-name.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 </BODY>
 </HTML>
@@ -1120,7 +1236,70 @@
 </HEAD>
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node/-node-configuration-from-properties/-init-.html"><span class="identifier">NodeConfigurationFromProperties</span><span class="symbol">(</span><span class="identifier" id="core.node.NodeConfigurationFromProperties$<init>(java.util.Properties)/properties">properties</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-node-configuration-from-properties/export-j-m-xto.html"><span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-node-configuration-from-properties/my-legal-name.html"><span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/index.html"><span class="keyword">object </span><span class="identifier">NodeInterestRates</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/index.html"><span class="keyword">class </span><span class="identifier">Oracle</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/-init-.html"><span class="identifier">Oracle</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.Party, java.security.KeyPair)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.Party, java.security.KeyPair)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/identity.html"><span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="core/-party/index.html"><span class="identifier">Party</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/known-fixes.html"><span class="keyword">var </span><span class="identifier">knownFixes</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/query.html"><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$query(kotlin.collections.List((core.FixOf)))/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/sign.html"><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$sign(core.WireTransaction)/wtx">wtx</span><span class="symbol">:</span>&nbsp;<a href="core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/index.html"><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/-init-.html"><span class="identifier">Service</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Service$<init>(core.node.AbstractNode)/node">node</span><span class="symbol">:</span>&nbsp;<a href="core.node/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/acceptable-file-extensions.html"><span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/data-type-prefix.html"><span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/net.html"><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/oracle.html"><span class="keyword">val </span><span class="identifier">oracle</span><span class="symbol">: </span><a href="core.node.services/-node-interest-rates/-oracle/index.html"><span class="identifier">Oracle</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/ss.html"><span class="keyword">val </span><span class="identifier">ss</span><span class="symbol">: </span><a href="core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/upload.html"><span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Service$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/index.html"><span class="keyword">class </span><span class="identifier">UnknownFix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/-init-.html"><span class="identifier">UnknownFix</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.UnknownFix$<init>(core.FixOf)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/fix.html"><span class="keyword">val </span><span class="identifier">fix</span><span class="symbol">: </span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/to-string.html"><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/parse-file.html"><span class="keyword">fun </span><span class="identifier">parseFile</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseFile(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">,</span>&nbsp;<a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/parse-fix-of.html"><span class="keyword">fun </span><span class="identifier">parseFixOf</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseFixOf(kotlin.String)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/parse-one-rate.html"><span class="keyword">fun </span><span class="identifier">parseOneRate</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseOneRate(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">,</span>&nbsp;<a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -1402,6 +1581,83 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/index.html"><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RatesFixProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-init-.html"><span class="identifier">RatesFixProtocol</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="core/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/oracle">oracle</span><span class="symbol">:</span>&nbsp;<a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/fixOf">fixOf</span><span class="symbol">:</span>&nbsp;<a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/expectedRate">expectedRate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/rateTolerance">rateTolerance</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-fix-out-of-range/index.html"><span class="keyword">class </span><span class="identifier">FixOutOfRange</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-fix-out-of-range/-init-.html"><span class="identifier">FixOutOfRange</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.FixOutOfRange$<init>(java.math.BigDecimal)/byAmount">byAmount</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-fix-out-of-range/by-amount.html"><span class="keyword">val </span><span class="identifier">byAmount</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-q-u-e-r-y-i-n-g/index.html"><span class="keyword">class </span><span class="identifier">QUERYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-q-u-e-r-y-i-n-g/-init-.html"><span class="identifier">QUERYING</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.Companion.QUERYING$<init>(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-q-u-e-r-y-i-n-g/name.html"><span class="keyword">val </span><span class="identifier">name</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryRequest</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/-init-.html"><span class="identifier">QueryRequest</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((core.FixOf)), core.messaging.SingleMessageRecipient, kotlin.Long)/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((core.FixOf)), core.messaging.SingleMessageRecipient, kotlin.Long)/replyTo">replyTo</span><span class="symbol">:</span>&nbsp;<a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((core.FixOf)), core.messaging.SingleMessageRecipient, kotlin.Long)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/queries.html"><span class="keyword">val </span><span class="identifier">queries</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/reply-to.html"><span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/session-i-d.html"><span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-s-i-g-n-i-n-g.html"><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/-init-.html"><span class="identifier">SignRequest</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.SignRequest$<init>(core.WireTransaction, core.messaging.SingleMessageRecipient, kotlin.Long)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.SignRequest$<init>(core.WireTransaction, core.messaging.SingleMessageRecipient, kotlin.Long)/replyTo">replyTo</span><span class="symbol">:</span>&nbsp;<a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.SignRequest$<init>(core.WireTransaction, core.messaging.SingleMessageRecipient, kotlin.Long)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/reply-to.html"><span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/session-i-d.html"><span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/tx.html"><span class="keyword">val </span><span class="identifier">tx</span><span class="symbol">: </span><a href="core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-t-o-p-i-c.html"><span class="keyword">val </span><span class="identifier">TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-w-o-r-k-i-n-g.html"><span class="keyword">object </span><span class="identifier">WORKING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/before-signing.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">beforeSigning</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol$beforeSigning(core.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/call.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/progress-tracker.html"><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/query.html"><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core/-fix/index.html"><span class="identifier">Fix</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/sign.html"><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/tx.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">tx</span><span class="symbol">: </span><a href="core/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
 <a href="docs/build/html/api/index"><a href="core/-requirements/index.html"><span class="keyword">class </span><span class="identifier">Requirements</span></a></a><br/>
 <ul>
 <HTML>
@@ -1498,7 +1754,8 @@
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/identity-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">identityService</span><span class="symbol">: </span><a href="core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/key-management-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">keyManagementService</span><span class="symbol">: </span><a href="core.node.services/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></a></a><br/>
-<a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/network-map-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="core.messaging/-network-map/index.html"><span class="identifier">NetworkMap</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/monitoring-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">monitoringService</span><span class="symbol">: </span><a href="core.node.services/-monitoring-service/index.html"><span class="identifier">MonitoringService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/network-map-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="core.messaging/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/network-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkService</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/storage-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">storageService</span><span class="symbol">: </span><a href="core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/verify-transaction.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="core.node.services.ServiceHub$verifyTransaction(core.LedgerTransaction)/ltx">ltx</span><span class="symbol">:</span>&nbsp;<a href="core/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
@@ -2156,6 +2413,7 @@
 </HEAD>
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node.services/-wallet/-init-.html"><span class="identifier">Wallet</span><span class="symbol">(</span><span class="identifier" id="core.node.services.Wallet$<init>(kotlin.collections.List((core.StateAndRef((core.OwnableState)))))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-wallet/cash-balances.html"><span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="core/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-wallet/states.html"><span class="keyword">val </span><span class="identifier">states</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-wallet/states-of-type.html"><span class="keyword">inline</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="keyword">reified</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span> <span class="identifier">statesOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
@@ -2376,6 +2634,55 @@
 <a href="docs/build/html/api/index"><a href="core/kotlin.collections.-list/require-single-command.html"><span class="keyword">inline</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="keyword">reified</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="core/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">requireSingleCommand</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core/kotlin.collections.-list/require-single-command.html"><span class="keyword">fun </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="core/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">requireSingleCommand</span><span class="symbol">(</span><span class="identifier" id="core$requireSingleCommand(kotlin.collections.List((core.AuthenticatedObject((core.CommandData)))), java.lang.Class((core.CommandData)))/klass">klass</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="core/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core/kotlin.collections.-list/select.html"><span class="keyword">inline</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="keyword">reified</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="core/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">select</span><span class="symbol">(</span><span class="identifier" id="core$select(kotlin.collections.List((core.AuthenticatedObject((core.CommandData)))), java.security.PublicKey, core.Party)/signer">signer</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="core$select(kotlin.collections.List((core.AuthenticatedObject((core.CommandData)))), java.security.PublicKey, core.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="api/index.html"><span class="keyword">package</span> <span class="identifier">api</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/index.html"><span class="keyword">class </span><span class="identifier">Config</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/-init-.html"><span class="identifier">Config</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="api/-config/-local-date-deserializer/index.html"><span class="keyword">object </span><span class="identifier">LocalDateDeserializer</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/-local-date-deserializer/deserialize.html"><span class="keyword">fun </span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="api.Config.LocalDateDeserializer$deserialize(, )/parser">parser</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="api.Config.LocalDateDeserializer$deserialize(, )/context">context</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="api/-config/-to-string-serializer/index.html"><span class="keyword">object </span><span class="identifier">ToStringSerializer</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="api/-config/-to-string-serializer/serialize.html"><span class="keyword">fun </span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="api.Config.ToStringSerializer$serialize(kotlin.Any, , )/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="api.Config.ToStringSerializer$serialize(kotlin.Any, , )/generator">generator</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="api.Config.ToStringSerializer$serialize(kotlin.Any, , )/provider">provider</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="api/-config/default-object-mapper.html"><span class="keyword">val </span><span class="identifier">defaultObjectMapper</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="api/-config/get-context.html"><span class="keyword">fun </span><span class="identifier">getContext</span><span class="symbol">(</span><span class="identifier" id="api.Config$getContext(java.lang.Class((kotlin.Any)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -2846,6 +3153,35 @@
 </HEAD>
 <BODY>
 <a href="docs/build/html/api/index"><a href="core/-contract-state/program-ref.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">programRef</span><span class="symbol">: </span><a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core/-fix/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Fix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core/-command-data.html"><span class="identifier">CommandData</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core/-fix/-init-.html"><span class="identifier">Fix</span><span class="symbol">(</span><span class="identifier" id="core.Fix$<init>(core.FixOf, java.math.BigDecimal)/of">of</span><span class="symbol">:</span>&nbsp;<a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">, </span><span class="identifier" id="core.Fix$<init>(core.FixOf, java.math.BigDecimal)/value">value</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix/of.html"><span class="keyword">val </span><span class="identifier">of</span><span class="symbol">: </span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix/value.html"><span class="keyword">val </span><span class="identifier">value</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixOf</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/-init-.html"><span class="identifier">FixOf</span><span class="symbol">(</span><span class="identifier" id="core.FixOf$<init>(kotlin.String, java.time.LocalDate, java.time.Duration)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.FixOf$<init>(kotlin.String, java.time.LocalDate, java.time.Duration)/forDay">forDay</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="core.FixOf$<init>(kotlin.String, java.time.LocalDate, java.time.Duration)/ofTenor">ofTenor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/for-day.html"><span class="keyword">val </span><span class="identifier">forDay</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/name.html"><span class="keyword">val </span><span class="identifier">name</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core/-fix-of/of-tenor.html"><span class="keyword">val </span><span class="identifier">ofTenor</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -3604,7 +3940,7 @@
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map/index.html"><span class="keyword">class </span><span class="identifier">MockNetworkMap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.messaging/-network-map/index.html"><span class="identifier">NetworkMap</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map-service/index.html"><span class="keyword">class </span><span class="identifier">MockNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.messaging/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -3612,12 +3948,12 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map/-init-.html"><span class="identifier">MockNetworkMap</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
-<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map/timestamping-nodes.html"><span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map-service/-init-.html"><span class="identifier">MockNetworkMapService</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-mock-network-map-service/timestamping-nodes.html"><span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.messaging/-network-map/index.html"><span class="keyword">interface </span><span class="identifier">NetworkMap</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-network-map-service/index.html"><span class="keyword">interface </span><span class="identifier">NetworkMapService</span></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -3625,7 +3961,7 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.messaging/-network-map/timestamping-nodes.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.messaging/-network-map-service/timestamping-nodes.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">timestampingNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -3745,6 +4081,7 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="core.node/-abstract-node/_services-that-accept-uploads.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">_servicesThatAcceptUploads</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/configuration.html"><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="core.node/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/construct-storage-service.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">constructStorageService</span><span class="symbol">(</span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, core.Party, java.security.KeyPair)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="core.node.services/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a><span class="symbol">, </span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, core.Party, java.security.KeyPair)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, core.Party, java.security.KeyPair)/keypair">keypair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.node/-abstract-node/-storage-service-impl/index.html"><span class="identifier">StorageServiceImpl</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/contract-factory.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">contractFactory</span><span class="symbol">: </span><a href="core/-contract-factory/index.html"><span class="identifier">ContractFactory</span></a></a></a><br/>
@@ -3756,16 +4093,32 @@
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/legally-identifable-address.html"><span class="keyword">val </span><span class="identifier">legallyIdentifableAddress</span><span class="symbol">: </span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/log.html"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/make-identity-service.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeIdentityService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-abstract-node/make-interest-rate-oracle-service.html"><span class="keyword">protected</span> <span class="keyword">fun </span><span class="identifier">makeInterestRateOracleService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/make-messaging-service.html"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/net.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/server-thread.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">serverThread</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/ExecutorService.html"><span class="identifier">ExecutorService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/services.html"><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="core.node.services/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-abstract-node/services-that-accept-uploads.html"><span class="keyword">val </span><span class="identifier">servicesThatAcceptUploads</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/smm.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">smm</span><span class="symbol">: </span><a href="core.messaging/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/start.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.node/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/stop.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/storage.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/timestamper-address.html"><span class="keyword">val </span><span class="identifier">timestamperAddress</span><span class="symbol">: </span><a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">?</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-abstract-node/wallet.html"><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">wallet</span><span class="symbol">: </span><a href="core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/index.html"><span class="keyword">interface </span><span class="identifier">AcceptsFileUpload</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/acceptable-file-extensions.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/data-type-prefix.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-accepts-file-upload/upload.html"><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.AcceptsFileUpload$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -3778,6 +4131,20 @@
 </HEAD>
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node/-configuration-exception/-init-.html"><span class="identifier">ConfigurationException</span><span class="symbol">(</span><span class="identifier" id="core.node.ConfigurationException$<init>(kotlin.String)/message">message</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/index.html"><span class="keyword">object </span><span class="identifier">DefaultConfiguration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/export-j-m-xto.html"><span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/my-legal-name.html"><span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-default-configuration/to-properties.html"><span class="keyword">fun </span><span class="identifier">toProperties</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -3808,6 +4175,7 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
+<a href="docs/build/html/api/index"><a href="core.node/-node-configuration/export-j-m-xto.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-node-configuration/my-legal-name.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 </BODY>
 </HTML>
@@ -3821,6 +4189,7 @@
 </HEAD>
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node/-node-configuration-from-properties/-init-.html"><span class="identifier">NodeConfigurationFromProperties</span><span class="symbol">(</span><span class="identifier" id="core.node.NodeConfigurationFromProperties$<init>(java.util.Properties)/properties">properties</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Properties.html"><span class="identifier">Properties</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node/-node-configuration-from-properties/export-j-m-xto.html"><span class="keyword">val </span><span class="identifier">exportJMXto</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node/-node-configuration-from-properties/my-legal-name.html"><span class="keyword">val </span><span class="identifier">myLegalName</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 </BODY>
 </HTML>
@@ -3984,7 +4353,7 @@
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/index.html"><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-monitoring-service/index.html"><span class="keyword">class </span><span class="identifier">MonitoringService</span></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -3992,7 +4361,20 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/-init-.html"><span class="identifier">NodeAttachmentService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path)/storePath">storePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-monitoring-service/-init-.html"><span class="identifier">MonitoringService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.MonitoringService$<init>()/metrics">metrics</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-monitoring-service/metrics.html"><span class="keyword">val </span><span class="identifier">metrics</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/index.html"><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/-init-.html"><span class="identifier">NodeAttachmentService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path, )/storePath">storePath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeAttachmentService$<init>(java.nio.file.Path, )/metrics">metrics</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/-on-disk-hash-mismatch/index.html"><span class="keyword">class </span><span class="identifier">OnDiskHashMismatch</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
 <ul>
 <HTML>
@@ -4008,11 +4390,77 @@
 </BODY>
 </HTML>
 </ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/acceptable-file-extensions.html"><span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/automatically-extract-attachments.html"><span class="keyword">var </span><span class="identifier">automaticallyExtractAttachments</span><span class="symbol">: </span><span class="identifier">Boolean</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/check-attachments-on-load.html"><span class="keyword">var </span><span class="identifier">checkAttachmentsOnLoad</span><span class="symbol">: </span><span class="identifier">Boolean</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/data-type-prefix.html"><span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/import-attachment.html"><span class="keyword">fun </span><span class="identifier">importAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$importAttachment(java.io.InputStream)/jar">jar</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/metrics.html"><span class="keyword">val </span><span class="identifier">metrics</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/open-attachment.html"><span class="keyword">fun </span><span class="identifier">openAttachment</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$openAttachment(core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">?</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/store-path.html"><span class="keyword">val </span><span class="identifier">storePath</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-attachment-service/upload.html"><span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeAttachmentService$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/index.html"><span class="keyword">object </span><span class="identifier">NodeInterestRates</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/index.html"><span class="keyword">class </span><span class="identifier">Oracle</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/-init-.html"><span class="identifier">Oracle</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.Party, java.security.KeyPair)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.Party, java.security.KeyPair)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/identity.html"><span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="core/-party/index.html"><span class="identifier">Party</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/known-fixes.html"><span class="keyword">var </span><span class="identifier">knownFixes</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/query.html"><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$query(kotlin.collections.List((core.FixOf)))/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-oracle/sign.html"><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$sign(core.WireTransaction)/wtx">wtx</span><span class="symbol">:</span>&nbsp;<a href="core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/index.html"><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/-init-.html"><span class="identifier">Service</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Service$<init>(core.node.AbstractNode)/node">node</span><span class="symbol">:</span>&nbsp;<a href="core.node/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/acceptable-file-extensions.html"><span class="keyword">val </span><span class="identifier">acceptableFileExtensions</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/data-type-prefix.html"><span class="keyword">val </span><span class="identifier">dataTypePrefix</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/net.html"><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/oracle.html"><span class="keyword">val </span><span class="identifier">oracle</span><span class="symbol">: </span><a href="core.node.services/-node-interest-rates/-oracle/index.html"><span class="identifier">Oracle</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/ss.html"><span class="keyword">val </span><span class="identifier">ss</span><span class="symbol">: </span><a href="core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-service/upload.html"><span class="keyword">fun </span><span class="identifier">upload</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Service$upload(java.io.InputStream)/data">data</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/index.html"><span class="keyword">class </span><span class="identifier">UnknownFix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/-init-.html"><span class="identifier">UnknownFix</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.UnknownFix$<init>(core.FixOf)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/fix.html"><span class="keyword">val </span><span class="identifier">fix</span><span class="symbol">: </span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/-unknown-fix/to-string.html"><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/parse-file.html"><span class="keyword">fun </span><span class="identifier">parseFile</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseFile(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">,</span>&nbsp;<a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/parse-fix-of.html"><span class="keyword">fun </span><span class="identifier">parseFixOf</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseFixOf(kotlin.String)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-node-interest-rates/parse-one-rate.html"><span class="keyword">fun </span><span class="identifier">parseOneRate</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseOneRate(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">,</span>&nbsp;<a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -4060,7 +4508,8 @@
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/identity-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">identityService</span><span class="symbol">: </span><a href="core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/key-management-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">keyManagementService</span><span class="symbol">: </span><a href="core.node.services/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></a></a><br/>
-<a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/network-map-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="core.messaging/-network-map/index.html"><span class="identifier">NetworkMap</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/monitoring-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">monitoringService</span><span class="symbol">: </span><a href="core.node.services/-monitoring-service/index.html"><span class="identifier">MonitoringService</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/network-map-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="core.messaging/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/network-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkService</span><span class="symbol">: </span><a href="core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/storage-service.html"><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">storageService</span><span class="symbol">: </span><a href="core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-service-hub/verify-transaction.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="core.node.services.ServiceHub$verifyTransaction(core.LedgerTransaction)/ltx">ltx</span><span class="symbol">:</span>&nbsp;<a href="core/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
@@ -4154,6 +4603,7 @@
 </HEAD>
 <BODY>
 <a href="docs/build/html/api/index"><a href="core.node.services/-wallet/-init-.html"><span class="identifier">Wallet</span><span class="symbol">(</span><span class="identifier" id="core.node.services.Wallet$<init>(kotlin.collections.List((core.StateAndRef((core.OwnableState)))))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.services/-wallet/cash-balances.html"><span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="core/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-wallet/states.html"><span class="keyword">val </span><span class="identifier">states</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="core.node.services/-wallet/states-of-type.html"><span class="keyword">inline</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="keyword">reified</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span> <span class="identifier">statesOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></a></a><br/>
 </BODY>
@@ -4198,7 +4648,7 @@
 </BODY>
 </HTML>
 </ul>
-<a href="docs/build/html/api/index"><a href="core.node.servlets/-attachment-upload-servlet/index.html"><span class="keyword">class </span><span class="identifier">AttachmentUploadServlet</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.servlets/-data-upload-servlet/index.html"><span class="keyword">class </span><span class="identifier">DataUploadServlet</span></a></a><br/>
 <ul>
 <HTML>
 <HEAD>
@@ -4206,8 +4656,8 @@
 <link rel="stylesheet" href="style.css">
 </HEAD>
 <BODY>
-<a href="docs/build/html/api/index"><a href="core.node.servlets/-attachment-upload-servlet/-init-.html"><span class="identifier">AttachmentUploadServlet</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
-<a href="docs/build/html/api/index"><a href="core.node.servlets/-attachment-upload-servlet/do-post.html"><span class="keyword">fun </span><span class="identifier">doPost</span><span class="symbol">(</span><span class="identifier" id="core.node.servlets.AttachmentUploadServlet$doPost(, )/req">req</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="core.node.servlets.AttachmentUploadServlet$doPost(, )/resp">resp</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.servlets/-data-upload-servlet/-init-.html"><span class="identifier">DataUploadServlet</span><span class="symbol">(</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="core.node.servlets/-data-upload-servlet/do-post.html"><span class="keyword">fun </span><span class="identifier">doPost</span><span class="symbol">(</span><span class="identifier" id="core.node.servlets.DataUploadServlet$doPost(, )/req">req</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="core.node.servlets.DataUploadServlet$doPost(, )/resp">resp</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -4601,6 +5051,7 @@
 </HTML>
 </ul>
 <a href="docs/build/html/api/index"><a href="demos/main.html"><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="demos$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="demos/main.html"><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="demos$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
 </BODY>
 </HTML>
 </ul>
@@ -4713,6 +5164,83 @@
 <a href="docs/build/html/api/index"><a href="protocols/-fetch-transactions-protocol/-t-o-p-i-c.html"><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="protocols/-fetch-transactions-protocol/load.html"><span class="keyword">protected</span> <span class="keyword">fun </span><span class="identifier">load</span><span class="symbol">(</span><span class="identifier" id="protocols.FetchTransactionsProtocol$load(core.crypto.SecureHash)/txid">txid</span><span class="symbol">:</span>&nbsp;<a href="core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">?</span></a></a><br/>
 <a href="docs/build/html/api/index"><a href="protocols/-fetch-transactions-protocol/query-topic.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">queryTopic</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/index.html"><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RatesFixProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-init-.html"><span class="identifier">RatesFixProtocol</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="core/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/oracle">oracle</span><span class="symbol">:</span>&nbsp;<a href="core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/fixOf">fixOf</span><span class="symbol">:</span>&nbsp;<a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/expectedRate">expectedRate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol$<init>(core.TransactionBuilder, core.messaging.LegallyIdentifiableNode, core.FixOf, java.math.BigDecimal, java.math.BigDecimal)/rateTolerance">rateTolerance</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-fix-out-of-range/index.html"><span class="keyword">class </span><span class="identifier">FixOutOfRange</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-fix-out-of-range/-init-.html"><span class="identifier">FixOutOfRange</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.FixOutOfRange$<init>(java.math.BigDecimal)/byAmount">byAmount</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-fix-out-of-range/by-amount.html"><span class="keyword">val </span><span class="identifier">byAmount</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigDecimal.html"><span class="identifier">BigDecimal</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-q-u-e-r-y-i-n-g/index.html"><span class="keyword">class </span><span class="identifier">QUERYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-q-u-e-r-y-i-n-g/-init-.html"><span class="identifier">QUERYING</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.Companion.QUERYING$<init>(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-q-u-e-r-y-i-n-g/name.html"><span class="keyword">val </span><span class="identifier">name</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryRequest</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/-init-.html"><span class="identifier">QueryRequest</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((core.FixOf)), core.messaging.SingleMessageRecipient, kotlin.Long)/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((core.FixOf)), core.messaging.SingleMessageRecipient, kotlin.Long)/replyTo">replyTo</span><span class="symbol">:</span>&nbsp;<a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((core.FixOf)), core.messaging.SingleMessageRecipient, kotlin.Long)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/queries.html"><span class="keyword">val </span><span class="identifier">queries</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/reply-to.html"><span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-query-request/session-i-d.html"><span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-s-i-g-n-i-n-g.html"><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/index.html"><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span></a></a><br/>
+<ul>
+<HTML>
+<HEAD>
+<title>Module Contents</title>
+<link rel="stylesheet" href="style.css">
+</HEAD>
+<BODY>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/-init-.html"><span class="identifier">SignRequest</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol.SignRequest$<init>(core.WireTransaction, core.messaging.SingleMessageRecipient, kotlin.Long)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.SignRequest$<init>(core.WireTransaction, core.messaging.SingleMessageRecipient, kotlin.Long)/replyTo">replyTo</span><span class="symbol">:</span>&nbsp;<a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="protocols.RatesFixProtocol.SignRequest$<init>(core.WireTransaction, core.messaging.SingleMessageRecipient, kotlin.Long)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/reply-to.html"><span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/session-i-d.html"><span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-sign-request/tx.html"><span class="keyword">val </span><span class="identifier">tx</span><span class="symbol">: </span><a href="core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></a></a><br/>
+</BODY>
+</HTML>
+</ul>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-t-o-p-i-c.html"><span class="keyword">val </span><span class="identifier">TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/-w-o-r-k-i-n-g.html"><span class="keyword">object </span><span class="identifier">WORKING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/before-signing.html"><span class="keyword">protected</span> <span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">beforeSigning</span><span class="symbol">(</span><span class="identifier" id="protocols.RatesFixProtocol$beforeSigning(core.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/call.html"><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/progress-tracker.html"><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/query.html"><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core/-fix/index.html"><span class="identifier">Fix</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/sign.html"><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></a></a><br/>
+<a href="docs/build/html/api/index"><a href="protocols/-rates-fix-protocol/tx.html"><span class="keyword">protected</span> <span class="keyword">val </span><span class="identifier">tx</span><span class="symbol">: </span><a href="core/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></a></a><br/>
 </BODY>
 </HTML>
 </ul>
