@@ -14,8 +14,10 @@ import core.*
 import core.crypto.SecureHash
 import core.node.MockNetwork
 import core.node.services.*
+import core.node.services.StorageServiceImpl
 import core.testutils.*
 import core.utilities.BriefLogFormatter
+import core.utilities.RecordingMap
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -151,7 +153,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             // Save the state machine to "disk" (i.e. a variable, here)
-            val savedCheckpoints = HashMap(bobNode.storage.getMap<Any, Any>("state machines"))
+            val savedCheckpoints = HashMap(bobNode.storage.stateMachines)
             assertEquals(1, savedCheckpoints.size)
 
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
@@ -167,7 +169,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                 object : MockNetwork.MockNode(path, nodeConfiguration, net, timestamper, bobAddr.id) {
                     override fun initialiseStorageService(dir: Path): StorageService {
                         val ss = super.initialiseStorageService(dir)
-                        val smMap = ss.getMap<Any, Any>("state machines")
+                        val smMap = ss.stateMachines
                         smMap.putAll(savedCheckpoints)
                         return ss
                     }
@@ -195,20 +197,10 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         return net.createNode(null) { path, config, net, tsNode ->
             object : MockNetwork.MockNode(path, config, net, tsNode) {
                 // That constructs the storage service object in a customised way ...
-                override fun constructStorageService(attachments: NodeAttachmentService, identity: Party, keypair: KeyPair): StorageServiceImpl {
-                    // By tweaking the standard StorageServiceImpl class ...
-                    return object : StorageServiceImpl(attachments, identity, keypair) {
-                        // To use RecordingMaps instead of ordinary HashMaps.
-                        @Suppress("UNCHECKED_CAST")
-                        override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
-                            synchronized(tables) {
-                                return tables.getOrPut(tableName) {
-                                    val map = Collections.synchronizedMap(HashMap<Any, Any>())
-                                    RecordingMap(map, LoggerFactory.getLogger("recordingmap.$name"))
-                                } as MutableMap<K, V>
-                            }
-                        }
-                    }
+                override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party,
+                                                     contractFactory: ContractFactory): StorageServiceImpl {
+                    // To use RecordingMaps instead of ordinary HashMaps.
+                    return StorageServiceImpl(attachments, contractFactory, keypair, identity, { tableName -> name })
                 }
             }
         }
