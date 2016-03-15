@@ -104,23 +104,35 @@ enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
  */
 enum class DateRollConvention {
     // direction() cannot be a val due to the throw in the Actual instance
-    Actual { // Don't roll the date, use the one supplied.
+
+    /** Don't roll the date, use the one supplied. */
+    Actual {
         override fun direction(): DateRollDirection = throw UnsupportedOperationException("Direction is not relevant for convention Actual")
         override val isModified: Boolean = false
     },
-    Following { // Following is the next business date from this one.
+    /** Following is the next business date from this one. */
+    Following {
         override fun direction(): DateRollDirection = DateRollDirection.FORWARD
         override val isModified: Boolean = false
     },
-    ModifiedFollowing { // Modified following is the next business date, unless it's in the next month, in which case use the preceeding business date
+    /**
+     * "Modified following" is the next business date, unless it's in the next month, in which case use the preceeding
+     * business date.
+     */
+    ModifiedFollowing {
         override fun direction(): DateRollDirection = DateRollDirection.FORWARD
         override val isModified: Boolean = true
     },
-    Previous { // Previous is the previous business date from this one
+    /** Previous is the previous business date from this one. */
+    Previous {
         override fun direction(): DateRollDirection = DateRollDirection.BACKWARD
         override val isModified: Boolean = false
     },
-    ModifiedPrevious { // Modified previous is the previous business date, unless it's in the previous month, in which case use the next business date
+    /**
+     * Modified previous is the previous business date, unless it's in the previous month, in which case use the next
+     * business date.
+     */
+    ModifiedPrevious {
         override fun direction(): DateRollDirection = DateRollDirection.BACKWARD
         override val isModified: Boolean = true
     };
@@ -130,35 +142,38 @@ enum class DateRollConvention {
 }
 
 
-/** This forms the day part of the "Day Count Basis" used for interest calculation
- */
-enum class DayCountBasisDay { // We have to prefix 30 etc with a letter due to enum naming constraints.
+/** This forms the day part of the "Day Count Basis" used for interest calculation. */
+enum class DayCountBasisDay {
+    // We have to prefix 30 etc with a letter due to enum naming constraints.
     D30, D30N, D30P, D30E, D30G, Actual, ActualJ, D30Z, D30F, Bus_SaoPaulo
 }
 
-/** This forms the year part of the "Day Count Basis" used for interest calculation
- */
-enum class DayCountBasisYear { // Ditto above comment for years.
+/** This forms the year part of the "Day Count Basis" used for interest calculation. */
+enum class DayCountBasisYear {
+    // Ditto above comment for years.
     Y360, Y365F, Y365L, Y365Q, Y366, Actual, ActualA, Y365B, Y365, ISMA, ICMA, Y252
 }
 
-/** Should the payment be made in advance or in arrears */
+/** Whether the payment should be made before the due date, or after it. */
 enum class PaymentRule {
     InAdvance, InArrears,
 }
 
-/** Date offset that the fixing is done prior to the accrual start date
- * Currently not used in the calculation
+/**
+ * Date offset that the fixing is done prior to the accrual start date.
+ * Currently not used in the calculation.
  */
-enum class DateOffset { // TODO: Definitely shouldn't be an enum, but let's leave it for now at T-2 is a convention.
+enum class DateOffset {
+    // TODO: Definitely shouldn't be an enum, but let's leave it for now at T-2 is a convention.
     ZERO, TWODAYS,
 }
 
 
-/** Frequency in which an event occurs - the enumerator also casts to an integer specifying the number of times per year
- * that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc)
+/**
+ * Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
+ * that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).
  */
-enum class Frequency(val annualCompoundCount:Int) {
+enum class Frequency(val annualCompoundCount: Int) {
     Annual(1) {
         override fun offset(d: LocalDate) = d.plusYears(1)
     },
@@ -185,15 +200,34 @@ enum class Frequency(val annualCompoundCount:Int) {
 fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = accordingToCalendar.isWorkingDay(this)
 
 // TODO: Make Calendar data come from an oracle
+
+/**
+ * A business calendar performs date calculations that take into account national holidays and weekends. This is a
+ * typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
+ * no staff are around to handle problems.
+ */
 open class BusinessCalendar private constructor(val holidayDates: List<LocalDate>) {
-    class UnknownCalendar(calname: String): Exception("$calname not found")
+    class UnknownCalendar(name: String): Exception("$name not found")
+
     companion object {
         val calendars = listOf("London","NewYork")
-        val TEST_CALENDAR_DATA = calendars.map { it to BusinessCalendar::class.java.getResourceAsStream("${it}HolidayCalendar.txt").bufferedReader().readText() }.toMap()
-        fun parseDateFromString(it: String) = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
-        fun getInstance(vararg calname: String): BusinessCalendar = // This combines multiple calendars into one list of holiday dates.
-                BusinessCalendar( calname.flatMap { (TEST_CALENDAR_DATA.get(it) ?: throw UnknownCalendar(it)).split(",") }.toSet().map{ parseDateFromString(it) }.toList())
 
+        val TEST_CALENDAR_DATA = calendars.map {
+            it to BusinessCalendar::class.java.getResourceAsStream("${it}HolidayCalendar.txt").bufferedReader().readText()
+        }.toMap()
+
+        /** Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan. */
+        fun parseDateFromString(it: String) = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
+
+        /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
+        fun getInstance(vararg calname: String) = BusinessCalendar(
+                calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
+                        toSet().
+                        map{ parseDateFromString(it) }.
+                        toList()
+        )
+
+        /** Calculates an event schedule that moves events around to ensure they fall on working days. */
         fun createGenericSchedule(startDate: LocalDate,
                                   period: Frequency,
                                   calendar: BusinessCalendar = BusinessCalendar.getInstance(),
@@ -207,16 +241,14 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
 
             while (true) {
                 currentDate = period.offset(currentDate)
-                var scheduleDate = currentDate
-                scheduleDate = calendar.applyRollConvention(scheduleDate, dateRollConvention)
+                val scheduleDate = calendar.applyRollConvention(currentDate, dateRollConvention)
 
-                if ((periodOffset == null) || (periodOffset <= ctr)) {
+                if (periodOffset == null || periodOffset <= ctr)
                     ret.add(scheduleDate)
-                }
                 ctr += 1
-                if ((ctr > noOfAdditionalPeriods ) || (currentDate >= endDate ?: currentDate )) { // TODO: Fix addl period logic
+                // TODO: Fix addl period logic
+                if ((ctr > noOfAdditionalPeriods ) || (currentDate >= endDate ?: currentDate ))
                     break
-                }
             }
             return ret
         }
@@ -235,7 +267,7 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
 
         var direction = dateRollConvention.direction().value
         var trialDate = testDate
-        while (! isWorkingDay(trialDate)) {
+        while (!isWorkingDay(trialDate)) {
             trialDate = trialDate.plusDays(direction)
         }
 
@@ -246,7 +278,7 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
         if (dateRollConvention.isModified && testDate.month != trialDate.month) {
             direction = -direction
             trialDate = testDate
-            while (! isWorkingDay(trialDate)) {
+            while (!isWorkingDay(trialDate)) {
                 trialDate = trialDate.plusDays(direction)
             }
         }
