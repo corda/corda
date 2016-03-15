@@ -61,7 +61,7 @@ import javax.annotation.concurrent.ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
     // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
     // them across node restarts.
-    private val checkpointsMap = serviceHub.storageService.getMap<SecureHash, ByteArray>("state machines")
+    private val checkpointsMap = serviceHub.storageService.stateMachines
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
     private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolLogic<*>>())

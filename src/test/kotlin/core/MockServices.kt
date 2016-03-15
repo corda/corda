@@ -14,9 +14,10 @@ import core.messaging.MessagingService
 import core.messaging.MockNetworkMapService
 import core.messaging.NetworkMapService
 import core.node.services.*
+import core.node.AbstractNode
+import core.node.services.StorageServiceImpl
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
-import core.testutils.RecordingMap
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
@@ -114,31 +115,7 @@ class MockAttachmentStorage : AttachmentStorage {
 }
 
 @ThreadSafe
-class MockStorageService(val recordingAs: Map<String, String>? = null) : StorageService {
-    override val myLegalIdentityKey: KeyPair = generateKeyPair()
-    override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public)
-
-    private val tables = HashMap<String, MutableMap<Any, Any>>()
-
-    override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
-        get() = getMap("validated-transactions")
-
-    override val contractPrograms = MockContractFactory
-
-    override val attachments: AttachmentStorage = MockAttachmentStorage()
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
-        synchronized(tables) {
-            return tables.getOrPut(tableName) {
-                val map = Collections.synchronizedMap(HashMap<Any, Any>())
-                if (recordingAs != null && recordingAs[tableName] != null)
-                    RecordingMap(map, LoggerFactory.getLogger("recordingmap.${recordingAs[tableName]}"))
-                else
-                    map
-            } as MutableMap<K, V>
-        }
-    }
+class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), MockContractFactory, generateKeyPair()) {
 }
 
 object MockContractFactory : ContractFactory {

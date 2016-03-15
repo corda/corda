@@ -104,15 +104,14 @@ interface KeyManagementService {
  * anything like that, this interface is only big enough to support the prototyping work.
  */
 interface StorageService {
-    /** TODO: Temp scaffolding that will go away eventually. */
-    fun <K,V> getMap(tableName: String): MutableMap<K, V>
-
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
      * the transaction data to other nodes that need it.
      */
     val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+
+    val stateMachines: MutableMap<SecureHash, ByteArray>
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage

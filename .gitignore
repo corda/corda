@@ -1,5 +1,13 @@
 TODO
 
+# Eclipse, ctags, Mac metadata, log files
+.classpath
+.project
+.settings
+tags
+.DS_Store
+*.log
+
 # Created by .ignore support plugin (hsz.mobi)
 
 .gradle
