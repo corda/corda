@@ -4,6 +4,34 @@ Node administration
 When a node is running, it exposes an embedded web server that lets you monitor it, upload and download attachments,
 access a REST API and so on.
 
+Monitoring your node
+--------------------
+
+Like most Java servers, the node exports various useful metrics and management operations via the industry-standard
+`JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard _in-process_ API
+for registering so-called _MBeans_ ... objects whose properties and methods are intended for server management. It does
+not require any particular network protocol for export. So this data can be exported from the node in various ways:
+some monitoring systems provide a "Java Agent", which is essentially a JVM plugin that finds all the MBeans and sends
+them out to a statistics collector over the network. For those systems, follow the instructions provided by the vendor.
+
+Sometimes though, you just want raw access to the data and operations itself. So nodes export them over HTTP on the
+`/monitoring/json` HTTP endpoint, using a program called `Jolokia <https://jolokia.org/>`_. Jolokia defines the JSON
+and REST formats for accessing MBeans, and provides client libraries to work with that protocol as well.
+
+Here are a few ways to build dashboards and extract monitoring data for a node:
+
+* `JMX2Graphite <https://github.com/logzio/jmx2graphite>`_ is a tool that can be pointed to /monitoring/json and will
+  scrape the statistics found there, then insert them into the Graphite monitoring tool on a regular basis. It runs
+  in Docker and can be started with a single command.
+* `JMXTrans <https://github.com/jmxtrans/jmxtrans>`_ is another tool for Graphite, this time, it's got its own agent
+  (JVM plugin) which reads a custom config file and exports only the named data. It's more configurable than
+  JMX2Graphite and doesn't require a separate process, as the JVM will write directly to Graphite.
+* *Java Mission Control* is a desktop app that can connect to a target JVM that has the right command line flags set
+  (or always, if running locally). You can explore what data is available, create graphs of those metrics, and invoke
+  management operations like forcing a garbage collection.
+* Cloud metrics services like New Relic also understand JMX, typically, by providing their own agent that uploads the
+  data to their service on a regular schedule.
+
 Uploading and downloading attachments
 -------------------------------------
 
@@ -15,7 +43,7 @@ you can upload it by running this command from a UNIX terminal:
 
 .. sourcecode:: shell
 
-   curl -F myfile=@path/to/my/file.zip http://localhost:31338/attachments/upload
+   curl -F myfile=@path/to/my/file.zip http://localhost:31338/upload/attachment
 
 The attachment will be identified by the SHA-256 hash of the contents, which you can get by doing:
 
@@ -23,8 +51,8 @@ The attachment will be identified by the SHA-256 hash of the contents, which you
 
    shasum -a 256 file.zip
 
-on a Mac or by using ``sha256sum`` on Linux. Alternatively, check the node logs. There is presently no way to manage
-attachments from a GUI.
+on a Mac or by using ``sha256sum`` on Linux. Alternatively, the hash will be returned to you when you upload the
+attachment.
 
 An attachment may be downloaded by fetching:
 
@@ -39,3 +67,24 @@ containers, you can also fetch a specific file within the attachment by appendin
 
    http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9/path/within/zip.txt
 
+Uploading interest rate fixes
+-----------------------------
+
+If you would like to operate an interest rate fixing service (oracle), you can upload fix data by uploading data in
+a simple text format to the ``/upload/interest-rates`` path on the web server.
+
+The file looks like this::
+
+    # Some pretend noddy rate fixes, for the interest rate oracles.
+
+    LIBOR 2016-03-16 30 = 0.678
+    LIBOR 2016-03-16 60 = 0.655
+    EURIBOR 2016-03-15 30 = 0.123
+    EURIBOR 2016-03-15 60 = 0.111
+
+The columns are:
+
+* Name of the fix
+* Date of the fix
+* The tenor / time to maturity in days
+* The interest rate itself
