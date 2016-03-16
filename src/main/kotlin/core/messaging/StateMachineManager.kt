@@ -154,7 +154,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     private fun deserializeFiber(bits: ByteArray): ProtocolStateMachine<*> {
-        val deserializer = Fiber.getFiberSerializer() as KryoSerializer
+        val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
         val kryo = createKryo(deserializer.kryo)
         val psm = kryo.readClassAndObject(Input(bits)) as ProtocolStateMachine<*>
         return psm
