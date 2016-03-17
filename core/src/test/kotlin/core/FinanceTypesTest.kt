@@ -11,6 +11,7 @@ package core
 import org.junit.Test
 import java.time.LocalDate
 import java.util.*
+import kotlin.test.assertEquals
 
 class FinanceTypesTest {
 
@@ -90,7 +91,46 @@ class FinanceTypesTest {
         assert(result == LocalDate.of(2016,12,28))
     }
 
+    @Test
+    fun `calendar date advancing`() {
+        val ldn = BusinessCalendar.getInstance("London")
+        val firstDay = LocalDate.of(2015, 12, 20)
+        val expected = mapOf(0 to firstDay,
+                1 to LocalDate.of(2015, 12, 21),
+                2 to LocalDate.of(2015, 12, 22),
+                3 to LocalDate.of(2015, 12, 23),
+                4 to LocalDate.of(2015, 12, 24),
+                5 to LocalDate.of(2015, 12, 29),
+                6 to LocalDate.of(2015, 12, 30),
+                7 to LocalDate.of(2015, 12, 31)
+        )
 
+        for ((inc, exp) in expected) {
+            var result = ldn.moveBusinessDays(firstDay, DateRollDirection.FORWARD, inc)
+            assertEquals(exp, result)
+        }
+    }
+
+    @Test
+    fun `calendar date preceeding`() {
+        val ldn = BusinessCalendar.getInstance("London")
+        val firstDay = LocalDate.of(2015, 12, 31)
+        val expected = mapOf(0 to firstDay,
+                1 to LocalDate.of(2015, 12, 30),
+                2 to LocalDate.of(2015, 12, 29),
+                3 to LocalDate.of(2015, 12, 24),
+                4 to LocalDate.of(2015, 12, 23),
+                5 to LocalDate.of(2015, 12, 22),
+                6 to LocalDate.of(2015, 12, 21),
+                7 to LocalDate.of(2015, 12, 18)
+        )
+
+        for ((inc, exp) in expected) {
+            var result = ldn.moveBusinessDays(firstDay, DateRollDirection.BACKWARD, inc)
+            assertEquals(exp, result)
+        }
+
+    }
 
 
 

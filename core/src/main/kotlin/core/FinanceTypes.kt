@@ -39,6 +39,8 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
         require(pennies >= 0) { "Negative amounts are not allowed: $pennies" }
     }
 
+    constructor(amount:BigDecimal, currency: Currency) : this(amount.toLong(), currency)
+
     operator fun plus(other: Amount): Amount {
         checkCurrency(other)
         return Amount(Math.addExact(pennies, other.pennies), currency)
@@ -58,7 +60,8 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
     operator fun div(other: Int): Amount = Amount(pennies / other, currency)
     operator fun times(other: Int): Amount = Amount(Math.multiplyExact(pennies, other.toLong()), currency)
 
-    override fun toString(): String = currency.currencyCode + " " + (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
+//    override fun toString(): String = currency.currencyCode + " " + (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
+    override fun toString(): String = (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
 
     override fun compareTo(other: Amount): Int {
         checkCurrency(other)
@@ -84,7 +87,9 @@ data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
 /**
  *  Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */
-data class Tenor(var name:String)
+data class Tenor(var name:String) {
+    override fun toString(): String = "$name"
+}
 
 /** Simple enum for returning accurals adjusted or unadjusted.
  * We don't actually do anything with this yet though, so it's ignored for now.
@@ -142,16 +147,25 @@ enum class DateRollConvention {
 }
 
 
-/** This forms the day part of the "Day Count Basis" used for interest calculation. */
+/**
+ *  This forms the day part of the "Day Count Basis" used for interest calculation.
+ *  Note that the first character cannot be a number (enum naming constraints), so we drop that
+ *  in the toString lest some people get confused. */
 enum class DayCountBasisDay {
     // We have to prefix 30 etc with a letter due to enum naming constraints.
-    D30, D30N, D30P, D30E, D30G, Actual, ActualJ, D30Z, D30F, Bus_SaoPaulo
+    D30, D30N, D30P, D30E, D30G, DActual, DActualJ, D30Z, D30F, DBus_SaoPaulo;
+    override fun toString(): String {
+        return super.toString().drop(1)
+    }
 }
 
 /** This forms the year part of the "Day Count Basis" used for interest calculation. */
 enum class DayCountBasisYear {
     // Ditto above comment for years.
-    Y360, Y365F, Y365L, Y365Q, Y366, Actual, ActualA, Y365B, Y365, ISMA, ICMA, Y252
+    Y360, Y365F, Y365L, Y365Q, Y366, YActual, YActualA, Y365B, Y365, YISMA, YICMA, Y252;
+    override fun toString(): String {
+        return super.toString().drop(1)
+    }
 }
 
 /** Whether the payment should be made before the due date, or after it. */
@@ -284,16 +298,32 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
         }
         return trialDate
     }
+
+    /**
+     * Returns a date which is the inbound date plus/minus a given number of business days.
+     * TODO: Make more efficient if necessary
+     */
+    fun moveBusinessDays(date: LocalDate, direction: DateRollDirection, i: Int): LocalDate {
+        require(i >= 0)
+        if ( i == 0 ) return date
+        var retDate = date
+        var ctr = 0
+        while (ctr < i) {
+            retDate = retDate.plusDays(direction.value)
+            if (isWorkingDay(retDate)) ctr++
+        }
+        return retDate
+    }
 }
 
 fun dayCountCalculator(startDate: LocalDate, endDate: LocalDate,
                        dcbYear: DayCountBasisYear,
-                       dcbDay: DayCountBasisDay): BigDecimal {
+                       dcbDay: DayCountBasisDay): Int {
     // Right now we are only considering Actual/360 and 30/360 .. We'll do the rest later.
     // TODO: The rest.
     return when {
-        dcbDay == DayCountBasisDay.Actual && dcbYear == DayCountBasisYear.Y360 -> BigDecimal((endDate.toEpochDay() - startDate.toEpochDay()))
-        dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> BigDecimal((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth)
+        dcbDay == DayCountBasisDay.DActual && dcbYear == DayCountBasisYear.Y360 -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
+        dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
         else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
     }
 }
