@@ -84,7 +84,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         // API, data upload and download to services (attachments, rates oracles etc)
         handlerCollection.addHandler(ServletContextHandler().apply {
             contextPath = "/"
-            setAttribute("storage", storage)
+            setAttribute("node", this@Node)
             addServlet(DataUploadServlet::class.java, "/upload/*")
             addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
 
