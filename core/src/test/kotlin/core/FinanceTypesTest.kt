@@ -10,8 +10,16 @@ package core
 
 import org.junit.Test
 import java.time.LocalDate
+import java.util.*
 
 class FinanceTypesTest {
+
+    @Test
+    fun `make sure Amount has decimal places`() {
+        var x = Amount(1, Currency.getInstance("USD"))
+        assert("0.01" in x.toString())
+    }
+
 
     @Test
     fun `schedule generator 1`() {

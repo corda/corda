@@ -58,7 +58,7 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
     operator fun div(other: Int): Amount = Amount(pennies / other, currency)
     operator fun times(other: Int): Amount = Amount(Math.multiplyExact(pennies, other.toLong()), currency)
 
-    override fun toString(): String = currency.currencyCode + " " + (BigDecimal(pennies) / BigDecimal(100)).toPlainString()
+    override fun toString(): String = currency.currencyCode + " " + (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
 
     override fun compareTo(other: Amount): Int {
         checkCurrency(other)
