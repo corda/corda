@@ -18,6 +18,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.time.Clock
 import java.util.*
 
 /**
@@ -31,7 +32,7 @@ import java.util.*
  * change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
  * about new transactions from our peers and generate new transactions that consume states ourselves.
  */
-data class Wallet(val states: List<StateAndRef<OwnableState>>) {
+data class Wallet(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state is T } as List<StateAndRef<T>>
 
@@ -66,6 +67,20 @@ interface WalletService {
      * which we have no cash evaluate to null, not 0.
      */
     val cashBalances: Map<Currency, Amount>
+
+    /**
+     * Returns a snapshot of the heads of LinearStates
+     */
+    val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
+
+    fun <T : LinearState> linearHeadsInstanceOf(clazz: Class<T>, predicate: (T) -> Boolean = { true } ): Map<SecureHash, StateAndRef<LinearState>> {
+        return linearHeads.filterValues { clazz.isInstance(it.state) }.filterValues { predicate(it.state as T) }
+    }
+
+    fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
+        val refsToStates = currentWallet.states.associateBy { it.ref }
+        return refs.associateBy( { it }, { refsToStates[it]?.state } )
+    }
 
     /**
      * Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
@@ -175,6 +190,7 @@ interface ServiceHub {
     val networkService: MessagingService
     val networkMapService: NetworkMapService
     val monitoringService: MonitoringService
+    val clock: Clock
 
     /**
      * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map
@@ -187,5 +203,15 @@ interface ServiceHub {
         }
         val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService, storageService.attachments) }
         TransactionGroup(setOf(ltx), ltxns.toSet()).verify(storageService.contractPrograms)
+    }
+
+    /**
+     * Use this for storing transactions to StorageService and WalletService
+     *
+     * TODO Need to come up with a way for preventing transactions being written other than by this method
+     */
+    fun recordTransactions(txs: List<SignedTransaction>) {
+        storageService.validatedTransactions.putAll(txs.groupBy { it.id }.mapValues { it.value.first() })
+        walletService.notifyAll(txs.map { it.tx })
     }
 }

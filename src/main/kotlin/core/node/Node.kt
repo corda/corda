@@ -22,6 +22,7 @@ import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.webapp.WebAppContext
+import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
@@ -30,8 +31,8 @@ import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.time.Clock
 import javax.management.ObjectName
-import kotlin.reflect.KClass
 
 class ConfigurationException(message: String) : Exception(message)
 
@@ -46,9 +47,11 @@ class ConfigurationException(message: String) : Exception(message)
  *                have to specify that yourself.
  * @param configuration This is typically loaded from a .properties file
  * @param timestamperAddress If null, this node will become a timestamping node, otherwise, it will use that one.
+ * @param clock The clock used within the node and by all protocols etc
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
-           timestamperAddress: LegallyIdentifiableNode?) : AbstractNode(dir, configuration, timestamperAddress) {
+           timestamperAddress: LegallyIdentifiableNode?,
+           clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, timestamperAddress, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         val DEFAULT_PORT = 31337
@@ -88,24 +91,23 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             addServlet(DataUploadServlet::class.java, "/upload/*")
             addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
 
-            setAttribute("services", services)
-            val jerseyServlet = addServlet(ServletContainer::class.java, "/api/*")
-            // Give the app a slightly better name in JMX rather than a randomly generated one
-            jerseyServlet.setInitParameter(ServerProperties.APPLICATION_NAME, "node.api")
-            jerseyServlet.setInitParameter(ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED, "true")
-            jerseyServlet.initOrder = 0 // Initialise at server start
+            val resourceConfig = ResourceConfig()
             // Add your API provider classes (annotated for JAX-RS) here
-            setProviders(jerseyServlet, Config::class)
+            resourceConfig.register(Config(services))
+            resourceConfig.register(api)
+            // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
+            resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
+                    ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))
+
+            val container = ServletContainer(resourceConfig)
+            val jerseyServlet = ServletHolder(container)
+            addServlet(jerseyServlet, "/api/*")
+            jerseyServlet.initOrder = 0 // Initialise at server start
         })
 
         server.handler = handlerCollection
         server.start()
         return server
-    }
-
-    private fun setProviders(jerseyServlet: ServletHolder, vararg providerClasses: KClass<out Any>) {
-        val providerClassNames = providerClasses.map { it.java.canonicalName }.joinToString()
-        jerseyServlet.setInitParameter(ServerProperties.PROVIDER_CLASSNAMES, providerClassNames)
     }
 
     override fun start(): Node {

@@ -16,6 +16,8 @@
 
 package core.node
 
+import api.APIServer
+import api.APIServerImpl
 import com.codahale.metrics.MetricRegistry
 import contracts.*
 import core.*
@@ -30,6 +32,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
+import java.time.Clock
 import java.util.*
 import java.util.concurrent.Executors
 
@@ -37,7 +40,7 @@ import java.util.concurrent.Executors
  * A base node implementation that can be customised either for production (with real implementations that do real
  * I/O), or a mock implementation suitable for unit test environments.
  */
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: LegallyIdentifiableNode?) {
+abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: LegallyIdentifiableNode?, val platformClock: Clock) {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -62,6 +65,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
+        override val clock: Clock get() = platformClock
     }
 
     val legallyIdentifableAddress: LegallyIdentifiableNode get() = LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
@@ -89,6 +93,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     var inNodeTimestampingService: NodeTimestamperService? = null
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
+    lateinit var api: APIServer
 
     open fun start(): AbstractNode {
         log.info("Node starting up ...")
@@ -99,6 +104,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
         makeInterestRateOracleService()
+        api = APIServerImpl(this)
 
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
         // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
@@ -106,7 +112,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             inNodeTimestampingService = null
             timestamperAddress
         } else {
-            inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey)
+            inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
             LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
         }
         (services.networkMapService as MockNetworkMapService).timestampingNodes.add(tsid)

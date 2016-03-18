@@ -9,6 +9,7 @@
 package core.messaging
 
 import core.Party
+import core.crypto.DummyPublicKey
 import java.util.*
 
 /** Info about a network node that has is operated by some sort of verified identity. */
@@ -25,9 +26,22 @@ data class LegallyIdentifiableNode(val address: SingleMessageRecipient, val iden
 */
 interface NetworkMapService {
     val timestampingNodes: List<LegallyIdentifiableNode>
+    val partyNodes: List<LegallyIdentifiableNode>
+
+    fun nodeForPartyName(name: String): LegallyIdentifiableNode? = partyNodes.singleOrNull { it.identity.name == name }
 }
 
 // TODO: Move this to the test tree once a real network map is implemented and this scaffolding is no longer needed.
 class MockNetworkMapService : NetworkMapService {
+
+    data class MockAddress(val id: String): SingleMessageRecipient
+
     override val timestampingNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
+    override val partyNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
+
+    init {
+        partyNodes.add(LegallyIdentifiableNode(MockAddress("excalibur:8080"), Party("Excalibur", DummyPublicKey("Excalibur"))))
+        partyNodes.add(LegallyIdentifiableNode(MockAddress("another:8080"), Party("ANOther", DummyPublicKey("ANOther"))))
+
+    }
 }

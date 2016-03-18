@@ -11,6 +11,7 @@ package core.node.services
 import com.codahale.metrics.Gauge
 import contracts.Cash
 import core.*
+import core.crypto.SecureHash
 import core.utilities.loggerFor
 import core.utilities.trace
 import java.security.PublicKey
@@ -42,6 +43,14 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
      */
     override val cashBalances: Map<Currency, Amount> get() = mutex.locked { wallet }.cashBalances
 
+    /**
+     * Returns a snapshot of the heads of LinearStates
+     */
+    override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
+        get() = mutex.locked { wallet }.let { wallet ->
+            wallet.states.filter { it.state is LinearState }.associateBy { (it.state as LinearState).thread }.mapValues { it.value as StateAndRef<LinearState> }
+        }
+
     override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
         val ourKeys = services.keyManagementService.keys.keys
 
@@ -68,11 +77,21 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
         }
     }
 
+    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
+        return if(state is OwnableState) {
+            state.owner in ourKeys
+        } else if(state is LinearState) {
+            // It's potentially of interest to the wallet
+            state.isRelevant(ourKeys)
+        } else {
+            false
+        }
+    }
+
     private fun Wallet.update(tx: WireTransaction, ourKeys: Set<PublicKey>): Wallet {
         val ourNewStates = tx.outputs.
-                filterIsInstance<OwnableState>().
-                filter { it.owner in ourKeys }.
-                map { tx.outRef<OwnableState>(it) }
+                filter { isRelevant(it, ourKeys) }.
+                map { tx.outRef<ContractState>(it) }
 
         // Now calculate the states that are being spent by this transaction.
         val consumed: Set<StateRef> = states.map { it.ref }.intersect(tx.inputs)

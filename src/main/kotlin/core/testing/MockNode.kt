@@ -20,6 +20,7 @@ import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -48,7 +49,7 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        withTimestamper: LegallyIdentifiableNode?, val forcedID: Int = -1) : AbstractNode(dir, config, withTimestamper) {
+                        withTimestamper: LegallyIdentifiableNode?, val forcedID: Int = -1) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: ExecutorService =
                 if (mockNet.threadPerNode)

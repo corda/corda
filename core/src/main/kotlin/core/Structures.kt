@@ -47,6 +47,23 @@ interface OwnableState : ContractState {
     fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
 }
 
+/**
+ * A state that evolves by superseding itself, all of which share the common "thread"
+ *
+ * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet
+ */
+interface LinearState: ContractState {
+    /** Unique thread id within the wallets of all parties */
+    val thread: SecureHash
+
+    /** Human readable well known reference (e.g. trade reference) */
+    // TODO we will push this down out of here once we have something more sophisticated and a more powerful query API
+    val ref: String
+
+    /** true if this should be tracked by our wallet(s) */
+    fun isRelevant(ourKeys: Set<PublicKey>): Boolean
+}
+
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bits)
 
