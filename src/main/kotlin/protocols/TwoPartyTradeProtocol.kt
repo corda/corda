@@ -26,6 +26,7 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Instant
+import kotlin.system.exitProcess
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
@@ -210,6 +211,8 @@ object TwoPartyTradeProtocol {
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
             val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+
+            // exitProcess(0)
 
             val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 

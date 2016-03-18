@@ -77,7 +77,7 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>) : Fiber<R>("protocol"
     private fun <T : Any> suspendAndExpectReceive(with: StateMachineManager.FiberRequest): UntrustworthyData<T> {
         parkAndSerialize { fiber, serializer ->
             // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
-            val deserializer = getFiberSerializer() as KryoSerializer
+            val deserializer = getFiberSerializer(false) as KryoSerializer
             val kryo = createKryo(deserializer.kryo)
             val stream = ByteArrayOutputStream()
             Output(stream).use {
