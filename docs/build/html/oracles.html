@@ -1,0 +1,388 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Writing oracle services &mdash; R3 Prototyping latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
+        <link rel="next" title="Using the visualiser" href="visualiser.html"/>
+        <link rel="prev" title="Protocol state machines" href="protocol-state-machines.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Prototyping
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-trading-demo.html">Running the trading demo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Writing oracle services</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-two-basic-approaches">The two basic approaches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#asserting-continuously-varying-data-that-is-publicly-known">Asserting continuously varying data that is publicly known</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#asserting-occasionally-varying-data-that-is-not-publicly-known">Asserting occasionally varying data that is not publicly known</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementing-oracles-in-the-framework">Implementing oracles in the framework</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Prototyping</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Writing oracle services</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/oracles.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="writing-oracle-services">
+<h1>Writing oracle services<a class="headerlink" href="#writing-oracle-services" title="Permalink to this headline">¶</a></h1>
+<p>This article covers <em>oracles</em>: network services that link the ledger to the outside world by providing facts that
+affect the validity of transactions.</p>
+<p>The current prototype includes two oracles:</p>
+<ol class="arabic simple">
+<li>A timestamping service</li>
+<li>An interest rate fixing service</li>
+</ol>
+<p>We will examine the similarities and differences in their design, whilst covering how the oracle concept works.</p>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Oracles are a key concept in the block chain/decentralised ledger space. They can be essential for many kinds of
+application, because we often wish to condition a transaction on some fact being true or false, but the ledger itself
+has a design that is essentially functional: all transactions are <em>pure</em> and <em>immutable</em>. Phrased another way, a
+smart contract cannot perform any input/output or depend on any state outside of the transaction itself. There is no
+way to download a web page or interact with the user, in a smart contract. It must be this way because everyone must
+be able to independently check a transaction and arrive at an identical conclusion for the ledger to maintan its
+integrity: if a transaction could evaluate to &#8220;valid&#8221; on one computer and then &#8220;invalid&#8221; a few minutes later on a
+different computer, the entire shared ledger concept wouldn&#8217;t work.</p>
+<p>But it is often essential that transactions do depend on data from the outside world, for example, verifying that an
+interest rate swap is paying out correctly may require data on interest rates, verifying that a loan has reached
+maturity requires knowledge about the current time, knowing which side of a bet receives the payment may require
+arbitrary facts about the real world (e.g. the bankruptcy or solvency of a company or country) ... and so on.</p>
+<p>We can solve this problem by introducing services that create digitally signed data structures which assert facts.
+These structures can then be used as an input to a transaction and distributed with the transaction data itself. Because
+the statements are themselves immutable and signed, it is impossible for an oracle to change its mind later and
+invalidate transactions that were previously found to be valid. In contrast, consider what would happen if a contract
+could do an HTTP request: it&#8217;s possible that an answer would change after being downloaded, resulting in loss of
+consensus (breaks).</p>
+</div>
+<div class="section" id="the-two-basic-approaches">
+<h2>The two basic approaches<a class="headerlink" href="#the-two-basic-approaches" title="Permalink to this headline">¶</a></h2>
+<p>The architecture provides two ways of implementing oracles with different tradeoffs:</p>
+<ol class="arabic simple">
+<li>Using commands</li>
+<li>Using attachments</li>
+</ol>
+<p>When a fact is encoded in a command, it is embedded in the transaction itself. The oracle then acts as a co-signer to
+the entire transaction. The oracle&#8217;s signature is valid only for that transaction, and thus even if a fact (like a
+stock price) does not change, every transaction that incorporates that fact must go back to the oracle for signing.</p>
+<p>When a fact is encoded as an attachment, it is a separate object to the transaction which is referred to by hash.
+Nodes download attachments from peers at the same time as they download transactions, unless of course the node has
+already seen that attachment, in which case it won&#8217;t fetch it again. Contracts have access to the contents of
+attachments and attachments can be digitally signed (in future).</p>
+<p>As you can see, both approaches share a few things: they both allow arbitrary binary data to be provided to transactions
+(and thus contracts). The primary difference is whether the data is a freely reusable, standalone object or whether it&#8217;s
+integrated with a transaction.</p>
+<p>Here&#8217;s a quick way to decide which approach makes more sense for your data source:</p>
+<ul class="simple">
+<li>Is your data <em>continuously changing</em>, like a stock price, the current time, etc? If yes, use a command.</li>
+<li>Is your data <em>commercially valuable</em>, like a feed which you are not allowed to resell unless it&#8217;s incorporated into
+a business deal? If yes, use a command, so you can charge money for signing the same fact in each unique business
+context.</li>
+<li>Is your data <em>very small</em>, like a single number? If yes, use a command.</li>
+<li>Is your data <em>large</em>, <em>static</em> and <em>commercially worthless</em>, for instance, a holiday calendar? If yes, use an
+attachment.</li>
+<li>Is your data <em>intended for human consumption</em>, like a PDF of legal prose, or an Excel spreadsheet? If yes, use an
+attachment.</li>
+</ul>
+</div>
+<div class="section" id="asserting-continuously-varying-data-that-is-publicly-known">
+<h2>Asserting continuously varying data that is publicly known<a class="headerlink" href="#asserting-continuously-varying-data-that-is-publicly-known" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s look at the timestamping oracle that can be found in the <code class="docutils literal"><span class="pre">TimestamperService</span></code> class. This is an example of
+an oracle that uses a command because the current time is a constantly changing fact that everybody knows.</p>
+<p>The most obvious way to implement such a service would be:</p>
+<ol class="arabic simple">
+<li>The creator of the transaction that depends on the time reads their local clock</li>
+<li>They insert a command with that time into the transaction</li>
+<li>They then send it to the oracle for signing.</li>
+</ol>
+<p>But this approach has a problem. There will never be exact clock synchronisation between the party creating the
+transaction and the oracle. This is not only due to physics, network latencies etc but because between inserting the
+command and getting the oracle to sign there may be many other steps, like sending the transaction to other parties
+involved in the trade as well, or even requesting human signoff. Thus the time observed by the oracle may be quite
+different to the time observed in step 1. This problem can occur any time an oracle attests to a constantly changing
+value.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">It is assumed that &#8220;true time&#8221; for a timestamping oracle means GPS/NaviStar time as defined by the atomic
+clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.</p>
+</div>
+<p>We fix it by including explicit tolerances in the command, which is defined like this:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">data</span> <span class="k">class</span> <span class="nc">TimestampCommand</span><span class="p">(</span><span class="k">val</span> <span class="py">after</span><span class="p">:</span> <span class="n">Instant</span><span class="p">?,</span> <span class="k">val</span> <span class="py">before</span><span class="p">:</span> <span class="n">Instant</span><span class="p">?)</span> <span class="p">:</span> <span class="n">CommandData</span>
+    <span class="n">init</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">after</span> <span class="p">==</span> <span class="k">null</span> <span class="p">&amp;&amp;</span> <span class="n">before</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span>
+            <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;At least one of before/after must be specified&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">after</span> <span class="p">!=</span> <span class="k">null</span> <span class="p">&amp;&amp;</span> <span class="n">before</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span>
+            <span class="n">check</span><span class="p">(</span><span class="n">after</span> <span class="p">&lt;=</span> <span class="n">before</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This defines a class that has two optional fields: before and after, along with a constructor that imposes a couple
+more constraints that cannot be expressed in the type system, namely, that &#8220;after&#8221; actually is temporally after
+&#8220;before&#8221;, and that at least one bound must be present. A timestamp command that doesn&#8217;t contain anything is illegal.</p>
+<p>Thus we express that the <em>true value</em> of the fact &#8220;the current time&#8221; is actually unknowable. Even when both before and
+after times are included, the transaction could have occurred at any point between those two timestamps. In this case
+&#8220;occurrence&#8221; could mean the execution date, the value date, the trade date etc ... the oracle doesn&#8217;t care what precise
+meaning the timestamp has to the contract.</p>
+<p>By creating a range that can be either closed or open at one end, we allow all of the following facts to be modelled:</p>
+<ul class="simple">
+<li>This transaction occurred at some point after the given time (e.g. after a maturity event)</li>
+<li>This transaction occurred at any time before the given time (e.g. before a bankruptcy event)</li>
+<li>This transaction occurred at some point roughly around the given time (e.g. on a specific day)</li>
+</ul>
+<p>This same technique can be adapted to other types of oracle.</p>
+</div>
+<div class="section" id="asserting-occasionally-varying-data-that-is-not-publicly-known">
+<h2>Asserting occasionally varying data that is not publicly known<a class="headerlink" href="#asserting-occasionally-varying-data-that-is-not-publicly-known" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes you may want a fact that changes, but is not entirely continuous. Additionally the exact value may not be
+public, or may only be semi-public (e.g. easily available to some entities on the network but not all). An example of
+this would be a LIBOR interest rate fix.</p>
+<p>In this case, the following design can be used. The oracle service provides a query API which returns the current value,
+and a signing service that signs a transaction if the data in the command matches the answer being returned by the
+query API. Probably the query response contains some sort of timestamp as well, so the service can recognise values
+that were true in the past but no longer are (this is arguably a part of the fact being asserted).</p>
+<p>Because the signature covers the transaction, and transactions may end up being forwarded anywhere, the fact itself
+is independently checkable. However, this approach can be useful when the data itself costs money, because the act
+of issuing the signature in the first place can be charged for (e.g. by requiring the submission of a fresh
+<code class="docutils literal"><span class="pre">Cash.State</span></code> that has been re-assigned to a key owned by the oracle service). Because the signature covers the
+<em>transaction</em> and not only the <em>fact</em>, this allows for a kind of weak pseudo-DRM over data feeds. Whilst a smart
+contract could in theory include a transaction parsing and signature checking library, writing a contract in this way
+would be conclusive evidence of intent to disobey the rules of the service (<em>res ipsa loquitur</em>). In an environment
+where parties are legally identifiable, usage of such a contract would by itself be sufficient to trigger some sort of
+punishment.</p>
+<p>Here is an extract from the <code class="docutils literal"><span class="pre">NodeService.Oracle</span></code> class and supporting types:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="cm">/** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix (&quot;LIBOR&quot;, &quot;EURIBOR&quot; etc) */</span>
+<span class="n">data</span> <span class="k">class</span> <span class="nc">FixOf</span><span class="p">(</span><span class="k">val</span> <span class="py">name</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">forDay</span><span class="p">:</span> <span class="n">LocalDate</span><span class="p">,</span> <span class="k">val</span> <span class="py">ofTenor</span><span class="p">:</span> <span class="n">Duration</span><span class="p">)</span>
+
+<span class="cm">/** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */</span>
+<span class="n">data</span> <span class="k">class</span> <span class="nc">Fix</span><span class="p">(</span><span class="k">val</span> <span class="py">of</span><span class="p">:</span> <span class="n">FixOf</span><span class="p">,</span> <span class="k">val</span> <span class="py">value</span><span class="p">:</span> <span class="n">BigDecimal</span><span class="p">)</span> <span class="p">:</span> <span class="n">CommandData</span>
+
+<span class="k">class</span> <span class="nc">Oracle</span> <span class="p">{</span>
+    <span class="k">fun</span> <span class="nf">query</span><span class="p">(</span><span class="n">queries</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">FixOf</span><span class="p">&gt;):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Fix</span><span class="p">&gt;</span>
+
+    <span class="k">fun</span> <span class="nf">sign</span><span class="p">(</span><span class="n">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Because the fix contains a timestamp (the <code class="docutils literal"><span class="pre">forDay</span></code> field), there can be an arbitrary delay between a fix being
+requested via <code class="docutils literal"><span class="pre">query</span></code> and the signature being requested via <code class="docutils literal"><span class="pre">sign</span></code>.</p>
+</div>
+<div class="section" id="implementing-oracles-in-the-framework">
+<h2>Implementing oracles in the framework<a class="headerlink" href="#implementing-oracles-in-the-framework" title="Permalink to this headline">¶</a></h2>
+<p>Implementation involves the following steps:</p>
+<ol class="arabic simple">
+<li>Defining a high level oracle class, that exposes the basic API operations.</li>
+<li>Defining a lower level service class, that binds network messages to the API.</li>
+<li>Defining a protocol using the <a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a> framework to make it easy for a client to interact
+with the oracle.</li>
+</ol>
+<p>An example of how to do this can be found in the <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code>, <code class="docutils literal"><span class="pre">NodeInterestRates.Service</span></code> and
+<code class="docutils literal"><span class="pre">RateFixProtocol</span></code> classes. The exact details of how this code works will change in future, so for now consulting
+the protocols tutorial and the code for the server-side oracles implementation will have to suffice. There will be more
+detail added once the platform APIs have settled down.</p>
+<p>Currently, there&#8217;s no network map service, so the location and identity keys of an oracle must be distributed out of
+band.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="visualiser.html" class="btn btn-neutral float-right" title="Using the visualiser" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="protocol-state-machines.html" class="btn btn-neutral" title="Protocol state machines" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, R3 CEV.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -11,6 +11,7 @@ package core.messaging
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
+import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.io.Input
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
@@ -60,10 +61,17 @@ import javax.annotation.concurrent.ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
     // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
     // them across node restarts.
-    private val checkpointsMap = serviceHub.storageService.getMap<SecureHash, ByteArray>("state machines")
+    private val checkpointsMap = serviceHub.storageService.stateMachines
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
     private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolLogic<*>>())
+
+    // Monitoring support.
+    private val metrics = serviceHub.monitoringService.metrics
+    init { metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { _stateMachines.size }) }
+    private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
+    private val totalStartedProtocols = metrics.counter("Protocols.Started")
+    private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
 
     // This is a workaround for something Gradle does to us during unit tests. It replaces stderr with its own
     // class that inserts itself into a ThreadLocal. That then gets caught in fiber serialisation, which we don't
@@ -146,7 +154,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     private fun deserializeFiber(bits: ByteArray): ProtocolStateMachine<*> {
-        val deserializer = Fiber.getFiberSerializer() as KryoSerializer
+        val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
         val kryo = createKryo(deserializer.kryo)
         val psm = kryo.readClassAndObject(Input(bits)) as ProtocolStateMachine<*>
         return psm
@@ -163,6 +171,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
             it.start()
         }
+        _stateMachines.add(logic)
+        totalStartedProtocols.inc()
         return fiber.resultFuture
     }
 
@@ -173,6 +183,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
             checkpointsMap.remove(prevCheckpointKey)
         val key = SecureHash.sha256(new)
         checkpointsMap[key] = new
+        checkpointingMeter.mark()
         return key
     }
 
@@ -212,6 +223,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
             psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
             _stateMachines.remove(psm.logic)
             checkpointsMap.remove(prevCheckpointKey)
+            totalFinishedProtocols.inc()
         }
     }
 

@@ -33,7 +33,10 @@ val Int.hours: Duration get() = Duration.ofHours(this.toLong())
 val Int.minutes: Duration get() = Duration.ofMinutes(this.toLong())
 val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
 
-val String.d: BigDecimal get() = BigDecimal(this)
+val Int.bd: BigDecimal get() = BigDecimal(this)
+val Double.bd: BigDecimal get() = BigDecimal(this)
+val String.bd: BigDecimal get() = BigDecimal(this)
+val Long.bd: BigDecimal get() = BigDecimal(this)
 
 /**
  * Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to

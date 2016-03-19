@@ -9,10 +9,7 @@
 package core.node.services
 
 import contracts.Cash
-import core.DOLLARS
-import core.Fix
-import core.TransactionBuilder
-import core.d
+import core.*
 import core.node.MockNetwork
 import core.testutils.*
 import core.utilities.BriefLogFormatter
@@ -35,7 +32,7 @@ class NodeInterestRatesTest {
         val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
         val res = service.query(listOf(q))
         assertEquals(1, res.size)
-        assertEquals("0.678".d, res[0].value)
+        assertEquals("0.678".bd, res[0].value)
         assertEquals(q, res[0].of)
     }
 
@@ -70,7 +67,7 @@ class NodeInterestRatesTest {
     @Test fun `do not sign with unknown fix`() {
         val tx = makeTX()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
-        val badFix = Fix(fixOf, "0.6789".d)
+        val badFix = Fix(fixOf, "0.6789".bd)
         tx.addCommand(badFix, service.identity.owningKey)
 
         val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { service.sign(tx.toWireTransaction()) }
@@ -85,7 +82,7 @@ class NodeInterestRatesTest {
 
         val tx = TransactionBuilder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
-        val protocol = RatesFixProtocol(tx, n2.legallyIdentifableAddress, fixOf, "0.675".d, "0.1".d)
+        val protocol = RatesFixProtocol(tx, n2.legallyIdentifableAddress, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
         val future = n1.smm.add("rates", protocol)
 
@@ -95,7 +92,7 @@ class NodeInterestRatesTest {
         // We should now have a valid signature over our tx from the oracle.
         val fix = tx.toSignedTransaction(true).tx.commands.map { it.data as Fix }.first()
         assertEquals(fixOf, fix.of)
-        assertEquals("0.678".d, fix.value)
+        assertEquals("0.678".bd, fix.value)
     }
 
     private fun makeTX() = TransactionBuilder(outputs = mutableListOf(1000.DOLLARS.CASH `owned by` ALICE))

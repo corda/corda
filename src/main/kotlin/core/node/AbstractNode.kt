@@ -16,6 +16,7 @@
 
 package core.node
 
+import com.codahale.metrics.MetricRegistry
 import contracts.*
 import core.*
 import core.crypto.SecureHash
@@ -60,6 +61,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
+        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     }
 
     val legallyIdentifableAddress: LegallyIdentifiableNode get() = LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
@@ -145,31 +147,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val attachments = makeAttachmentStorage(dir)
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return constructStorageService(attachments, identity, keypair)
+        return constructStorageService(attachments, keypair, identity, contractFactory)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService, identity: Party, keypair: KeyPair) =
-            StorageServiceImpl(attachments, identity, keypair)
-
-    open inner class StorageServiceImpl(attachments: NodeAttachmentService, identity: Party, keypair: KeyPair) : StorageService {
-        protected val tables = HashMap<String, MutableMap<Any, Any>>()
-
-        @Suppress("UNCHECKED_CAST")
-        override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
-            // TODO: This should become a database.
-            synchronized(tables) {
-                return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
-            }
-        }
-
-        override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
-            get() = getMap("validated-transactions")
-
-        override val attachments: AttachmentStorage = attachments
-        override val contractPrograms = contractFactory
-        override val myLegalIdentity = identity
-        override val myLegalIdentityKey = keypair
-    }
+    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party,
+                                               contractFactory: ContractFactory) =
+            StorageServiceImpl(attachments, contractFactory, keypair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
@@ -209,6 +192,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             Files.createDirectory(attachmentsDir)
         } catch (e: FileAlreadyExistsException) {
         }
-        return NodeAttachmentService(attachmentsDir)
+        return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
     }
 }
+
