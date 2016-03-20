@@ -46,7 +46,7 @@ class AttachmentTests {
         val bs = ByteArrayOutputStream()
         val js = JarOutputStream(bs)
         js.putNextEntry(ZipEntry("file1.txt"))
-        js.writer().append("Some useful content")
+        js.writer().apply { append("Some useful content"); flush() }
         js.closeEntry()
         js.close()
         return bs.toByteArray()

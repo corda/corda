@@ -13,7 +13,7 @@ tags
 .gradle
 /build/
 /contracts/build
-/sandbox/build
+/standalone.test/build
 /core/build
 /docs/build/doctrees
 

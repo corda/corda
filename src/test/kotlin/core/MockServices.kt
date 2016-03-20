@@ -92,7 +92,7 @@ class MockAttachmentStorage : AttachmentStorage {
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null
         return object : Attachment {
-            override fun open(): JarInputStream = JarInputStream(ByteArrayInputStream(f))
+            override fun open(): InputStream = ByteArrayInputStream(f)
             override val id: SecureHash = id
         }
     }
@@ -104,6 +104,7 @@ class MockAttachmentStorage : AttachmentStorage {
         val bytes = run {
             val s = ByteArrayOutputStream()
             jar.copyTo(s)
+            s.close()
             s.toByteArray()
         }
         val sha256 = bytes.sha256()
