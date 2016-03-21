@@ -6,7 +6,7 @@
  * All other rights reserved.
  */
 
-package core.messaging
+package core.testing
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import core.node.services.DummyTimestampingAuthority
 import core.ThreadBox
 import core.crypto.sha256
+import core.messaging.*
 import core.node.services.NodeTimestamperService
 import core.utilities.loggerFor
 import java.time.Instant

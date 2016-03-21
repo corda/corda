@@ -10,7 +10,7 @@ package core.node.services
 
 import contracts.Cash
 import core.*
-import core.node.MockNetwork
+import core.testing.MockNetwork
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import org.junit.Test

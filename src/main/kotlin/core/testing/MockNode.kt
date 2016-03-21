@@ -6,25 +6,16 @@
  * All other rights reserved.
  */
 
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
+package core.testing
 
-package core.node
-
-import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.MoreExecutors
 import core.Party
-import core.messaging.InMemoryMessagingNetwork
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
+import core.node.AbstractNode
+import core.node.NodeConfiguration
 import core.node.services.FixedIdentityService
-import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -43,10 +34,10 @@ import java.util.concurrent.Executors
  */
 class MockNetwork(private val threadPerNode: Boolean = false) {
     private var counter = 0
-    val filesystem = Jimfs.newFileSystem(Configuration.unix())
+    val filesystem = Jimfs.newFileSystem(com.google.common.jimfs.Configuration.unix())
     val messagingNetwork = InMemoryMessagingNetwork()
 
-    val identities = ArrayList<Party>(TEST_KEYS_TO_CORP_MAP.values)
+    val identities = ArrayList<Party>()
 
     private val _nodes = ArrayList<MockNode>()
     /** A read only view of the current set of executing nodes. */
