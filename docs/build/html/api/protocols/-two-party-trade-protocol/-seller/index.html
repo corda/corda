@@ -1,0 +1,197 @@
+<HTML>
+<HEAD>
+<title>TwoPartyTradeProtocol.Seller - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">protocols</a>&nbsp;/&nbsp;<a href="../index.html">TwoPartyTradeProtocol</a>&nbsp;/&nbsp;<a href=".">Seller</a><br/>
+<br/>
+<h1>Seller</h1>
+<code><span class="keyword">class </span><span class="identifier">Seller</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../../core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><br/>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-a-w-a-i-t-i-n-g_-p-r-o-p-o-s-a-l.html">AWAITING_PROPOSAL</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AWAITING_PROPOSAL</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-e-n-d-i-n-g_-s-i-g-s.html">SENDING_SIGS</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SENDING_SIGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-i-g-n-i-n-g.html">SIGNING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-t-i-m-e-s-t-a-m-p-i-n-g.html">TIMESTAMPING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">TIMESTAMPING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Seller</span><span class="symbol">(</span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/otherSide">otherSide</span><span class="symbol">:</span>&nbsp;<a href="../../../core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/timestampingAuthority">timestampingAuthority</span><span class="symbol">:</span>&nbsp;<a href="../../../core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a><span class="symbol">, </span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/assetToSell">assetToSell</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../../core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/price">price</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">, </span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/myKeyPair">myKeyPair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/buyerSessionID">buyerSessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$<init>(core.messaging.SingleMessageRecipient, core.messaging.LegallyIdentifiableNode, core.StateAndRef((core.OwnableState)), core.Amount, java.security.KeyPair, kotlin.Long, core.utilities.ProgressTracker)/progressTracker">progressTracker</span><span class="symbol">:</span>&nbsp;<a href="../../../core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Seller.tracker()<span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="asset-to-sell.html">assetToSell</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">assetToSell</span><span class="symbol">: </span><a href="../../../core/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../../core/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="buyer-session-i-d.html">buyerSessionID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">buyerSessionID</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="my-key-pair.html">myKeyPair</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">myKeyPair</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="other-side.html">otherSide</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">otherSide</span><span class="symbol">: </span><a href="../../../core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="price.html">price</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">price</span><span class="symbol">: </span><a href="../../../core/-amount/index.html"><span class="identifier">Amount</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="progress-tracker.html">progressTracker</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">progressTracker</span><span class="symbol">: </span><a href="../../../core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></code><p>Override this to provide a <a href="../../../core.utilities/-progress-tracker/index.html">ProgressTracker</a>. If one is provided and stepped, the framework will do something
+helpful with the progress reports. If this protocol is invoked as a sub-protocol of another, then the
+tracker will be made a child of the current step in the parent. If its null, this protocol doesnt track
+progress.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="timestamping-authority.html">timestampingAuthority</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">timestampingAuthority</span><span class="symbol">: </span><a href="../../../core.messaging/-legally-identifiable-node/index.html"><span class="identifier">LegallyIdentifiableNode</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/logger.html">logger</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>This is where you should log things to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/psm.html">psm</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">psm</span><span class="symbol">: </span><a href="../../../core.protocols/-protocol-state-machine/index.html"><span class="identifier">ProtocolStateMachine</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code><p>Reference to the <a href="#">Fiber</a> instance that is the top level controller for the entire flow.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/service-hub.html">serviceHub</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../../core.node.services/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="call.html">call</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a></code><p>This is where you fill out your business logic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sign-with-our-key.html">signWithOurKey</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">signWithOurKey</span><span class="symbol">(</span><span class="identifier" id="protocols.TwoPartyTradeProtocol.Seller$signWithOurKey(core.SignedTransaction)/partialTX">partialTX</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/receive.html">receive</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$send(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/send-and-receive.html">sendAndReceive</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.protocols/-protocol-logic/sub-protocol.html">subProtocol</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">subProtocol</span><span class="symbol">(</span><span class="identifier" id="core.protocols.ProtocolLogic$subProtocol(core.protocols.ProtocolLogic((core.protocols.ProtocolLogic.subProtocol.R)))/subLogic">subLogic</span><span class="symbol">:</span>&nbsp;<a href="../../../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code><p>Invokes the given subprotocol by simply passing through this <a href="../../../core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s reference to the
+<a href="../../../core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> and then calling the <a href="../../../core.protocols/-protocol-logic/call.html">call</a> method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="tracker.html">tracker</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tracker</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.utilities/-progress-tracker/index.html"><span class="identifier">ProgressTracker</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

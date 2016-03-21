@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<title>protocols - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">protocols</a><br/>
+<br/>
+<h2>Package protocols</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-fetch-attachments-protocol/index.html">FetchAttachmentsProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FetchAttachmentsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../core/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">&gt;</span></code><p>Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
+attachments are saved to local storage automatically.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fetch-data-protocol/index.html">FetchDataProtocol</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FetchDataProtocol</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../core/-named-by-hash/index.html"><span class="identifier">NamedByHash</span></a><span class="symbol">, </span><span class="identifier">W</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="-fetch-data-protocol/-result/index.html"><span class="identifier">Result</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>An abstract protocol for fetching typed data from a remote peer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fetch-transactions-protocol/index.html">FetchTransactionsProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FetchTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<a href="../core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-rates-fix-protocol/index.html">RatesFixProtocol</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RatesFixProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the
+fix in the transaction and then proceeds to get the oracle to sign it. Although the <a href="-rates-fix-protocol/call.html">call</a> method combines the query
+and signing step, you can run the steps individually by constructing this object and then using the public methods
+for each step.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-resolve-transactions-protocol/index.html">ResolveTransactionsProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
+their dependencies, and verifies them together using a single <a href="../core/-transaction-group/index.html">TransactionGroup</a>. If no exception is thrown, then
+all the transactions have been successfully verified and inserted into the local database.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-timestamping-protocol/index.html">TimestampingProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TimestampingProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code><p>The TimestampingProtocol class is the client code that talks to a <a href="../core.node.services/-node-timestamper-service/index.html">NodeTimestamperService</a> on some remote node. It is a
+<a href="../core.protocols/-protocol-logic/index.html">ProtocolLogic</a>, meaning it can either be a sub-protocol of some other protocol, or be driven independently.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-two-party-trade-protocol/index.html">TwoPartyTradeProtocol</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">TwoPartyTradeProtocol</span></code><p>This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
+and seller) and the following steps:</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
