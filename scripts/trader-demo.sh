@@ -7,9 +7,7 @@ if [ ! -e ./gradlew ]; then
     exit 1
 fi
 
-if [ ! -d build/install/r3prototyping ]; then
-    ./gradlew installDist
-fi
+./gradlew installDist
 
 if [[ "$mode" == "buyer" ]]; then
     if [ ! -d buyer ]; then
