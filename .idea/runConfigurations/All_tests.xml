@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="All tests" type="JUnit" factoryName="JUnit">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
-    <module name="r3prototyping" />
+    <module name="r3prototyping_test" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <option name="PACKAGE_NAME" value="" />
