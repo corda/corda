@@ -4,9 +4,9 @@ This source repository contains explorations of various design concepts the R3 D
 
 Things you need to know:
 
-* The main code documentation is in the form of a website in the git repository. Load [the website](docs/build/html/index.html)
-  in the `docs/build/html` directory to start reading about what's included, how to get set up, and to read a tutorial
-  on writing smart contracts in this framework.
+* The main code documentation is in the form of a website in the git repository. There is a copy of the site online, so
+  [access the website](http://docs.corda.r3cev.com) using the username 'corda' and password 'delegato' to start reading
+  about what's included, how to get set up, and to read a tutorial on writing smart contracts in this framework.
   
 * The architecture documentation is on the [Architecture Working Group Wiki](https://r3-cev.atlassian.net/wiki/display/AWG/Architecture+Working+Group) site - please
   refer to that for an explanation of some of the background concepts that the prototype is exploring.
