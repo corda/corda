@@ -36,6 +36,7 @@ rate-fix-demo-data
 .idea/libraries
 .idea/shelf
 
+!.idea/modules.xml
 
 # if you remove the above rule, at least ignore the following:
 
