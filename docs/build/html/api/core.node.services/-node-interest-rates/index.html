@@ -1,0 +1,78 @@
+<HTML>
+<HEAD>
+<title>NodeInterestRates - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">NodeInterestRates</a><br/>
+<br/>
+<h1>NodeInterestRates</h1>
+<code><span class="keyword">object </span><span class="identifier">NodeInterestRates</span></code><br/>
+<p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
+rate fix (e.g. LIBOR, EURIBOR ...).</p>
+<p>The oracle has two functions. It can be queried for a fix for the given day. And it can sign a transaction that
+includes a fix that it finds acceptable. So to use it you would query the oracle, incorporate its answer into the
+transaction you are building, and then (after possibly extra steps) hand the final transaction back to the oracle
+for signing.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-oracle/index.html">Oracle</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Oracle</span></code><p>An implementation of an interest rate fix oracle which is given data in a simple string format.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></code><p>The Service that wraps <a href="-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-unknown-fix/index.html">UnknownFix</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">UnknownFix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="parse-file.html">parseFile</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseFile</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseFile(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">,</span>&nbsp;<a href="../../core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code><p>Parses lines containing fixes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="parse-fix-of.html">parseFixOf</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseFixOf</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseFixOf(kotlin.String)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../core/-fix-of/index.html"><span class="identifier">FixOf</span></a></code><p>Parses a string of the form "LIBOR 16-March-2016 30" into a <a href="../../core/-fix-of/index.html">FixOf</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="parse-one-rate.html">parseOneRate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseOneRate</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates$parseOneRate(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">,</span>&nbsp;<a href="../../core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code><p>Parses a string of the form "LIBOR 16-March-2016 30 = 0.678" into a <a href="../../core/-fix-of/index.html">FixOf</a> and <a href="../../core/-fix/index.html">Fix</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

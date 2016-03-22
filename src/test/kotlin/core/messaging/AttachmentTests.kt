@@ -13,7 +13,7 @@ import protocols.FetchDataProtocol
 import core.Attachment
 import core.crypto.SecureHash
 import core.crypto.sha256
-import core.node.MockNetwork
+import core.testing.MockNetwork
 import core.node.services.NodeAttachmentService
 import core.serialization.OpaqueBytes
 import core.testutils.rootCauseExceptions

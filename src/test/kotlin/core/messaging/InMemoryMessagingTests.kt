@@ -11,6 +11,7 @@
 package core.messaging
 
 import core.serialization.deserialize
+import core.testing.InMemoryMessagingNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

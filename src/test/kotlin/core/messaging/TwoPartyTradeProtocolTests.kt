@@ -12,16 +12,15 @@ import contracts.Cash
 import contracts.CommercialPaper
 import core.*
 import core.crypto.SecureHash
-import core.node.MockNetwork
 import core.node.services.*
-import core.node.services.StorageServiceImpl
+import core.testing.InMemoryMessagingNetwork
+import core.testing.MockNetwork
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import core.utilities.RecordingMap
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.slf4j.LoggerFactory
 import protocols.TwoPartyTradeProtocol
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -36,8 +35,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-// TODO: Refactor this test to use the MockNode class, which will clean this file up significantly.
-
 /**
  * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do
  * it on the ledger atomically. Therefore they must work together to build a transaction.
@@ -50,6 +47,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Before
     fun before() {
         net = MockNetwork(false)
+        net.identities += TEST_KEYS_TO_CORP_MAP.values
         BriefLogFormatter.loggingOn("platform.trade", "core.TransactionGroup", "recordingmap")
     }
 

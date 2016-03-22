@@ -37,6 +37,7 @@ inline fun <R> rootCauseExceptions(body: () -> R) : R {
 object TestUtils {
     val keypair = generateKeyPair()
     val keypair2 = generateKeyPair()
+    val keypair3 = generateKeyPair()
 }
 // A dummy time at which we will be pretending test transactions are created.
 val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
@@ -44,14 +45,22 @@ val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 // A few dummy values for testing.
 val MEGA_CORP_KEY = TestUtils.keypair
 val MEGA_CORP_PUBKEY = MEGA_CORP_KEY.public
+
 val MINI_CORP_KEY = TestUtils.keypair2
 val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
+
+val ORACLE_KEY = TestUtils.keypair3
+val ORACLE_PUBKEY = ORACLE_KEY.public
+
 val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
+
 val ALICE_KEY = generateKeyPair()
 val ALICE = ALICE_KEY.public
+
 val BOB_KEY = generateKeyPair()
 val BOB = BOB_KEY.public
+
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
@@ -70,7 +79,8 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Class<out Contract>> = mapOf(
         CP_PROGRAM_ID to CommercialPaper::class.java,
         JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper::class.java,
         CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
-        DUMMY_PROGRAM_ID to DummyContract::class.java
+        DUMMY_PROGRAM_ID to DummyContract::class.java,
+        IRS_PROGRAM_ID to InterestRateSwap::class.java
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

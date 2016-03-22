@@ -159,3 +159,5 @@ fun extractZipFile(zipPath: Path, toPath: Path) {
         }
     }
 }
+
+// TODO: Generic csv printing utility for clases.

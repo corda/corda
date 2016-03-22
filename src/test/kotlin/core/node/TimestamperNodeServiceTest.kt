@@ -17,6 +17,7 @@ import core.node.services.ServiceHub
 import core.node.services.TimestampingError
 import core.protocols.ProtocolLogic
 import core.serialization.serialize
+import core.testing.InMemoryMessagingNetwork
 import core.testutils.ALICE
 import core.testutils.ALICE_KEY
 import core.testutils.CASH
