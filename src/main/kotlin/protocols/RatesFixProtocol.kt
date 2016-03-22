@@ -11,7 +11,7 @@ package protocols
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
-import core.messaging.LegallyIdentifiableNode
+import core.node.services.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker

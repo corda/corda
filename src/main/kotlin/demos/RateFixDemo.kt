@@ -10,10 +10,10 @@ package demos
 
 import contracts.Cash
 import core.*
-import core.messaging.LegallyIdentifiableNode
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.services.ArtemisMessagingService
+import core.node.services.LegallyIdentifiableNode
 import core.node.services.NodeInterestRates
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
@@ -71,6 +71,7 @@ fun main(args: Array<String>) {
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
         override val exportJMXto: String = "http"
+        override val nearestCity: String = "Atlantis"
     }
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, null).start() }
 

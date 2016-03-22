@@ -12,7 +12,7 @@ import api.Config
 import api.ResponseFilter
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
-import core.messaging.LegallyIdentifiableNode
+import core.node.services.LegallyIdentifiableNode
 import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
 import core.node.servlets.AttachmentDownloadServlet

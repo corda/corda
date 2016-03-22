@@ -15,7 +15,7 @@ import contracts.sumCashBy
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.messaging.LegallyIdentifiableNode
+import core.node.services.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
 import protocols.TimestampingProtocol

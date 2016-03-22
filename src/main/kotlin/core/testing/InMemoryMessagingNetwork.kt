@@ -15,6 +15,7 @@ import core.node.services.DummyTimestampingAuthority
 import core.ThreadBox
 import core.crypto.sha256
 import core.messaging.*
+import core.node.services.LegallyIdentifiableNode
 import core.node.services.NodeTimestamperService
 import core.utilities.loggerFor
 import java.time.Instant

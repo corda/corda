@@ -12,7 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.Party
 import core.WireTransaction
 import core.crypto.DigitalSignature
-import core.messaging.LegallyIdentifiableNode
+import core.node.services.LegallyIdentifiableNode
 import core.messaging.MessageRecipients
 import core.messaging.StateMachineManager
 import core.node.services.NodeTimestamperService

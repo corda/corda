@@ -11,11 +11,12 @@ package core.testing
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.MoreExecutors
 import core.Party
-import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
 import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.services.FixedIdentityService
+import core.node.services.LegallyIdentifiableNode
+import core.node.services.PhysicalLocation
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -69,6 +70,9 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
 
         override fun makeIdentityService() = FixedIdentityService(mockNet.identities)
 
+        // There is no need to slow down the unit tests by initialising CityDatabase
+        override fun findMyLocation(): PhysicalLocation? = null
+
         override fun start(): MockNode {
             super.start()
             mockNet.identities.add(storage.myLegalIdentity)
@@ -88,6 +92,7 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
         val config = object : NodeConfiguration {
             override val myLegalName: String = "Mock Company $id"
             override val exportJMXto: String = ""
+            override val nearestCity: String = "Atlantis"
         }
         val fac = factory ?: { p, n, n2, l -> MockNode(p, n, n2, l, id) }
         val node = fac(path, config, this, withTimestamper).start()
