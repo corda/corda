@@ -37,7 +37,7 @@ fun main(args: Array<String>) {
     val oracleAddrArg = parser.accepts("oracle").withRequiredArg().required()
     val oracleIdentityArg = parser.accepts("oracle-identity-file").withRequiredArg().required()
 
-    val fixOfArg = parser.accepts("fix-of").withRequiredArg().defaultsTo("LIBOR 2016-03-16 30")
+    val fixOfArg = parser.accepts("fix-of").withRequiredArg().defaultsTo("LIBOR 2016-03-16 1M")
     val expectedRateArg = parser.accepts("expected-rate").withRequiredArg().defaultsTo("0.67")
     val rateToleranceArg = parser.accepts("rate-tolerance").withRequiredArg().defaultsTo("0.1")
 

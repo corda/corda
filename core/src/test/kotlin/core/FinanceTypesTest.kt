@@ -12,6 +12,7 @@ import org.junit.Test
 import java.time.LocalDate
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FinanceTypesTest {
 
@@ -21,6 +22,19 @@ class FinanceTypesTest {
         assert("0.01" in x.toString())
     }
 
+    @Test
+    fun `valid tenor tests`() {
+        val exampleTenors = ("ON,1D,2D,3D,4D,5D,6D,7D,1W,2W,3W,1M,3M,6M,1Y,2Y,3Y,5Y,10Y,12Y,20Y").split(",")
+        exampleTenors.all { Tenor(it).name.length > 0  } // Slightly obtuse way of ensuring no exception thrown in construction.
+    }
+
+    @Test
+    fun `invalid tenor tests`() {
+        val exampleTenors = ("W,M,D,Z,2Q,p0,W1").split(",")
+        for (t in exampleTenors) {
+            assertFailsWith<java.lang.IllegalArgumentException> { Tenor(t) }
+        }
+    }
 
     @Test
     fun `schedule generator 1`() {

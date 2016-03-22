@@ -33,7 +33,7 @@ import javax.annotation.concurrent.ThreadSafe
  * for signing.
  */
 object NodeInterestRates {
-    /** Parses a string of the form "LIBOR 16-March-2016 30 = 0.678" into a [FixOf] and [Fix] */
+    /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [FixOf] and [Fix] */
     fun parseOneRate(s: String): Pair<FixOf, Fix> {
         val (key, value) = s.split('=').map { it.trim() }
         val of = parseFixOf(key)
@@ -41,10 +41,10 @@ object NodeInterestRates {
         return of to Fix(of, rate)
     }
 
-    /** Parses a string of the form "LIBOR 16-March-2016 30" into a [FixOf] */
+    /** Parses a string of the form "LIBOR 16-March-2016 1M" into a [FixOf] */
     fun parseFixOf(key: String): FixOf {
-        val (name, date, days) = key.split(' ')
-        return FixOf(name, LocalDate.parse(date), days.toInt().days)
+        val (name, date, tenorString) = key.split(' ')
+        return FixOf(name, LocalDate.parse(date), Tenor(tenorString))
     }
 
     /** Parses lines containing fixes */
