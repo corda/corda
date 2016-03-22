@@ -11,6 +11,10 @@ package core.node.services
 import contracts.Cash
 import core.*
 import core.testing.MockNetwork
+import core.DOLLARS
+import core.Fix
+import core.TransactionBuilder
+import core.bd
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import org.junit.Test
@@ -20,16 +24,16 @@ import kotlin.test.assertFailsWith
 
 class NodeInterestRatesTest {
     val TEST_DATA = NodeInterestRates.parseFile("""
-        LIBOR 2016-03-16 30 = 0.678
-        LIBOR 2016-03-16 60 = 0.655
-        EURIBOR 2016-03-15 30 = 0.123
-        EURIBOR 2016-03-15 60 = 0.111
+        LIBOR 2016-03-16 1M = 0.678
+        LIBOR 2016-03-16 2M = 0.655
+        EURIBOR 2016-03-15 1M = 0.123
+        EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
 
     val service = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY).apply { knownFixes = TEST_DATA }
 
     @Test fun `query successfully`() {
-        val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
+        val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val res = service.query(listOf(q))
         assertEquals(1, res.size)
         assertEquals("0.678".bd, res[0].value)
@@ -37,8 +41,8 @@ class NodeInterestRatesTest {
     }
 
     @Test fun `query with one success and one missing`() {
-        val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
-        val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-19 30")
+        val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
+        val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-19 1M")
         val e = assertFailsWith<NodeInterestRates.UnknownFix> { service.query(listOf(q1, q2)) }
         assertEquals(e.fix, q2)
     }
@@ -56,7 +60,7 @@ class NodeInterestRatesTest {
 
     @Test fun `sign successfully`() {
         val tx = makeTX()
-        val fix = service.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30"))).first()
+        val fix = service.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
         tx.addCommand(fix, service.identity.owningKey)
 
         // Sign successfully.
@@ -66,7 +70,7 @@ class NodeInterestRatesTest {
 
     @Test fun `do not sign with unknown fix`() {
         val tx = makeTX()
-        val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
+        val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val badFix = Fix(fixOf, "0.6789".bd)
         tx.addCommand(badFix, service.identity.owningKey)
 
@@ -81,7 +85,7 @@ class NodeInterestRatesTest {
         NodeInterestRates.Service(n2).oracle.knownFixes = TEST_DATA
 
         val tx = TransactionBuilder()
-        val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 30")
+        val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val protocol = RatesFixProtocol(tx, n2.legallyIdentifableAddress, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
         val future = n1.smm.add("rates", protocol)

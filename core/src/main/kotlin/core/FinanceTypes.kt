@@ -10,7 +10,6 @@ package core
 
 import java.math.BigDecimal
 import java.time.DayOfWeek
-import java.time.Duration
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -79,7 +78,7 @@ fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) s
 //
 
 /** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc) */
-data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Duration)
+data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
@@ -87,7 +86,13 @@ data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
 /**
  *  Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */
-data class Tenor(var name:String) {
+data class Tenor(val name:String) {
+    init {
+        val verifier = Regex("([0-9])+([DMYW])") // Only doing Overnight, Day, Week, Month, Year for now.
+        if (!(name == "ON" || verifier.containsMatchIn(name))) {
+            throw IllegalArgumentException("Unrecognized tenor : $name")
+        }
+    }
     override fun toString(): String = "$name"
 }
 
