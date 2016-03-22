@@ -12,6 +12,7 @@ import contracts.Cash
 import contracts.CommercialPaper
 import core.*
 import core.crypto.SecureHash
+import core.node.NodeConfiguration
 import core.node.services.*
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork
@@ -163,16 +164,18 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = net.createNode(timestamperAddr, bobAddr.id) { path, nodeConfiguration, net, timestamper ->
-                object : MockNetwork.MockNode(path, nodeConfiguration, net, timestamper, bobAddr.id) {
-                    override fun initialiseStorageService(dir: Path): StorageService {
-                        val ss = super.initialiseStorageService(dir)
-                        val smMap = ss.stateMachines
-                        smMap.putAll(savedCheckpoints)
-                        return ss
+            bobNode = net.createNode(timestamperAddr, bobAddr.id, object : MockNetwork.Factory {
+                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: LegallyIdentifiableNode?): MockNetwork.MockNode {
+                    return object : MockNetwork.MockNode(dir, config, net, timestamperAddr, bobAddr.id) {
+                        override fun initialiseStorageService(dir: Path): StorageService {
+                            val ss = super.initialiseStorageService(dir)
+                            val smMap = ss.stateMachines
+                            smMap.putAll(savedCheckpoints)
+                            return ss
+                        }
                     }
                 }
-            }
+            })
 
             // Find the future representing the result of this state machine again.
             var bobFuture = bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).single().second
@@ -192,16 +195,18 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     // of gets and puts.
     private fun makeNodeWithTracking(name: String): MockNetwork.MockNode {
         // Create a node in the mock network ...
-        return net.createNode(null) { path, config, net, tsNode ->
-            object : MockNetwork.MockNode(path, config, net, tsNode) {
-                // That constructs the storage service object in a customised way ...
-                override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party,
-                                                     contractFactory: ContractFactory): StorageServiceImpl {
-                    // To use RecordingMaps instead of ordinary HashMaps.
-                    return StorageServiceImpl(attachments, contractFactory, keypair, identity, { tableName -> name })
+        return net.createNode(null, nodeFactory = object : MockNetwork.Factory {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: LegallyIdentifiableNode?): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr) {
+                    // That constructs the storage service object in a customised way ...
+                    override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party,
+                                                         contractFactory: ContractFactory): StorageServiceImpl {
+                        // To use RecordingMaps instead of ordinary HashMaps.
+                        return StorageServiceImpl(attachments, contractFactory, keypair, identity, { tableName -> name })
+                    }
                 }
             }
-        }
+        })
     }
 
     @Test

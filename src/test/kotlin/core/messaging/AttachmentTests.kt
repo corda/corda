@@ -8,22 +8,25 @@
 
 package core.messaging
 
-import protocols.FetchAttachmentsProtocol
-import protocols.FetchDataProtocol
 import core.Attachment
 import core.crypto.SecureHash
 import core.crypto.sha256
-import core.testing.MockNetwork
+import core.node.NodeConfiguration
+import core.node.services.LegallyIdentifiableNode
 import core.node.services.NodeAttachmentService
 import core.serialization.OpaqueBytes
+import core.testing.MockNetwork
 import core.testutils.rootCauseExceptions
 import core.utilities.BriefLogFormatter
 import org.junit.Before
 import org.junit.Test
+import protocols.FetchAttachmentsProtocol
+import protocols.FetchDataProtocol
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -90,15 +93,17 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val n0 = network.createNode(null) { path, config, mock, ts ->
-            object : MockNetwork.MockNode(path, config, mock, ts) {
-                override fun start(): MockNetwork.MockNode {
-                    super.start()
-                    (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false
-                    return this
+        val n0 = network.createNode(null, nodeFactory = object : MockNetwork.Factory {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: LegallyIdentifiableNode?): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr) {
+                    override fun start(): MockNetwork.MockNode {
+                        super.start()
+                        (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false
+                        return this
+                    }
                 }
             }
-        }
+        })
         val n1 = network.createNode(n0.legallyIdentifableAddress)
 
         // Insert an attachment into node zero's store directly.
