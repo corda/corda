@@ -41,6 +41,9 @@ repositories {
 
 configurations {
     quasar
+
+    // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
+    runtime.exclude module: 'isolated'
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -48,6 +51,7 @@ configurations {
 
 dependencies {
     compile project(':contracts')
+    testCompile project(':contracts:isolated')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
     compile "org.slf4j:slf4j-jdk14:1.7.13"

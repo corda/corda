@@ -87,7 +87,7 @@ inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_K
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
 fun SerializedBytes<WireTransaction>.deserialize(): WireTransaction = WireTransaction.deserialize(this)
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
+inline fun <reified T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T = bits.deserialize(kryo, includeClassName)
 
 /**
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
