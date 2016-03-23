@@ -9,6 +9,7 @@
 package core.node
 
 import api.Config
+import api.ResponseFilter
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import core.messaging.LegallyIdentifiableNode
@@ -94,6 +95,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             val resourceConfig = ResourceConfig()
             // Add your API provider classes (annotated for JAX-RS) here
             resourceConfig.register(Config(services))
+            resourceConfig.register(ResponseFilter())
             resourceConfig.register(api)
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",

@@ -50,10 +50,13 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     @Suspendable
     override fun call() {
+        progressTracker.currentStep = progressTracker.steps[0]
         val fix = query()
+        progressTracker.currentStep = WORKING
         checkFixIsNearExpected(fix)
         tx.addCommand(fix, oracle.identity.owningKey)
         beforeSigning(fix)
+        progressTracker.currentStep = SIGNING
         tx.addSignatureUnchecked(sign())
     }
 
