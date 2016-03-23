@@ -1,5 +1,13 @@
 package contracts
 
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
+import com.fasterxml.jackson.databind.type.SimpleType
 import core.Amount
 import core.Tenor
 import java.math.BigDecimal
@@ -50,43 +58,7 @@ open class FloatingRate: Rate(null)
  * So a reference rate is a rate that takes its value from a source at a given date
  * e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value date in the getAsOf(..) method.
  */
-abstract class ReferenceRate(val name: String): FloatingRate() {
-    abstract fun getAsOf(date: LocalDate?) : RatioUnit
-}
-
-/**
- * A concrete implementation of the above for testing purposes
- */
-open class TestReferenceRate(val testrate: String) : ReferenceRate(testrate) {
-    override fun getAsOf(date: LocalDate?) : RatioUnit {
-        return testrate.percent
-    }
-}
-
-/**
- * This represents a source of data.
- */
-abstract class Oracle() { abstract fun retrieve(tenor: Tenor, date: LocalDate) : RatioUnit  }
-
-class ReutersOracle() : Oracle() {
-    override fun retrieve(tenor: Tenor, date: LocalDate): RatioUnit {
-        TODO("Reuters Oracle retrieval")
-    }
-}
-
-class TelerateOracle(page: String) : Oracle() {
-    override fun retrieve(tenor: Tenor, date: LocalDate): RatioUnit {
-        TODO("Telerate Oracle retrieval")
-    }
-}
-
-/**
- * A Reference rate that is retrieved via an Oracle.
- */
-open class OracleRetrievableReferenceRate(val oracle: Oracle, val tenor: Tenor, referenceRate: String) : ReferenceRate(referenceRate) {
-    override fun getAsOf(date: LocalDate?): RatioUnit {
-        return oracle.retrieve(tenor,date!!)
-    }
+class ReferenceRate(val oracle: String, val tenor: Tenor, val name: String) : FloatingRate() {
     override fun toString(): String = "$name - $tenor"
 }
 

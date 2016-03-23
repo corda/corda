@@ -76,7 +76,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 CASH_PROGRAM_ID to Cash::class.java,
                 CP_PROGRAM_ID to CommercialPaper::class.java,
                 CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
-                DUMMY_PROGRAM_ID to DummyContract::class.java
+                DUMMY_PROGRAM_ID to DummyContract::class.java,
+                IRS_PROGRAM_ID to InterestRateSwap::class.java
         )
 
         override fun <T : Contract> get(hash: SecureHash): T {

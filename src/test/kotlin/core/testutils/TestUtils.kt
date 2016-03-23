@@ -38,6 +38,8 @@ object TestUtils {
     val keypair = generateKeyPair()
     val keypair2 = generateKeyPair()
     val keypair3 = generateKeyPair()
+    val keypair4 = generateKeyPair()
+    val keypair5 = generateKeyPair()
 }
 // A dummy time at which we will be pretending test transactions are created.
 val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
@@ -48,6 +50,14 @@ val MEGA_CORP_PUBKEY = MEGA_CORP_KEY.public
 
 val MINI_CORP_KEY = TestUtils.keypair2
 val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
+
+// TODO remove once mock API is retired
+val EXCALIBUR_BANK_KEY = TestUtils.keypair4
+val EXCALIBUR_BANK_PUBKEY = EXCALIBUR_BANK_KEY.public
+
+// TODO remove once mock API is retired
+val A_N_OTHER_BANK_KEY = TestUtils.keypair5
+val A_N_OTHER_BANK_PUBKEY = A_N_OTHER_BANK_KEY.public
 
 val ORACLE_KEY = TestUtils.keypair3
 val ORACLE_PUBKEY = ORACLE_KEY.public
@@ -64,11 +74,17 @@ val BOB = BOB_KEY.public
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DummyTimestampingAuthority.key)
+// TODO remove once mock API is retired
+val EXCALIBUR_BANK = Party("Excalibur", EXCALIBUR_BANK_PUBKEY)
+val A_N_OTHER_BANK = Party("ANOther",A_N_OTHER_BANK_PUBKEY)
+
+val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, EXCALIBUR_BANK_KEY, A_N_OTHER_BANK_KEY, DummyTimestampingAuthority.key)
 
 val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
         MEGA_CORP_PUBKEY to MEGA_CORP,
         MINI_CORP_PUBKEY to MINI_CORP,
+        EXCALIBUR_BANK_PUBKEY to EXCALIBUR_BANK,
+        A_N_OTHER_BANK_PUBKEY to A_N_OTHER_BANK,
         DUMMY_TIMESTAMPER.identity.owningKey to DUMMY_TIMESTAMPER.identity
 )
 

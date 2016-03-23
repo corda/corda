@@ -74,11 +74,11 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     //expression = "( fixedLeg.notional * (fixedLeg.fixedRate)) - (floatingLeg.notional * (rateSchedule.get(context.getDate('currentDate'))))",
 
                     // How it's ended up looking, which I think is now broken but it's a WIP.
-                    expression = InterestRateSwap.Expression("( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -" +
+                    expression = Expression("( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -" +
                             "(floatingLeg.notional.pennies * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))"),
 
                     floatingLegPaymentSchedule = HashMap(),
-                    fixedLegpaymentSchedule = HashMap()
+                    fixedLegPaymentSchedule = HashMap()
             )
 
             val EUR = currency("EUR")
@@ -94,13 +94,13 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     valuationDate = "Every Local Business Day",
                     notificationTime = "2:00pm London",
                     resolutionTime = "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
-                    interestRate = OracleRetrievableReferenceRate(TelerateOracle("T3270"), Tenor("6M"), "EONIA"),
+                    interestRate = ReferenceRate("T3270", Tenor("6M"), "EONIA"),
                     addressForTransfers = "",
                     exposure = UnknownType(),
                     localBusinessDay = BusinessCalendar.getInstance("London"),
                     tradeID = "trade1",
                     hashLegalDocs = "put hash here",
-                    dailyInterestAmount = InterestRateSwap.Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
+                    dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
             InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
@@ -165,11 +165,11 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     //expression = "( fixedLeg.notional * (fixedLeg.fixedRate)) - (floatingLeg.notional * (rateSchedule.get(context.getDate('currentDate'))))",
 
                     // How it's ended up looking, which I think is now broken but it's a WIP.
-                    expression = InterestRateSwap.Expression("( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -" +
+                    expression = Expression("( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -" +
                             "(floatingLeg.notional.pennies * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))"),
 
                     floatingLegPaymentSchedule = HashMap(),
-                    fixedLegpaymentSchedule = HashMap()
+                    fixedLegPaymentSchedule = HashMap()
             )
 
             val EUR = currency("EUR")
@@ -185,13 +185,13 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     valuationDate = "Every Local Business Day",
                     notificationTime = "2:00pm London",
                     resolutionTime = "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
-                    interestRate = OracleRetrievableReferenceRate(TelerateOracle("T3270"), Tenor("6M"), "EONIA"),
+                    interestRate = ReferenceRate("T3270", Tenor("6M"), "EONIA"),
                     addressForTransfers = "",
                     exposure = UnknownType(),
                     localBusinessDay = BusinessCalendar.getInstance("London"),
                     tradeID = "trade1",
                     hashLegalDocs = "put hash here",
-                    dailyInterestAmount = InterestRateSwap.Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
+                    dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
             return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
@@ -336,12 +336,6 @@ class IRSTests {
     }
 
     @Test
-    fun `reference rate testing`() {
-        val r1 = TestReferenceRate("5")
-        assert(100 * r1.getAsOf(null) == 5)
-    }
-
-    @Test
     fun `expression calculation testing`() {
         val dummyIRS = singleIRS()
         val v = FixedRate(PercentageRatioUnit("4.5"))
@@ -366,7 +360,7 @@ class IRSTests {
 
         for (i in stuffToPrint) {
             println(i)
-            var z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 12), InterestRateSwap.Expression(i))
+            var z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 12), Expression(i))
             println(z.javaClass)
             println(z)
             println("-----------")

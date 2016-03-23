@@ -8,6 +8,14 @@
 
 package core
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -82,7 +90,25 @@ data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
+/**
+ * Represents a textual expression of e.g. a formula
+ *
+ */
+@JsonDeserialize(using = ExpressionDeserializer::class)
+@JsonSerialize(using = ExpressionSerializer::class)
+data class Expression(val expr: String)
 
+object ExpressionSerializer: JsonSerializer<Expression>() {
+    override fun serialize(expr: Expression, generator: JsonGenerator, provider: SerializerProvider) {
+        generator.writeString(expr.expr)
+    }
+}
+
+object ExpressionDeserializer: JsonDeserializer<Expression>() {
+    override fun deserialize(parser: JsonParser, context: DeserializationContext): Expression {
+        return Expression(parser.text)
+    }
+}
 
 /**
  *  Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */

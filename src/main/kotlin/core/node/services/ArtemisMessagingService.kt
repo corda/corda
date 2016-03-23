@@ -135,43 +135,45 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         session.createQueue(myHostPort.toString(), "inbound", false)
         inboundConsumer = session.createConsumer("inbound").setMessageHandler { message: ClientMessage ->
             // This code runs for every inbound message.
-            if (!message.containsProperty(TOPIC_PROPERTY)) {
-                log.warn("Received message without a ${TOPIC_PROPERTY} property, ignoring")
-                // TODO: Figure out whether we always need to acknowledge messages, even when invalid.
-                return@setMessageHandler
-            }
-            val topic = message.getStringProperty(TOPIC_PROPERTY)
-            // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
-            // or removed whilst the filter is executing will not affect anything.
-            val deliverTo = handlers.filter { if (it.topic.isBlank()) true else it.topic == topic }
+            try {
+                if (!message.containsProperty(TOPIC_PROPERTY)) {
+                    log.warn("Received message without a ${TOPIC_PROPERTY} property, ignoring")
+                    return@setMessageHandler
+                }
+                val topic = message.getStringProperty(TOPIC_PROPERTY)
+                // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
+                // or removed whilst the filter is executing will not affect anything.
+                val deliverTo = handlers.filter { if (it.topic.isBlank()) true else it.topic == topic }
 
-            if (deliverTo.isEmpty()) {
-                // This should probably be downgraded to a trace in future, so the protocol can evolve with new topics
-                // without causing log spam.
-                log.warn("Received message for $topic that doesn't have any registered handlers.")
-                return@setMessageHandler
-            }
+                if (deliverTo.isEmpty()) {
+                    // This should probably be downgraded to a trace in future, so the protocol can evolve with new topics
+                    // without causing log spam.
+                    log.warn("Received message for $topic that doesn't have any registered handlers.")
+                    return@setMessageHandler
+                }
 
-            val bits = ByteArray(message.bodySize)
-            message.bodyBuffer.readBytes(bits)
+                val bits = ByteArray(message.bodySize)
+                message.bodyBuffer.readBytes(bits)
 
-            val msg = object : Message {
-                override val topic = topic
-                override val data: ByteArray = bits
-                override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
-                override val debugMessageID: String = message.messageID.toString()
-                override fun serialise(): ByteArray = bits
-            }
-            for (handler in deliverTo) {
-                (handler.executor ?: RunOnCallerThread).execute {
-                    try {
-                        handler.callback(msg, handler)
-                    } catch(e: Exception) {
-                        log.error("Caught exception whilst executing message handler for $topic", e)
+                val msg = object : Message {
+                    override val topic = topic
+                    override val data: ByteArray = bits
+                    override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
+                    override val debugMessageID: String = message.messageID.toString()
+                    override fun serialise(): ByteArray = bits
+                }
+                for (handler in deliverTo) {
+                    (handler.executor ?: RunOnCallerThread).execute {
+                        try {
+                            handler.callback(msg, handler)
+                        } catch(e: Exception) {
+                            log.error("Caught exception whilst executing message handler for $topic", e)
+                        }
                     }
                 }
+            } finally {
+                message.acknowledge()
             }
-            message.acknowledge()
         }
         session.start()
 

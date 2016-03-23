@@ -26,6 +26,7 @@ data class LegallyIdentifiableNode(val address: SingleMessageRecipient, val iden
 */
 interface NetworkMapService {
     val timestampingNodes: List<LegallyIdentifiableNode>
+    val ratesOracleNodes: List<LegallyIdentifiableNode>
     val partyNodes: List<LegallyIdentifiableNode>
 
     fun nodeForPartyName(name: String): LegallyIdentifiableNode? = partyNodes.singleOrNull { it.identity.name == name }
@@ -37,6 +38,7 @@ class MockNetworkMapService : NetworkMapService {
     data class MockAddress(val id: String): SingleMessageRecipient
 
     override val timestampingNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
+    override val ratesOracleNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
     override val partyNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
 
     init {

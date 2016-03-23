@@ -7,6 +7,7 @@ import core.crypto.SecureHash
 import core.node.AbstractNode
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
+import core.utilities.ANSIProgressRenderer
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.reflect.KParameter
@@ -87,6 +88,7 @@ class APIServerImpl(val node: AbstractNode): APIServer {
                     }
                     // If we get here then we matched every parameter
                     val protocol = constructor.callBy(params) as ProtocolLogic<*>
+                    ANSIProgressRenderer.progressTracker = protocol.progressTracker
                     val future = node.smm.add("api-call",protocol)
                     return future
                 }
