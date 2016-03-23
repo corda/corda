@@ -225,7 +225,7 @@ fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = acc
  * typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
  * no staff are around to handle problems.
  */
-open class BusinessCalendar private constructor(val holidayDates: List<LocalDate>) {
+open class BusinessCalendar private constructor(val calendars: Array<out String>, val holidayDates: List<LocalDate>) {
     class UnknownCalendar(name: String): Exception("$name not found")
 
     companion object {
@@ -239,7 +239,7 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
         fun parseDateFromString(it: String) = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
         /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
-        fun getInstance(vararg calname: String) = BusinessCalendar(
+        fun getInstance(vararg calname: String) = BusinessCalendar(calname,
                 calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
                         toSet().
                         map{ parseDateFromString(it) }.
