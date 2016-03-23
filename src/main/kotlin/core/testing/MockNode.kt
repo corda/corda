@@ -12,6 +12,7 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.MoreExecutors
 import core.Party
 import core.messaging.MessagingService
+import core.messaging.SingleMessageRecipient
 import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.services.FixedIdentityService
@@ -133,4 +134,6 @@ class MockNetwork(private val threadPerNode: Boolean = false,
         require(nodes.isEmpty())
         return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].legallyIdentifableAddress, -1, nodeFactory))
     }
+
+    fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
 }
