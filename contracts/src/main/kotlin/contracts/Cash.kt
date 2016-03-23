@@ -22,7 +22,8 @@ import java.util.*
 //
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
-val CASH_PROGRAM_ID = SecureHash.sha256("cash")
+val CASH_PROGRAM_ID = Cash()
+    //SecureHash.sha256("cash")
 
 class InsufficientBalanceException(val amountMissing: Amount) : Exception()
 
@@ -62,7 +63,7 @@ class Cash : Contract {
             /** There must be a MoveCommand signed by this key to claim the amount */
             override val owner: PublicKey
     ) : OwnableState {
-        override val programRef = CASH_PROGRAM_ID
+        override val contract = CASH_PROGRAM_ID
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))

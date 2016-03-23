@@ -38,7 +38,7 @@ import java.time.Instant
  *    to do this in the Apache BVal project).
  */
 
-val CP_PROGRAM_ID = SecureHash.sha256("replace-me-later-with-bytecode-hash")
+val CP_PROGRAM_ID = CommercialPaper()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 class CommercialPaper : Contract {
@@ -51,7 +51,7 @@ class CommercialPaper : Contract {
             val faceValue: Amount,
             val maturityDate: Instant
     ) : OwnableState, ICommercialPaperState {
-        override val programRef = CP_PROGRAM_ID
+        override val contract = CP_PROGRAM_ID
 
         fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))

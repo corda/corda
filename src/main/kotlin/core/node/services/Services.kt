@@ -117,11 +117,6 @@ interface StorageService {
     val attachments: AttachmentStorage
 
     /**
-     * A map of program hash->contract class type, used for verification.
-     */
-    val contractPrograms: ContractFactory
-
-    /**
      * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
      * first installed.
      */
@@ -186,6 +181,6 @@ interface ServiceHub {
             storageService.validatedTransactions[it.txhash] ?: throw TransactionResolutionException(it.txhash)
         }
         val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService, storageService.attachments) }
-        TransactionGroup(setOf(ltx), ltxns.toSet()).verify(storageService.contractPrograms)
+        TransactionGroup(setOf(ltx), ltxns.toSet()).verify()
     }
 }

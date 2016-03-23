@@ -15,11 +15,11 @@ import core.crypto.SecureHash
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
-val DUMMY_PROGRAM_ID = SecureHash.sha256("dummy")
+val DUMMY_PROGRAM_ID = DummyContract()
 
 class DummyContract : Contract {
     class State : ContractState {
-        override val programRef: SecureHash = DUMMY_PROGRAM_ID
+        override val contract = DUMMY_PROGRAM_ID
     }
 
     override fun verify(tx: TransactionForVerification) {

@@ -6,6 +6,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 import java.net.URLClassLoader
+import java.security.AccessControlContext
+import java.security.ProtectionDomain
 import java.util.*
 import java.util.jar.JarEntry
 
@@ -26,6 +28,10 @@ class ClassLoader private constructor(val tmpFiles: List<File> )
         for (file in tmpFiles) {
             file.delete()
         }
+    }
+
+    override fun loadClass(name: String?, resolve: Boolean): Class<*>? {
+        return super.loadClass(name, resolve)
     }
 
     companion object {

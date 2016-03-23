@@ -1,6 +1,5 @@
 package core.node.services
 
-import core.ContractFactory
 import core.Party
 import core.SignedTransaction
 import core.crypto.SecureHash
@@ -10,7 +9,6 @@ import java.security.KeyPair
 import java.util.*
 
 open class StorageServiceImpl(attachments: AttachmentStorage,
-                              contractFactory: ContractFactory,
                               keypair: KeyPair,
                               identity: Party = Party("Unit test party", keypair.public),
                               // This parameter is for unit tests that want to observe operation details.
@@ -39,7 +37,6 @@ open class StorageServiceImpl(attachments: AttachmentStorage,
         get() = getMapOriginal("state-machines")
 
     override val attachments: AttachmentStorage = attachments
-    override val contractPrograms = contractFactory
     override val myLegalIdentity = identity
     override val myLegalIdentityKey = keypair
 }

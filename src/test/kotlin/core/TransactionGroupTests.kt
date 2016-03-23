@@ -153,6 +153,6 @@ class TransactionGroupTests {
 
         // Now go through the conversion -> verification path with them.
         val ltxns = signedTxns.map { it.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments) }.toSet()
-        TransactionGroup(ltxns, emptySet()).verify(MockContractFactory)
+        TransactionGroup(ltxns, emptySet()).verify()
     }
 }

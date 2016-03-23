@@ -18,7 +18,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.util.*
 
-val IRS_PROGRAM_ID = SecureHash.sha256("replace-me-later-with-bytecode-hash-of-irs-code")
+val IRS_PROGRAM_ID = InterestRateSwap()
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
 open class UnknownType()
@@ -349,7 +349,7 @@ class InterestRateSwap() : Contract {
             val calculation: Calculation,
             val common: Common
     ) : ContractState {
-        override val programRef = IRS_PROGRAM_ID
+        override val contract = IRS_PROGRAM_ID
 
         /**
          * For evaluating arbitrary java on the platform

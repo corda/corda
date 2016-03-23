@@ -116,15 +116,7 @@ class MockAttachmentStorage : AttachmentStorage {
 }
 
 @ThreadSafe
-class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), MockContractFactory, generateKeyPair()) {
-}
-
-object MockContractFactory : ContractFactory {
-    override operator fun <T : Contract> get(hash: SecureHash): T {
-        val clazz = TEST_PROGRAM_MAP[hash] ?: throw UnknownContractException()
-        @Suppress("UNCHECKED_CAST")
-        return clazz.newInstance() as T
-    }
+class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), generateKeyPair()) {
 }
 
 class MockServices(

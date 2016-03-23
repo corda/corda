@@ -173,4 +173,9 @@ class ClassLoaderTests {
         assertNotNull(state2)
     }
 
+    @Test
+    fun `white list serialization`() {
+
+    }
+
 }

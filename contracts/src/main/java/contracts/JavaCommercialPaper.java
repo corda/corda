@@ -32,7 +32,8 @@ import static kotlin.collections.CollectionsKt.single;
  *
  */
 public class JavaCommercialPaper implements Contract {
-    public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
+    //public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
+    public static Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
     public static class State implements ContractState, ICommercialPaperState {
         private PartyReference issuance;
@@ -87,8 +88,9 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
-        public SecureHash getProgramRef() {
-            return SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
+        public Contract getContract() {
+            return JCP_PROGRAM_ID;
+            //return SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
         }
 
         @Override

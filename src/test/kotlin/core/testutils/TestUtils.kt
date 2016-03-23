@@ -74,7 +74,7 @@ val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
 
 // In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
 // a sandbox. For unit tests we just have a hard-coded list.
-val TEST_PROGRAM_MAP: Map<SecureHash, Class<out Contract>> = mapOf(
+val TEST_PROGRAM_MAP: Map<Contract, Class<out Contract>> = mapOf(
         CASH_PROGRAM_ID to Cash::class.java,
         CP_PROGRAM_ID to CommercialPaper::class.java,
         JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper::class.java,
@@ -162,7 +162,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
     protected fun run(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
         val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.randomSHA256())
-        tx.verify(MockContractFactory)
+        tx.verify()
     }
 
     fun accepts(time: Instant = TEST_TX_TIME) = run(time)
@@ -319,7 +319,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun verify() {
         val group = toTransactionGroup()
         try {
-            group.verify(MockContractFactory)
+            group.verify()
         } catch (e: TransactionVerificationException) {
             // Let the developer know the index of the transaction that failed.
             val wtx: WireTransaction = txns.find { it.id == e.tx.origHash }!!

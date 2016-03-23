@@ -66,22 +66,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     val legallyIdentifableAddress: LegallyIdentifiableNode get() = LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
 
-    // TODO: This will be obsoleted by "PLT-12: Basic module/sandbox system for contracts"
-    protected val contractFactory = object : ContractFactory {
-        private val contracts = mapOf(
-                CASH_PROGRAM_ID to Cash::class.java,
-                CP_PROGRAM_ID to CommercialPaper::class.java,
-                CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
-                DUMMY_PROGRAM_ID to DummyContract::class.java
-        )
-
-        override fun <T : Contract> get(hash: SecureHash): T {
-            val c = contracts[hash] ?: throw UnknownContractException()
-            @Suppress("UNCHECKED_CAST")
-            return c.newInstance() as T
-        }
-    }
-
     lateinit var storage: StorageService
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
@@ -147,12 +131,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val attachments = makeAttachmentStorage(dir)
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return constructStorageService(attachments, keypair, identity, contractFactory)
+        return constructStorageService(attachments, keypair, identity)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party,
-                                               contractFactory: ContractFactory) =
-            StorageServiceImpl(attachments, contractFactory, keypair, identity)
+    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party) =
+            StorageServiceImpl(attachments, keypair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that

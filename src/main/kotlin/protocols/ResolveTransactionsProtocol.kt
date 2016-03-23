@@ -66,7 +66,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         }
 
         // Run all the contracts and throw an exception if any of them reject.
-        TransactionGroup(toVerify, alreadyVerified).verify(serviceHub.storageService.contractPrograms)
+        TransactionGroup(toVerify, alreadyVerified).verify()
 
         // Now write all the transactions we just validated back to the database for next time, including
         // signatures so we can serve up these transactions to other peers when we, in turn, send one that

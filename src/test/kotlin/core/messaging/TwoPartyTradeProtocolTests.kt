@@ -195,10 +195,9 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         return net.createNode(null) { path, config, net, tsNode ->
             object : MockNetwork.MockNode(path, config, net, tsNode) {
                 // That constructs the storage service object in a customised way ...
-                override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party,
-                                                     contractFactory: ContractFactory): StorageServiceImpl {
+                override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
                     // To use RecordingMaps instead of ordinary HashMaps.
-                    return StorageServiceImpl(attachments, contractFactory, keypair, identity, { tableName -> name })
+                    return StorageServiceImpl(attachments, keypair, identity, { tableName -> name })
                 }
             }
         }

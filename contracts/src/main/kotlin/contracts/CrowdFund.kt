@@ -15,7 +15,7 @@ import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
-val CROWDFUND_PROGRAM_ID = SecureHash.sha256("crowdsourcing")
+val CROWDFUND_PROGRAM_ID = CrowdFund()
 
 /**
  * This is a basic crowd funding contract. It allows a party to create a funding opportunity, then for others to
@@ -57,7 +57,7 @@ class CrowdFund : Contract {
             val closed: Boolean = false,
             val pledges: List<Pledge> = ArrayList()
     ) : ContractState {
-        override val programRef = CROWDFUND_PROGRAM_ID
+        override val contract = CROWDFUND_PROGRAM_ID
 
         val pledgedAmount: Amount get() = pledges.map { it.amount }.sumOrZero(campaign.target.currency)
     }

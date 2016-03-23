@@ -16,8 +16,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
-import core.SignedTransaction
-import core.WireTransaction
+import core.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256
@@ -179,6 +178,19 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
+fun Kryo.useClassLoader(cl: ClassLoader, body: () -> Unit) {
+    val tmp = this.classLoader
+    this.classLoader = cl
+    try {
+        body()
+    }
+    finally {
+        if (tmp != null) {
+            this.classLoader
+        }
+    }
+}
+
 fun createKryo(k: Kryo = Kryo()): Kryo {
     return k.apply {
         // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
@@ -198,6 +210,34 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
             override fun read(kryo: Kryo, input: Input, type: Class<Kryo>): Kryo {
                 return createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo)
+            }
+        })
+
+       register(WireTransaction::class.java, object : Serializer<WireTransaction>() {
+            override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
+
+                kryo.writeClassAndObject( output, obj.inputs )
+                kryo.writeClassAndObject( output, obj.attachments )
+
+                kryo.writeClassAndObject( output, obj.outputs )
+                kryo.writeClassAndObject( output, obj.commands )
+
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
+                var inputs = kryo.readClassAndObject( input ) as List<StateRef>
+                var attachments = kryo.readClassAndObject( input ) as List<SecureHash>
+
+                // had we access to AttachmentStorage here, a ClassLoader could be created
+
+                // val customClassLoader = createClassLoader( attachments )
+                // kryo.useClassLoader(customClassLoader) {
+
+                    var outputs = kryo.readClassAndObject(input) as List<ContractState>
+                    var commands = kryo.readClassAndObject(input) as List<Command>
+
+                return WireTransaction(inputs, attachments, outputs, commands)
+                // }
             }
         })
 

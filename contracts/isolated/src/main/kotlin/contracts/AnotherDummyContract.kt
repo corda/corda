@@ -8,6 +8,7 @@
 
 package contracts.isolated
 
+import core.*
 import core.Contract
 import core.ContractState
 import core.TransactionForVerification
@@ -15,17 +16,20 @@ import core.crypto.SecureHash
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
-val ANOTHER_DUMMY_PROGRAM_ID = SecureHash.sha256("dummy")
+val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
 class AnotherDummyContract : Contract {
-    class State : ContractState {
-        override val programRef: SecureHash = ANOTHER_DUMMY_PROGRAM_ID
+    data class State(val foo: Int) : ContractState {
+        override val contract = ANOTHER_DUMMY_PROGRAM_ID
     }
 
     override fun verify(tx: TransactionForVerification) {
+        requireThat {
+            "justice will be served" by false
+        }
         // Always accepts.
     }
 
     // The "empty contract"
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://anotherdummy.org")
+    override val legalContractReference = SecureHash.sha256("https://anotherdummy.org")
 }

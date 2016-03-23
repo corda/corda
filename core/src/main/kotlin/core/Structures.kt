@@ -32,11 +32,9 @@ interface NamedByHash {
  */
 interface ContractState {
     /**
-     * Refers to a bytecode program that has previously been published to the network. This contract program
-     * will be executed any time this state is used in an input. It must accept in order for the
-     * transaction to proceed.
+     * Contract by which the state belongs
      */
-    val programRef: SecureHash
+    val contract: Contract
 }
 
 interface OwnableState : ContractState {
@@ -143,19 +141,6 @@ interface Contract {
      */
     val legalContractReference: SecureHash
 }
-
-/** A contract factory knows how to lazily load and instantiate contract objects. */
-interface ContractFactory {
-    /**
-     * Loads, instantiates and returns a contract object from its class bytecodes, given the hash of that bytecode.
-     *
-     * @throws UnknownContractException if the hash doesn't map to any known contract.
-     * @throws ClassCastException if the hash mapped to a contract, but it was not of type T
-     */
-    operator fun <T : Contract> get(hash: SecureHash): T
-}
-
-class UnknownContractException : Exception()
 
 /**
  * An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
