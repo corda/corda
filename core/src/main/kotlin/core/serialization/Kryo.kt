@@ -179,11 +179,11 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
-inline fun Kryo.useClassLoader(cl: ClassLoader, body: () -> Unit) {
+inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     val tmp = this.classLoader
     this.classLoader = cl
     try {
-        body()
+        return body()
     }
     finally {
         if (tmp != null) {
@@ -225,27 +225,22 @@ fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
 
             }
 
+            @Suppress("UNCHECKED_CAST")
             override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
                 var inputs = kryo.readClassAndObject( input ) as List<StateRef>
                 var attachments = kryo.readClassAndObject( input ) as List<SecureHash>
 
-                if (kryo is core.serialization.Kryo2) {
+                val attachmentStorage = (kryo as? core.serialization.Kryo2)?.attachmentStorage
 
-                    // .filterNotNull in order for TwoPartyTradeProtocolTests.checkDependenciesOfSaleAssetAreResolved test to run
-                    val classLoader = core.node.ClassLoader.create( attachments?.map { kryo.attachmentStorage?.openAttachment(it) }.filterNotNull() )
+                // .filterNotNull in order for TwoPartyTradeProtocolTests.checkDependenciesOfSaleAssetAreResolved test to run
+                val classLoader = core.node.ClassLoader.create( attachments.map { attachmentStorage?.openAttachment(it) }.filterNotNull() )
 
-                    kryo.useClassLoader(classLoader) {
-                        var outputs = kryo.readClassAndObject(input) as List<ContractState>
-                        var commands = kryo.readClassAndObject(input) as List<Command>
+                return kryo.useClassLoader(classLoader) {
+                    var outputs = kryo.readClassAndObject(input) as List<ContractState>
+                    var commands = kryo.readClassAndObject(input) as List<Command>
 
-                        return WireTransaction(inputs, attachments, outputs, commands)
-                    }
+                    return WireTransaction(inputs, attachments, outputs, commands)
                 }
-
-                var outputs = kryo.readClassAndObject(input) as List<ContractState>
-                var commands = kryo.readClassAndObject(input) as List<Command>
-
-                return WireTransaction(inputs, attachments, outputs, commands)
             }
         })
 
