@@ -75,7 +75,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // It may seem tempting to write transactions to the database as we receive them, instead of all at once
         // here at the end. Doing it this way avoids cases where a transaction is in the database but its
         // dependencies aren't, or an unvalidated and possibly broken tx is there.
-        serviceHub.storageService.validatedTransactions.putAll(downloadedSignedTxns.associateBy { it.id })
+        serviceHub.recordTransactions(downloadedSignedTxns)
     }
 
     @Suspendable

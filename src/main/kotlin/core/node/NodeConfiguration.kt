@@ -8,37 +8,19 @@
 
 package core.node
 
-import java.util.*
-import kotlin.reflect.declaredMemberProperties
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import kotlin.reflect.KProperty
 
 interface NodeConfiguration {
     val myLegalName: String
     val exportJMXto: String
 }
 
-object DefaultConfiguration : NodeConfiguration {
-    override val myLegalName: String = "Vast Global MegaCorp"
-    override val exportJMXto: String = ""   // can be "http" or empty
+// Allow the use of "String by config" syntax. TODO: Make it more flexible.
+operator fun Config.getValue(receiver: NodeConfigurationFromConfig, metadata: KProperty<*>) = getString(metadata.name)
 
-    fun toProperties(): Properties {
-        val settings = DefaultConfiguration::class.declaredMemberProperties.map { it.name to it.get(this@DefaultConfiguration).toString() }
-        val p = Properties().apply {
-            for (setting in settings) {
-                setProperty(setting.first, setting.second)
-            }
-        }
-        return p
-    }
-}
-
-/**
- * A simple wrapper around a plain old Java .properties file. The keys have the same name as in the source code.
- *
- * TODO: Replace Java properties file with a better config file format (maybe yaml).
- * We want to be able to configure via a GUI too, so an ability to round-trip whitespace, comments etc when machine
- * editing the file is a must-have.
- */
-class NodeConfigurationFromProperties(private val properties: Properties) : NodeConfiguration {
-    override val myLegalName: String get() = properties.getProperty("myLegalName")
-    override val exportJMXto: String get() = properties.getProperty("exportJMXto")
+class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : NodeConfiguration {
+    override val myLegalName: String by config
+    override val exportJMXto: String by config
 }

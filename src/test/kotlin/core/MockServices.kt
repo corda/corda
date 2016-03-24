@@ -14,14 +14,11 @@ import core.messaging.MessagingService
 import core.messaging.MockNetworkMapService
 import core.messaging.NetworkMapService
 import core.node.services.*
-import core.node.AbstractNode
-import core.node.services.StorageServiceImpl
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -76,6 +73,8 @@ class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementServi
 }
 
 class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletService {
+    override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
+        get() = TODO("Use NodeWalletService instead")
     override val cashBalances: Map<Currency, Amount>
         get() = TODO("Use NodeWalletService instead")
 
@@ -125,7 +124,8 @@ class MockServices(
         val net: MessagingService? = null,
         val identity: IdentityService? = MockIdentityService,
         val storage: StorageService? = MockStorageService(),
-        val networkMap: NetworkMapService? = MockNetworkMapService()
+        val networkMap: NetworkMapService? = MockNetworkMapService(),
+        val overrideClock: Clock? = Clock.systemUTC()
 ) : ServiceHub {
     override val walletService: WalletService
         get() = wallet ?: throw UnsupportedOperationException()
@@ -139,6 +139,8 @@ class MockServices(
         get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()
+    override val clock: Clock
+        get() = overrideClock ?: throw UnsupportedOperationException()
 
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
 

@@ -42,9 +42,15 @@ import java.util.*
  */
 class ProgressTracker(vararg steps: Step) {
     sealed class Change {
-        class Position(val newStep: Step) : Change()
-        class Rendering(val ofStep: Step) : Change()
-        class Structural(val parent: Step) : Change()
+        class Position(val newStep: Step) : Change() {
+            override fun toString() = newStep.label
+        }
+        class Rendering(val ofStep: Step) : Change() {
+            override fun toString() = ofStep.label
+        }
+        class Structural(val parent: Step) : Change() {
+            override fun toString() = "Structural step change in child of ${parent.label}"
+        }
     }
 
     /** The superclass of all step objects. */
