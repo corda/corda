@@ -1,11 +1,11 @@
 package core.node
 
-import core.Contract
-import core.MockAttachmentStorage
+import contracts.DUMMY_PROGRAM_ID
+import contracts.DummyContract
+import core.*
 import core.crypto.SecureHash
-import core.serialization.createKryo
-import core.serialization.deserialize
-import core.serialization.serialize
+import core.serialization.*
+import core.testutils.MEGA_CORP
 import org.apache.commons.io.IOUtils
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -18,6 +18,12 @@ import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+
+interface DummyContractBackdoor {
+    fun generateInitial(owner: PartyReference, magicNumber: Int) : TransactionBuilder
+
+    fun inspectState(state: ContractState) : Int
+}
 
 class ClassLoaderTests {
 
@@ -174,8 +180,48 @@ class ClassLoaderTests {
     }
 
     @Test
-    fun `white list serialization`() {
+    fun `test serialization of WireTransaction with statically loaded contract`() {
+        val tx = DUMMY_PROGRAM_ID.generateInitial(MEGA_CORP.ref(0), 42)
 
+        val wireTransaction = tx.toWireTransaction()
+
+        val bytes = wireTransaction.serialize()
+
+        val copiedWireTransaction = bytes.deserialize()
+
+        assertEquals(1, copiedWireTransaction.outputs.size)
+
+        assertEquals(42, (copiedWireTransaction.outputs[0] as DummyContract.State).magicNumber)
     }
 
+    @Test
+    fun `test serialization of WireTransaction with dynamically loaded contract`() {
+        var child = URLClassLoader(arrayOf(URL("file", "", ISOLATED_CONTRACTS_JAR_PATH)))
+
+        var contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
+        var contract = contractClass.newInstance() as DummyContractBackdoor
+
+        val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
+
+        var storage = MockAttachmentStorage()
+
+        // todo - think about better way to push attachmentStorage down to serializer
+        var kryo = THREAD_LOCAL_KRYO.get() as core.serialization.Kryo2
+        kryo.attachmentStorage = storage
+
+        var attachmentRef = storage.importAttachment( FileInputStream(ISOLATED_CONTRACTS_JAR_PATH) )
+
+        tx.addAttachment(storage.openAttachment(attachmentRef)!!)
+
+        val wireTransaction = tx.toWireTransaction()
+
+        val bytes = wireTransaction.serialize()
+
+        val copiedWireTransaction = bytes.deserialize()
+
+        assertEquals(1, copiedWireTransaction.outputs.size)
+
+        var contract2 = copiedWireTransaction.outputs[0].contract as DummyContractBackdoor
+        assertEquals(42, contract2.inspectState( copiedWireTransaction.outputs[0] ))
+    }
 }

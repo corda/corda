@@ -20,6 +20,7 @@ import core.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256
+import core.node.services.AttachmentStorage
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
@@ -85,7 +86,7 @@ inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_K
 }
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
-fun SerializedBytes<WireTransaction>.deserialize(): WireTransaction = WireTransaction.deserialize(this)
+fun SerializedBytes<WireTransaction>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction = WireTransaction.deserialize(this, kryo)
 inline fun <reified T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T = bits.deserialize(kryo, includeClassName)
 
 /**
@@ -178,7 +179,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
-fun Kryo.useClassLoader(cl: ClassLoader, body: () -> Unit) {
+inline fun Kryo.useClassLoader(cl: ClassLoader, body: () -> Unit) {
     val tmp = this.classLoader
     this.classLoader = cl
     try {
@@ -191,7 +192,7 @@ fun Kryo.useClassLoader(cl: ClassLoader, body: () -> Unit) {
     }
 }
 
-fun createKryo(k: Kryo = Kryo()): Kryo {
+fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
     return k.apply {
         // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
         isRegistrationRequired = false
@@ -228,16 +229,22 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
                 var inputs = kryo.readClassAndObject( input ) as List<StateRef>
                 var attachments = kryo.readClassAndObject( input ) as List<SecureHash>
 
-                // had we access to AttachmentStorage here, a ClassLoader could be created
+                if (kryo is core.serialization.Kryo2) {
 
-                // val customClassLoader = createClassLoader( attachments )
-                // kryo.useClassLoader(customClassLoader) {
+                    val classLoader = core.node.ClassLoader.create( attachments?.map { kryo.attachmentStorage?.openAttachment(it)!! } )
 
-                    var outputs = kryo.readClassAndObject(input) as List<ContractState>
-                    var commands = kryo.readClassAndObject(input) as List<Command>
+                    kryo.useClassLoader(classLoader) {
+                        var outputs = kryo.readClassAndObject(input) as List<ContractState>
+                        var commands = kryo.readClassAndObject(input) as List<Command>
+
+                        return WireTransaction(inputs, attachments, outputs, commands)
+                    }
+                }
+
+                var outputs = kryo.readClassAndObject(input) as List<ContractState>
+                var commands = kryo.readClassAndObject(input) as List<Command>
 
                 return WireTransaction(inputs, attachments, outputs, commands)
-                // }
             }
         })
 
@@ -261,4 +268,13 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // TODO: See if we can make Lazy<T> serialize properly so we can use "by lazy" in serialized object.
     }
+}
+
+/**
+ * Extends Kryo with a field for passing attachmentStorage to serializer for WireTransaction
+ *
+ * TODO: Think of better solution, or at least better name
+ */
+class Kryo2() : Kryo() {
+    var attachmentStorage: AttachmentStorage? = null
 }

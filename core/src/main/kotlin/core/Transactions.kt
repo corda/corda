@@ -9,6 +9,7 @@
 package core
 
 import co.paralleluniverse.fibers.Suspendable
+import com.esotericsoftware.kryo.Kryo
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.signWithECDSA
@@ -16,6 +17,7 @@ import core.crypto.toStringShort
 import core.node.services.TimestamperService
 import core.node.services.TimestampingError
 import core.serialization.SerializedBytes
+import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.utilities.Emoji
@@ -68,8 +70,8 @@ data class WireTransaction(val inputs: List<StateRef>,
     override val id: SecureHash get() = serialized.hash
 
     companion object {
-        fun deserialize(bits: SerializedBytes<WireTransaction>): WireTransaction {
-            val wtx = bits.bits.deserialize<WireTransaction>()
+        fun deserialize(bits: SerializedBytes<WireTransaction>, kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction {
+            val wtx = bits.bits.deserialize<WireTransaction>(kryo)
             wtx.cachedBits = bits
             return wtx
         }
