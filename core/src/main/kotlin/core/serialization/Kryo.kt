@@ -231,7 +231,8 @@ fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
 
                 if (kryo is core.serialization.Kryo2) {
 
-                    val classLoader = core.node.ClassLoader.create( attachments?.map { kryo.attachmentStorage?.openAttachment(it)!! } )
+                    // .filterNotNull in order for TwoPartyTradeProtocolTests.checkDependenciesOfSaleAssetAreResolved test to run
+                    val classLoader = core.node.ClassLoader.create( attachments?.map { kryo.attachmentStorage?.openAttachment(it) }.filterNotNull() )
 
                     kryo.useClassLoader(classLoader) {
                         var outputs = kryo.readClassAndObject(input) as List<ContractState>
