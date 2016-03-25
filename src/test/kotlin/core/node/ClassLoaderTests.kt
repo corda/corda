@@ -108,6 +108,11 @@ class ClassLoaderTests {
         }
     }
 
+
+    /**
+     * If this test starts failing it is either because you haven't build with gradle first
+     * or because you have reimported gradle project in IDEA (revert change to .idea/modules.xml)
+     */
     @Test
     fun `verify that contract AnotherDummyContract is not in classPath`() {
         assertFailsWith(ClassNotFoundException::class) {
