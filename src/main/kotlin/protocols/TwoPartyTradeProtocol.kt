@@ -148,7 +148,7 @@ object TwoPartyTradeProtocol {
                 serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments))
 
                 if (wtx.outputs.sumCashBy(myKeyPair.public) != price)
-                    throw IllegalArgumentException("Transaction is not sending us the right amounnt of cash")
+                    throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
 
                 // There are all sorts of funny games a malicious secondary might play here, we should fix them:
                 //
