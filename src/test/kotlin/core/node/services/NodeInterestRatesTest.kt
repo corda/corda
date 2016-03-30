@@ -9,12 +9,11 @@
 package core.node.services
 
 import contracts.Cash
-import core.*
-import core.testing.MockNetwork
 import core.DOLLARS
 import core.Fix
 import core.TransactionBuilder
 import core.bd
+import core.testing.MockNetwork
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import org.junit.Test
@@ -86,7 +85,7 @@ class NodeInterestRatesTest {
 
         val tx = TransactionBuilder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.legallyIdentifableAddress, fixOf, "0.675".bd, "0.1".bd)
+        val protocol = RatesFixProtocol(tx, n2.legallyIdentifiableAddress, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
         val future = n1.smm.add("rates", protocol)
 

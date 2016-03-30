@@ -66,7 +66,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         transactionGroupFor<ContractState> {
             val (aliceNode, bobNode) = net.createTwoNodes()
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.legallyIdentifableAddress.identity, null).second
+            val alicesFakePaper = fillUpForSeller(false, aliceNode.legallyIdentifiableAddress.identity, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
@@ -74,7 +74,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val aliceResult = TwoPartyTradeProtocol.runSeller(
                     aliceNode.smm,
-                    aliceNode.legallyIdentifableAddress,
+                    aliceNode.legallyIdentifiableAddress,
                     bobNode.net.myAddress,
                     lookup("alice's paper"),
                     1000.DOLLARS,
@@ -83,7 +83,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             )
             val bobResult = TwoPartyTradeProtocol.runBuyer(
                     bobNode.smm,
-                    aliceNode.legallyIdentifableAddress,
+                    aliceNode.legallyIdentifiableAddress,
                     aliceNode.net.myAddress,
                     1000.DOLLARS,
                     CommercialPaper.State::class.java,
@@ -105,7 +105,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             var (aliceNode, bobNode) = net.createTwoNodes()
             val aliceAddr = aliceNode.net.myAddress
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-            val timestamperAddr = aliceNode.legallyIdentifableAddress
+            val timestamperAddr = aliceNode.legallyIdentifiableAddress
 
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity, null).second
@@ -213,7 +213,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     fun checkDependenciesOfSaleAssetAreResolved() {
         transactionGroupFor<ContractState> {
             val aliceNode = makeNodeWithTracking("alice")
-            val timestamperAddr = aliceNode.legallyIdentifableAddress
+            val timestamperAddr = aliceNode.legallyIdentifiableAddress
             val bobNode = makeNodeWithTracking("bob")
 
             // Insert a prospectus type attachment into the commercial paper transaction.
@@ -324,7 +324,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         var (aliceNode, bobNode) = net.createTwoNodes()
         val aliceAddr = aliceNode.net.myAddress
         val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-        val timestamperAddr = aliceNode.legallyIdentifableAddress
+        val timestamperAddr = aliceNode.legallyIdentifiableAddress
 
         val bobKey = bobNode.keyManagement.freshKey()
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public).second

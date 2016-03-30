@@ -132,7 +132,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
      */
     fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
-        return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].legallyIdentifableAddress, -1, nodeFactory))
+        return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].legallyIdentifiableAddress, -1, nodeFactory))
     }
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }

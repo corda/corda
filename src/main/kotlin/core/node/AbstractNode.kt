@@ -72,7 +72,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val clock: Clock get() = platformClock
     }
 
-    val legallyIdentifableAddress: LegallyIdentifiableNode by lazy {
+    val legallyIdentifiableAddress: LegallyIdentifiableNode by lazy {
         LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity, findMyLocation())
     }
 

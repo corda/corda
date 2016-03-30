@@ -104,7 +104,7 @@ class AttachmentTests {
                 }
             }
         })
-        val n1 = network.createNode(n0.legallyIdentifableAddress)
+        val n1 = network.createNode(n0.legallyIdentifiableAddress)
 
         // Insert an attachment into node zero's store directly.
         val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
