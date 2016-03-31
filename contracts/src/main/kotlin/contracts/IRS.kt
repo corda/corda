@@ -8,6 +8,14 @@
 
 package contracts
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import core.*
 import core.crypto.SecureHash
 import org.apache.commons.jexl3.JexlBuilder
@@ -407,7 +415,7 @@ class InterestRateSwap() : Contract {
      */
     override fun verify(tx: TransactionForVerification) {
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
-        val time = tx.commands.getTimestampByName("Mock Company 0", "Bank A")?.midpoint
+        val time = tx.commands.getTimestampByName("Mock Company 0", "European Timestamping Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         val irs = tx.outStates.filterIsInstance<InterestRateSwap.State>().single()
