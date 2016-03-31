@@ -113,7 +113,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         smm = StateMachineManager(services, serverThread)
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
-        makeInterestRateOracleService()
+        makeInterestRatesOracleService()
         api = APIServerImpl(this)
 
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
@@ -136,10 +136,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return this
     }
 
-    protected fun makeInterestRateOracleService() {
-        // Constructing the service registers message handlers that ensure the service won't be garbage collected.
+    lateinit var interestRatesService: NodeInterestRates.Service
+
+    open protected fun makeInterestRatesOracleService() {
         // TODO: Once the service has data, automatically register with the network map service (once built).
-        _servicesThatAcceptUploads += NodeInterestRates.Service(this)
+        interestRatesService = NodeInterestRates.Service(this)
+        _servicesThatAcceptUploads += interestRatesService
     }
 
     protected open fun makeIdentityService(): IdentityService {
