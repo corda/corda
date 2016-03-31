@@ -144,6 +144,26 @@ task getRateFixDemo(type: CreateStartScripts) {
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
+// These lines tell gradle to run the Quasar suspendables scanner to look for unannotated super methods
+// that have @Suspendable sub implementations.  These tend to cause NPEs and are not caught by the verifier
+// NOTE: need to make sure the output isn't on the classpath or every other run it generates empty results, so
+// we explicitly delete to avoid that happening.  We also need to turn off what seems to be a spurious warning in the IDE
+
+//noinspection GroovyAssignabilityCheck
+task quasarScan(dependsOn: ['classes', 'core:classes', 'contracts:classes']) << {
+    ant.taskdef(name:'scanSuspendables', classname:'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
+            classpath: "${sourceSets.main.output.classesDir}:${sourceSets.main.output.resourcesDir}:${configurations.runtime.asPath}")
+    delete "$sourceSets.main.output.resourcesDir/META-INF/suspendables", "$sourceSets.main.output.resourcesDir/META-INF/suspendable-supers"
+    ant.scanSuspendables(
+            auto:false,
+            suspendablesFile: "$sourceSets.main.output.resourcesDir/META-INF/suspendables",
+            supersFile: "$sourceSets.main.output.resourcesDir/META-INF/suspendable-supers") {
+        fileset(dir: sourceSets.main.output.classesDir)
+    }
+}
+
+jar.dependsOn quasarScan
+
 applicationDistribution.into("bin") {
     from(getRateFixDemo)
     fileMode = 0755
