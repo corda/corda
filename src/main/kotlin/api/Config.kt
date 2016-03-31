@@ -12,6 +12,6 @@ import javax.ws.rs.ext.Provider
  */
 @Provider
 class Config(val services: ServiceHub): ContextResolver<ObjectMapper> {
-    val defaultObjectMapper = JsonSupport.createDefaultMapper(services)
+    val defaultObjectMapper = JsonSupport.createDefaultMapper(services.identityService)
     override fun getContext(type: java.lang.Class<*>) = defaultObjectMapper
 }

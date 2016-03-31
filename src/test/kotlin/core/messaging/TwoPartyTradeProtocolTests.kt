@@ -48,7 +48,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Before
     fun before() {
         net = MockNetwork(false)
-        net.identities += TEST_KEYS_TO_CORP_MAP.values
+        net.identities += MockIdentityService.identities
         BriefLogFormatter.loggingOn("platform.trade", "core.TransactionGroup", "recordingmap")
     }
 

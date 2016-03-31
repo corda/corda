@@ -15,6 +15,7 @@ import contracts.*
 import core.*
 import core.crypto.*
 import core.node.services.DummyTimestampingAuthority
+import core.node.services.FixedIdentityService
 import core.serialization.serialize
 import core.visualiser.GraphVisualiser
 import java.security.KeyPair
@@ -66,11 +67,7 @@ val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
 val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DummyTimestampingAuthority.key)
 
-val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
-        MEGA_CORP_PUBKEY to MEGA_CORP,
-        MINI_CORP_PUBKEY to MINI_CORP,
-        DUMMY_TIMESTAMPER.identity.owningKey to DUMMY_TIMESTAMPER.identity
-)
+val MockIdentityService = FixedIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_TIMESTAMPER.identity))
 
 // In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
 // a sandbox. For unit tests we just have a hard-coded list.
@@ -128,7 +125,7 @@ abstract class AbstractTransactionForTest {
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, s()).apply { outStates.add(this) }
 
     protected fun commandsToAuthenticatedObjects(): List<AuthenticatedObject<CommandData>> {
-        return commands.map { AuthenticatedObject(it.pubkeys, it.pubkeys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, it.data) }
+        return commands.map { AuthenticatedObject(it.pubkeys, it.pubkeys.mapNotNull { MockIdentityService.partyFromKey(it) }, it.data) }
     }
 
     fun attachment(attachmentID: SecureHash) {

@@ -11,10 +11,7 @@ package core.serialization
 import contracts.Cash
 import core.*
 import core.crypto.SecureHash
-import core.testutils.DUMMY_PUBKEY_1
-import core.testutils.MINI_CORP
-import core.testutils.TEST_TX_TIME
-import core.testutils.TestUtils
+import core.testutils.*
 import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException

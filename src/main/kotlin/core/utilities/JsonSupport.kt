@@ -20,7 +20,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import core.BusinessCalendar
 import core.Party
 import core.crypto.SecureHash
-import core.node.services.ServiceHub
+import core.node.services.IdentityService
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -30,8 +30,8 @@ import java.time.LocalDateTime
  * the java.time API, some core types, and Kotlin data classes.
  */
 object JsonSupport {
-    fun createDefaultMapper(services: ServiceHub): ObjectMapper {
-        val mapper = ServiceHubObjectMapper(services)
+    fun createDefaultMapper(identities: IdentityService): ObjectMapper {
+        val mapper = ServiceHubObjectMapper(identities)
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
@@ -59,7 +59,7 @@ object JsonSupport {
         return mapper
     }
 
-    class ServiceHubObjectMapper(val serviceHub: ServiceHub): ObjectMapper()
+    class ServiceHubObjectMapper(val identities: IdentityService): ObjectMapper()
 
     object ToStringSerializer: JsonSerializer<Any>() {
         override fun serialize(obj: Any, generator: JsonGenerator, provider: SerializerProvider) {
@@ -97,8 +97,7 @@ object JsonSupport {
             }
             val mapper = parser.codec as ServiceHubObjectMapper
             // TODO this needs to use some industry identifier(s) not just these human readable names
-            val nodeForPartyName = mapper.serviceHub.networkMapCache.nodeForPartyName(parser.text) ?: throw JsonParseException("Could not find a Party with name: ${parser.text}", parser.currentLocation)
-            return nodeForPartyName.identity
+            return mapper.identities.partyFromName(parser.text) ?: throw JsonParseException("Could not find a Party with name: ${parser.text}", parser.currentLocation)
         }
     }
 
