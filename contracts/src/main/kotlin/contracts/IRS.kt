@@ -8,6 +8,15 @@
 
 package contracts
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.type.SimpleType
 import core.*
 import core.crypto.SecureHash
 import core.node.services.DummyTimestampingAuthority
@@ -15,6 +24,7 @@ import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.security.PublicKey
 import java.time.LocalDate
 import java.util.*
 
@@ -167,8 +177,6 @@ class InterestRateSwap() : Contract {
             val hashLegalDocs: String
     )
 
-    data class Expression(val expr: String)
-
     /**
      * The Calculation data class is "mutable" through out the life of the swap, as in, it's the only thing that contains
      * data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
@@ -177,7 +185,7 @@ class InterestRateSwap() : Contract {
     data class Calculation(
             val expression: Expression,
             val floatingLegPaymentSchedule: Map<LocalDate, FloatingRatePaymentEvent>,
-            val fixedLegpaymentSchedule: Map<LocalDate, FixedRatePaymentEvent>
+            val fixedLegPaymentSchedule: Map<LocalDate, FixedRatePaymentEvent>
     ) {
         /**
          * Gets the date of the next fixing.
@@ -185,7 +193,7 @@ class InterestRateSwap() : Contract {
          */
         fun nextFixingDate(): LocalDate? {
             return floatingLegPaymentSchedule.
-                    filter { it.value.rate is OracleRetrievableReferenceRate }.// TODO - a better way to determine what fixings remain to be fixed
+                    filter { it.value.rate is ReferenceRate }.// TODO - a better way to determine what fixings remain to be fixed
                     minBy { it.value.fixingDate.toEpochDay() }?.value?.fixingDate
         }
 
@@ -203,7 +211,7 @@ class InterestRateSwap() : Contract {
             val newFloatingLPS = floatingLegPaymentSchedule + (paymentEvent.date to paymentEvent.withNewRate(newRate))
             return Calculation(expression = expression,
                     floatingLegPaymentSchedule = newFloatingLPS,
-                    fixedLegpaymentSchedule = fixedLegpaymentSchedule)
+                    fixedLegPaymentSchedule = fixedLegPaymentSchedule)
         }
 
         fun exportSchedule() {
@@ -297,7 +305,7 @@ class InterestRateSwap() : Contract {
      */
     override fun verify(tx: TransactionForVerification) {
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
-        val time = tx.getTimestampBy(DummyTimestampingAuthority.identity)?.midpoint
+        val time = tx.commands.getTimestampByName("Mock Company 0", "Bank of Zurich")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         val irs = tx.outStates.filterIsInstance<InterestRateSwap.State>().single()
@@ -306,7 +314,7 @@ class InterestRateSwap() : Contract {
                 requireThat {
                     "There are no in states for an agreement" by tx.inStates.isEmpty()
                     "The fixed rate is non zero" by (irs.fixedLeg.fixedRate != FixedRate(PercentageRatioUnit("0.0")))
-                    "There are events in the fix schedule" by (irs.calculation.fixedLegpaymentSchedule.size > 0)
+                    "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
                     "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
                     // "There are fixes in the schedule" by (irs.calculation.floatingLegPaymentSchedule!!.size > 0)
                     // TODO: shortlist of other tests
@@ -348,8 +356,14 @@ class InterestRateSwap() : Contract {
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
             val common: Common
-    ) : ContractState {
+    ) : LinearState {
         override val contract = IRS_PROGRAM_ID
+        override val thread = SecureHash.sha256(common.tradeID)
+        override val ref = common.tradeID
+
+        override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
+            return (fixedLeg.fixedRatePayer.owningKey in ourKeys) || (floatingLeg.floatingRatePayer.owningKey in ourKeys)
+        }
 
         /**
          * For evaluating arbitrary java on the platform
@@ -408,9 +422,6 @@ class InterestRateSwap() : Contract {
         var floatingLegPaymentSchedule: MutableMap<LocalDate, FloatingRatePaymentEvent> = HashMap()
         periodStartDate = floatingLeg.effectiveDate
 
-        // TODO: Temporary until implemented via Rates Oracle.
-        val telerate = TelerateOracle("3750")
-
         // Now create a schedule for the floating and fixes.
         for (periodEndDate in dates) {
             val paymentEvent = FloatingRatePaymentEvent(
@@ -421,8 +432,7 @@ class InterestRateSwap() : Contract {
                     floatingLeg.dayCountBasisYear,
                     calcFixingDate(periodStartDate, floatingLeg.fixingPeriod, floatingLeg.fixingCalendar),
                     floatingLeg.notional,
-                    // TODO: OracleRetrievableReferenceRate will be replaced via oracle v soon.
-                    OracleRetrievableReferenceRate(telerate, floatingLeg.indexTenor, floatingLeg.index)
+                    ReferenceRate(floatingLeg.indexSource, floatingLeg.indexTenor, floatingLeg.index)
             )
 
             floatingLegPaymentSchedule.put(periodEndDate, paymentEvent)

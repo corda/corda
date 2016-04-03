@@ -11,11 +11,13 @@ package core.testing
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.MoreExecutors
 import core.Party
-import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessagingService
+import core.messaging.SingleMessageRecipient
 import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.services.FixedIdentityService
+import core.node.services.LegallyIdentifiableNode
+import core.node.services.PhysicalLocation
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -33,7 +35,8 @@ import java.util.concurrent.Executors
  * for message exchanges to take place (and associated handlers to run), you must call the [runNetwork]
  * method.
  */
-class MockNetwork(private val threadPerNode: Boolean = false) {
+class MockNetwork(private val threadPerNode: Boolean = false,
+                  private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var counter = 0
     val filesystem = Jimfs.newFileSystem(com.google.common.jimfs.Configuration.unix())
     val messagingNetwork = InMemoryMessagingNetwork()
@@ -46,6 +49,19 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
 
     init {
         Files.createDirectory(filesystem.getPath("/nodes"))
+    }
+
+    /** Allows customisation of how nodes are created. */
+    interface Factory {
+        fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
+                   timestamperAddr: LegallyIdentifiableNode?): MockNode
+    }
+
+    object DefaultFactory : Factory {
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
+                            timestamperAddr: LegallyIdentifiableNode?): MockNode {
+            return MockNode(dir, config, network, timestamperAddr)
+        }
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
@@ -69,6 +85,9 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
 
         override fun makeIdentityService() = FixedIdentityService(mockNet.identities)
 
+        // There is no need to slow down the unit tests by initialising CityDatabase
+        override fun findMyLocation(): PhysicalLocation? = null
+
         override fun start(): MockNode {
             super.start()
             mockNet.identities.add(storage.myLegalIdentity)
@@ -77,8 +96,7 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: LegallyIdentifiableNode?, forcedID: Int = -1,
-                   factory: ((Path, NodeConfiguration, network: MockNetwork, LegallyIdentifiableNode?) -> MockNode)? = null): MockNode {
+    fun createNode(withTimestamper: LegallyIdentifiableNode?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -88,9 +106,9 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
         val config = object : NodeConfiguration {
             override val myLegalName: String = "Mock Company $id"
             override val exportJMXto: String = ""
+            override val nearestCity: String = "Atlantis"
         }
-        val fac = factory ?: { p, n, n2, l -> MockNode(p, n, n2, l, id) }
-        val node = fac(path, config, this, withTimestamper).start()
+        val node = nodeFactory.create(path, config, this, withTimestamper).start()
         _nodes.add(node)
         return node
     }
@@ -112,8 +130,10 @@ class MockNetwork(private val threadPerNode: Boolean = false) {
     /**
      * Sets up a two node network in which the first node runs a timestamping service and the other doesn't.
      */
-    fun createTwoNodes(factory: ((Path, NodeConfiguration, network: MockNetwork, LegallyIdentifiableNode?) -> MockNode)? = null): Pair<MockNode, MockNode> {
+    fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
-        return Pair(createNode(null, -1, factory), createNode(nodes[0].legallyIdentifableAddress, -1, factory))
+        return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].legallyIdentifiableAddress, -1, nodeFactory))
     }
+
+    fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
 }

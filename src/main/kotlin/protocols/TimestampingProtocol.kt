@@ -12,7 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.Party
 import core.WireTransaction
 import core.crypto.DigitalSignature
-import core.messaging.LegallyIdentifiableNode
+import core.node.services.LegallyIdentifiableNode
 import core.messaging.MessageRecipients
 import core.messaging.StateMachineManager
 import core.node.services.NodeTimestamperService
@@ -20,6 +20,7 @@ import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.SerializedBytes
+import core.utilities.ProgressTracker
 
 /**
  * The TimestampingProtocol class is the client code that talks to a [NodeTimestamperService] on some remote node. It is a
@@ -31,7 +32,8 @@ import core.serialization.SerializedBytes
  * a network message: use it only from spare application threads that don't have to respond to anything.
  */
 class TimestampingProtocol(private val node: LegallyIdentifiableNode,
-                           private val wtxBytes: SerializedBytes<WireTransaction>) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+                           private val wtxBytes: SerializedBytes<WireTransaction>,
+                           override val progressTracker: ProgressTracker = TimestampingProtocol.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
 
     class Client(private val stateMachineManager: StateMachineManager, private val node: LegallyIdentifiableNode) : TimestamperService {
         override val identity: Party = node.identity
@@ -41,9 +43,18 @@ class TimestampingProtocol(private val node: LegallyIdentifiableNode,
         }
     }
 
+    companion object {
+        object REQUESTING : ProgressTracker.Step("Requesting signature by timestamping service")
+        object VALIDATING : ProgressTracker.Step("Validating received signature from timestamping service")
+
+        fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
+    }
+
+
 
     @Suspendable
     override fun call(): DigitalSignature.LegallyIdentifiable {
+        progressTracker.currentStep = REQUESTING
         val sessionID = random63BitValue()
         val replyTopic = "${NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
         val req = Request(wtxBytes, serviceHub.networkService.myAddress, replyTopic)
@@ -52,6 +63,7 @@ class TimestampingProtocol(private val node: LegallyIdentifiableNode,
                 NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
 
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
+        progressTracker.currentStep = VALIDATING
         maybeSignature.validate { sig ->
             sig.verifyWithECDSA(wtxBytes)
             return sig

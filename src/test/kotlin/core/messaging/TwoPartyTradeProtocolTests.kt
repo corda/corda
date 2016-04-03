@@ -12,6 +12,7 @@ import contracts.Cash
 import contracts.CommercialPaper
 import core.*
 import core.crypto.SecureHash
+import core.node.NodeConfiguration
 import core.node.services.*
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork
@@ -65,7 +66,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         transactionGroupFor<ContractState> {
             val (aliceNode, bobNode) = net.createTwoNodes()
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
-            val alicesFakePaper = fillUpForSeller(false, aliceNode.legallyIdentifableAddress.identity, null).second
+            val alicesFakePaper = fillUpForSeller(false, aliceNode.legallyIdentifiableAddress.identity, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
@@ -73,7 +74,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val aliceResult = TwoPartyTradeProtocol.runSeller(
                     aliceNode.smm,
-                    aliceNode.legallyIdentifableAddress,
+                    aliceNode.legallyIdentifiableAddress,
                     bobNode.net.myAddress,
                     lookup("alice's paper"),
                     1000.DOLLARS,
@@ -82,7 +83,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             )
             val bobResult = TwoPartyTradeProtocol.runBuyer(
                     bobNode.smm,
-                    aliceNode.legallyIdentifableAddress,
+                    aliceNode.legallyIdentifiableAddress,
                     aliceNode.net.myAddress,
                     1000.DOLLARS,
                     CommercialPaper.State::class.java,
@@ -104,7 +105,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             var (aliceNode, bobNode) = net.createTwoNodes()
             val aliceAddr = aliceNode.net.myAddress
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-            val timestamperAddr = aliceNode.legallyIdentifableAddress
+            val timestamperAddr = aliceNode.legallyIdentifiableAddress
 
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity, null).second
@@ -163,16 +164,18 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = net.createNode(timestamperAddr, bobAddr.id) { path, nodeConfiguration, net, timestamper ->
-                object : MockNetwork.MockNode(path, nodeConfiguration, net, timestamper, bobAddr.id) {
-                    override fun initialiseStorageService(dir: Path): StorageService {
-                        val ss = super.initialiseStorageService(dir)
-                        val smMap = ss.stateMachines
-                        smMap.putAll(savedCheckpoints)
-                        return ss
+            bobNode = net.createNode(timestamperAddr, bobAddr.id, object : MockNetwork.Factory {
+                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: LegallyIdentifiableNode?): MockNetwork.MockNode {
+                    return object : MockNetwork.MockNode(dir, config, net, timestamperAddr, bobAddr.id) {
+                        override fun initialiseStorageService(dir: Path): StorageService {
+                            val ss = super.initialiseStorageService(dir)
+                            val smMap = ss.stateMachines
+                            smMap.putAll(savedCheckpoints)
+                            return ss
+                        }
                     }
                 }
-            }
+            })
 
             // Find the future representing the result of this state machine again.
             var bobFuture = bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).single().second
@@ -192,22 +195,24 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     // of gets and puts.
     private fun makeNodeWithTracking(name: String): MockNetwork.MockNode {
         // Create a node in the mock network ...
-        return net.createNode(null) { path, config, net, tsNode ->
-            object : MockNetwork.MockNode(path, config, net, tsNode) {
-                // That constructs the storage service object in a customised way ...
-                override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
-                    // To use RecordingMaps instead of ordinary HashMaps.
-                    return StorageServiceImpl(attachments, keypair, identity, { tableName -> name })
+        return net.createNode(null, nodeFactory = object : MockNetwork.Factory {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: LegallyIdentifiableNode?): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr) {
+                    // That constructs the storage service object in a customised way ...
+                    override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
+                        // To use RecordingMaps instead of ordinary HashMaps.
+                        return StorageServiceImpl(attachments, keypair, identity, { tableName -> name })
+                    }
                 }
             }
-        }
+        })
     }
 
     @Test
     fun checkDependenciesOfSaleAssetAreResolved() {
         transactionGroupFor<ContractState> {
             val aliceNode = makeNodeWithTracking("alice")
-            val timestamperAddr = aliceNode.legallyIdentifableAddress
+            val timestamperAddr = aliceNode.legallyIdentifiableAddress
             val bobNode = makeNodeWithTracking("bob")
 
             // Insert a prospectus type attachment into the commercial paper transaction.
@@ -318,7 +323,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
         var (aliceNode, bobNode) = net.createTwoNodes()
         val aliceAddr = aliceNode.net.myAddress
         val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-        val timestamperAddr = aliceNode.legallyIdentifableAddress
+        val timestamperAddr = aliceNode.legallyIdentifiableAddress
 
         val bobKey = bobNode.keyManagement.freshKey()
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public).second

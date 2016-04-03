@@ -168,10 +168,11 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
         val logger = LoggerFactory.getLogger(loggerName)
         val fiber = ProtocolStateMachine(logic)
+        // Need to add before iterating in case of immediate completion
+        _stateMachines.add(logic)
         iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
             it.start()
         }
-        _stateMachines.add(logic)
         totalStartedProtocols.inc()
         return fiber.resultFuture
     }

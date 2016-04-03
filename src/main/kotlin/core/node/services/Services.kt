@@ -13,7 +13,7 @@ import contracts.Cash
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
-import core.messaging.NetworkMapService
+import core.node.services.NetworkMapService
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey

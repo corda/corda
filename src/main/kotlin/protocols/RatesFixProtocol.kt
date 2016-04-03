@@ -11,7 +11,7 @@ package protocols
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
-import core.messaging.LegallyIdentifiableNode
+import core.node.services.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
@@ -50,10 +50,13 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     @Suspendable
     override fun call() {
+        progressTracker.currentStep = progressTracker.steps[0]
         val fix = query()
+        progressTracker.currentStep = WORKING
         checkFixIsNearExpected(fix)
         tx.addCommand(fix, oracle.identity.owningKey)
         beforeSigning(fix)
+        progressTracker.currentStep = SIGNING
         tx.addSignatureUnchecked(sign())
     }
 

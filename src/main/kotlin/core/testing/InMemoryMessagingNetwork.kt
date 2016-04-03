@@ -11,17 +11,22 @@ package core.testing
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import core.node.services.DummyTimestampingAuthority
 import core.ThreadBox
 import core.crypto.sha256
 import core.messaging.*
+import core.node.services.DummyTimestampingAuthority
+import core.node.services.LegallyIdentifiableNode
 import core.node.services.NodeTimestamperService
 import core.utilities.loggerFor
+import rx.Observable
+import rx.subjects.PublishSubject
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.concurrent.schedule
 import kotlin.concurrent.thread
 
 /**
@@ -66,8 +71,33 @@ class InMemoryMessagingNetwork {
         return Builder(manuallyPumped, Handle(id))
     }
 
+    private val _allMessages = PublishSubject.create<Triple<SingleMessageRecipient, Message, MessageRecipients>>()
+    /** A stream of (sender, message, recipients) triples */
+    val allMessages: Observable<Triple<SingleMessageRecipient, Message, MessageRecipients>> = _allMessages
+
+    interface LatencyCalculator {
+        fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
+    }
+
+    /** This can be set to an object which can inject artificial latency between sender/recipient pairs. */
+    @Volatile var latencyCalculator: LatencyCalculator? = null
+    private val timer = Timer()
+
     @Synchronized
-    private fun msgSend(message: Message, recipients: MessageRecipients) {
+    private fun msgSend(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
+        val calc = latencyCalculator
+        if (calc != null && recipients is SingleMessageRecipient) {
+            // Inject some artificial latency.
+            timer.schedule(calc.between(from.myAddress, recipients).toMillis()) {
+                msgSendInternal(from, message, recipients)
+            }
+        } else {
+            msgSendInternal(from, message, recipients)
+        }
+        _allMessages.onNext(Triple(from.myAddress, message, recipients))
+    }
+
+    private fun msgSendInternal(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
         when (recipients) {
             is Handle -> getQueueForHandle(recipients).add(message)
 
@@ -173,7 +203,7 @@ class InMemoryMessagingNetwork {
                 Pair(handler, items)
             }
             for (it in items)
-                msgSend(it, handle)
+                msgSend(this, it, handle)
             return handler
         }
 
@@ -184,7 +214,7 @@ class InMemoryMessagingNetwork {
 
         override fun send(message: Message, target: MessageRecipients) {
             check(running)
-            msgSend(message, target)
+            msgSend(this, message, target)
         }
 
         override fun stop() {

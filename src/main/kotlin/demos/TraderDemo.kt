@@ -15,12 +15,12 @@ import contracts.CommercialPaper
 import core.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
-import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
+import core.node.services.LegallyIdentifiableNode
 import core.node.services.NodeAttachmentService
 import core.node.services.NodeWalletService
 import core.protocols.ProtocolLogic

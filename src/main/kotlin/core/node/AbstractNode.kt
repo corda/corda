@@ -20,10 +20,12 @@ import api.APIServer
 import api.APIServerImpl
 import com.codahale.metrics.MetricRegistry
 import contracts.*
-import core.*
+import core.Contract
+import core.Party
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
-import core.messaging.*
+import core.messaging.MessagingService
+import core.messaging.StateMachineManager
 import core.node.services.*
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -68,7 +70,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val clock: Clock get() = platformClock
     }
 
-    val legallyIdentifableAddress: LegallyIdentifiableNode get() = LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
+    val legallyIdentifiableAddress: LegallyIdentifiableNode by lazy {
+        LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity, findMyLocation())
+    }
+
+    protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
 
     lateinit var storage: StorageService
     lateinit var smm: StateMachineManager
