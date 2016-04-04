@@ -1,10 +1,13 @@
 package core.node
 
+import com.esotericsoftware.kryo.KryoException
 import contracts.DUMMY_PROGRAM_ID
 import contracts.DummyContract
 import core.*
 import core.crypto.SecureHash
-import core.serialization.*
+import core.serialization.createKryo
+import core.serialization.deserialize
+import core.serialization.serialize
 import core.testutils.MEGA_CORP
 import org.apache.commons.io.IOUtils
 import org.junit.Test
@@ -71,7 +74,7 @@ class ClassLoaderTests {
 
         assertFailsWith( OverlappingAttachments::class ) {
 
-            var cl = ClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+            AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
         }
     }
@@ -85,7 +88,7 @@ class ClassLoaderTests {
         var att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
         var att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
 
-        ClassLoader.create( arrayOf( att0, att1, att2 ).map { storage.openAttachment(it)!! } ).use {
+        AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }).use {
             var txt = IOUtils.toString(it.getResourceAsStream("file1.txt"))
             assertEquals( "some data", txt )
         }
@@ -99,7 +102,7 @@ class ClassLoaderTests {
         var att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
         var att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
 
-        ClassLoader.create( arrayOf( att0, att1, att2 ).map { storage.openAttachment(it)!! } ).use {
+        AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }).use {
 
             var contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, it)
             var contract = contractClass.newInstance() as Contract
@@ -149,7 +152,7 @@ class ClassLoaderTests {
         var att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
         var att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
 
-        val clsLoader = ClassLoader.create( arrayOf( att0, att1, att2 ).map { storage.openAttachment(it)!! } )
+        val clsLoader = AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
         val kryo = createKryo()
         kryo.classLoader = clsLoader
@@ -166,6 +169,8 @@ class ClassLoaderTests {
     fun `testing Kryo with ClassLoader (without top level class name)`() {
         val data =  Data( createContract2Cash() )
 
+        assertNotNull(data.contract)
+
         val bytes = data.serialize()
 
         var storage = MockAttachmentStorage()
@@ -174,7 +179,7 @@ class ClassLoaderTests {
         var att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
         var att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
 
-        val clsLoader = ClassLoader.create( arrayOf( att0, att1, att2 ).map { storage.openAttachment(it)!! } )
+        val clsLoader = AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
         val kryo = createKryo()
         kryo.classLoader = clsLoader
@@ -210,8 +215,9 @@ class ClassLoaderTests {
 
         var storage = MockAttachmentStorage()
 
+        var kryo = createKryo() as core.serialization.Kryo2
+
         // todo - think about better way to push attachmentStorage down to serializer
-        var kryo = THREAD_LOCAL_KRYO.get() as core.serialization.Kryo2
         kryo.attachmentStorage = storage
 
         var attachmentRef = storage.importAttachment( FileInputStream(ISOLATED_CONTRACTS_JAR_PATH) )
@@ -220,13 +226,51 @@ class ClassLoaderTests {
 
         val wireTransaction = tx.toWireTransaction()
 
-        val bytes = wireTransaction.serialize()
+        val bytes = wireTransaction.serialize(kryo)
 
-        val copiedWireTransaction = bytes.deserialize()
+        kryo = createKryo() as core.serialization.Kryo2
+
+        // use empty attachmentStorage
+        kryo.attachmentStorage = storage
+
+        val copiedWireTransaction = bytes.deserialize(kryo)
 
         assertEquals(1, copiedWireTransaction.outputs.size)
 
         var contract2 = copiedWireTransaction.outputs[0].contract as DummyContractBackdoor
         assertEquals(42, contract2.inspectState( copiedWireTransaction.outputs[0] ))
+    }
+
+    @Test
+    fun `test deserialize of WireTransaction where contract cannot be found`() {
+        var child = URLClassLoader(arrayOf(URL("file", "", ISOLATED_CONTRACTS_JAR_PATH)))
+
+        var contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
+        var contract = contractClass.newInstance() as DummyContractBackdoor
+
+        val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
+
+        var storage = MockAttachmentStorage()
+
+        var kryo = createKryo() as core.serialization.Kryo2
+
+        // todo - think about better way to push attachmentStorage down to serializer
+        kryo.attachmentStorage = storage
+
+        var attachmentRef = storage.importAttachment(FileInputStream(ISOLATED_CONTRACTS_JAR_PATH))
+
+        tx.addAttachment(storage.openAttachment(attachmentRef)!!)
+
+        val wireTransaction = tx.toWireTransaction()
+
+        val bytes = wireTransaction.serialize(kryo)
+
+        kryo = createKryo() as core.serialization.Kryo2
+        // use empty attachmentStorage
+        kryo.attachmentStorage = MockAttachmentStorage()
+
+        assertFailsWith(KryoException::class) {
+            bytes.deserialize(kryo)
+        }
     }
 }

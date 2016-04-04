@@ -180,15 +180,13 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
 }
 
 inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
-    val tmp = this.classLoader
+    val tmp = this.classLoader ?: ClassLoader.getSystemClassLoader()
     this.classLoader = cl
     try {
         return body()
     }
     finally {
-        if (tmp != null) {
-            this.classLoader
-        }
+        this.classLoader = tmp
     }
 }
 
@@ -233,9 +231,9 @@ fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
                 val attachmentStorage = (kryo as? core.serialization.Kryo2)?.attachmentStorage
 
                 // .filterNotNull in order for TwoPartyTradeProtocolTests.checkDependenciesOfSaleAssetAreResolved test to run
-                val classLoader = core.node.ClassLoader.create( attachments.map { attachmentStorage?.openAttachment(it) }.filterNotNull() )
+                val classLoader = core.node.AttachmentsClassLoader.create( attachments.map { attachmentStorage?.openAttachment(it) }.filterNotNull() )
 
-                return kryo.useClassLoader(classLoader) {
+                kryo.useClassLoader(classLoader) {
                     var outputs = kryo.readClassAndObject(input) as List<ContractState>
                     var commands = kryo.readClassAndObject(input) as List<Command>
 

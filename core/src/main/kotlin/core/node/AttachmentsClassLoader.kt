@@ -6,8 +6,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 import java.net.URLClassLoader
-import java.security.AccessControlContext
-import java.security.ProtectionDomain
 import java.util.*
 import java.util.jar.JarEntry
 
@@ -16,11 +14,9 @@ class OverlappingAttachments : Exception()
 /**
  * A custom ClassLoader for creating contracts distributed as attachments and for contracts to
  * access attachments.
- *
- *
  */
-class ClassLoader private constructor(val tmpFiles: List<File> )
-    : URLClassLoader(tmpFiles.map { URL("file", "", it.toString()) }.toTypedArray()), Closeable {
+class AttachmentsClassLoader private constructor(val tmpFiles: List<File>)
+: URLClassLoader(tmpFiles.map { URL("file", "", it.toString()) }.toTypedArray()), Closeable {
 
     override fun close() {
         super.close()
@@ -35,19 +31,20 @@ class ClassLoader private constructor(val tmpFiles: List<File> )
     }
 
     companion object {
-        fun create(streams: List<Attachment>) : ClassLoader {
+        fun create(streams: List<Attachment>): AttachmentsClassLoader {
 
             validate(streams)
 
             var tmpFiles = streams.map {
                 var filename = File.createTempFile("jar", "")
                 it.open().use {
-                    str -> FileOutputStream(filename).use { str.copyTo(it) }
+                    str ->
+                    FileOutputStream(filename).use { str.copyTo(it) }
                 }
                 filename
             }
 
-            return ClassLoader(tmpFiles)
+            return AttachmentsClassLoader(tmpFiles)
         }
 
         private fun validate(streams: List<Attachment>) {
