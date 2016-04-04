@@ -799,7 +799,8 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-				if test -L $(sdk-dir)/$(target)9.1.sdk; then echo 9.1; \
+				if test -L $(sdk-dir)/$(target)9.2.sdk; then echo 9.2; \
+			elif test -L $(sdk-dir)/$(target)9.1.sdk; then echo 9.1; \
 			elif test -L $(sdk-dir)/$(target)9.0.sdk; then echo 9.0; \
 			elif test -d $(sdk-dir)/$(target)8.3.sdk; then echo 8.3; \
 			elif test -d $(sdk-dir)/$(target)8.2.sdk; then echo 8.2; \
@@ -816,8 +817,10 @@ ifeq ($(kernel),darwin)
 			else echo; fi)
 
 		ifeq ($(ios-version),)
-			x := $(error "couldn't find SDK")
+			x := $(error "couldn't find SDK in $(sdk-dir)")
 		endif
+
+		sysroot = $(sdk-dir)/$(target)$(ios-version).sdk
 
 		ios-bin = $(platform-dir)/Developer/usr/bin
 
