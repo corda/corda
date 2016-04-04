@@ -190,7 +190,7 @@ inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     }
 }
 
-fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
+fun createKryo(k: Kryo = Kryo()): Kryo {
     return k.apply {
         // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
         isRegistrationRequired = false
@@ -228,7 +228,7 @@ fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
                 var inputs = kryo.readClassAndObject( input ) as List<StateRef>
                 var attachments = kryo.readClassAndObject( input ) as List<SecureHash>
 
-                val attachmentStorage = (kryo as? core.serialization.Kryo2)?.attachmentStorage
+                val attachmentStorage = kryo.attachmentStorage
 
                 // .filterNotNull in order for TwoPartyTradeProtocolTests.checkDependenciesOfSaleAssetAreResolved test to run
                 val classLoader = core.node.AttachmentsClassLoader.create( attachments.map { attachmentStorage?.openAttachment(it) }.filterNotNull() )
@@ -264,11 +264,10 @@ fun createKryo(k: Kryo = core.serialization.Kryo2()): Kryo {
     }
 }
 
-/**
- * Extends Kryo with a field for passing attachmentStorage to serializer for WireTransaction
- *
- * TODO: Think of better solution, or at least better name
- */
-class Kryo2() : Kryo() {
-    var attachmentStorage: AttachmentStorage? = null
-}
+val ATTACHMENT_STORAGE = "ATTACHMENT_STORAGE"
+
+var Kryo.attachmentStorage: AttachmentStorage?
+    get() = this.context.get(ATTACHMENT_STORAGE, null) as AttachmentStorage?
+    set(value) {
+        this.context.put(ATTACHMENT_STORAGE, value)
+    }

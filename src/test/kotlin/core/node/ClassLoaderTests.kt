@@ -5,6 +5,7 @@ import contracts.DUMMY_PROGRAM_ID
 import contracts.DummyContract
 import core.*
 import core.crypto.SecureHash
+import core.serialization.attachmentStorage
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -215,7 +216,7 @@ class ClassLoaderTests {
 
         var storage = MockAttachmentStorage()
 
-        var kryo = createKryo() as core.serialization.Kryo2
+        var kryo = createKryo()
 
         // todo - think about better way to push attachmentStorage down to serializer
         kryo.attachmentStorage = storage
@@ -228,7 +229,7 @@ class ClassLoaderTests {
 
         val bytes = wireTransaction.serialize(kryo)
 
-        kryo = createKryo() as core.serialization.Kryo2
+        kryo = createKryo()
 
         // use empty attachmentStorage
         kryo.attachmentStorage = storage
@@ -252,7 +253,7 @@ class ClassLoaderTests {
 
         var storage = MockAttachmentStorage()
 
-        var kryo = createKryo() as core.serialization.Kryo2
+        var kryo = createKryo()
 
         // todo - think about better way to push attachmentStorage down to serializer
         kryo.attachmentStorage = storage
@@ -265,7 +266,7 @@ class ClassLoaderTests {
 
         val bytes = wireTransaction.serialize(kryo)
 
-        kryo = createKryo() as core.serialization.Kryo2
+        kryo = createKryo()
         // use empty attachmentStorage
         kryo.attachmentStorage = MockAttachmentStorage()
 
