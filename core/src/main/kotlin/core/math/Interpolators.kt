@@ -8,7 +8,7 @@ import java.util.*
  * Implementation uses the Natural Cubic Spline algorithm as described in
  * R. L. Burden and J. D. Faires (2011), *Numerical Analysis*. 9th ed. Boston, MA: Brooks/Cole, Cengage Learning. p149-150.
  */
-class CubicSplineInterpolator(val xs: DoubleArray, val ys: DoubleArray) {
+class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: DoubleArray) {
     init {
         require(xs.size == ys.size) { "x and y dimensions should match: ${xs.size} != ${ys.size}" }
         require(xs.size >= 3) { "At least 3 data points are required for interpolation, received: ${xs.size}" }
@@ -54,7 +54,7 @@ class CubicSplineInterpolator(val xs: DoubleArray, val ys: DoubleArray) {
 
         val segmentMap = TreeMap<Double, Polynomial>()
         for (i in 0..n - 1) {
-            val coefficients = doubleArrayOf(d[i], c[i], b[i], ys[i])
+            val coefficients = doubleArrayOf(ys[i], b[i], c[i], d[i])
             segmentMap.put(xs[i], Polynomial(coefficients))
         }
         return SplineFunction(segmentMap)
@@ -63,10 +63,12 @@ class CubicSplineInterpolator(val xs: DoubleArray, val ys: DoubleArray) {
 
 /**
  * Represents a polynomial function of arbitrary degree
- * @param coefficients polynomial coefficients in descending order (highest degree first)
+ * @param coefficients polynomial coefficients in the order of degree (constant first, followed by higher degree term coefficients)
  */
 class Polynomial(private val coefficients: DoubleArray) {
-    fun getValue(x: Double) = coefficients.fold(0.0, { result, c -> result * x + c })
+    private val reversedCoefficients = coefficients.reversed()
+
+    fun getValue(x: Double) = reversedCoefficients.fold(0.0, { result, c -> result * x + c })
 }
 
 /**
@@ -75,7 +77,7 @@ class Polynomial(private val coefficients: DoubleArray) {
  *
  * @param segmentMap a mapping between a knot and the polynomial that covers the subsequent interval
  */
-class SplineFunction(val segmentMap: TreeMap<Double, Polynomial>) {
+class SplineFunction(private val segmentMap: TreeMap<Double, Polynomial>) {
     fun getValue(x: Double): Double {
         val (knot, polynomial) = segmentMap.floorEntry(x)
         return polynomial.getValue(x - knot)
