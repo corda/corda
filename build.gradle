@@ -144,6 +144,14 @@ task getRateFixDemo(type: CreateStartScripts) {
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
+task getIRSDemo(type: CreateStartScripts) {
+    mainClassName = "demos.IRSDemoKt"
+    applicationName = "irsdemo"
+    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
 // These lines tell gradle to run the Quasar suspendables scanner to look for unannotated super methods
 // that have @Suspendable sub implementations.  These tend to cause NPEs and are not caught by the verifier
 // NOTE: need to make sure the output isn't on the classpath or every other run it generates empty results, so
@@ -166,5 +174,6 @@ jar.dependsOn quasarScan
 
 applicationDistribution.into("bin") {
     from(getRateFixDemo)
+    from(getIRSDemo)
     fileMode = 0755
 }

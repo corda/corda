@@ -15,10 +15,9 @@ import contracts.sumCashBy
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.node.services.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
-import protocols.TimestampingProtocol
+import core.node.services.LegallyIdentifiableNode
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import core.utilities.trace
@@ -26,7 +25,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Instant
-import kotlin.system.exitProcess
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer

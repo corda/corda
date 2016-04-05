@@ -8,18 +8,8 @@
 
 package contracts
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.type.SimpleType
 import core.*
 import core.crypto.SecureHash
-import core.node.services.DummyTimestampingAuthority
 import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
 import java.math.BigDecimal
@@ -31,7 +21,16 @@ import java.util.*
 val IRS_PROGRAM_ID = SecureHash.sha256("replace-me-later-with-bytecode-hash-of-irs-code")
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
-open class UnknownType()
+open class UnknownType() {
+
+    override fun equals(other: Any?): Boolean {
+        return (other is UnknownType)
+    }
+
+    override fun hashCode(): Int {
+        return 1
+    }
+}
 
 /**
  * Event superclass - everything happens on a date.
@@ -182,7 +181,7 @@ class InterestRateSwap() : Contract {
      * data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
      * copy / update for each transition)
      */
-    data class Calculation(
+    data class Calculation (
             val expression: Expression,
             val floatingLegPaymentSchedule: Map<LocalDate, FloatingRatePaymentEvent>,
             val fixedLegPaymentSchedule: Map<LocalDate, FixedRatePaymentEvent>
@@ -240,6 +239,48 @@ class InterestRateSwap() : Contract {
                     "TerminationDateAdjustment=$terminationDateAdjustment,DayCountBasis=$dayCountBasisDay/$dayCountBasisYear,DayInMonth=$dayInMonth," +
                     "PaymentRule=$paymentRule,PaymentDelay=$paymentDelay,PaymentCalendar=$paymentCalendar,InterestPeriodAdjustment=$interestPeriodAdjustment"
         }
+
+        override fun equals(other: Any?): Boolean{
+            if (this === other) return true
+            if (other?.javaClass != javaClass) return false
+
+            other as CommonLeg
+
+            if (notional != other.notional) return false
+            if (paymentFrequency != other.paymentFrequency) return false
+            if (effectiveDate != other.effectiveDate) return false
+            if (effectiveDateAdjustment != other.effectiveDateAdjustment) return false
+            if (terminationDate != other.terminationDate) return false
+            if (terminationDateAdjustment != other.terminationDateAdjustment) return false
+            if (dayCountBasisDay != other.dayCountBasisDay) return false
+            if (dayCountBasisYear != other.dayCountBasisYear) return false
+            if (dayInMonth != other.dayInMonth) return false
+            if (paymentRule != other.paymentRule) return false
+            if (paymentDelay != other.paymentDelay) return false
+            if (paymentCalendar != other.paymentCalendar) return false
+            if (interestPeriodAdjustment != other.interestPeriodAdjustment) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int{
+            var result = notional.hashCode()
+            result += 31 * result + paymentFrequency.hashCode()
+            result += 31 * result + effectiveDate.hashCode()
+            result += 31 * result + (effectiveDateAdjustment?.hashCode() ?: 0)
+            result += 31 * result + terminationDate.hashCode()
+            result += 31 * result + (terminationDateAdjustment?.hashCode() ?: 0)
+            result += 31 * result + dayCountBasisDay.hashCode()
+            result += 31 * result + dayCountBasisYear.hashCode()
+            result += 31 * result + dayInMonth
+            result += 31 * result + paymentRule.hashCode()
+            result += 31 * result + paymentDelay
+            result += 31 * result + paymentCalendar.hashCode()
+            result += 31 * result + interestPeriodAdjustment.hashCode()
+            return result
+        }
+
+
     }
 
     open class FixedLeg(
@@ -264,6 +305,29 @@ class InterestRateSwap() : Contract {
             dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment) {
         override fun toString(): String = "FixedLeg(Payer=$fixedRatePayer," + super.toString() + ",fixedRate=$fixedRate," +
                 "rollConvention=$rollConvention"
+
+        override fun equals(other: Any?): Boolean{
+            if (this === other) return true
+            if (other?.javaClass != javaClass) return false
+            if (!super.equals(other)) return false
+
+            other as FixedLeg
+
+            if (fixedRatePayer != other.fixedRatePayer) return false
+            if (fixedRate != other.fixedRate) return false
+            if (rollConvention != other.rollConvention) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int{
+            var result = super.hashCode()
+            result += 31 * result + fixedRatePayer.hashCode()
+            result += 31 * result + fixedRate.hashCode()
+            result += 31 * result + rollConvention.hashCode()
+            return result
+        }
+
     }
 
     open class FloatingLeg(
@@ -298,6 +362,44 @@ class InterestRateSwap() : Contract {
                 "FixingPeriond=$fixingPeriod,ResetRule=$resetRule,FixingsPerPayment=$fixingsPerPayment,FixingCalendar=$fixingCalendar," +
                 "Index=$index,IndexSource=$indexSource,IndexTenor=$indexTenor"
 
+        override fun equals(other: Any?): Boolean{
+            if (this === other) return true
+            if (other?.javaClass != javaClass) return false
+            if (!super.equals(other)) return false
+
+            other as FloatingLeg
+
+            if (floatingRatePayer != other.floatingRatePayer) return false
+            if (rollConvention != other.rollConvention) return false
+            if (fixingRollConvention != other.fixingRollConvention) return false
+            if (resetDayInMonth != other.resetDayInMonth) return false
+            if (fixingPeriod != other.fixingPeriod) return false
+            if (resetRule != other.resetRule) return false
+            if (fixingsPerPayment != other.fixingsPerPayment) return false
+            if (fixingCalendar != other.fixingCalendar) return false
+            if (index != other.index) return false
+            if (indexSource != other.indexSource) return false
+            if (indexTenor != other.indexTenor) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int{
+            var result = super.hashCode()
+            result += 31 * result + floatingRatePayer.hashCode()
+            result += 31 * result + rollConvention.hashCode()
+            result += 31 * result + fixingRollConvention.hashCode()
+            result += 31 * result + resetDayInMonth
+            result += 31 * result + fixingPeriod.hashCode()
+            result += 31 * result + resetRule.hashCode()
+            result += 31 * result + fixingsPerPayment.hashCode()
+            result += 31 * result + fixingCalendar.hashCode()
+            result += 31 * result + index.hashCode()
+            result += 31 * result + indexSource.hashCode()
+            result += 31 * result + indexTenor.hashCode()
+            return result
+        }
+
     }
 
     /**
@@ -305,7 +407,7 @@ class InterestRateSwap() : Contract {
      */
     override fun verify(tx: TransactionForVerification) {
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
-        val time = tx.commands.getTimestampByName("Mock Company 0", "Bank of Zurich")?.midpoint
+        val time = tx.commands.getTimestampByName("Mock Company 0", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         val irs = tx.outStates.filterIsInstance<InterestRateSwap.State>().single()
@@ -356,13 +458,47 @@ class InterestRateSwap() : Contract {
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
             val common: Common
-    ) : LinearState {
+    ) : FixableDealState {
+
         override val programRef = IRS_PROGRAM_ID
         override val thread = SecureHash.sha256(common.tradeID)
         override val ref = common.tradeID
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return (fixedLeg.fixedRatePayer.owningKey in ourKeys) || (floatingLeg.floatingRatePayer.owningKey in ourKeys)
+        }
+
+        override val parties: Array<Party>
+            get() = arrayOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
+
+        override fun withPublicKey(before: Party, after: PublicKey): State {
+            val newParty = Party(before.name, after)
+            if(before == fixedLeg.fixedRatePayer) {
+                val deal = copy()
+                deal.fixedLeg.fixedRatePayer = newParty
+                return deal
+            } else if(before == floatingLeg.floatingRatePayer) {
+                val deal = copy()
+                deal.floatingLeg.floatingRatePayer = newParty
+                return deal
+            } else {
+                throw IllegalArgumentException("No such party: $before")
+            }
+        }
+
+        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common)
+
+        override fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix) {
+            InterestRateSwap().generateFix(ptx, StateAndRef(this, oldStateRef), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
+        }
+
+        override fun nextFixingOf(): FixOf? {
+            val date = calculation.nextFixingDate()
+            return if (date==null) null else {
+                val fixingEvent = calculation.getFixing(date)
+                val oracleRate = fixingEvent.rate as ReferenceRate
+                FixOf(oracleRate.name, date, oracleRate.tenor)
+            }
         }
 
         /**

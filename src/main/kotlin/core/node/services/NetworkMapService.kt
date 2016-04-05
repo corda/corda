@@ -43,8 +43,8 @@ class MockNetworkMapService : NetworkMapService {
     override val partyNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
 
     init {
-        partyNodes.add(LegallyIdentifiableNode(MockAddress("excalibur:8080"), Party("Excalibur", DummyPublicKey("Excalibur"))))
-        partyNodes.add(LegallyIdentifiableNode(MockAddress("another:8080"), Party("ANOther", DummyPublicKey("ANOther"))))
+        partyNodes.add(LegallyIdentifiableNode(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C"))))
+        partyNodes.add(LegallyIdentifiableNode(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D"))))
     }
 }
 

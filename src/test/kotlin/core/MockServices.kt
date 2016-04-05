@@ -11,8 +11,6 @@ package core
 import com.codahale.metrics.MetricRegistry
 import core.crypto.*
 import core.messaging.MessagingService
-import core.node.services.MockNetworkMapService
-import core.node.services.NetworkMapService
 import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize

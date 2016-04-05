@@ -43,16 +43,21 @@ object NodeInterestRates {
 
     /** Parses a string of the form "LIBOR 16-March-2016 1M" into a [FixOf] */
     fun parseFixOf(key: String): FixOf {
-        val (name, date, tenorString) = key.split(' ')
+        val words = key.split(' ')
+        val tenorString = words.last()
+        val date = words.dropLast(1).last()
+        val name = words.dropLast(2).joinToString(" ")
         return FixOf(name, LocalDate.parse(date), Tenor(tenorString))
     }
 
     /** Parses lines containing fixes */
-    fun parseFile(s: String): Map<FixOf, Fix> {
-        val results = HashMap<FixOf, Fix>()
+    fun parseFile(s: String): Map<FixOf, TreeMap<LocalDate,Fix>> {
+        val results = HashMap<FixOf, TreeMap<LocalDate,Fix>>()
         for (line in s.lines()) {
-            val (fixOf, fix) = parseOneRate(line.trim())
-            results[fixOf] = fix
+            val (fixOf, fix) = parseOneRate(line)
+            val genericKey = FixOf(fixOf.name, LocalDate.MIN, fixOf.ofTenor)
+            val existingMap = results.computeIfAbsent(genericKey, { TreeMap() })
+            existingMap[fixOf.forDay] = fix
         }
         return results
     }
@@ -91,14 +96,13 @@ object NodeInterestRates {
         override val acceptableFileExtensions = listOf(".rates", ".txt")
 
         override fun upload(data: InputStream): String {
-            val fixes: Map<FixOf, Fix> = data.
+            val fixes: Map<FixOf, TreeMap<LocalDate,Fix>> = parseFile(data.
                     bufferedReader().
                     readLines().
                     map { it.trim() }.
                     // Filter out comment and empty lines.
                     filterNot { it.startsWith("#") || it.isBlank() }.
-                    map { parseOneRate(it) }.
-                    associate { it.first to it.second }
+                    joinToString("\n"))
 
             // TODO: Save the uploaded fixes to the storage service and reload on construction.
 
@@ -106,12 +110,16 @@ object NodeInterestRates {
             // the pointer to the stack before working with the map.
             oracle.knownFixes = fixes
 
-            return "Accepted ${fixes.size} new interest rate fixes"
+            val sumOfFixes = fixes.map { it.value.size }.sum()
+            return "Accepted $sumOfFixes new interest rate fixes"
         }
     }
 
     /**
      * An implementation of an interest rate fix oracle which is given data in a simple string format.
+     *
+     * NOTE the implementation has changed such that it will find the nearest dated entry on OR BEFORE the date
+     * requested so as not to need to populate every possible date in the flat file that (typically) feeds this service
      */
     @ThreadSafe
     class Oracle(val identity: Party, private val signingKey: KeyPair) {
@@ -119,8 +127,13 @@ object NodeInterestRates {
             require(signingKey.public == identity.owningKey)
         }
 
-        /** The fix data being served by this oracle. */
-        @Transient var knownFixes = emptyMap<FixOf, Fix>()
+        /** The fix data being served by this oracle.
+         *
+         * This is now a map of FixOf (but with date set to LocalDate.MIN, so just index name and tenor)
+         * to a sorted map of LocalDate to Fix, allowing for approximate date finding so that we do not need
+         * to populate the file with a rate for every day.
+         */
+        @Volatile var knownFixes = emptyMap<FixOf, TreeMap<LocalDate,Fix>>()
             set(value) {
                 require(value.isNotEmpty())
                 field = value
@@ -130,11 +143,22 @@ object NodeInterestRates {
             require(queries.isNotEmpty())
             val knownFixes = knownFixes   // Snapshot
 
-            val answers: List<Fix?> = queries.map { knownFixes[it] }
+            val answers: List<Fix?> = queries.map { getKnownFix(knownFixes, it) }
             val firstNull = answers.indexOf(null)
             if (firstNull != -1)
                 throw UnknownFix(queries[firstNull])
             return answers.filterNotNull()
+        }
+
+        private fun getKnownFix(knownFixes: Map<FixOf, TreeMap<LocalDate, Fix>>, fixOf: FixOf): Fix? {
+            val rates = knownFixes[FixOf(fixOf.name, LocalDate.MIN, fixOf.ofTenor)]
+            // Greatest key less than or equal to the date we're looking for
+            val floor = rates?.floorEntry(fixOf.forDay)?.value
+            return if (floor!=null) {
+                Fix(fixOf, floor.value)
+            } else {
+                null
+            }
         }
 
         fun sign(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
@@ -150,7 +174,7 @@ object NodeInterestRates {
             // For each fix, verify that the data is correct.
             val knownFixes = knownFixes   // Snapshot
             for (fix in fixes) {
-                val known = knownFixes[fix.of]
+                val known = getKnownFix(knownFixes, fix.of)
                 if (known == null || known != fix)
                     throw UnknownFix(fix.of)
             }

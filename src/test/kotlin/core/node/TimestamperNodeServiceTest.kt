@@ -11,7 +11,8 @@ package core.node
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
-import core.messaging.*
+import core.messaging.StateMachineManager
+import core.messaging.TestWithInMemoryNetwork
 import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.serialize

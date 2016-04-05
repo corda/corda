@@ -48,7 +48,10 @@ abstract class ProtocolLogic<T> {
         return psm.sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, T::class.java)
     }
     inline fun <reified T : Any> receive(topic: String, sessionIDForReceive: Long): UntrustworthyData<T> {
-        return psm.receive(topic, sessionIDForReceive, T::class.java)
+        return receive(topic, sessionIDForReceive, T::class.java)
+    }
+    @Suspendable fun <T : Any> receive(topic: String, sessionIDForReceive: Long, clazz: Class<T>): UntrustworthyData<T> {
+        return psm.receive(topic, sessionIDForReceive, clazz)
     }
     @Suspendable fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
         psm.send(topic, destination, sessionID, obj)
