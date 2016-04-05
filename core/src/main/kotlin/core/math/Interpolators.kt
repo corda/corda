@@ -54,15 +54,19 @@ class CubicSplineInterpolator(val xs: DoubleArray, val ys: DoubleArray) {
 
         val segmentMap = TreeMap<Double, Polynomial>()
         for (i in 0..n - 1) {
-            val coefficients = doubleArrayOf(ys[i], b[i], c[i], d[i])
+            val coefficients = doubleArrayOf(d[i], c[i], b[i], ys[i])
             segmentMap.put(xs[i], Polynomial(coefficients))
         }
         return SplineFunction(segmentMap)
     }
 }
 
+/**
+ * Represents a polynomial function of arbitrary degree
+ * @param coefficients polynomial coefficients in descending order (highest degree first)
+ */
 class Polynomial(private val coefficients: DoubleArray) {
-    fun getValue(x: Double) = coefficients.reversed().fold(0.0, { result, c -> result * x + c })
+    fun getValue(x: Double) = coefficients.fold(0.0, { result, c -> result * x + c })
 }
 
 /**
