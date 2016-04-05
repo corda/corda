@@ -798,23 +798,10 @@ ifeq ($(kernel),darwin)
 		platform-dir = $(developer-dir)/Platforms/$(target).platform
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
-		ios-version := $(shell \
-				if test -L $(sdk-dir)/$(target)9.2.sdk; then echo 9.2; \
-			elif test -L $(sdk-dir)/$(target)9.1.sdk; then echo 9.1; \
-			elif test -L $(sdk-dir)/$(target)9.0.sdk; then echo 9.0; \
-			elif test -d $(sdk-dir)/$(target)8.3.sdk; then echo 8.3; \
-			elif test -d $(sdk-dir)/$(target)8.2.sdk; then echo 8.2; \
-			elif test -d $(sdk-dir)/$(target)8.1.sdk; then echo 8.1; \
-			elif test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
-			elif test -d $(sdk-dir)/$(target)7.1.sdk; then echo 7.1; \
-			elif test -d $(sdk-dir)/$(target)7.0.sdk; then echo 7.0; \
-			elif test -d $(sdk-dir)/$(target)6.1.sdk; then echo 6.1; \
-			elif test -d $(sdk-dir)/$(target)6.0.sdk; then echo 6.0; \
-			elif test -d $(sdk-dir)/$(target)5.1.sdk; then echo 5.1; \
-			elif test -d $(sdk-dir)/$(target)5.0.sdk; then echo 5.0; \
-			elif test -d $(sdk-dir)/$(target)4.3.sdk; then echo 4.3; \
-			elif test -d $(sdk-dir)/$(target)4.2.sdk; then echo 4.2; \
-			else echo; fi)
+		ios-version := $(shell for x in 9.3 9.2 9.1 9.0 8.3 8.2 8.1 8.0; \
+			do if test -d $(sdk-dir)/$(target)$$x.sdk \
+				-o -L $(sdk-dir)/$(target)$$x.sdk; \
+			then echo $$x; break; fi; done)
 
 		ifeq ($(ios-version),)
 			x := $(error "couldn't find SDK in $(sdk-dir)")
