@@ -8,14 +8,6 @@
 
 package contracts
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonDeserializer
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import core.*
 import core.crypto.SecureHash
 import org.apache.commons.jexl3.JexlBuilder
@@ -60,12 +52,12 @@ abstract class PaymentEvent(date: LocalDate) : Event(date) {
  * For the floating leg, the rate refers to a reference rate which is to be "fixed" at a point in the future.
  */
 abstract class RatePaymentEvent(date: LocalDate,
-                       val accrualStartDate: LocalDate,
-                       val accrualEndDate: LocalDate,
-                       val dayCountBasisDay: DayCountBasisDay,
-                       val dayCountBasisYear: DayCountBasisYear,
-                       val notional: Amount,
-                       val rate: Rate) : PaymentEvent(date) {
+                                val accrualStartDate: LocalDate,
+                                val accrualEndDate: LocalDate,
+                                val dayCountBasisDay: DayCountBasisDay,
+                                val dayCountBasisYear: DayCountBasisYear,
+                                val notional: Amount,
+                                val rate: Rate) : PaymentEvent(date) {
     companion object {
         val CSVHeader = "AccrualStartDate,AccrualEndDate,DayCountFactor,Days,Date,Ccy,Notional,Rate,Flow"
     }
@@ -78,7 +70,7 @@ abstract class RatePaymentEvent(date: LocalDate,
         dayCountCalculator(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
 
     val dayCountFactor: BigDecimal get() =
-    // TODO : Fix below (use daycount convention for division)
+        // TODO : Fix below (use daycount convention for division)
         (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)
 
     open fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.currency},${notional},$rate,$flow"
@@ -146,12 +138,6 @@ class FloatingRatePaymentEvent(date: LocalDate,
 
 
 /**
- * Don't try and use a rate that isn't ready yet.
- */
-class DataNotReadyException : Exception()
-
-
-/**
  * The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
  * This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
  * It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
@@ -189,7 +175,7 @@ class InterestRateSwap() : Contract {
      * data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
      * copy / update for each transition)
      */
-    data class Calculation (
+    data class Calculation(
             val expression: Expression,
             val floatingLegPaymentSchedule: Map<LocalDate, FloatingRatePaymentEvent>,
             val fixedLegPaymentSchedule: Map<LocalDate, FixedRatePaymentEvent>
@@ -248,7 +234,7 @@ class InterestRateSwap() : Contract {
                     "PaymentRule=$paymentRule,PaymentDelay=$paymentDelay,PaymentCalendar=$paymentCalendar,InterestPeriodAdjustment=$interestPeriodAdjustment"
         }
 
-        override fun equals(other: Any?): Boolean{
+        override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other?.javaClass != javaClass) return false
 
@@ -271,7 +257,7 @@ class InterestRateSwap() : Contract {
             return true
         }
 
-        override fun hashCode(): Int{
+        override fun hashCode(): Int {
             var result = notional.hashCode()
             result += 31 * result + paymentFrequency.hashCode()
             result += 31 * result + effectiveDate.hashCode()
@@ -314,7 +300,7 @@ class InterestRateSwap() : Contract {
         override fun toString(): String = "FixedLeg(Payer=$fixedRatePayer," + super.toString() + ",fixedRate=$fixedRate," +
                 "rollConvention=$rollConvention"
 
-        override fun equals(other: Any?): Boolean{
+        override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other?.javaClass != javaClass) return false
             if (!super.equals(other)) return false
@@ -328,7 +314,7 @@ class InterestRateSwap() : Contract {
             return true
         }
 
-        override fun hashCode(): Int{
+        override fun hashCode(): Int {
             var result = super.hashCode()
             result += 31 * result + fixedRatePayer.hashCode()
             result += 31 * result + fixedRate.hashCode()
@@ -370,7 +356,7 @@ class InterestRateSwap() : Contract {
                 "FixingPeriond=$fixingPeriod,ResetRule=$resetRule,FixingsPerPayment=$fixingsPerPayment,FixingCalendar=$fixingCalendar," +
                 "Index=$index,IndexSource=$indexSource,IndexTenor=$indexTenor"
 
-        override fun equals(other: Any?): Boolean{
+        override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other?.javaClass != javaClass) return false
             if (!super.equals(other)) return false
@@ -392,7 +378,7 @@ class InterestRateSwap() : Contract {
             return true
         }
 
-        override fun hashCode(): Int{
+        override fun hashCode(): Int {
             var result = super.hashCode()
             result += 31 * result + floatingRatePayer.hashCode()
             result += 31 * result + rollConvention.hashCode()
@@ -481,11 +467,11 @@ class InterestRateSwap() : Contract {
 
         override fun withPublicKey(before: Party, after: PublicKey): State {
             val newParty = Party(before.name, after)
-            if(before == fixedLeg.fixedRatePayer) {
+            if (before == fixedLeg.fixedRatePayer) {
                 val deal = copy()
                 deal.fixedLeg.fixedRatePayer = newParty
                 return deal
-            } else if(before == floatingLeg.floatingRatePayer) {
+            } else if (before == floatingLeg.floatingRatePayer) {
                 val deal = copy()
                 deal.floatingLeg.floatingRatePayer = newParty
                 return deal
@@ -502,7 +488,7 @@ class InterestRateSwap() : Contract {
 
         override fun nextFixingOf(): FixOf? {
             val date = calculation.nextFixingDate()
-            return if (date==null) null else {
+            return if (date == null) null else {
                 val fixingEvent = calculation.getFixing(date)
                 val oracleRate = fixingEvent.rate as ReferenceRate
                 FixOf(oracleRate.name, date, oracleRate.tenor)
