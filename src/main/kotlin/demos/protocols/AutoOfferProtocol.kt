@@ -95,10 +95,10 @@ object AutoOfferProtocol {
         override fun call(): SignedTransaction {
             val ourSessionID = random63BitValue()
 
-            val timestampingAuthority = serviceHub.networkMapService.timestampingNodes[0]
+            val timestampingAuthority = serviceHub.networkMapCache.timestampingNodes[0]
             // need to pick which ever party is not us
             val otherParty = notUs(*dealToBeOffered.parties).single()
-            val otherSide = (serviceHub.networkMapService.nodeForPartyName(otherParty.name))!!.address
+            val otherSide = (serviceHub.networkMapCache.nodeForPartyName(otherParty.name))!!.address
             progressTracker.currentStep = ANNOUNCING
             send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.networkService.myAddress, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING

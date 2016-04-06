@@ -16,8 +16,8 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
-import core.node.services.LegallyIdentifiableNode
-import core.node.services.MockNetworkMapService
+import core.node.services.NodeInfo
+import core.node.services.MockNetworkMapCache
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
 import joptsimple.OptionParser
@@ -79,7 +79,7 @@ fun main(args: Array<String>) {
         null
     } else {
         try {
-            legallyIdentifiableNode(options.valueOf(timestamperNetAddr), options.valueOf(timestamperIdentityFile))
+            nodeInfo(options.valueOf(timestamperNetAddr), options.valueOf(timestamperIdentityFile))
         } catch (e: Exception) {
             null
         }
@@ -90,7 +90,7 @@ fun main(args: Array<String>) {
         null
     } else {
         try {
-            legallyIdentifiableNode(options.valueOf(rateOracleNetAddr), options.valueOf(rateOracleIdentityFile))
+            nodeInfo(options.valueOf(rateOracleNetAddr), options.valueOf(rateOracleIdentityFile))
         } catch (e: Exception) {
             null
         }
@@ -99,10 +99,10 @@ fun main(args: Array<String>) {
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, DemoClock()).start() }
 
     // Add self to network map
-    (node.services.networkMapService as MockNetworkMapService).partyNodes.add(node.legallyIdentifiableAddress)
+    (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(node.info)
 
     // Add rates oracle to network map
-    (node.services.networkMapService as MockNetworkMapService).ratesOracleNodes.add(rateOracleId)
+    (node.services.networkMapCache as MockNetworkMapCache).ratesOracleNodes.add(rateOracleId)
 
     val hostAndPortStrings = options.valuesOf(fakeTradeWithAddr)
     val identityFiles = options.valuesOf(fakeTradeWithIdentityFile)
@@ -111,8 +111,8 @@ fun main(args: Array<String>) {
     }
     for ((hostAndPortString,identityFile) in hostAndPortStrings.zip(identityFiles)) {
         try {
-            val peerId = legallyIdentifiableNode(hostAndPortString, identityFile)
-            (node.services.networkMapService as MockNetworkMapService).partyNodes.add(peerId)
+            val peerId = nodeInfo(hostAndPortString, identityFile)
+            (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(peerId)
         } catch (e: Exception) {
         }
     }
@@ -128,12 +128,12 @@ fun main(args: Array<String>) {
     exitProcess(0)
 }
 
-fun legallyIdentifiableNode(hostAndPortString: String, identityFile: String): LegallyIdentifiableNode {
+fun nodeInfo(hostAndPortString: String, identityFile: String): NodeInfo {
     try {
         val addr = HostAndPort.fromString(hostAndPortString).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(identityFile)
         val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
-        return LegallyIdentifiableNode(ArtemisMessagingService.makeRecipient(addr), party)
+        return NodeInfo(ArtemisMessagingService.makeRecipient(addr), party)
     } catch (e: Exception) {
         println("Could not find identify file $identityFile.  If the file has just been created as part of starting the demo, please restart this node")
         throw e

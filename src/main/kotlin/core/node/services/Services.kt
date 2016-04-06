@@ -187,7 +187,7 @@ interface ServiceHub {
     val identityService: IdentityService
     val storageService: StorageService
     val networkService: MessagingService
-    val networkMapService: NetworkMapService
+    val networkMapCache: NetworkMapCache
     val monitoringService: MonitoringService
     val clock: Clock
 

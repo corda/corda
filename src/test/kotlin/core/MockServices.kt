@@ -129,7 +129,7 @@ class MockServices(
         val net: MessagingService? = null,
         val identity: IdentityService? = MockIdentityService,
         val storage: StorageService? = MockStorageService(),
-        val networkMap: NetworkMapService? = MockNetworkMapService(),
+        val networkMap: NetworkMapCache? = MockNetworkMapCache(),
         val overrideClock: Clock? = Clock.systemUTC()
 ) : ServiceHub {
     override val walletService: WalletService
@@ -140,7 +140,7 @@ class MockServices(
         get() = identity ?: throw UnsupportedOperationException()
     override val networkService: MessagingService
         get() = net ?: throw UnsupportedOperationException()
-    override val networkMapService: NetworkMapService
+    override val networkMapCache: NetworkMapCache
         get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()

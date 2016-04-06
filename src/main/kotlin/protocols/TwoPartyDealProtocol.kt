@@ -15,7 +15,7 @@ import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData
@@ -63,7 +63,7 @@ object TwoPartyDealProtocol {
                               val otherSide: SingleMessageRecipient,
                               val otherSessionID: Long,
                               val myKeyPair: KeyPair,
-                              val timestampingAuthority: LegallyIdentifiableNode,
+                              val timestampingAuthority: NodeInfo,
                               override val progressTracker: ProgressTracker = Primary.tracker()) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
@@ -263,7 +263,7 @@ object TwoPartyDealProtocol {
      * One side of the protocol for inserting a pre-agreed deal.
      */
     open class Instigator<T : DealState>(otherSide: SingleMessageRecipient,
-                                         timestampingAuthority: LegallyIdentifiableNode,
+                                         timestampingAuthority: NodeInfo,
                                          dealBeingOffered: T,
                                          myKeyPair: KeyPair,
                                          buyerSessionID: Long,
@@ -360,7 +360,7 @@ object TwoPartyDealProtocol {
             val oldRef = dealToFix.ref
 
             val ptx = TransactionBuilder()
-            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapService.ratesOracleNodes[0], fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0], fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
 
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
@@ -387,7 +387,7 @@ object TwoPartyDealProtocol {
      */
     open class Floater<T : FixableDealState>(otherSide: SingleMessageRecipient,
                                              otherSessionID: Long,
-                                             timestampingAuthority: LegallyIdentifiableNode,
+                                             timestampingAuthority: NodeInfo,
                                              dealToFix: StateAndRef<T>,
                                              myKeyPair: KeyPair,
                                              val sessionID: Long,

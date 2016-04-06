@@ -93,7 +93,7 @@ class NodeInterestRatesTest {
 
         val tx = TransactionBuilder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.legallyIdentifiableAddress, fixOf, "0.675".bd, "0.1".bd)
+        val protocol = RatesFixProtocol(tx, n2.info, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
         val future = n1.smm.add("rates", protocol)
 

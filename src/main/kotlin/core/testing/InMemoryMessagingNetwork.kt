@@ -15,7 +15,7 @@ import core.ThreadBox
 import core.crypto.sha256
 import core.messaging.*
 import core.node.services.DummyTimestampingAuthority
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.node.services.NodeTimestamperService
 import core.utilities.loggerFor
 import rx.Observable
@@ -150,15 +150,15 @@ class InMemoryMessagingNetwork {
         override fun hashCode() = id.hashCode()
     }
 
-    private var timestampingAdvert: LegallyIdentifiableNode? = null
+    private var timestampingAdvert: NodeInfo? = null
 
     @Synchronized
-    fun setupTimestampingNode(manuallyPumped: Boolean): Pair<LegallyIdentifiableNode, InMemoryMessaging> {
+    fun setupTimestampingNode(manuallyPumped: Boolean): Pair<NodeInfo, InMemoryMessaging> {
         check(timestampingAdvert == null)
         val (handle, builder) = createNode(manuallyPumped)
         val node = builder.start().get()
         NodeTimestamperService(node, DummyTimestampingAuthority.identity, DummyTimestampingAuthority.key)
-        timestampingAdvert = LegallyIdentifiableNode(handle, DummyTimestampingAuthority.identity)
+        timestampingAdvert = NodeInfo(handle, DummyTimestampingAuthority.identity)
         return Pair(timestampingAdvert!!, node)
     }
 

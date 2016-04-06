@@ -103,7 +103,7 @@ class Config(val services: ServiceHub): ContextResolver<ObjectMapper> {
             }
             val mapper = parser.codec as ServiceHubObjectMapper
             // TODO this needs to use some industry identifier(s) not just these human readable names
-            val nodeForPartyName = mapper.serviceHub.networkMapService.nodeForPartyName(parser.text) ?: throw JsonParseException("Could not find a Party with name: ${parser.text}", parser.currentLocation)
+            val nodeForPartyName = mapper.serviceHub.networkMapCache.nodeForPartyName(parser.text) ?: throw JsonParseException("Could not find a Party with name: ${parser.text}", parser.currentLocation)
             return nodeForPartyName.identity
         }
     }

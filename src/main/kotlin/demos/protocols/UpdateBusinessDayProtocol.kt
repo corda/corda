@@ -6,8 +6,8 @@ import contracts.DealState
 import contracts.InterestRateSwap
 import core.StateAndRef
 import core.node.Node
-import core.node.services.LegallyIdentifiableNode
-import core.node.services.MockNetworkMapService
+import core.node.services.NodeInfo
+import core.node.services.MockNetworkMapCache
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.deserialize
@@ -57,14 +57,14 @@ object UpdateBusinessDayProtocol {
         }
 
         // This assumes we definitely have one key or the other
-        fun otherParty(deal: DealState): LegallyIdentifiableNode {
+        fun otherParty(deal: DealState): NodeInfo {
             val ourKeys = serviceHub.keyManagementService.keys.keys
-            return serviceHub.networkMapService.nodeForPartyName(deal.parties.single { !ourKeys.contains(it.owningKey) }.name)!!
+            return serviceHub.networkMapCache.nodeForPartyName(deal.parties.single { !ourKeys.contains(it.owningKey) }.name)!!
         }
 
         // TODO we should make this more object oriented when we can ask a state for it's contract
         @Suspendable
-        fun processDeal(party: LegallyIdentifiableNode, deal: StateAndRef<DealState>, date: LocalDate, sessionID: Long) {
+        fun processDeal(party: NodeInfo, deal: StateAndRef<DealState>, date: LocalDate, sessionID: Long) {
             when(deal.state) {
                 is InterestRateSwap.State -> processInterestRateSwap(party, StateAndRef(deal.state as InterestRateSwap.State, deal.ref), date, sessionID)
             }
@@ -72,7 +72,7 @@ object UpdateBusinessDayProtocol {
 
         // TODO and this would move to the InterestRateSwap and cope with permutations of Fixed/Floating and Floating/Floating etc
         @Suspendable
-        fun processInterestRateSwap(party: LegallyIdentifiableNode, deal: StateAndRef<InterestRateSwap.State>, date: LocalDate, sessionID: Long) {
+        fun processInterestRateSwap(party: NodeInfo, deal: StateAndRef<InterestRateSwap.State>, date: LocalDate, sessionID: Long) {
             var dealStateAndRef: StateAndRef<InterestRateSwap.State>? = deal
             var nextFixingDate = deal.state.calculation.nextFixingDate()
             while (nextFixingDate != null && !nextFixingDate.isAfter(date)) {
@@ -93,22 +93,22 @@ object UpdateBusinessDayProtocol {
         }
 
         @Suspendable
-        private fun nextFixingFloatingLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: LegallyIdentifiableNode, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
+        private fun nextFixingFloatingLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: NodeInfo, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
             progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Primary.tracker()
             progressTracker.currentStep = FIXING
 
-            val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapService.timestampingNodes[0], dealStateAndRef, serviceHub.keyManagementService.freshKey(), sessionID, progressTracker.childrenFor[FIXING]!!)
+            val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.timestampingNodes[0], dealStateAndRef, serviceHub.keyManagementService.freshKey(), sessionID, progressTracker.childrenFor[FIXING]!!)
             Strand.sleep(100)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
 
         @Suspendable
-        private fun nextFixingFixedLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: LegallyIdentifiableNode, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
+        private fun nextFixingFixedLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: NodeInfo, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
             progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Secondary.tracker()
             progressTracker.currentStep = FIXING
 
-            val participant = TwoPartyDealProtocol.Fixer(party.address, serviceHub.networkMapService.timestampingNodes[0].identity, dealStateAndRef, sessionID, progressTracker.childrenFor[FIXING]!!)
+            val participant = TwoPartyDealProtocol.Fixer(party.address, serviceHub.networkMapCache.timestampingNodes[0].identity, dealStateAndRef, sessionID, progressTracker.childrenFor[FIXING]!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
@@ -147,7 +147,7 @@ object UpdateBusinessDayProtocol {
         override fun call(): Boolean {
             val message = UpdateBusinessDayMessage(date, random63BitValue())
 
-            for (recipient in serviceHub.networkMapService.partyNodes) {
+            for (recipient in serviceHub.networkMapCache.partyNodes) {
                 progressTracker.currentStep = NOTIFYING
                 doNextRecipient(recipient, message)
             }
@@ -159,8 +159,8 @@ object UpdateBusinessDayProtocol {
         }
 
         @Suspendable
-        private fun doNextRecipient(recipient: LegallyIdentifiableNode, message: UpdateBusinessDayMessage) {
-            if(recipient.address is MockNetworkMapService.MockAddress) {
+        private fun doNextRecipient(recipient: NodeInfo, message: UpdateBusinessDayMessage) {
+            if(recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages
