@@ -32,6 +32,7 @@ interface NetworkMapCache {
     val timestampingNodes: List<NodeInfo>
     val ratesOracleNodes: List<NodeInfo>
     val partyNodes: List<NodeInfo>
+    val regulators: List<NodeInfo>
 
     fun nodeForPartyName(name: String): NodeInfo? = partyNodes.singleOrNull { it.identity.name == name }
 }
@@ -43,6 +44,7 @@ class MockNetworkMapCache : NetworkMapCache {
     override val timestampingNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
     override val ratesOracleNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
     override val partyNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
+    override val regulators = Collections.synchronizedList(ArrayList<NodeInfo>())
 
     init {
         partyNodes.add(NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C"))))

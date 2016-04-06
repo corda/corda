@@ -93,6 +93,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             mockNet.identities.add(storage.myLegalIdentity)
             return this
         }
+
+        val place: PhysicalLocation get() = info.physicalLocation!!
     }
 
     /** Returns a started node, optionally created by the passed factory method */

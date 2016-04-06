@@ -115,7 +115,17 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
         api = APIServerImpl(this)
+        makeTimestampingService(timestamperAddress)
+        identity = makeIdentityService()
 
+        // This object doesn't need to be referenced from this class because it registers handlers on the network
+        // service and so that keeps it from being collected.
+        DataVendingService(net, storage)
+
+        return this
+    }
+
+    private fun makeTimestampingService(timestamperAddress: NodeInfo?) {
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
         // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
         val tsid = if (timestamperAddress != null) {
@@ -126,14 +136,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             NodeInfo(net.myAddress, storage.myLegalIdentity)
         }
         (services.networkMapCache as MockNetworkMapCache).timestampingNodes.add(tsid)
-
-        identity = makeIdentityService()
-
-        // This object doesn't need to be referenced from this class because it registers handlers on the network
-        // service and so that keeps it from being collected.
-        DataVendingService(net, storage)
-
-        return this
     }
 
     lateinit var interestRatesService: NodeInterestRates.Service
