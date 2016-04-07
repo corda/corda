@@ -52,6 +52,7 @@ The code should build, the unit tests should show as all green.
 You can catch up with the latest code by selecting "VCS -> Update Project" in the menu.
 
 ## IntelliJ Troubleshooting
+
 If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:
 
     Configure -> Project Defaults -> Project Structure
@@ -65,6 +66,17 @@ click on New… next to the red <No SDK> symbol, and select JDK.  It should then
     jdk1.8.0_xx…/Contents/Home
 
 Also select Project language level: as 8.  Click OK.  Open should now work.
+
+## Other troubleshooting
+
+If you get an error about a missing Quasar agent, then your JVM is being invoked without a needed command line argument.
+Make sure an argument like `-javaagent:lib/quasar.jar` is being passed to the invocation.
+
+You may need/want to edit your default JUnit run config in IntelliJ to ensure that parameter is being set, along with
+`-Dco.paralleluniverse.fibers.verifyInstrumentation` which is useful to catch mistakes. To do that, click the dropdown
+in the toolbar and select "Edit configurations", then expand the defaults tree, then select JUnit and add the two
+arguments to the VM options edit.
+
 
 ## Accessing Source Without an IDE
 
