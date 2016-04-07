@@ -95,6 +95,18 @@ interface WalletService {
     fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
 }
 
+// TODO: Document this
+@Suppress("UNCHECKED_CAST")
+inline fun <reified T : LinearState> WalletService.linearHeadsOfType(): Map<SecureHash, StateAndRef<T>> {
+    return linearHeads.mapNotNull {
+        val s = it.value.state
+        if (s is T)
+            Pair(it.key, it.value as StateAndRef<T>)
+        else
+            null
+    }.toMap()
+}
+
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
  * call out to a hardware security module that enforces various auditing and frequency-of-use requirements.

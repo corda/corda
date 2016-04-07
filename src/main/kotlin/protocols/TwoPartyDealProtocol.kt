@@ -73,8 +73,11 @@ object TwoPartyDealProtocol {
             object TIMESTAMPING : ProgressTracker.Step("Timestamping transaction")
             object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to other party")
             object RECORDING : ProgressTracker.Step("Recording completed transaction")
+            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator")
 
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, TIMESTAMPING, SENDING_SIGS, RECORDING)
+            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, TIMESTAMPING, SENDING_SIGS, RECORDING, COPYING_TO_REGULATOR).apply {
+                childrenFor[TIMESTAMPING] = TimestampingProtocol.tracker()
+            }
         }
 
         @Suspendable
@@ -148,6 +151,15 @@ object TwoPartyDealProtocol {
             serviceHub.recordTransactions(listOf(fullySigned))
 
             logger.trace { "Deal stored" }
+
+            val regulators = serviceHub.networkMapCache.regulators
+            if (regulators.isNotEmpty()) {
+                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
+                // just for demo purposes.
+                for (regulator in regulators) {
+                    send("regulator.all.seeing.eye", regulator.address, 0, fullySigned)
+                }
+            }
 
             return fullySigned
         }

@@ -18,4 +18,5 @@ import java.security.PublicKey
  */
 interface IdentityService {
     fun partyFromKey(key: PublicKey): Party?
+    fun partyFromName(name: String): Party?
 }

@@ -14,7 +14,7 @@ import core.messaging.MessagingService
 import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
-import core.testutils.TEST_KEYS_TO_CORP_MAP
+import core.testutils.MockIdentityService
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
 import java.io.ByteArrayInputStream
@@ -49,10 +49,6 @@ class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.syste
 }
 
 val DUMMY_TIMESTAMPER = DummyTimestamper()
-
-object MockIdentityService : IdentityService {
-    override fun partyFromKey(key: PublicKey): Party? = TEST_KEYS_TO_CORP_MAP[key]
-}
 
 class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementService {
     override val keys: MutableMap<PublicKey, PrivateKey>

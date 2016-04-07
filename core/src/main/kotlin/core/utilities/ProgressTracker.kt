@@ -42,13 +42,13 @@ import java.util.*
  */
 class ProgressTracker(vararg steps: Step) {
     sealed class Change {
-        class Position(val newStep: Step) : Change() {
+        class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
             override fun toString() = newStep.label
         }
-        class Rendering(val ofStep: Step) : Change() {
+        class Rendering(val tracker: ProgressTracker, val ofStep: Step) : Change() {
             override fun toString() = ofStep.label
         }
-        class Structural(val parent: Step) : Change() {
+        class Structural(val tracker: ProgressTracker, val parent: Step) : Change() {
             override fun toString() = "Structural step change in child of ${parent.label}"
         }
     }
@@ -59,13 +59,13 @@ class ProgressTracker(vararg steps: Step) {
     }
 
     /** This class makes it easier to relabel a step on the fly, to provide transient information. */
-    open class RelabelableStep(currentLabel: String) : Step(currentLabel) {
+    open inner class RelabelableStep(currentLabel: String) : Step(currentLabel) {
         override val changes = BehaviorSubject.create<Change>()
 
         var currentLabel: String = currentLabel
             set(value) {
                 field = value
-                changes.onNext(ProgressTracker.Change.Rendering(this))
+                changes.onNext(ProgressTracker.Change.Rendering(this@ProgressTracker, this@RelabelableStep))
             }
 
         override val label: String get() = currentLabel
@@ -109,7 +109,7 @@ class ProgressTracker(vararg steps: Step) {
 
                 curChangeSubscription?.unsubscribe()
                 stepIndex = index
-                _changes.onNext(Change.Position(steps[index]))
+                _changes.onNext(Change.Position(this, steps[index]))
                 curChangeSubscription = currentStep.changes.subscribe { _changes.onNext(it) }
 
                 if (currentStep == DONE) _changes.onCompleted()
@@ -128,17 +128,32 @@ class ProgressTracker(vararg steps: Step) {
         override fun put(key: Step, value: ProgressTracker): ProgressTracker? {
             val r = super.put(key, value)
             childSubscriptions[value] = value.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
-            _changes.onNext(Change.Structural(key))
+            value.parent = this@ProgressTracker
+            _changes.onNext(Change.Structural(this@ProgressTracker, key))
             return r
         }
 
         override fun remove(key: Step): ProgressTracker? {
-            if (containsKey(key))
-                childSubscriptions[this[key]]?.let { it.unsubscribe(); childSubscriptions.remove(this[key]) }
-            _changes.onNext(Change.Structural(key))
+            val tracker = this[key]
+            if (tracker != null) {
+                tracker.parent = null
+                childSubscriptions[tracker]?.let { it.unsubscribe(); childSubscriptions.remove(tracker) }
+            }
+            _changes.onNext(Change.Structural(this@ProgressTracker, key))
             return super.remove(key)
         }
     }
+
+    /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
+    var parent: ProgressTracker? = null
+
+    /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this' */
+    val topLevelTracker: ProgressTracker
+        get() {
+            var cursor: ProgressTracker = this
+            while (cursor.parent != null) cursor = cursor.parent!!
+            return cursor
+        }
 
     private val childSubscriptions = HashMap<ProgressTracker, Subscription>()
 

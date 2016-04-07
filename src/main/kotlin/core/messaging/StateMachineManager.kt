@@ -80,6 +80,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     // checkpointing when unit tests are run inside Gradle. The right fix is probably to stop Quasar's
     // bit-too-clever-for-its-own-good ThreadLocal serialisation trick. It already wasted far more time than it can
     // ever recover.
+    //
+    // TODO: Remove this now that TLS serialisation is fixed.
     val checkpointing: Boolean get() = !System.err.javaClass.name.contains("LinePerThreadBufferingOutputStream")
 
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
