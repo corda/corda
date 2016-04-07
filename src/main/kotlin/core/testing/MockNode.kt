@@ -7,9 +7,9 @@ import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
 import core.node.AbstractNode
 import core.node.NodeConfiguration
+import core.node.NodeInfo
+import core.node.PhysicalLocation
 import core.node.services.FixedIdentityService
-import core.node.services.NodeInfo
-import core.node.services.PhysicalLocation
 import core.node.services.ServiceType
 import core.utilities.loggerFor
 import org.slf4j.Logger

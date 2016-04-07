@@ -11,7 +11,7 @@ import core.Party
 import core.crypto.DummyPublicKey
 import core.messaging.SingleMessageRecipient
 import core.node.services.NetworkMapCache
-import core.node.services.NodeInfo
+import core.node.NodeInfo
 import java.util.*
 
 class MockNetworkMapCache : NetworkMapCache {

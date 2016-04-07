@@ -7,7 +7,6 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
-import core.node.services.NodeInfo
 import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.DataUploadServlet
 import core.utilities.loggerFor

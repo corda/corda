@@ -4,8 +4,8 @@ import core.Attachment
 import core.crypto.SecureHash
 import core.crypto.sha256
 import core.node.NodeConfiguration
+import core.node.NodeInfo
 import core.node.services.NodeAttachmentService
-import core.node.services.NodeInfo
 import core.node.services.ServiceType
 import core.serialization.OpaqueBytes
 import core.testing.MockNetwork

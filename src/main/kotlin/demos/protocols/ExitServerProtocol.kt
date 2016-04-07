@@ -3,7 +3,7 @@ package demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import core.node.Node
-import core.node.services.NodeInfo
+import core.node.NodeInfo
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import core.testing.MockNetworkMapCache

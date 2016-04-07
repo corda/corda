@@ -7,8 +7,8 @@ import core.logElapsedTime
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
+import core.node.NodeInfo
 import core.node.services.ArtemisMessagingService
-import core.node.services.NodeInfo
 import core.node.services.ServiceType
 import core.testing.MockNetworkMapCache
 import core.serialization.deserialize

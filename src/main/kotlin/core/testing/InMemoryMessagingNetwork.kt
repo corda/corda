@@ -6,8 +6,8 @@ import com.google.common.util.concurrent.MoreExecutors
 import core.ThreadBox
 import core.crypto.sha256
 import core.messaging.*
+import core.node.NodeInfo
 import core.node.services.DummyTimestampingAuthority
-import core.node.services.NodeInfo
 import core.node.services.NodeTimestamperService
 import core.node.services.ServiceType
 import core.utilities.loggerFor
