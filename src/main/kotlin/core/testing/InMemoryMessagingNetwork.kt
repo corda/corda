@@ -89,15 +89,15 @@ class InMemoryMessagingNetwork {
         if (calc != null && recipients is SingleMessageRecipient) {
             // Inject some artificial latency.
             timer.schedule(calc.between(from.myAddress, recipients).toMillis()) {
-                msgSendInternal(from, message, recipients)
+                msgSendInternal(message, recipients)
             }
         } else {
-            msgSendInternal(from, message, recipients)
+            msgSendInternal(message, recipients)
         }
         _allMessages.onNext(Triple(from.myAddress, message, recipients))
     }
 
-    private fun msgSendInternal(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
+    private fun msgSendInternal(message: Message, recipients: MessageRecipients) {
         when (recipients) {
             is Handle -> getQueueForHandle(recipients).add(message)
 

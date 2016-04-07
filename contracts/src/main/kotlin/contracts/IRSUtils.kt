@@ -45,8 +45,8 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
 val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 
 /**
- * Interface representing an agreement that exposes various attributes that are common and allow
- * implementation of general protocols that manipulate many agreement types
+ * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
+ * implementation of general protocols that manipulate many agreement types.
  */
 interface DealState : LinearState {
 
@@ -56,7 +56,7 @@ interface DealState : LinearState {
     /** Exposes the Parties involved in a generic way */
     val parties: Array<Party>
 
-    /** Allow swapping in of potentially transaction specific public keys prior to signing */
+    // TODO: This works by editing the keys used by a Party which is invalid.
     fun withPublicKey(before: Party, after: PublicKey): DealState
 
     /**

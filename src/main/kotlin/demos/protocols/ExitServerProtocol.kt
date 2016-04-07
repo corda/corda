@@ -3,8 +3,8 @@ package demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import core.node.Node
-import core.node.services.NodeInfo
 import core.node.services.MockNetworkMapCache
+import core.node.services.NodeInfo
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import java.util.concurrent.TimeUnit
@@ -37,7 +37,7 @@ object ExitServerProtocol {
      * This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
      * we do not support coercing numeric types in the reflective search for matching constructors
      */
-    class Broadcast(val exitCode: Integer) : ProtocolLogic<Boolean>() {
+    class Broadcast(@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") val exitCode: Integer) : ProtocolLogic<Boolean>() {
 
         @Suspendable
         override fun call(): Boolean {

@@ -48,7 +48,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
      */
     override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
         get() = mutex.locked { wallet }.let { wallet ->
-            wallet.states.filter { it.state is LinearState }.associateBy { (it.state as LinearState).thread }.mapValues { it.value as StateAndRef<LinearState> }
+            wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.thread }.mapValues { it.value }
         }
 
     override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {

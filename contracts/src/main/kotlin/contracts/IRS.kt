@@ -453,7 +453,6 @@ class InterestRateSwap() : Contract {
             val calculation: Calculation,
             val common: Common
     ) : FixableDealState {
-
         override val programRef = IRS_PROGRAM_ID
         override val thread = SecureHash.sha256(common.tradeID)
         override val ref = common.tradeID
@@ -465,7 +464,8 @@ class InterestRateSwap() : Contract {
         override val parties: Array<Party>
             get() = arrayOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
-        override fun withPublicKey(before: Party, after: PublicKey): State {
+        // TODO: This changing of the public key violates the assumption that Party is a fixed identity key.
+        override fun withPublicKey(before: Party, after: PublicKey): DealState {
             val newParty = Party(before.name, after)
             if (before == fixedLeg.fixedRatePayer) {
                 val deal = copy()

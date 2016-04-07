@@ -16,12 +16,13 @@ open class StorageServiceImpl(attachments: AttachmentStorage,
                               // This parameter is for unit tests that want to observe operation details.
                               val recordingAs: (String) -> String = { tableName -> "" })
 : StorageService {
-    protected val tables = HashMap<String, MutableMap<Any, Any>>()
+    protected val tables = HashMap<String, MutableMap<*, *>>()
 
     private fun <K, V> getMapOriginal(tableName: String): MutableMap<K, V> {
         synchronized(tables) {
+            @Suppress("UNCHECKED_CAST")
             return tables.getOrPut(tableName) {
-                recorderWrap(Collections.synchronizedMap(HashMap<Any, Any>()), tableName);
+                recorderWrap(Collections.synchronizedMap(HashMap<K, V>()), tableName)
             } as MutableMap<K, V>
         }
     }

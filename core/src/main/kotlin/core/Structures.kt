@@ -18,7 +18,6 @@ import java.io.OutputStream
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
 import java.util.jar.JarInputStream
 
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
@@ -74,6 +73,11 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
 data class StateAndRef<out T : ContractState>(val state: T, val ref: StateRef)
+
+/** Filters a list of [StateAndRef] objects according to the type of the states */
+inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
+    return mapNotNull { if (it.state is T) StateAndRef(it.state, it.ref) else null }
+}
 
 /** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
 data class Party(val name: String, val owningKey: PublicKey)  {

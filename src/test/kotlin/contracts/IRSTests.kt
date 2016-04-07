@@ -327,18 +327,8 @@ class IRSTests {
     }
 
     @Test
-    fun `more rate tests`() {
-        val r1 = FixedRate(PercentageRatioUnit("10"))
-        val r2 = FixedRate(PercentageRatioUnit("10"))
-
-        // TODO: r1+r2 ? Do we want to allow these.
-        // TODO: r1*r2 ?
-    }
-
-    @Test
     fun `expression calculation testing`() {
         val dummyIRS = singleIRS()
-        val v = FixedRate(PercentageRatioUnit("4.5"))
         val stuffToPrint: ArrayList<String> = arrayListOf(
                 "fixedLeg.notional.pennies",
                 "fixedLeg.fixedRate.ratioUnit",

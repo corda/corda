@@ -239,7 +239,7 @@ object TwoPartyDealProtocol {
         private fun receiveAndValidateHandshake(): Handshake<U> {
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
-            val handshake = receive(DEAL_TOPIC, sessionID, Handshake::class.java)
+            val handshake = receive<Handshake<U>>(DEAL_TOPIC, sessionID)
 
             progressTracker.currentStep = VERIFYING
             handshake.validate {
@@ -267,7 +267,7 @@ object TwoPartyDealProtocol {
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
-        @Suspendable protected abstract fun validateHandshake(handshake: Handshake<*>): Handshake<U>
+        @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
         @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKey>>
     }
 
@@ -291,10 +291,10 @@ object TwoPartyDealProtocol {
                                        override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<T>(otherSide, timestampingAuthority, sessionID) {
 
         @Suspendable
-        override fun validateHandshake(handshake: Handshake<*>): Handshake<T> {
-            with(handshake as Handshake<T>) {
+        override fun validateHandshake(handshake: Handshake<T>): Handshake<T> {
+            with(handshake) {
                 // What is the seller trying to sell us?
-                val deal = handshake.payload
+                val deal: T = handshake.payload
                 val otherKey = handshake.publicKey
                 logger.trace { "Got deal request for: ${handshake.payload}" }
 
@@ -308,7 +308,10 @@ object TwoPartyDealProtocol {
                 val myOldParty = deal.parties.single { it.name == myName }
                 val theirOldParty = deal.parties.single { it.name != myName }
 
-                val newDeal = deal.withPublicKey(myOldParty, serviceHub.keyManagementService.freshKey().public).withPublicKey(theirOldParty, otherKey) as T
+                @Suppress("UNCHECKED_CAST")
+                val newDeal = deal.
+                        withPublicKey(myOldParty, serviceHub.keyManagementService.freshKey().public).
+                        withPublicKey(theirOldParty, otherKey) as T
 
                 return handshake.copy(payload = newDeal)
             }
@@ -341,8 +344,8 @@ object TwoPartyDealProtocol {
                                            override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<StateRef>(otherSide, timestampingAuthority, sessionID) {
 
         @Suspendable
-        override fun validateHandshake(handshake: Handshake<*>): Handshake<StateRef> {
-            with(handshake as Handshake<StateRef>) {
+        override fun validateHandshake(handshake: Handshake<StateRef>): Handshake<StateRef> {
+            with(handshake) {
                 logger.trace { "Got fixing request for: ${dealToFix.state}" }
 
                 // Check the start message for acceptability.
@@ -363,11 +366,12 @@ object TwoPartyDealProtocol {
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
             val myName = serviceHub.storageService.myLegalIdentity.name
-            val deal = dealToFix.state
+            val deal: T = dealToFix.state
             val myOldParty = deal.parties.single { it.name == myName }
             val theirOldParty = deal.parties.single { it.name != myName }
             val myNewKey = serviceHub.keyManagementService.freshKey().public
 
+            @Suppress("UNCHECKED_CAST")
             val newDeal = deal.withPublicKey(myOldParty, myNewKey).withPublicKey(theirOldParty, handshake.publicKey) as T
             val oldRef = dealToFix.ref
 

@@ -2,10 +2,14 @@ package api
 
 import com.google.common.util.concurrent.ListenableFuture
 import contracts.DealState
-import core.*
+import core.ContractState
+import core.SignedTransaction
+import core.StateRef
+import core.WireTransaction
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.node.AbstractNode
+import core.node.services.linearHeadsOfType
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.utilities.ANSIProgressRenderer
@@ -28,8 +32,8 @@ class APIServerImpl(val node: AbstractNode): APIServer {
                 return states.values.map { it.ref }
             }
             else if (query.criteria is StatesQuery.Criteria.Deal) {
-                val states = node.services.walletService.linearHeadsInstanceOf(DealState::class.java) {
-                    it.ref == query.criteria.ref
+                val states = node.services.walletService.linearHeadsOfType<DealState>().filterValues {
+                    it.state.ref == query.criteria.ref
                 }
                 return states.values.map { it.ref }
             }

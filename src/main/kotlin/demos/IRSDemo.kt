@@ -16,14 +16,14 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
-import core.node.services.NodeInfo
 import core.node.services.MockNetworkMapCache
+import core.node.services.NodeInfo
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
-import joptsimple.OptionParser
 import demos.protocols.AutoOfferProtocol
 import demos.protocols.ExitServerProtocol
 import demos.protocols.UpdateBusinessDayProtocol
+import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -122,8 +122,10 @@ fun main(args: Array<String>) {
     UpdateBusinessDayProtocol.Handler.register(node)
     ExitServerProtocol.Handler.register(node)
 
-    while(true) {
-        Thread.sleep(1000L)
+    try {
+        while (true) Thread.sleep(Long.MAX_VALUE)
+    } catch(e: InterruptedException) {
+        node.stop()
     }
     exitProcess(0)
 }

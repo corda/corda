@@ -72,8 +72,12 @@ interface WalletService {
      */
     val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
 
-    fun <T : LinearState> linearHeadsInstanceOf(clazz: Class<T>, predicate: (T) -> Boolean = { true } ): Map<SecureHash, StateAndRef<T>> {
-        return linearHeads.filterValues { clazz.isInstance(it.state) }.filterValues { predicate(it.state as T) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
+    // TODO: When KT-10399 is fixed, rename this and remove the inline version below.
+
+    /** Returns the [linearHeads] only when the type of the state would be considered an 'instanceof' the given type. */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<SecureHash, StateAndRef<T>> {
+        return linearHeads.filterValues { stateType.isInstance(it.state) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
     }
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
@@ -95,17 +99,7 @@ interface WalletService {
     fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
 }
 
-// TODO: Document this
-@Suppress("UNCHECKED_CAST")
-inline fun <reified T : LinearState> WalletService.linearHeadsOfType(): Map<SecureHash, StateAndRef<T>> {
-    return linearHeads.mapNotNull {
-        val s = it.value.state
-        if (s is T)
-            Pair(it.key, it.value as StateAndRef<T>)
-        else
-            null
-    }.toMap()
-}
+inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
