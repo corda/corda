@@ -1,6 +1,7 @@
 package api
 
 import com.google.common.util.concurrent.ListenableFuture
+import contracts.DealState
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
@@ -27,7 +28,7 @@ class APIServerImpl(val node: AbstractNode): APIServer {
                 return states.values.map { it.ref }
             }
             else if (query.criteria is StatesQuery.Criteria.Deal) {
-                val states = node.services.walletService.linearHeadsInstanceOf(LinearState::class.java) {
+                val states = node.services.walletService.linearHeadsInstanceOf(DealState::class.java) {
                     it.ref == query.criteria.ref
                 }
                 return states.values.map { it.ref }
@@ -73,6 +74,7 @@ class APIServerImpl(val node: AbstractNode): APIServer {
                         } else if (args.containsKey(parameter.name)) {
                             val value = args[parameter.name]
                             if (value is Any) {
+                                // TODO consider supporting more complex test here to support coercing numeric/Kotlin types
                                 if (!(parameter.type.javaType as Class<*>).isAssignableFrom(value.javaClass)) {
                                     // Not null and not assignable
                                     break@nextConstructor

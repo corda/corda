@@ -85,8 +85,8 @@ fun main(args: Array<String>) {
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
-    if (listening && config.myLegalName != "Bank of Zurich") {
-        println("The buyer node must have a legal name of 'Bank of Zurich'. Please edit the config file.")
+    if (listening && config.myLegalName != "Bank A") {
+        println("The buyer node must have a legal name of 'Bank A'. Please edit the config file.")
         exitProcess(1)
     }
 

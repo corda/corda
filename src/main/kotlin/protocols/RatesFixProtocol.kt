@@ -11,8 +11,8 @@ package protocols
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
-import core.node.services.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
+import core.node.services.LegallyIdentifiableNode
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import java.math.BigDecimal
@@ -50,7 +50,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     @Suspendable
     override fun call() {
-        progressTracker.currentStep = progressTracker.steps[0]
+        progressTracker.currentStep = progressTracker.steps[1]
         val fix = query()
         progressTracker.currentStep = WORKING
         checkFixIsNearExpected(fix)

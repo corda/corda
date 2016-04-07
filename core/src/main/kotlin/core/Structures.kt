@@ -18,6 +18,7 @@ import java.io.OutputStream
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.util.jar.JarInputStream
 
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
@@ -55,10 +56,6 @@ interface OwnableState : ContractState {
 interface LinearState: ContractState {
     /** Unique thread id within the wallets of all parties */
     val thread: SecureHash
-
-    /** Human readable well known reference (e.g. trade reference) */
-    // TODO we will push this down out of here once we have something more sophisticated and a more powerful query API
-    val ref: String
 
     /** true if this should be tracked by our wallet(s) */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
