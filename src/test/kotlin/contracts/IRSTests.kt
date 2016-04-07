@@ -16,7 +16,7 @@ import java.time.LocalDate
 import java.util.*
 
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
-    return when(irsSelect) {
+    return when (irsSelect) {
         1 -> {
 
             val fixedLeg = InterestRateSwap.FixedLeg(

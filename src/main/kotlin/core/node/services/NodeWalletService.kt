@@ -33,6 +33,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
     private class InnerState {
         var wallet: Wallet = Wallet(emptyList<StateAndRef<OwnableState>>())
     }
+
     private val mutex = ThreadBox(InnerState())
 
     override val currentWallet: Wallet get() = mutex.locked { wallet }
@@ -78,9 +79,9 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
-        return if(state is OwnableState) {
+        return if (state is OwnableState) {
             state.owner in ourKeys
-        } else if(state is LinearState) {
+        } else if (state is LinearState) {
             // It's potentially of interest to the wallet
             state.isRelevant(ourKeys)
         } else {

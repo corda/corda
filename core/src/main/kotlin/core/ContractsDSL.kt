@@ -43,6 +43,7 @@ class Requirements {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
     }
 }
+
 val R = Requirements()
 inline fun <R> requireThat(body: Requirements.() -> R) = R.body()
 

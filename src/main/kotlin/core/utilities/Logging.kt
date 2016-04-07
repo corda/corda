@@ -23,6 +23,7 @@ import kotlin.reflect.KClass
 // Kotlin's string interpolation efficiently: the message is never calculated/concatenated together unless
 // logging at that level is enabled.
 inline fun <reified T : Any> loggerFor(): org.slf4j.Logger = LoggerFactory.getLogger(T::class.java)
+
 inline fun org.slf4j.Logger.trace(msg: () -> String) {
     if (isTraceEnabled) trace(msg())
 }

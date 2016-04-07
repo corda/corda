@@ -8,9 +8,6 @@
 
 package core.node.services
 
-import protocols.FetchAttachmentsProtocol
-import protocols.FetchTransactionsProtocol
-import core.node.services.StorageService
 import core.crypto.SecureHash
 import core.messaging.Message
 import core.messaging.MessagingService
@@ -18,6 +15,8 @@ import core.messaging.SingleMessageRecipient
 import core.messaging.send
 import core.serialization.deserialize
 import core.utilities.loggerFor
+import protocols.FetchAttachmentsProtocol
+import protocols.FetchTransactionsProtocol
 import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
 

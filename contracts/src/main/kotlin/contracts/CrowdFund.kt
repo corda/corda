@@ -63,8 +63,8 @@ class CrowdFund : Contract {
     }
 
     data class Pledge(
-        val owner: PublicKey,
-        val amount: Amount
+            val owner: PublicKey,
+            val amount: Amount
     )
 
 

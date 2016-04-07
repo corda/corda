@@ -52,7 +52,7 @@ interface OwnableState : ContractState {
  *
  * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet
  */
-interface LinearState: ContractState {
+interface LinearState : ContractState {
     /** Unique thread id within the wallets of all parties */
     val thread: SecureHash
 
@@ -80,7 +80,7 @@ inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterSt
 }
 
 /** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
-data class Party(val name: String, val owningKey: PublicKey)  {
+data class Party(val name: String, val owningKey: PublicKey) {
     override fun toString() = name
 
     fun ref(bytes: OpaqueBytes) = PartyReference(this, bytes)
@@ -109,6 +109,7 @@ data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
     init {
         require(pubkeys.isNotEmpty())
     }
+
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = data.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
@@ -117,10 +118,10 @@ data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
-    val signers: List<PublicKey>,
-    /** If any public keys were recognised, the looked up institutions are available here */
-    val signingParties: List<Party>,
-    val value: T
+        val signers: List<PublicKey>,
+        /** If any public keys were recognised, the looked up institutions are available here */
+        val signingParties: List<Party>,
+        val value: T
 )
 
 /**

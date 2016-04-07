@@ -25,7 +25,7 @@ import java.util.concurrent.Callable
 class TransactionGraphSearch(val transactions: Map<SecureHash, SignedTransaction>,
                              val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
     class Query(
-        val withCommandOfType: Class<out CommandData>? = null
+            val withCommandOfType: Class<out CommandData>? = null
     )
 
     var query: Query = Query()

@@ -49,7 +49,7 @@ object UpdateBusinessDayProtocol {
             val sortedParties = otherPartyToDeals.keys.sortedBy { it.identity.name }
             for (party in sortedParties) {
                 val sortedDeals = otherPartyToDeals[party]!!.sortedBy { it.state.ref }
-                for(deal in sortedDeals) {
+                for (deal in sortedDeals) {
                     progressTracker.currentStep = ITERATING_DEALS
                     processDeal(party, deal, date, sessionID)
                 }
@@ -162,7 +162,7 @@ object UpdateBusinessDayProtocol {
 
         @Suspendable
         private fun doNextRecipient(recipient: NodeInfo, message: UpdateBusinessDayMessage) {
-            if(recipient.address is MockNetworkMapCache.MockAddress) {
+            if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages

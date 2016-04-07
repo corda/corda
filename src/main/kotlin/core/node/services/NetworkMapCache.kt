@@ -27,7 +27,7 @@ data class NodeInfo(val address: SingleMessageRecipient, val identity: Party,
  * then be cached by every node and thus a network map can be retrieved given only a single successful peer connection.
  *
  * This interface assumes fast, synchronous access to an in-memory map.
-*/
+ */
 interface NetworkMapCache {
     val timestampingNodes: List<NodeInfo>
     val ratesOracleNodes: List<NodeInfo>
@@ -39,7 +39,7 @@ interface NetworkMapCache {
 
 // TODO: Move this to the test tree once a real network map is implemented and this scaffolding is no longer needed.
 class MockNetworkMapCache : NetworkMapCache {
-    data class MockAddress(val id: String): SingleMessageRecipient
+    data class MockAddress(val id: String) : SingleMessageRecipient
 
     override val timestampingNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
     override val ratesOracleNodes = Collections.synchronizedList(ArrayList<NodeInfo>())

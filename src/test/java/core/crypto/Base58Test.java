@@ -13,11 +13,11 @@ import org.junit.*;
 import java.math.*;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-/** From the bitcoinj library */
+/**
+ * From the bitcoinj library
+ */
 public class Base58Test {
     @Test
     public void testEncode() throws Exception {

@@ -40,12 +40,12 @@ data class Wallet(val states: List<StateAndRef<ContractState>>) {
      * which we have no cash evaluate to null (not present in map), not 0.
      */
     val cashBalances: Map<Currency, Amount> get() = states.
-                // Select the states we own which are cash, ignore the rest, take the amounts.
-                mapNotNull { (it.state as? Cash.State)?.amount }.
-                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-                groupBy { it.currency }.
-                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-                mapValues { it.value.sumOrThrow() }
+            // Select the states we own which are cash, ignore the rest, take the amounts.
+            mapNotNull { (it.state as? Cash.State)?.amount }.
+            // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
+            groupBy { it.currency }.
+            // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
+            mapValues { it.value.sumOrThrow() }
 }
 
 /**
@@ -82,7 +82,7 @@ interface WalletService {
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
         val refsToStates = currentWallet.states.associateBy { it.ref }
-        return refs.associateBy( { it }, { refsToStates[it]?.state } )
+        return refs.associateBy({ it }, { refsToStates[it]?.state })
     }
 
     /**

@@ -26,7 +26,7 @@ class DataUploadServlet : HttpServlet() {
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val node = servletContext.getAttribute("node") as Node
 
-        @Suppress("DEPRECATION")    // Bogus warning due to superclass static method being deprecated.
+        @Suppress("DEPRECATION") // Bogus warning due to superclass static method being deprecated.
         val isMultipart = ServletFileUpload.isMultipartContent(req)
 
         if (!isMultipart) {

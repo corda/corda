@@ -27,7 +27,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 /** If an exception is thrown by the body, rethrows the root cause exception. */
-inline fun <R> rootCauseExceptions(body: () -> R) : R {
+inline fun <R> rootCauseExceptions(body: () -> R): R {
     try {
         return body()
     } catch(e: Exception) {
@@ -40,6 +40,7 @@ object TestUtils {
     val keypair2 = generateKeyPair()
     val keypair3 = generateKeyPair()
 }
+
 // A dummy time at which we will be pretending test transactions are created.
 val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
@@ -107,7 +108,7 @@ infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner =
 infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
 
 // Allows you to write 100.DOLLARS.CASH
-val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1,2,3), this, NullPublicKey)
+val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1, 2, 3), this, NullPublicKey)
 
 class LabeledOutput(val label: String?, val state: ContractState) {
     override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
@@ -120,7 +121,7 @@ infix fun ContractState.label(label: String) = LabeledOutput(label, this)
 abstract class AbstractTransactionForTest {
     protected val attachments = ArrayList<SecureHash>()
     protected val outStates = ArrayList<LabeledOutput>()
-    protected val commands  = ArrayList<Command>()
+    protected val commands = ArrayList<Command>()
 
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, s()).apply { outStates.add(this) }
 
@@ -148,7 +149,8 @@ abstract class AbstractTransactionForTest {
 
     // Forbid patterns like:  transaction { ... transaction { ... } }
     @Deprecated("Cannot nest transactions, use tweak", level = DeprecationLevel.ERROR)
-    fun transaction(body: TransactionForTest.() -> Unit) {}
+    fun transaction(body: TransactionForTest.() -> Unit) {
+    }
 }
 
 // Corresponds to the args to Contract.verify
@@ -180,6 +182,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
 
     // which is uglier?? :)
     infix fun `fails requirement`(msg: String) = rejects(msg)
+
     fun fails_requirement(msg: String) = this.`fails requirement`(msg)
 
     // Use this to create transactions where the output of this transaction is automatically used as an input of
@@ -281,10 +284,14 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         }
 
         @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
-        fun roots(body: Roots.() -> Unit) {}
+        fun roots(body: Roots.() -> Unit) {
+        }
+
         @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
-        fun transaction(body: WireTransactionDSL.() -> Unit) {}
+        fun transaction(body: WireTransactionDSL.() -> Unit) {
+        }
     }
+
     fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
 
     val txns = ArrayList<WireTransaction>()
@@ -304,7 +311,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun labelForTransaction(tx: LedgerTransaction): String? = txnToLabelMap[tx.hash]
 
     @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
-    fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {}
+    fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {
+    }
 
     fun toTransactionGroup() = TransactionGroup(
             txns.map { it.toLedgerTransaction(MockIdentityService, MockStorageService().attachments) }.toSet(),

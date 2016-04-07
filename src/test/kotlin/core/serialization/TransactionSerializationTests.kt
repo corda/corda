@@ -31,7 +31,7 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = TransactionBuilder().withItems(
-            fakeStateRef, outputState, changeState, Command(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
+                fakeStateRef, outputState, changeState, Command(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
 

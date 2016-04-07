@@ -98,6 +98,7 @@ class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : 
                 stream = HashCheckingStream(id, path, stream)
             return stream
         }
+
         override fun equals(other: Any?) = other is Attachment && other.id == id
         override fun hashCode(): Int = id.hashCode()
     }

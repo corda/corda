@@ -51,7 +51,6 @@ class TimestampingProtocol(private val node: NodeInfo,
     }
 
 
-
     @Suspendable
     override fun call(): DigitalSignature.LegallyIdentifiable {
         progressTracker.currentStep = REQUESTING

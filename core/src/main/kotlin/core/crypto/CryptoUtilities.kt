@@ -18,7 +18,10 @@ import java.security.interfaces.ECPublicKey
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
-        init { require(bits.size == 32) }
+        init {
+            require(bits.size == 32)
+        }
+
         override val signatureAlgorithmName: String get() = "SHA256withECDSA"
     }
 
@@ -97,6 +100,7 @@ fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
 fun PrivateKey.signWithECDSA(bitsToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
     return DigitalSignature.WithKey(publicKey, signWithECDSA(bitsToSign).bits)
 }
+
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToSign, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA(bitsToSign.bits, party)
@@ -124,6 +128,7 @@ fun PublicKey.toStringShort(): String {
 
 // Allow Kotlin destructuring:    val (private, public) = keypair
 operator fun KeyPair.component1() = this.private
+
 operator fun KeyPair.component2() = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */

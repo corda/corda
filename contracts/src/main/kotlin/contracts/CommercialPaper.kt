@@ -59,6 +59,7 @@ class CommercialPaper : Contract {
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
         override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
+
         override fun withIssuance(newIssuance: PartyReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)

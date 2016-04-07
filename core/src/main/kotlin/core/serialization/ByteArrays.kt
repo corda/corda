@@ -17,13 +17,15 @@ import java.util.*
  * functionality to Java, but it won't arrive for a few years yet!
  */
 open class OpaqueBytes(val bits: ByteArray) {
-    init { check(bits.isNotEmpty()) }
+    init {
+        check(bits.isNotEmpty())
+    }
 
     companion object {
         fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
     }
 
-    override fun equals(other: Any?): Boolean{
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is OpaqueBytes) return false
         return Arrays.equals(bits, other.bits)

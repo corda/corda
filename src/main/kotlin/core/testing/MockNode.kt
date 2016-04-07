@@ -124,7 +124,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     fun runNetwork(rounds: Int = -1) {
         fun pumpAll() = messagingNetwork.endpoints.map { it.pump(false) }
         if (rounds == -1)
-            while (pumpAll().any { it }) {}
+            while (pumpAll().any { it }) {
+            }
         else
             repeat(rounds) { pumpAll() }
     }

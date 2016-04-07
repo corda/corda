@@ -8,7 +8,6 @@
 
 package core.utilities
 
-import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -24,6 +23,7 @@ class RecordingMap<K, V>(private val wrappedMap: MutableMap<K, V>,
                          private val logger: Logger = loggerFor<RecordingMap<K, V>>()) : MutableMap<K, V> by wrappedMap {
     // If/when Kotlin supports data classes inside sealed classes, that would be preferable to this.
     interface Record
+
     data class Get<K>(val key: K) : Record
     data class Put<K, V>(val key: K, val value: V) : Record
 

@@ -42,7 +42,7 @@ class NodeAttachmentStorageTest {
         val expectedHash = SecureHash.sha256(Files.readAllBytes(testJar))
 
         val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
-        val id =  testJar.use { storage.importAttachment(it) }
+        val id = testJar.use { storage.importAttachment(it) }
         assertEquals(expectedHash, id)
 
         assertNull(storage.openAttachment(SecureHash.randomSHA256()))

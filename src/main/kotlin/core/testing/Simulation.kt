@@ -30,7 +30,7 @@ import java.util.*
  * in a few cities around the world.
  */
 abstract class Simulation(val runAsync: Boolean,
-                      val latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
+                          val latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
     init {
         if (!runAsync && latencyInjector != null)
             throw IllegalArgumentException("The latency injector is only useful when using manual pumping.")
@@ -41,7 +41,7 @@ abstract class Simulation(val runAsync: Boolean,
     // This puts together a mock network of SimulatedNodes.
 
     open class SimulatedNode(dir: Path, config: NodeConfiguration, mockNet: MockNetwork,
-                        withTimestamper: NodeInfo?) : MockNetwork.MockNode(dir, config, mockNet, withTimestamper) {
+                             withTimestamper: NodeInfo?) : MockNetwork.MockNode(dir, config, mockNet, withTimestamper) {
         override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
     }
 
@@ -190,7 +190,8 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    open fun start() {}
+    open fun start() {
+    }
 
     fun stop() {
         network.nodes.forEach { it.stop() }

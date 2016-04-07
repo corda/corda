@@ -68,7 +68,11 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
-    init { metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { _stateMachines.size }) }
+
+    init {
+        metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { _stateMachines.size })
+    }
+
     private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
     private val totalStartedProtocols = metrics.counter("Protocols.Started")
     private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
@@ -90,16 +94,16 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
     // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
     private class Checkpoint(
-        val serialisedFiber: ByteArray,
-        val loggerName: String,
-        val awaitingTopic: String,
-        val awaitingObjectOfType: String   // java class name
+            val serialisedFiber: ByteArray,
+            val loggerName: String,
+            val awaitingTopic: String,
+            val awaitingObjectOfType: String   // java class name
     )
 
     init {
         // Blank out the default uncaught exception handler because we always catch things ourselves, and the default
         // just redundantly prints stack traces to the logs.
-        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->  }
+        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable -> }
         restoreCheckpoints()
     }
 

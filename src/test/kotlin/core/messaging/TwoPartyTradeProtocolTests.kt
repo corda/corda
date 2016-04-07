@@ -135,6 +135,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
             fun pumpAlice() = (aliceNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pump(false)
+
             fun pumpBob() = (bobNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pump(false)
 
             pumpBob()

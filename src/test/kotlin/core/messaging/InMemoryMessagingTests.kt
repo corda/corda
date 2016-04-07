@@ -54,7 +54,8 @@ open class TestWithInMemoryNetwork {
     }
 
     fun runNetwork() {
-        while (pumpAll(false).any { it }) {}
+        while (pumpAll(false).any { it }) {
+        }
     }
 }
 

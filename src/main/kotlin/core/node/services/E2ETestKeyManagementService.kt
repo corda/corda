@@ -8,7 +8,6 @@
 
 package core.node.services
 
-import core.node.services.KeyManagementService
 import core.ThreadBox
 import core.crypto.generateKeyPair
 import java.security.KeyPair
@@ -33,6 +32,7 @@ class E2ETestKeyManagementService : KeyManagementService {
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
     }
+
     private val mutex = ThreadBox(InnerState())
 
     // Accessing this map clones it.

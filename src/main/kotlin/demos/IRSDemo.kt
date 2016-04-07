@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
 
     // The timestamping node runs in the same process as the one that passes null to Node constructor.
-    val timestamperId = if(options.valueOf(timestamperNetAddr).equals(options.valueOf(networkAddressArg))) {
+    val timestamperId = if (options.valueOf(timestamperNetAddr).equals(options.valueOf(networkAddressArg))) {
         null
     } else {
         try {
@@ -86,7 +86,7 @@ fun main(args: Array<String>) {
     }
 
     // The timestamping node runs in the same process as the one that passes null to Node constructor.
-    val rateOracleId = if(options.valueOf(rateOracleNetAddr).equals(options.valueOf(networkAddressArg))) {
+    val rateOracleId = if (options.valueOf(rateOracleNetAddr).equals(options.valueOf(networkAddressArg))) {
         null
     } else {
         try {
@@ -106,10 +106,10 @@ fun main(args: Array<String>) {
 
     val hostAndPortStrings = options.valuesOf(fakeTradeWithAddr)
     val identityFiles = options.valuesOf(fakeTradeWithIdentityFile)
-    if(hostAndPortStrings.size != identityFiles.size) {
+    if (hostAndPortStrings.size != identityFiles.size) {
         throw IllegalArgumentException("Different number of peer addresses (${hostAndPortStrings.size}) and identities (${identityFiles.size})")
     }
-    for ((hostAndPortString,identityFile) in hostAndPortStrings.zip(identityFiles)) {
+    for ((hostAndPortString, identityFile) in hostAndPortStrings.zip(identityFiles)) {
         try {
             val peerId = nodeInfo(hostAndPortString, identityFile)
             (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(peerId)

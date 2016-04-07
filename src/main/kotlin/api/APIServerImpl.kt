@@ -18,7 +18,7 @@ import java.util.*
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
 
-class APIServerImpl(val node: AbstractNode): APIServer {
+class APIServerImpl(val node: AbstractNode) : APIServer {
 
     override fun serverTime(): LocalDateTime = LocalDateTime.now(node.services.clock)
 
@@ -30,8 +30,7 @@ class APIServerImpl(val node: AbstractNode): APIServer {
             if (query.criteria is StatesQuery.Criteria.AllDeals) {
                 val states = node.services.walletService.linearHeads
                 return states.values.map { it.ref }
-            }
-            else if (query.criteria is StatesQuery.Criteria.Deal) {
+            } else if (query.criteria is StatesQuery.Criteria.Deal) {
                 val states = node.services.walletService.linearHeadsOfType<DealState>().filterValues {
                     it.state.ref == query.criteria.ref
                 }
@@ -66,9 +65,9 @@ class APIServerImpl(val node: AbstractNode): APIServer {
     }
 
     private fun invokeProtocolAsync(type: ProtocolRef, args: Map<String, Any?>): ListenableFuture<out Any?> {
-        if(type is ProtocolClassRef) {
+        if (type is ProtocolClassRef) {
             val clazz = Class.forName(type.className)
-            if(ProtocolLogic::class.java.isAssignableFrom(clazz)) {
+            if (ProtocolLogic::class.java.isAssignableFrom(clazz)) {
                 // TODO for security, check annotated as exposed on API?  Or have PublicProtocolLogic... etc
                 nextConstructor@ for (constructor in clazz.kotlin.constructors) {
                     val params = HashMap<KParameter, Any?>()
@@ -95,7 +94,7 @@ class APIServerImpl(val node: AbstractNode): APIServer {
                     // If we get here then we matched every parameter
                     val protocol = constructor.callBy(params) as ProtocolLogic<*>
                     ANSIProgressRenderer.progressTracker = protocol.progressTracker
-                    val future = node.smm.add("api-call",protocol)
+                    val future = node.smm.add("api-call", protocol)
                     return future
                 }
             }

@@ -82,11 +82,13 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         var running = false
         val sendClients = HashMap<Address, ClientProducer>()
     }
+
     private val mutex = ThreadBox(InnerState())
 
     /** A registration to handle messages of different types */
     inner class Handler(val executor: Executor?, val topic: String,
                         val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+
     private val handlers = CopyOnWriteArrayList<Handler>()
 
     private fun getSendClient(addr: Address): ClientProducer {

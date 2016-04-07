@@ -24,7 +24,7 @@ object ExitServerProtocol {
         fun register(node: Node) {
             node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
                 // Just to validate we got the message
-                if(enabled) {
+                if (enabled) {
                     val message = msg.data.deserialize<ExitMessage>()
                     System.exit(message.exitCode)
                 }
@@ -41,7 +41,7 @@ object ExitServerProtocol {
 
         @Suspendable
         override fun call(): Boolean {
-            if(enabled) {
+            if (enabled) {
                 val rc = exitCode.toInt()
                 val message = ExitMessage(rc)
 
@@ -57,7 +57,7 @@ object ExitServerProtocol {
 
         @Suspendable
         private fun doNextRecipient(recipient: NodeInfo, message: ExitMessage) {
-            if(recipient.address is MockNetworkMapCache.MockAddress) {
+            if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages
