@@ -112,11 +112,6 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
-            // Horrible Gradle/Kryo/Quasar FUBAR workaround: just skip these tests when run under Gradle for now.
-            // TODO: Fix this once Quasar issue 153 is resolved.
-            if (!bobNode.smm.checkpointing)
-                return
-
             val buyerSessionID = random63BitValue()
 
             val aliceFuture = TwoPartyTradeProtocol.runSeller(

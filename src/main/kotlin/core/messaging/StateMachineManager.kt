@@ -73,17 +73,6 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     private val totalStartedProtocols = metrics.counter("Protocols.Started")
     private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
 
-    // This is a workaround for something Gradle does to us during unit tests. It replaces stderr with its own
-    // class that inserts itself into a ThreadLocal. That then gets caught in fiber serialisation, which we don't
-    // want because it can't get recreated properly. It turns out there's no good workaround for this! All the obvious
-    // approaches fail. Pending resolution of https://github.com/puniverse/quasar/issues/153 we just disable
-    // checkpointing when unit tests are run inside Gradle. The right fix is probably to stop Quasar's
-    // bit-too-clever-for-its-own-good ThreadLocal serialisation trick. It already wasted far more time than it can
-    // ever recover.
-    //
-    // TODO: Remove this now that TLS serialisation is fixed.
-    val checkpointing: Boolean get() = !System.err.javaClass.name.contains("LinePerThreadBufferingOutputStream")
-
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
     fun <T> findStateMachines(klass: Class<out ProtocolLogic<T>>): List<Pair<ProtocolLogic<T>, ListenableFuture<T>>> {
         synchronized(_stateMachines) {
@@ -111,9 +100,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         // Blank out the default uncaught exception handler because we always catch things ourselves, and the default
         // just redundantly prints stack traces to the logs.
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->  }
-
-        if (checkpointing)
-            restoreCheckpoints()
+        restoreCheckpoints()
     }
 
     /** Reads the database map and resurrects any serialised state machines. */
@@ -235,8 +222,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                                                  serialisedFiber: ByteArray) {
         val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
-        if (checkpointing)
-            persistCheckpoint(prevCheckpointKey, curPersistedBytes)
+        persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)
