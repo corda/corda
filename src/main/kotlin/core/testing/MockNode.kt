@@ -10,6 +10,7 @@ import core.node.NodeConfiguration
 import core.node.services.FixedIdentityService
 import core.node.services.NodeInfo
 import core.node.services.PhysicalLocation
+import core.node.services.ServiceType
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -90,7 +91,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: NodeInfo?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory): MockNode {
+    fun createNode(withTimestamper: NodeInfo?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
+                   advertisedServices: Set<ServiceType> = emptySet()): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -103,6 +105,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val nearestCity: String = "Atlantis"
         }
         val node = nodeFactory.create(path, config, this, withTimestamper).start()
+        node.info.advertisedServices = advertisedServices
         _nodes.add(node)
         return node
     }
@@ -127,7 +130,10 @@ class MockNetwork(private val threadPerNode: Boolean = false,
      */
     fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
-        return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].info, -1, nodeFactory))
+        return Pair(
+                createNode(null, -1, nodeFactory, setOf(ServiceType.Timestamping)),
+                createNode(nodes[0].info, -1, nodeFactory)
+        )
     }
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }

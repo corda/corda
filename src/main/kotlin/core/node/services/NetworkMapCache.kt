@@ -9,7 +9,8 @@ import java.util.*
  * Info about a network node that acts on behalf of some sort of verified identity.
  */
 data class NodeInfo(val address: SingleMessageRecipient, val identity: Party,
-                    val physicalLocation: PhysicalLocation? = null)
+                    val physicalLocation: PhysicalLocation? = null,
+                    var advertisedServices: Set<ServiceType> = emptySet())
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
