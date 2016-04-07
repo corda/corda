@@ -3,10 +3,10 @@ package core.testing
 import com.google.common.util.concurrent.ListenableFuture
 import core.node.NodeConfiguration
 import core.node.services.CityDatabase
-import core.node.services.MockNetworkMapCache
 import core.node.services.NodeInfo
 import core.node.services.PhysicalLocation
 import core.protocols.ProtocolLogic
+import core.testing.MockNetworkMapCache
 import core.then
 import core.utilities.ProgressTracker
 import rx.Observable

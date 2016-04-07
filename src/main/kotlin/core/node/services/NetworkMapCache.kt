@@ -30,21 +30,6 @@ interface NetworkMapCache {
     fun nodeForPartyName(name: String): NodeInfo? = partyNodes.singleOrNull { it.identity.name == name }
 }
 
-// TODO: Move this to the test tree once a real network map is implemented and this scaffolding is no longer needed.
-class MockNetworkMapCache : NetworkMapCache {
-    data class MockAddress(val id: String) : SingleMessageRecipient
-
-    override val timestampingNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
-    override val ratesOracleNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
-    override val partyNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
-    override val regulators = Collections.synchronizedList(ArrayList<NodeInfo>())
-
-    init {
-        partyNodes.add(NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C"))))
-        partyNodes.add(NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D"))))
-    }
-}
-
 /** A latitude/longitude pair. */
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {

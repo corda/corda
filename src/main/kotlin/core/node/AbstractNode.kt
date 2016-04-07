@@ -15,6 +15,7 @@ import core.messaging.StateMachineManager
 import core.node.services.*
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.testing.MockNetworkMapCache
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
