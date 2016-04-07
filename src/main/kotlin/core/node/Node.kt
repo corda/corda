@@ -15,7 +15,7 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.DataUploadServlet
 import core.utilities.loggerFor
@@ -52,7 +52,7 @@ class ConfigurationException(message: String) : Exception(message)
  * @param clock The clock used within the node and by all protocols etc
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
-           timestamperAddress: LegallyIdentifiableNode?,
+           timestamperAddress: NodeInfo?,
            clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, timestamperAddress, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */

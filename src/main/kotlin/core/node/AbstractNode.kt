@@ -44,7 +44,7 @@ import java.util.concurrent.Executors
  * A base node implementation that can be customised either for production (with real implementations that do real
  * I/O), or a mock implementation suitable for unit test environments.
  */
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: LegallyIdentifiableNode?, val platformClock: Clock) {
+abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: NodeInfo?, val platformClock: Clock) {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -63,7 +63,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
-        override val networkMapService: NetworkMapService = MockNetworkMapService()
+        override val networkMapCache: NetworkMapCache = MockNetworkMapCache()
         override val storageService: StorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -72,8 +72,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val clock: Clock get() = platformClock
     }
 
-    val legallyIdentifiableAddress: LegallyIdentifiableNode by lazy {
-        LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity, findMyLocation())
+    val info: NodeInfo by lazy {
+        NodeInfo(net.myAddress, storage.myLegalIdentity, findMyLocation())
     }
 
     protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
@@ -122,9 +122,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             timestamperAddress
         } else {
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
-            LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
+            NodeInfo(net.myAddress, storage.myLegalIdentity)
         }
-        (services.networkMapService as MockNetworkMapService).timestampingNodes.add(tsid)
+        (services.networkMapCache as MockNetworkMapCache).timestampingNodes.add(tsid)
 
         identity = makeIdentityService()
 

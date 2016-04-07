@@ -3,8 +3,8 @@ package demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import core.node.Node
-import core.node.services.LegallyIdentifiableNode
-import core.node.services.MockNetworkMapService
+import core.node.services.NodeInfo
+import core.node.services.MockNetworkMapCache
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import java.util.concurrent.TimeUnit
@@ -45,7 +45,7 @@ object ExitServerProtocol {
                 val rc = exitCode.toInt()
                 val message = ExitMessage(rc)
 
-                for (recipient in serviceHub.networkMapService.partyNodes) {
+                for (recipient in serviceHub.networkMapCache.partyNodes) {
                     doNextRecipient(recipient, message)
                 }
                 // Sleep a little in case any async message delivery to other nodes needs to happen
@@ -56,8 +56,8 @@ object ExitServerProtocol {
         }
 
         @Suspendable
-        private fun doNextRecipient(recipient: LegallyIdentifiableNode, message: ExitMessage) {
-            if(recipient.address is MockNetworkMapService.MockAddress) {
+        private fun doNextRecipient(recipient: NodeInfo, message: ExitMessage) {
+            if(recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages

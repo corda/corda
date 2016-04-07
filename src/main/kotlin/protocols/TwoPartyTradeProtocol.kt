@@ -17,7 +17,7 @@ import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import core.utilities.trace
@@ -52,14 +52,14 @@ import java.time.Instant
 object TwoPartyTradeProtocol {
     val TRADE_TOPIC = "platform.trade"
 
-    fun runSeller(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
+    fun runSeller(smm: StateMachineManager, timestampingAuthority: NodeInfo,
                   otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
                   myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = Seller(otherSide, timestampingAuthority, assetToSell, price, myKeyPair, buyerSessionID)
         return smm.add("${TRADE_TOPIC}.seller", seller)
     }
 
-    fun runBuyer(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
+    fun runBuyer(smm: StateMachineManager, timestampingAuthority: NodeInfo,
                  otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
                  sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = Buyer(otherSide, timestampingAuthority.identity, acceptablePrice, typeToBuy, sessionID)
@@ -82,7 +82,7 @@ object TwoPartyTradeProtocol {
     class SignaturesFromSeller(val timestampAuthoritySig: DigitalSignature.WithKey, val sellerSig: DigitalSignature.WithKey)
 
     open class Seller(val otherSide: SingleMessageRecipient,
-                      val timestampingAuthority: LegallyIdentifiableNode,
+                      val timestampingAuthority: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount,
                       val myKeyPair: KeyPair,

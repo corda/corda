@@ -12,7 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.DigitalSignature
 import core.messaging.SingleMessageRecipient
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import java.math.BigDecimal
@@ -29,7 +29,7 @@ import java.util.*
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
 open class RatesFixProtocol(protected val tx: TransactionBuilder,
-                            private val oracle: LegallyIdentifiableNode,
+                            private val oracle: NodeInfo,
                             private val fixOf: FixOf,
                             private val expectedRate: BigDecimal,
                             private val rateTolerance: BigDecimal) : ProtocolLogic<Unit>() {

@@ -16,7 +16,7 @@ import core.messaging.SingleMessageRecipient
 import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.services.FixedIdentityService
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.node.services.PhysicalLocation
 import core.utilities.loggerFor
 import org.slf4j.Logger
@@ -54,18 +54,18 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory {
         fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                   timestamperAddr: LegallyIdentifiableNode?): MockNode
+                   timestamperAddr: NodeInfo?): MockNode
     }
 
     object DefaultFactory : Factory {
         override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                            timestamperAddr: LegallyIdentifiableNode?): MockNode {
+                            timestamperAddr: NodeInfo?): MockNode {
             return MockNode(dir, config, network, timestamperAddr)
         }
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        withTimestamper: LegallyIdentifiableNode?, val forcedID: Int = -1) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
+                        withTimestamper: NodeInfo?, val forcedID: Int = -1) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: ExecutorService =
                 if (mockNet.threadPerNode)
@@ -96,7 +96,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: LegallyIdentifiableNode?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory): MockNode {
+    fun createNode(withTimestamper: NodeInfo?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -132,7 +132,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
      */
     fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
-        return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].legallyIdentifiableAddress, -1, nodeFactory))
+        return Pair(createNode(null, -1, nodeFactory), createNode(nodes[0].info, -1, nodeFactory))
     }
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
