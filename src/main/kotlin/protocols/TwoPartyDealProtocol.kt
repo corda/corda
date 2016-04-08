@@ -59,8 +59,8 @@ object TwoPartyDealProtocol {
                               override val progressTracker: ProgressTracker = Primary.tracker()) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
-            object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal from other")
-            object VERIFYING : ProgressTracker.Step("Verifying transaction proposal from other")
+            object AWAITING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal")
+            object VERIFYING : ProgressTracker.Step("Verifying proposed transaction")
             object SIGNING : ProgressTracker.Step("Signing transaction")
             object TIMESTAMPING : ProgressTracker.Step("Timestamping transaction")
             object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to other party")
@@ -158,7 +158,6 @@ object TwoPartyDealProtocol {
 
         @Suspendable
         private fun timestamp(partialTX: SignedTransaction): DigitalSignature.LegallyIdentifiable {
-            progressTracker.childrenFor[TIMESTAMPING] = TimestampingProtocol.tracker()
             progressTracker.currentStep = TIMESTAMPING
             return subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits, progressTracker.childrenFor[TIMESTAMPING]!!))
         }
@@ -333,7 +332,14 @@ object TwoPartyDealProtocol {
                                            timestampingAuthority: Party,
                                            val dealToFix: StateAndRef<T>,
                                            sessionID: Long,
-                                           override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<StateRef>(otherSide, timestampingAuthority, sessionID) {
+                                           val replacementProgressTracker: ProgressTracker? = null) : Secondary<StateRef>(otherSide, timestampingAuthority, sessionID) {
+        private val ratesFixTracker = RatesFixProtocol.tracker(dealToFix.state.nextFixingOf()!!.name)
+
+        override val progressTracker: ProgressTracker = replacementProgressTracker ?: createTracker()
+
+        fun createTracker(): ProgressTracker = Secondary.tracker().apply {
+            childrenFor[SIGNING] = ratesFixTracker
+        }
 
         @Suspendable
         override fun validateHandshake(handshake: Handshake<StateRef>): Handshake<StateRef> {
@@ -369,7 +375,6 @@ object TwoPartyDealProtocol {
 
             val ptx = TransactionBuilder()
             val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0], fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
-
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, oldRef, fix)
@@ -378,7 +383,6 @@ object TwoPartyDealProtocol {
                     // to have one.
                     ptx.setTime(serviceHub.clock.instant(), timestampingAuthority, 30.seconds)
                 }
-
             }
             subProtocol(addFixing)
 
