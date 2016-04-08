@@ -20,7 +20,7 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
-import core.node.services.LegallyIdentifiableNode
+import core.node.services.NodeInfo
 import core.node.services.NodeAttachmentService
 import core.node.services.NodeWalletService
 import core.protocols.ProtocolLogic
@@ -85,8 +85,8 @@ fun main(args: Array<String>) {
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
-    if (listening && config.myLegalName != "Bank of Zurich") {
-        println("The buyer node must have a legal name of 'Bank of Zurich'. Please edit the config file.")
+    if (listening && config.myLegalName != "Bank A") {
+        println("The buyer node must have a legal name of 'Bank A'. Please edit the config file.")
         exitProcess(1)
     }
 
@@ -95,7 +95,7 @@ fun main(args: Array<String>) {
         val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(timestamperIdentityFile))
         val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
-        LegallyIdentifiableNode(ArtemisMessagingService.makeRecipient(addr), party)
+        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party)
     } else null
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId).start() }
@@ -163,7 +163,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path) : ProtocolLogic
                 progressTracker.currentStep = STARTING_BUY
                 send("test.junktrade", newPartnerAddr, 0, sessionID)
 
-                val tsa = serviceHub.networkMapService.timestampingNodes[0]
+                val tsa = serviceHub.networkMapCache.timestampingNodes[0]
                 val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, tsa.identity, 1000.DOLLARS,
                         CommercialPaper.State::class.java, sessionID)
                 val tradeTX: SignedTransaction = subProtocol(buyer)
@@ -222,7 +222,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         progressTracker.currentStep = SELF_ISSUING
 
-        val tsa = serviceHub.networkMapService.timestampingNodes[0]
+        val tsa = serviceHub.networkMapCache.timestampingNodes[0]
         val cpOwnerKey = serviceHub.keyManagementService.freshKey()
         val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, tsa)
 
@@ -236,7 +236,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
     }
 
     @Suspendable
-    fun selfIssueSomeCommercialPaper(ownedBy: PublicKey, tsa: LegallyIdentifiableNode): StateAndRef<CommercialPaper.State> {
+    fun selfIssueSomeCommercialPaper(ownedBy: PublicKey, tsa: NodeInfo): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
         val keyPair = generateKeyPair()
         val party = Party("Bank of London", keyPair.public)

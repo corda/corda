@@ -13,7 +13,6 @@ import contracts.Cash
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
-import core.node.services.NetworkMapService
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -73,8 +72,8 @@ interface WalletService {
      */
     val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
 
-    fun <T : LinearState> linearHeadsInstanceOf(clazz: Class<T>, predicate: (T) -> Boolean = { true } ): Map<SecureHash, StateAndRef<LinearState>> {
-        return linearHeads.filterValues { clazz.isInstance(it.state) }.filterValues { predicate(it.state as T) }
+    fun <T : LinearState> linearHeadsInstanceOf(clazz: Class<T>, predicate: (T) -> Boolean = { true } ): Map<SecureHash, StateAndRef<T>> {
+        return linearHeads.filterValues { clazz.isInstance(it.state) }.filterValues { predicate(it.state as T) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
     }
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
@@ -94,6 +93,18 @@ interface WalletService {
 
     /** Same as notifyAll but with a single transaction. */
     fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
+}
+
+// TODO: Document this
+@Suppress("UNCHECKED_CAST")
+inline fun <reified T : LinearState> WalletService.linearHeadsOfType(): Map<SecureHash, StateAndRef<T>> {
+    return linearHeads.mapNotNull {
+        val s = it.value.state
+        if (s is T)
+            Pair(it.key, it.value as StateAndRef<T>)
+        else
+            null
+    }.toMap()
 }
 
 /**
@@ -156,7 +167,7 @@ interface ServiceHub {
     val identityService: IdentityService
     val storageService: StorageService
     val networkService: MessagingService
-    val networkMapService: NetworkMapService
+    val networkMapCache: NetworkMapCache
     val monitoringService: MonitoringService
     val clock: Clock
 

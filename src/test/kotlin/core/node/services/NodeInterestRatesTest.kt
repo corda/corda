@@ -41,9 +41,17 @@ class NodeInterestRatesTest {
 
     @Test fun `query with one success and one missing`() {
         val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-19 1M")
+        val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
         val e = assertFailsWith<NodeInterestRates.UnknownFix> { service.query(listOf(q1, q2)) }
         assertEquals(e.fix, q2)
+    }
+
+    @Test fun `query successfully with one date beyond`() {
+        val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-19 1M")
+        val res = service.query(listOf(q))
+        assertEquals(1, res.size)
+        assertEquals("0.678".bd, res[0].value)
+        assertEquals(q, res[0].of)
     }
 
     @Test fun `empty query`() {
@@ -85,7 +93,7 @@ class NodeInterestRatesTest {
 
         val tx = TransactionBuilder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.legallyIdentifiableAddress, fixOf, "0.675".bd, "0.1".bd)
+        val protocol = RatesFixProtocol(tx, n2.info, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
         val future = n1.smm.add("rates", protocol)
 

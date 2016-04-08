@@ -34,6 +34,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.PublicKey
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.Executors
@@ -42,7 +43,7 @@ import java.util.concurrent.Executors
  * A base node implementation that can be customised either for production (with real implementations that do real
  * I/O), or a mock implementation suitable for unit test environments.
  */
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: LegallyIdentifiableNode?, val platformClock: Clock) {
+abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: NodeInfo?, val platformClock: Clock) {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -61,7 +62,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
-        override val networkMapService: NetworkMapService = MockNetworkMapService()
+        override val networkMapCache: NetworkMapCache = MockNetworkMapCache()
         override val storageService: StorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -70,8 +71,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val clock: Clock get() = platformClock
     }
 
-    val legallyIdentifiableAddress: LegallyIdentifiableNode by lazy {
-        LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity, findMyLocation())
+    val info: NodeInfo by lazy {
+        NodeInfo(net.myAddress, storage.myLegalIdentity, findMyLocation())
     }
 
     protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
@@ -93,20 +94,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         smm = StateMachineManager(services, serverThread)
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
-        makeInterestRateOracleService()
+        makeInterestRatesOracleService()
         api = APIServerImpl(this)
-
-        // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
-        // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
-        val tsid = if (timestamperAddress != null) {
-            inNodeTimestampingService = null
-            timestamperAddress
-        } else {
-            inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
-            LegallyIdentifiableNode(net.myAddress, storage.myLegalIdentity)
-        }
-        (services.networkMapService as MockNetworkMapService).timestampingNodes.add(tsid)
-
+        makeTimestampingService(timestamperAddress)
         identity = makeIdentityService()
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
@@ -116,20 +106,50 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return this
     }
 
-    protected fun makeInterestRateOracleService() {
-        // Constructing the service registers message handlers that ensure the service won't be garbage collected.
+    private fun makeTimestampingService(timestamperAddress: NodeInfo?) {
+        // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
+        // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
+        val tsid = if (timestamperAddress != null) {
+            inNodeTimestampingService = null
+            timestamperAddress
+        } else {
+            inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
+            NodeInfo(net.myAddress, storage.myLegalIdentity)
+        }
+        (services.networkMapCache as MockNetworkMapCache).timestampingNodes.add(tsid)
+    }
+
+    lateinit var interestRatesService: NodeInterestRates.Service
+
+    open protected fun makeInterestRatesOracleService() {
         // TODO: Once the service has data, automatically register with the network map service (once built).
-        _servicesThatAcceptUploads += NodeInterestRates.Service(this)
+        interestRatesService = NodeInterestRates.Service(this)
+        _servicesThatAcceptUploads += interestRatesService
     }
 
     protected open fun makeIdentityService(): IdentityService {
-        // We don't have any identity infrastructure right now, so we just throw together the only two identities we
-        // know about: our own, and the identity of the remote timestamper node (if any).
-        val knownIdentities = if (timestamperAddress != null)
+        // We don't have any identity infrastructure right now, so we just throw together the only identities we
+        // know about: our own, the identity of the remote timestamper node (if any), plus whatever is in the
+        // network map.
+        //
+        // TODO: All this will be replaced soon enough.
+        val fixedIdentities = if (timestamperAddress != null)
             listOf(storage.myLegalIdentity, timestamperAddress.identity)
         else
             listOf(storage.myLegalIdentity)
-        return FixedIdentityService(knownIdentities)
+
+        return object : IdentityService {
+            private val identities: List<Party> get() = fixedIdentities + services.networkMapCache.partyNodes.map { it.identity }
+            private val keyToParties: Map<PublicKey, Party> get() = identities.associateBy { it.owningKey }
+            private val nameToParties: Map<String, Party> get() = identities.associateBy { it.name }
+
+            override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
+            override fun partyFromName(name: String): Party? = nameToParties[name]
+
+            override fun toString(): String {
+                return identities.joinToString { it.name }
+            }
+        }
     }
 
     open fun stop() {

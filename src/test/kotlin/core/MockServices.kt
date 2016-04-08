@@ -11,12 +11,10 @@ package core
 import com.codahale.metrics.MetricRegistry
 import core.crypto.*
 import core.messaging.MessagingService
-import core.node.services.MockNetworkMapService
-import core.node.services.NetworkMapService
 import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
-import core.testutils.TEST_KEYS_TO_CORP_MAP
+import core.testutils.MockIdentityService
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
 import java.io.ByteArrayInputStream
@@ -51,10 +49,6 @@ class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.syste
 }
 
 val DUMMY_TIMESTAMPER = DummyTimestamper()
-
-object MockIdentityService : IdentityService {
-    override fun partyFromKey(key: PublicKey): Party? = TEST_KEYS_TO_CORP_MAP[key]
-}
 
 class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementService {
     override val keys: MutableMap<PublicKey, PrivateKey>
@@ -124,7 +118,7 @@ class MockServices(
         val net: MessagingService? = null,
         val identity: IdentityService? = MockIdentityService,
         val storage: StorageService? = MockStorageService(),
-        val networkMap: NetworkMapService? = MockNetworkMapService(),
+        val networkMap: NetworkMapCache? = MockNetworkMapCache(),
         val overrideClock: Clock? = Clock.systemUTC()
 ) : ServiceHub {
     override val walletService: WalletService
@@ -135,7 +129,7 @@ class MockServices(
         get() = identity ?: throw UnsupportedOperationException()
     override val networkService: MessagingService
         get() = net ?: throw UnsupportedOperationException()
-    override val networkMapService: NetworkMapService
+    override val networkMapCache: NetworkMapCache
         get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()

@@ -12,9 +12,9 @@ import co.paralleluniverse.fibers.Suspendable
 import core.Party
 import core.WireTransaction
 import core.crypto.DigitalSignature
-import core.node.services.LegallyIdentifiableNode
 import core.messaging.MessageRecipients
 import core.messaging.StateMachineManager
+import core.node.services.NodeInfo
 import core.node.services.NodeTimestamperService
 import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic
@@ -31,11 +31,11 @@ import core.utilities.ProgressTracker
  * the built transaction. Please be aware that this will block, meaning it should not be used on a thread that is handling
  * a network message: use it only from spare application threads that don't have to respond to anything.
  */
-class TimestampingProtocol(private val node: LegallyIdentifiableNode,
+class TimestampingProtocol(private val node: NodeInfo,
                            private val wtxBytes: SerializedBytes<WireTransaction>,
                            override val progressTracker: ProgressTracker = TimestampingProtocol.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
 
-    class Client(private val stateMachineManager: StateMachineManager, private val node: LegallyIdentifiableNode) : TimestamperService {
+    class Client(private val stateMachineManager: StateMachineManager, private val node: NodeInfo) : TimestamperService {
         override val identity: Party = node.identity
 
         override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {

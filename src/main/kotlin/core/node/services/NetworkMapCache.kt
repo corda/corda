@@ -13,9 +13,11 @@ import core.crypto.DummyPublicKey
 import core.messaging.SingleMessageRecipient
 import java.util.*
 
-/** Info about a network node that has operated by some sort of verified identity. */
-data class LegallyIdentifiableNode(val address: SingleMessageRecipient, val identity: Party,
-                                   val physicalLocation: PhysicalLocation? = null)
+/**
+ * Info about a network node that acts on behalf of some sort of verified identity.
+ */
+data class NodeInfo(val address: SingleMessageRecipient, val identity: Party,
+                    val physicalLocation: PhysicalLocation? = null)
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -26,25 +28,27 @@ data class LegallyIdentifiableNode(val address: SingleMessageRecipient, val iden
  *
  * This interface assumes fast, synchronous access to an in-memory map.
 */
-interface NetworkMapService {
-    val timestampingNodes: List<LegallyIdentifiableNode>
-    val ratesOracleNodes: List<LegallyIdentifiableNode>
-    val partyNodes: List<LegallyIdentifiableNode>
+interface NetworkMapCache {
+    val timestampingNodes: List<NodeInfo>
+    val ratesOracleNodes: List<NodeInfo>
+    val partyNodes: List<NodeInfo>
+    val regulators: List<NodeInfo>
 
-    fun nodeForPartyName(name: String): LegallyIdentifiableNode? = partyNodes.singleOrNull { it.identity.name == name }
+    fun nodeForPartyName(name: String): NodeInfo? = partyNodes.singleOrNull { it.identity.name == name }
 }
 
 // TODO: Move this to the test tree once a real network map is implemented and this scaffolding is no longer needed.
-class MockNetworkMapService : NetworkMapService {
+class MockNetworkMapCache : NetworkMapCache {
     data class MockAddress(val id: String): SingleMessageRecipient
 
-    override val timestampingNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
-    override val ratesOracleNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
-    override val partyNodes = Collections.synchronizedList(ArrayList<LegallyIdentifiableNode>())
+    override val timestampingNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
+    override val ratesOracleNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
+    override val partyNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
+    override val regulators = Collections.synchronizedList(ArrayList<NodeInfo>())
 
     init {
-        partyNodes.add(LegallyIdentifiableNode(MockAddress("excalibur:8080"), Party("Excalibur", DummyPublicKey("Excalibur"))))
-        partyNodes.add(LegallyIdentifiableNode(MockAddress("another:8080"), Party("ANOther", DummyPublicKey("ANOther"))))
+        partyNodes.add(NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C"))))
+        partyNodes.add(NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D"))))
     }
 }
 

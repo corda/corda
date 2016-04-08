@@ -269,7 +269,7 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
                 calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
                         toSet().
                         map{ parseDateFromString(it) }.
-                        toList()
+                        toList().sorted()
         )
 
         /** Calculates an event schedule that moves events around to ensure they fall on working days. */
@@ -297,6 +297,17 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
             }
             return ret
         }
+    }
+
+    override fun equals(other: Any?): Boolean = if (other is BusinessCalendar) {
+        /** Note this comparison is OK as we ensure they are sorted in getInstance() */
+        this.holidayDates == other.holidayDates
+    } else {
+        false
+    }
+
+    override fun hashCode(): Int {
+        return this.holidayDates.hashCode()
     }
 
     open fun isWorkingDay(date: LocalDate): Boolean =

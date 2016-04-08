@@ -11,7 +11,8 @@ package core.node
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
-import core.messaging.*
+import core.messaging.StateMachineManager
+import core.messaging.TestWithInMemoryNetwork
 import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.serialize
@@ -57,14 +58,14 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         mockServices = MockServices(net = serviceMessaging.second, storage = MockStorageService())
 
         val timestampingNodeID = network.setupTimestampingNode(true).first
-        (mockServices.networkMapService as MockNetworkMapService).timestampingNodes.add(timestampingNodeID)
+        (mockServices.networkMapCache as MockNetworkMapCache).timestampingNodes.add(timestampingNodeID)
         serverKey = timestampingNodeID.identity.owningKey
 
         // And a separate one to be tested directly, to make the unit tests a bit faster.
         service = NodeTimestamperService(serviceMessaging.second, Party("Unit test suite", ALICE), ALICE_KEY)
     }
 
-    class TestPSM(val server: LegallyIdentifiableNode, val now: Instant) : ProtocolLogic<Boolean>() {
+    class TestPSM(val server: NodeInfo, val now: Instant) : ProtocolLogic<Boolean>() {
         @Suspendable
         override fun call(): Boolean {
             val ptx = TransactionBuilder().apply {
@@ -85,7 +86,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         val psm = runNetwork {
             val smm = StateMachineManager(MockServices(net = myMessaging.second), RunOnCallerThread)
             val logName = NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC
-            val psm = TestPSM(mockServices.networkMapService.timestampingNodes[0], clock.instant())
+            val psm = TestPSM(mockServices.networkMapCache.timestampingNodes[0], clock.instant())
             smm.add(logName, psm)
         }
         assertTrue(psm.isDone)

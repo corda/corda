@@ -12,14 +12,14 @@ fi
 if [[ "$mode" == "buyer" ]]; then
     if [ ! -d buyer ]; then
         mkdir buyer
-        echo "myLegalName = Bank of Zurich" >buyer/config
+        echo "myLegalName = Bank A" >buyer/config
     fi
 
     build/install/r3prototyping/bin/r3prototyping --dir=buyer --service-fake-trades --network-address=localhost
 elif [[ "$mode" == "seller" ]]; then
     if [ ! -d seller ]; then
         mkdir seller
-        echo "myLegalName = Bank of London" >seller/config
+        echo "myLegalName = Bank B" >seller/config
     fi
 
     build/install/r3prototyping/bin/r3prototyping --dir=seller --fake-trade-with=localhost --network-address=localhost:31340 --timestamper-identity-file=buyer/identity-public --timestamper-address=localhost
