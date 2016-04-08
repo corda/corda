@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.services
 
 import com.codahale.metrics.MetricRegistry
@@ -40,12 +32,12 @@ data class Wallet(val states: List<StateAndRef<ContractState>>) {
      * which we have no cash evaluate to null (not present in map), not 0.
      */
     val cashBalances: Map<Currency, Amount> get() = states.
-                // Select the states we own which are cash, ignore the rest, take the amounts.
-                mapNotNull { (it.state as? Cash.State)?.amount }.
-                // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-                groupBy { it.currency }.
-                // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-                mapValues { it.value.sumOrThrow() }
+            // Select the states we own which are cash, ignore the rest, take the amounts.
+            mapNotNull { (it.state as? Cash.State)?.amount }.
+            // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
+            groupBy { it.currency }.
+            // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
+            mapValues { it.value.sumOrThrow() }
 }
 
 /**
@@ -72,13 +64,17 @@ interface WalletService {
      */
     val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
 
-    fun <T : LinearState> linearHeadsInstanceOf(clazz: Class<T>, predicate: (T) -> Boolean = { true } ): Map<SecureHash, StateAndRef<T>> {
-        return linearHeads.filterValues { clazz.isInstance(it.state) }.filterValues { predicate(it.state as T) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
+    // TODO: When KT-10399 is fixed, rename this and remove the inline version below.
+
+    /** Returns the [linearHeads] only when the type of the state would be considered an 'instanceof' the given type. */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<SecureHash, StateAndRef<T>> {
+        return linearHeads.filterValues { stateType.isInstance(it.state) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
     }
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
         val refsToStates = currentWallet.states.associateBy { it.ref }
-        return refs.associateBy( { it }, { refsToStates[it]?.state } )
+        return refs.associateBy({ it }, { refsToStates[it]?.state })
     }
 
     /**
@@ -95,17 +91,7 @@ interface WalletService {
     fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
 }
 
-// TODO: Document this
-@Suppress("UNCHECKED_CAST")
-inline fun <reified T : LinearState> WalletService.linearHeadsOfType(): Map<SecureHash, StateAndRef<T>> {
-    return linearHeads.mapNotNull {
-        val s = it.value.state
-        if (s is T)
-            Pair(it.key, it.value as StateAndRef<T>)
-        else
-            null
-    }.toMap()
-}
+inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,

@@ -107,8 +107,8 @@ object AutoOfferProtocol {
         }
 
         fun notUs(vararg parties: Party): List<Party> {
-            val notUsParties : MutableList<Party> = arrayListOf()
-            for(party in parties) {
+            val notUsParties: MutableList<Party> = arrayListOf()
+            for (party in parties) {
                 if (serviceHub.storageService.myLegalIdentity != party) {
                     notUsParties.add(party)
                 }

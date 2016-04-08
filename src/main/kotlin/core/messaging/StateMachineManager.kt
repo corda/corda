@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.messaging
 
 import co.paralleluniverse.fibers.Fiber
@@ -68,21 +60,14 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
-    init { metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { _stateMachines.size }) }
+
+    init {
+        metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { _stateMachines.size })
+    }
+
     private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
     private val totalStartedProtocols = metrics.counter("Protocols.Started")
     private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
-
-    // This is a workaround for something Gradle does to us during unit tests. It replaces stderr with its own
-    // class that inserts itself into a ThreadLocal. That then gets caught in fiber serialisation, which we don't
-    // want because it can't get recreated properly. It turns out there's no good workaround for this! All the obvious
-    // approaches fail. Pending resolution of https://github.com/puniverse/quasar/issues/153 we just disable
-    // checkpointing when unit tests are run inside Gradle. The right fix is probably to stop Quasar's
-    // bit-too-clever-for-its-own-good ThreadLocal serialisation trick. It already wasted far more time than it can
-    // ever recover.
-    //
-    // TODO: Remove this now that TLS serialisation is fixed.
-    val checkpointing: Boolean get() = !System.err.javaClass.name.contains("LinePerThreadBufferingOutputStream")
 
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
     fun <T> findStateMachines(klass: Class<out ProtocolLogic<T>>): List<Pair<ProtocolLogic<T>, ListenableFuture<T>>> {
@@ -101,19 +86,17 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
     // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
     private class Checkpoint(
-        val serialisedFiber: ByteArray,
-        val loggerName: String,
-        val awaitingTopic: String,
-        val awaitingObjectOfType: String   // java class name
+            val serialisedFiber: ByteArray,
+            val loggerName: String,
+            val awaitingTopic: String,
+            val awaitingObjectOfType: String   // java class name
     )
 
     init {
         // Blank out the default uncaught exception handler because we always catch things ourselves, and the default
         // just redundantly prints stack traces to the logs.
-        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->  }
-
-        if (checkpointing)
-            restoreCheckpoints()
+        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable -> }
+        restoreCheckpoints()
     }
 
     /** Reads the database map and resurrects any serialised state machines. */
@@ -235,8 +218,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                                                  serialisedFiber: ByteArray) {
         val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
-        if (checkpointing)
-            persistCheckpoint(prevCheckpointKey, curPersistedBytes)
+        persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)

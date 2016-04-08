@@ -37,7 +37,7 @@ class CashTests {
             this `fails requirement` "the amounts balance"
 
             tweak {
-                output { outState.copy(amount = 2000.DOLLARS )}
+                output { outState.copy(amount = 2000.DOLLARS) }
                 this `fails requirement` "the amounts balance"
             }
             tweak {
@@ -86,9 +86,9 @@ class CashTests {
         transaction {
             output {
                 Cash.State(
-                    amount = 1000.DOLLARS,
-                    owner = DUMMY_PUBKEY_1,
-                    deposit = MINI_CORP.ref(12, 34)
+                        amount = 1000.DOLLARS,
+                        owner = DUMMY_PUBKEY_1,
+                        deposit = MINI_CORP.ref(12, 34)
                 )
             }
             tweak {
@@ -100,7 +100,7 @@ class CashTests {
         }
 
         val ptx = TransactionBuilder()
-        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12,34), owner = DUMMY_PUBKEY_1)
+        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0] as Cash.State
         assertEquals(100.DOLLARS, s.amount)
@@ -173,8 +173,8 @@ class CashTests {
             input { inState }
             input {
                 inState.copy(
-                    amount = 150.POUNDS,
-                    owner = DUMMY_PUBKEY_2
+                        amount = 150.POUNDS,
+                        owner = DUMMY_PUBKEY_2
                 )
             }
             output { outState.copy(amount = 1150.DOLLARS) }

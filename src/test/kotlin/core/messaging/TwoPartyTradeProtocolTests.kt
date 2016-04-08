@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.messaging
 
 import contracts.Cash
@@ -112,11 +104,6 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
-            // Horrible Gradle/Kryo/Quasar FUBAR workaround: just skip these tests when run under Gradle for now.
-            // TODO: Fix this once Quasar issue 153 is resolved.
-            if (!bobNode.smm.checkpointing)
-                return
-
             val buyerSessionID = random63BitValue()
 
             val aliceFuture = TwoPartyTradeProtocol.runSeller(
@@ -140,6 +127,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
             fun pumpAlice() = (aliceNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pump(false)
+
             fun pumpBob() = (bobNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pump(false)
 
             pumpBob()

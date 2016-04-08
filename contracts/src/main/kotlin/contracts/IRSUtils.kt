@@ -13,7 +13,7 @@ import java.security.PublicKey
 open class RatioUnit(value: BigDecimal) { // TODO: Discuss this type
     val value = value
 
-    override fun equals(other: Any?): Boolean{
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
 
@@ -24,7 +24,7 @@ open class RatioUnit(value: BigDecimal) { // TODO: Discuss this type
         return true
     }
 
-    override fun hashCode(): Int{
+    override fun hashCode(): Int {
         return value.hashCode()
     }
 
@@ -34,7 +34,7 @@ open class RatioUnit(value: BigDecimal) { // TODO: Discuss this type
  * A class to reprecent a percentage in an unambiguous way.
  */
 open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecimal(percentageAsString).divide(BigDecimal("100"))) {
-    override fun toString(): String = value.times(BigDecimal(100)).toString()+"%"
+    override fun toString(): String = value.times(BigDecimal(100)).toString() + "%"
 }
 
 /**
@@ -45,8 +45,8 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
 val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 
 /**
- * Interface representing an agreement that exposes various attributes that are common and allow
- * implementation of general protocols that manipulate many agreement types
+ * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
+ * implementation of general protocols that manipulate many agreement types.
  */
 interface DealState : LinearState {
 
@@ -56,7 +56,7 @@ interface DealState : LinearState {
     /** Exposes the Parties involved in a generic way */
     val parties: Array<Party>
 
-    /** Allow swapping in of potentially transaction specific public keys prior to signing */
+    // TODO: This works by editing the keys used by a Party which is invalid.
     fun withPublicKey(before: Party, after: PublicKey): DealState
 
     /**
@@ -95,8 +95,7 @@ interface FixableDealState : DealState {
  * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc
  */
 open class Rate(val ratioUnit: RatioUnit? = null) {
-
-    override fun equals(other: Any?): Boolean{
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other?.javaClass != javaClass) return false
 
@@ -112,7 +111,7 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
      * that have not yet happened.  Yet-to-be fixed floating rates need to be equal such that schedules can be tested
      * for equality.
      */
-    override fun hashCode(): Int{
+    override fun hashCode(): Int {
         return ratioUnit?.hashCode() ?: 0
     }
 }
@@ -127,7 +126,7 @@ class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
 /**
  * The parent class of the Floating rate classes
  */
-open class FloatingRate: Rate(null)
+open class FloatingRate : Rate(null)
 
 /**
  * So a reference rate is a rate that takes its value from a source at a given date

@@ -1,16 +1,5 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.services
 
-import protocols.FetchAttachmentsProtocol
-import protocols.FetchTransactionsProtocol
-import core.node.services.StorageService
 import core.crypto.SecureHash
 import core.messaging.Message
 import core.messaging.MessagingService
@@ -18,6 +7,8 @@ import core.messaging.SingleMessageRecipient
 import core.messaging.send
 import core.serialization.deserialize
 import core.utilities.loggerFor
+import protocols.FetchAttachmentsProtocol
+import protocols.FetchTransactionsProtocol
 import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
 

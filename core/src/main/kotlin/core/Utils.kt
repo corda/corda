@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core
 
 import com.google.common.io.ByteStreams
@@ -46,13 +38,24 @@ fun random63BitValue(): Long = Math.abs(SecureRandom.getInstanceStrong().nextLon
 
 // Some utilities for working with Guava listenable futures.
 fun <T> ListenableFuture<T>.then(executor: Executor, body: () -> Unit) = addListener(Runnable(body), executor)
+
 fun <T> ListenableFuture<T>.success(executor: Executor, body: (T) -> Unit) = then(executor) {
-    val r = try { get() } catch(e: Throwable) { return@then }
+    val r = try {
+        get()
+    } catch(e: Throwable) {
+        return@then
+    }
     body(r)
 }
+
 fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Unit) = then(executor) {
-    try { get() } catch(e: Throwable) { body(e) }
+    try {
+        get()
+    } catch(e: Throwable) {
+        body(e)
+    }
 }
+
 infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = apply { then(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }

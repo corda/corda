@@ -43,7 +43,7 @@ class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: Doubl
         val z = DoubleArray(n)
         for (i in 1..n - 1) {
             val l = 2 * (xs[i + 1] - xs[i - 1]) - h[i - 1] * m[i - 1]
-            m[i] = h[i]/l
+            m[i] = h[i] / l
             z[i] = (g[i] - h[i - 1] * z[i - 1]) / l
         }
         for (j in n - 1 downTo 0) {

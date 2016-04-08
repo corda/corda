@@ -3,8 +3,8 @@ package demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import core.node.Node
-import core.node.services.NodeInfo
 import core.node.services.MockNetworkMapCache
+import core.node.services.NodeInfo
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import java.util.concurrent.TimeUnit
@@ -24,7 +24,7 @@ object ExitServerProtocol {
         fun register(node: Node) {
             node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
                 // Just to validate we got the message
-                if(enabled) {
+                if (enabled) {
                     val message = msg.data.deserialize<ExitMessage>()
                     System.exit(message.exitCode)
                 }
@@ -37,11 +37,11 @@ object ExitServerProtocol {
      * This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
      * we do not support coercing numeric types in the reflective search for matching constructors
      */
-    class Broadcast(val exitCode: Integer) : ProtocolLogic<Boolean>() {
+    class Broadcast(@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") val exitCode: Integer) : ProtocolLogic<Boolean>() {
 
         @Suspendable
         override fun call(): Boolean {
-            if(enabled) {
+            if (enabled) {
                 val rc = exitCode.toInt()
                 val message = ExitMessage(rc)
 
@@ -57,7 +57,7 @@ object ExitServerProtocol {
 
         @Suspendable
         private fun doNextRecipient(recipient: NodeInfo, message: ExitMessage) {
-            if(recipient.address is MockNetworkMapCache.MockAddress) {
+            if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages

@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package contracts
 
 import core.*
@@ -144,7 +136,7 @@ class Cash : Contract {
             // Now check the digital signatures on the move command. Every input has an owning public key, and we must
             // see a signature from each of those keys. The actual signatures have been verified against the transaction
             // data by the platform before execution.
-            val owningPubKeys  = inputs.map  { it.owner }.toSet()
+            val owningPubKeys = inputs.map { it.owner }.toSet()
             val keysThatSigned = tx.commands.requireSingleCommand<Commands.Move>().signers.toSet()
             requireThat {
                 "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
@@ -246,10 +238,13 @@ class Cash : Contract {
 
 /** Sums the cash states in the list that are owned by the given key, throwing an exception if there are none. */
 fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
+
 /** Sums the cash states in the list, throwing an exception if there are none. */
 fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
+
 /** Sums the cash states in the list, returning null if there are none. */
 fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
+
 /** Sums the cash states in the list, returning zero of the given currency if there are none. */
 fun Iterable<ContractState>.sumCashOrZero(currency: Currency) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
 

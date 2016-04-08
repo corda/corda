@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.utilities
 
 import org.slf4j.LoggerFactory
@@ -23,6 +15,7 @@ import kotlin.reflect.KClass
 // Kotlin's string interpolation efficiently: the message is never calculated/concatenated together unless
 // logging at that level is enabled.
 inline fun <reified T : Any> loggerFor(): org.slf4j.Logger = LoggerFactory.getLogger(T::class.java)
+
 inline fun org.slf4j.Logger.trace(msg: () -> String) {
     if (isTraceEnabled) trace(msg())
 }

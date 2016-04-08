@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
@@ -128,9 +120,12 @@ object TopicStringValidator {
 
 /** The interface for a group of message recipients (which may contain only one recipient) */
 interface MessageRecipients
+
 /** A base class for the case of point-to-point messages */
 interface SingleMessageRecipient : MessageRecipients
+
 /** A base class for a set of recipients specifically identified by the sender. */
 interface MessageRecipientGroup : MessageRecipients
+
 /** A special base class for the set of all possible recipients, without having to identify who they all are. */
 interface AllPossibleRecipients : MessageRecipients

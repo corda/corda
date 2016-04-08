@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package contracts
 
 import core.*
@@ -465,7 +457,8 @@ class InterestRateSwap() : Contract {
         override val parties: Array<Party>
             get() = arrayOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
-        override fun withPublicKey(before: Party, after: PublicKey): State {
+        // TODO: This changing of the public key violates the assumption that Party is a fixed identity key.
+        override fun withPublicKey(before: Party, after: PublicKey): DealState {
             val newParty = Party(before.name, after)
             if (before == fixedLeg.fixedRatePayer) {
                 val deal = copy()

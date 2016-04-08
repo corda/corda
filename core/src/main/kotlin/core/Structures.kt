@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core
 
 import core.crypto.SecureHash
@@ -18,7 +10,6 @@ import java.io.OutputStream
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
 import java.util.jar.JarInputStream
 
 /** Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments). */
@@ -51,7 +42,7 @@ interface OwnableState : ContractState {
  *
  * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet
  */
-interface LinearState: ContractState {
+interface LinearState : ContractState {
     /** Unique thread id within the wallets of all parties */
     val thread: SecureHash
 
@@ -73,8 +64,13 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
 data class StateAndRef<out T : ContractState>(val state: T, val ref: StateRef)
 
+/** Filters a list of [StateAndRef] objects according to the type of the states */
+inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
+    return mapNotNull { if (it.state is T) StateAndRef(it.state, it.ref) else null }
+}
+
 /** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
-data class Party(val name: String, val owningKey: PublicKey)  {
+data class Party(val name: String, val owningKey: PublicKey) {
     override fun toString() = name
 
     fun ref(bytes: OpaqueBytes) = PartyReference(this, bytes)
@@ -103,6 +99,7 @@ data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
     init {
         require(pubkeys.isNotEmpty())
     }
+
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = data.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
@@ -111,10 +108,10 @@ data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
-    val signers: List<PublicKey>,
-    /** If any public keys were recognised, the looked up institutions are available here */
-    val signingParties: List<Party>,
-    val value: T
+        val signers: List<PublicKey>,
+        /** If any public keys were recognised, the looked up institutions are available here */
+        val signingParties: List<Party>,
+        val value: T
 )
 
 /**

@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package demos
 
 import com.google.common.net.HostAndPort
@@ -16,14 +8,14 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
-import core.node.services.NodeInfo
 import core.node.services.MockNetworkMapCache
+import core.node.services.NodeInfo
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
-import joptsimple.OptionParser
 import demos.protocols.AutoOfferProtocol
 import demos.protocols.ExitServerProtocol
 import demos.protocols.UpdateBusinessDayProtocol
+import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -75,7 +67,7 @@ fun main(args: Array<String>) {
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
 
     // The timestamping node runs in the same process as the one that passes null to Node constructor.
-    val timestamperId = if(options.valueOf(timestamperNetAddr).equals(options.valueOf(networkAddressArg))) {
+    val timestamperId = if (options.valueOf(timestamperNetAddr).equals(options.valueOf(networkAddressArg))) {
         null
     } else {
         try {
@@ -86,7 +78,7 @@ fun main(args: Array<String>) {
     }
 
     // The timestamping node runs in the same process as the one that passes null to Node constructor.
-    val rateOracleId = if(options.valueOf(rateOracleNetAddr).equals(options.valueOf(networkAddressArg))) {
+    val rateOracleId = if (options.valueOf(rateOracleNetAddr).equals(options.valueOf(networkAddressArg))) {
         null
     } else {
         try {
@@ -106,10 +98,10 @@ fun main(args: Array<String>) {
 
     val hostAndPortStrings = options.valuesOf(fakeTradeWithAddr)
     val identityFiles = options.valuesOf(fakeTradeWithIdentityFile)
-    if(hostAndPortStrings.size != identityFiles.size) {
+    if (hostAndPortStrings.size != identityFiles.size) {
         throw IllegalArgumentException("Different number of peer addresses (${hostAndPortStrings.size}) and identities (${identityFiles.size})")
     }
-    for ((hostAndPortString,identityFile) in hostAndPortStrings.zip(identityFiles)) {
+    for ((hostAndPortString, identityFile) in hostAndPortStrings.zip(identityFiles)) {
         try {
             val peerId = nodeInfo(hostAndPortString, identityFile)
             (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(peerId)
@@ -122,8 +114,10 @@ fun main(args: Array<String>) {
     UpdateBusinessDayProtocol.Handler.register(node)
     ExitServerProtocol.Handler.register(node)
 
-    while(true) {
-        Thread.sleep(1000L)
+    try {
+        while (true) Thread.sleep(Long.MAX_VALUE)
+    } catch(e: InterruptedException) {
+        node.stop()
     }
     exitProcess(0)
 }

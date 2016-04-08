@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.servlets
 
 import core.node.AcceptsFileUpload
@@ -26,7 +18,7 @@ class DataUploadServlet : HttpServlet() {
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val node = servletContext.getAttribute("node") as Node
 
-        @Suppress("DEPRECATION")    // Bogus warning due to superclass static method being deprecated.
+        @Suppress("DEPRECATION") // Bogus warning due to superclass static method being deprecated.
         val isMultipart = ServletFileUpload.isMultipartContent(req)
 
         if (!isMultipart) {

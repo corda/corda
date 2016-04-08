@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.services
 
 import com.codahale.metrics.Gauge
@@ -33,6 +25,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
     private class InnerState {
         var wallet: Wallet = Wallet(emptyList<StateAndRef<OwnableState>>())
     }
+
     private val mutex = ThreadBox(InnerState())
 
     override val currentWallet: Wallet get() = mutex.locked { wallet }
@@ -48,7 +41,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
      */
     override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
         get() = mutex.locked { wallet }.let { wallet ->
-            wallet.states.filter { it.state is LinearState }.associateBy { (it.state as LinearState).thread }.mapValues { it.value as StateAndRef<LinearState> }
+            wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.thread }.mapValues { it.value }
         }
 
     override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
@@ -78,9 +71,9 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
-        return if(state is OwnableState) {
+        return if (state is OwnableState) {
             state.owner in ourKeys
-        } else if(state is LinearState) {
+        } else if (state is LinearState) {
             // It's potentially of interest to the wallet
             state.isRelevant(ourKeys)
         } else {

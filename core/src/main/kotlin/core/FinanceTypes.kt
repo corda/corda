@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core
 
 import com.fasterxml.jackson.core.JsonGenerator
@@ -46,7 +38,7 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
         require(pennies >= 0) { "Negative amounts are not allowed: $pennies" }
     }
 
-    constructor(amount:BigDecimal, currency: Currency) : this(amount.toLong(), currency)
+    constructor(amount: BigDecimal, currency: Currency) : this(amount.toLong(), currency)
 
     operator fun plus(other: Amount): Amount {
         checkCurrency(other)
@@ -87,6 +79,7 @@ fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) s
 
 /** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc) */
 data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
+
 /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
@@ -98,13 +91,13 @@ data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 @JsonSerialize(using = ExpressionSerializer::class)
 data class Expression(val expr: String)
 
-object ExpressionSerializer: JsonSerializer<Expression>() {
+object ExpressionSerializer : JsonSerializer<Expression>() {
     override fun serialize(expr: Expression, generator: JsonGenerator, provider: SerializerProvider) {
         generator.writeString(expr.expr)
     }
 }
 
-object ExpressionDeserializer: JsonDeserializer<Expression>() {
+object ExpressionDeserializer : JsonDeserializer<Expression>() {
     override fun deserialize(parser: JsonParser, context: DeserializationContext): Expression {
         return Expression(parser.text)
     }
@@ -112,13 +105,14 @@ object ExpressionDeserializer: JsonDeserializer<Expression>() {
 
 /**
  *  Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */
-data class Tenor(val name:String) {
+data class Tenor(val name: String) {
     init {
         val verifier = Regex("([0-9])+([DMYW])") // Only doing Overnight, Day, Week, Month, Year for now.
         if (!(name == "ON" || verifier.containsMatchIn(name))) {
             throw IllegalArgumentException("Unrecognized tenor : $name")
         }
     }
+
     override fun toString(): String = "$name"
 }
 
@@ -126,7 +120,7 @@ data class Tenor(val name:String) {
  * We don't actually do anything with this yet though, so it's ignored for now.
  */
 enum class AccrualAdjustment {
-    Adjusted,Unadjusted
+    Adjusted, Unadjusted
 }
 
 /** This is utilised in the [DateRollConvention] class to determine which way we should initially step when
@@ -184,7 +178,9 @@ enum class DateRollConvention {
  *  in the toString lest some people get confused. */
 enum class DayCountBasisDay {
     // We have to prefix 30 etc with a letter due to enum naming constraints.
-    D30, D30N, D30P, D30E, D30G, DActual, DActualJ, D30Z, D30F, DBus_SaoPaulo;
+    D30,
+    D30N, D30P, D30E, D30G, DActual, DActualJ, D30Z, D30F, DBus_SaoPaulo;
+
     override fun toString(): String {
         return super.toString().drop(1)
     }
@@ -193,7 +189,9 @@ enum class DayCountBasisDay {
 /** This forms the year part of the "Day Count Basis" used for interest calculation. */
 enum class DayCountBasisYear {
     // Ditto above comment for years.
-    Y360, Y365F, Y365L, Y365Q, Y366, YActual, YActualA, Y365B, Y365, YISMA, YICMA, Y252;
+    Y360,
+    Y365F, Y365L, Y365Q, Y366, YActual, YActualA, Y365B, Y365, YISMA, YICMA, Y252;
+
     override fun toString(): String {
         return super.toString().drop(1)
     }
@@ -210,7 +208,8 @@ enum class PaymentRule {
  */
 enum class DateOffset {
     // TODO: Definitely shouldn't be an enum, but let's leave it for now at T-2 is a convention.
-    ZERO, TWODAYS,
+    ZERO,
+    TWODAYS,
 }
 
 
@@ -237,6 +236,7 @@ enum class Frequency(val annualCompoundCount: Int) {
     BiWeekly(26) {
         override fun offset(d: LocalDate) = d.plusWeeks(2)
     };
+
     abstract fun offset(d: LocalDate): LocalDate
     // Daily() // Let's not worry about this for now.
 }
@@ -252,10 +252,10 @@ fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = acc
  * no staff are around to handle problems.
  */
 open class BusinessCalendar private constructor(val calendars: Array<out String>, val holidayDates: List<LocalDate>) {
-    class UnknownCalendar(name: String): Exception("$name not found")
+    class UnknownCalendar(name: String) : Exception("$name not found")
 
     companion object {
-        val calendars = listOf("London","NewYork")
+        val calendars = listOf("London", "NewYork")
 
         val TEST_CALENDAR_DATA = calendars.map {
             it to BusinessCalendar::class.java.getResourceAsStream("${it}HolidayCalendar.txt").bufferedReader().readText()
@@ -268,7 +268,7 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
         fun getInstance(vararg calname: String) = BusinessCalendar(calname,
                 calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
                         toSet().
-                        map{ parseDateFromString(it) }.
+                        map { parseDateFromString(it) }.
                         toList().sorted()
         )
 

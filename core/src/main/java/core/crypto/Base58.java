@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.crypto;
 
 import java.math.*;
@@ -19,7 +11,7 @@ import java.util.*;
  * Satoshi explains: why base-58 instead of standard base-64 encoding?
  * <ul>
  * <li>Don't want 0OIl characters that look the same in some fonts and
- *     could be used to create visually identical looking account numbers.</li>
+ * could be used to create visually identical looking account numbers.</li>
  * <li>A string with non-alphanumeric characters is not as easily accepted as an account number.</li>
  * <li>E-mail usually won't line-break if there's no punctuation to break at.</li>
  * <li>Doubleclicking selects the whole number as one word if it's all alphanumeric.</li>
@@ -31,7 +23,7 @@ import java.util.*;
  * base-256 digits, convert the number to be represented using base-58 digits, preserve the exact
  * number of leading zeros (which are otherwise lost during the mathematical operations on the
  * numbers), and finally represent the resulting base-58 digits as alphanumeric ASCII characters.
- *
+ * <p>
  * NB: This class originally comes from the Apache licensed bitcoinj library. The original author of this code is the
  * same as the original author of the R3 repository.
  */
@@ -39,6 +31,7 @@ public class Base58 {
     public static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
     private static final char ENCODED_ZERO = ALPHABET[0];
     private static final int[] INDEXES = new int[128];
+
     static {
         Arrays.fill(INDEXES, -1);
         for (int i = 0; i < ALPHABET.length; i++) {
@@ -55,7 +48,7 @@ public class Base58 {
     public static String encode(byte[] input) {
         if (input.length == 0) {
             return "";
-        }       
+        }
         // Count leading zeros.
         int zeros = 0;
         while (zeros < input.length && input[zeros] == 0) {
@@ -124,7 +117,7 @@ public class Base58 {
         // Return decoded data (including original number of leading zeros).
         return Arrays.copyOfRange(decoded, outputStart - zeros, decoded.length);
     }
-    
+
     public static BigInteger decodeToBigInteger(String input) throws AddressFormatException {
         return new BigInteger(1, decode(input));
     }
@@ -138,7 +131,7 @@ public class Base58 {
      * @throws AddressFormatException if the input is not base 58 or the checksum does not validate.
      */
     public static byte[] decodeChecked(String input) throws AddressFormatException {
-        byte[] decoded  = decode(input);
+        byte[] decoded = decode(input);
         if (decoded.length < 4)
             throw new AddressFormatException("Input too short");
         byte[] data = Arrays.copyOfRange(decoded, 0, decoded.length - 4);
@@ -154,11 +147,11 @@ public class Base58 {
      * in the specified base, by the given divisor. The given number is modified in-place
      * to contain the quotient, and the return value is the remainder.
      *
-     * @param number the number to divide
+     * @param number     the number to divide
      * @param firstDigit the index within the array of the first non-zero digit
-     *        (this is used for optimization by skipping the leading zeros)
-     * @param base the base in which the number's digits are represented (up to 256)
-     * @param divisor the number to divide by (up to 256)
+     *                   (this is used for optimization by skipping the leading zeros)
+     * @param base       the base in which the number's digits are represented (up to 256)
+     * @param divisor    the number to divide by (up to 256)
      * @return the remainder of the division operation
      */
     private static byte divmod(byte[] number, int firstDigit, int base, int divisor) {

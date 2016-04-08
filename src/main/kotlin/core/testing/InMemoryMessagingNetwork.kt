@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.testing
 
 import com.google.common.util.concurrent.Futures
@@ -59,7 +51,7 @@ class InMemoryMessagingNetwork {
      */
     @Synchronized
     fun createNode(manuallyPumped: Boolean): Pair<Handle, MessagingServiceBuilder<InMemoryMessaging>> {
-        check(counter >= 0) { "In memory network stopped: please recreate."}
+        check(counter >= 0) { "In memory network stopped: please recreate." }
         val builder = createNodeWithID(manuallyPumped, counter) as Builder
         counter++
         val id = builder.id
@@ -89,15 +81,15 @@ class InMemoryMessagingNetwork {
         if (calc != null && recipients is SingleMessageRecipient) {
             // Inject some artificial latency.
             timer.schedule(calc.between(from.myAddress, recipients).toMillis()) {
-                msgSendInternal(from, message, recipients)
+                msgSendInternal(message, recipients)
             }
         } else {
-            msgSendInternal(from, message, recipients)
+            msgSendInternal(message, recipients)
         }
         _allMessages.onNext(Triple(from.myAddress, message, recipients))
     }
 
-    private fun msgSendInternal(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
+    private fun msgSendInternal(message: Message, recipients: MessageRecipients) {
         when (recipients) {
             is Handle -> getQueueForHandle(recipients).add(message)
 
@@ -170,15 +162,18 @@ class InMemoryMessagingNetwork {
      * An instance can be obtained by creating a builder and then using the start method.
      */
     @ThreadSafe
-    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle): MessagingService {
+    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : MessagingService {
         inner class Handler(val executor: Executor?, val topic: String,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+
         @Volatile
         protected var running = true
+
         protected inner class InnerState {
             val handlers: MutableList<Handler> = ArrayList()
             val pendingRedelivery = LinkedList<Message>()
         }
+
         protected val state = ThreadBox(InnerState())
 
         override val myAddress: SingleMessageRecipient = handle

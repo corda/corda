@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package demos
 
 import co.paralleluniverse.fibers.Suspendable
@@ -20,8 +12,8 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
-import core.node.services.NodeInfo
 import core.node.services.NodeAttachmentService
+import core.node.services.NodeInfo
 import core.node.services.NodeWalletService
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
@@ -242,7 +234,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
         val party = Party("Bank of London", keyPair.public)
 
         val issuance = run {
-            val tx = CommercialPaper().generateIssue(party.ref(1,2,3), 1100.DOLLARS, Instant.now() + 10.days)
+            val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days)
 
             // TODO: Consider moving these two steps below into generateIssue.
 
