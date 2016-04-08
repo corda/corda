@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.services
 
 import core.*
@@ -51,8 +43,8 @@ object NodeInterestRates {
     }
 
     /** Parses lines containing fixes */
-    fun parseFile(s: String): Map<FixOf, TreeMap<LocalDate,Fix>> {
-        val results = HashMap<FixOf, TreeMap<LocalDate,Fix>>()
+    fun parseFile(s: String): Map<FixOf, TreeMap<LocalDate, Fix>> {
+        val results = HashMap<FixOf, TreeMap<LocalDate, Fix>>()
         for (line in s.lines()) {
             val (fixOf, fix) = parseOneRate(line)
             val genericKey = FixOf(fixOf.name, LocalDate.MIN, fixOf.ofTenor)
@@ -96,7 +88,7 @@ object NodeInterestRates {
         override val acceptableFileExtensions = listOf(".rates", ".txt")
 
         override fun upload(data: InputStream): String {
-            val fixes: Map<FixOf, TreeMap<LocalDate,Fix>> = parseFile(data.
+            val fixes: Map<FixOf, TreeMap<LocalDate, Fix>> = parseFile(data.
                     bufferedReader().
                     readLines().
                     map { it.trim() }.
@@ -133,7 +125,7 @@ object NodeInterestRates {
          * to a sorted map of LocalDate to Fix, allowing for approximate date finding so that we do not need
          * to populate the file with a rate for every day.
          */
-        @Volatile var knownFixes = emptyMap<FixOf, TreeMap<LocalDate,Fix>>()
+        @Volatile var knownFixes = emptyMap<FixOf, TreeMap<LocalDate, Fix>>()
             set(value) {
                 require(value.isNotEmpty())
                 field = value
@@ -154,7 +146,7 @@ object NodeInterestRates {
             val rates = knownFixes[FixOf(fixOf.name, LocalDate.MIN, fixOf.ofTenor)]
             // Greatest key less than or equal to the date we're looking for
             val floor = rates?.floorEntry(fixOf.forDay)?.value
-            return if (floor!=null) {
+            return if (floor != null) {
                 Fix(fixOf, floor.value)
             } else {
                 null

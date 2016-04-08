@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.services
 
 import com.codahale.metrics.MetricRegistry
@@ -98,6 +90,7 @@ class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : 
                 stream = HashCheckingStream(id, path, stream)
             return stream
         }
+
         override fun equals(other: Any?) = other is Attachment && other.id == id
         override fun hashCode(): Int = id.hashCode()
     }

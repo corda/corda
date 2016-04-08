@@ -36,13 +36,13 @@ class InterestRateSwapAPI(val api: APIServer) {
 
     private val logger = loggerFor<InterestRateSwapAPI>()
 
-    private fun generateDealLink(deal: InterestRateSwap.State) = "/api/irs/deals/"+deal.common.tradeID
+    private fun generateDealLink(deal: InterestRateSwap.State) = "/api/irs/deals/" + deal.common.tradeID
 
     private fun getDealByRef(ref: String): InterestRateSwap.State? {
         val states = api.queryStates(StatesQuery.selectDeal(ref))
         return if (states.isEmpty()) null else {
-            val deals = api.fetchStates(states).values.map { it as InterestRateSwap.State}.filterNotNull()
-            return if(deals.isEmpty()) null else deals[0]
+            val deals = api.fetchStates(states).values.map { it as InterestRateSwap.State }.filterNotNull()
+            return if (deals.isEmpty()) null else deals[0]
         }
     }
 
@@ -83,7 +83,7 @@ class InterestRateSwapAPI(val api: APIServer) {
     fun storeDemoDate(newDemoDate: LocalDate): Response {
         val priorDemoDate = api.serverTime().toLocalDate()
         // Can only move date forwards
-        if(newDemoDate.isAfter(priorDemoDate)) {
+        if (newDemoDate.isAfter(priorDemoDate)) {
             api.invokeProtocolSync(ProtocolClassRef(UpdateBusinessDayProtocol.Broadcast::class.java.name!!), mapOf("date" to newDemoDate))
             return Response.ok().build()
         }

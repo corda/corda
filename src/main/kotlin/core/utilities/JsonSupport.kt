@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.utilities
 
 import com.fasterxml.jackson.core.JsonGenerator
@@ -59,15 +51,15 @@ object JsonSupport {
         return mapper
     }
 
-    class ServiceHubObjectMapper(val identities: IdentityService): ObjectMapper()
+    class ServiceHubObjectMapper(val identities: IdentityService) : ObjectMapper()
 
-    object ToStringSerializer: JsonSerializer<Any>() {
+    object ToStringSerializer : JsonSerializer<Any>() {
         override fun serialize(obj: Any, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.toString())
         }
     }
 
-    object LocalDateDeserializer: JsonDeserializer<LocalDate>() {
+    object LocalDateDeserializer : JsonDeserializer<LocalDate>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): LocalDate {
             return try {
                 LocalDate.parse(parser.text)
@@ -77,22 +69,22 @@ object JsonSupport {
         }
     }
 
-    object LocalDateKeyDeserializer: KeyDeserializer() {
+    object LocalDateKeyDeserializer : KeyDeserializer() {
         override fun deserializeKey(text: String, p1: DeserializationContext): Any? {
             return LocalDate.parse(text)
         }
 
     }
 
-    object PartySerializer: JsonSerializer<Party>() {
+    object PartySerializer : JsonSerializer<Party>() {
         override fun serialize(obj: Party, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.name)
         }
     }
 
-    object PartyDeserializer: JsonDeserializer<Party>() {
+    object PartyDeserializer : JsonDeserializer<Party>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): Party {
-            if(parser.currentToken == JsonToken.FIELD_NAME) {
+            if (parser.currentToken == JsonToken.FIELD_NAME) {
                 parser.nextToken()
             }
             val mapper = parser.codec as ServiceHubObjectMapper
@@ -101,7 +93,7 @@ object JsonSupport {
         }
     }
 
-    object SecureHashSerializer: JsonSerializer<SecureHash>() {
+    object SecureHashSerializer : JsonSerializer<SecureHash>() {
         override fun serialize(obj: SecureHash, generator: JsonGenerator, provider: SerializerProvider) {
             generator.writeString(obj.toString())
         }
@@ -110,9 +102,9 @@ object JsonSupport {
     /**
      * Implemented as a class so that we can instantiate for T
      */
-    class SecureHashDeserializer<T : SecureHash>: JsonDeserializer<T>() {
+    class SecureHashDeserializer<T : SecureHash> : JsonDeserializer<T>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): T {
-            if(parser.currentToken == JsonToken.FIELD_NAME) {
+            if (parser.currentToken == JsonToken.FIELD_NAME) {
                 parser.nextToken()
             }
             try {
@@ -124,7 +116,7 @@ object JsonSupport {
         }
     }
 
-    object CalendarDeserializer: JsonDeserializer<BusinessCalendar>() {
+    object CalendarDeserializer : JsonDeserializer<BusinessCalendar>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): BusinessCalendar {
             return try {
                 val array = StringArrayDeserializer.instance.deserialize(parser, context)

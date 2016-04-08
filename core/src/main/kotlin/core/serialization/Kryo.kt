@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.serialization
 
 import co.paralleluniverse.fibers.Fiber
@@ -81,12 +73,15 @@ inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRY
     else
         return kryo.readObject(Input(this), T::class.java)
 }
+
 inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T {
     return this.bits.deserialize(kryo, includeClassName)
 }
+
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
 fun SerializedBytes<WireTransaction>.deserialize(): WireTransaction = WireTransaction.deserialize(this)
+
 inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
 
 /**
@@ -175,7 +170,11 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
             }
         }
         // If the constructor throws an exception, pass it through instead of wrapping it.
-        return try { constructor.call(*args) } catch (e: InvocationTargetException) { throw e.cause!! }
+        return try {
+            constructor.call(*args)
+        } catch (e: InvocationTargetException) {
+            throw e.cause!!
+        }
     }
 }
 
@@ -187,7 +186,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // no-arg constructor available.
         instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(StdInstantiatorStrategy())
 
-        register(Arrays.asList( "" ).javaClass, ArraysAsListSerializer());
+        register(Arrays.asList("").javaClass, ArraysAsListSerializer());
 
         // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
         // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so
@@ -211,8 +210,8 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
         val immutables = listOf(
-            SignedTransaction::class,
-            SerializedBytes::class
+                SignedTransaction::class,
+                SerializedBytes::class
         )
 
         immutables.forEach {

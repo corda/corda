@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package contracts
 
 import core.*
@@ -59,6 +51,7 @@ class CommercialPaper : Contract {
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
         override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
+
         override fun withIssuance(newIssuance: PartyReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)

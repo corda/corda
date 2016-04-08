@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node
 
 import com.codahale.metrics.MetricRegistry
@@ -42,7 +34,7 @@ class NodeAttachmentStorageTest {
         val expectedHash = SecureHash.sha256(Files.readAllBytes(testJar))
 
         val storage = NodeAttachmentService(fs.getPath("/"), MetricRegistry())
-        val id =  testJar.use { storage.importAttachment(it) }
+        val id = testJar.use { storage.importAttachment(it) }
         assertEquals(expectedHash, id)
 
         assertNull(storage.openAttachment(SecureHash.randomSHA256()))

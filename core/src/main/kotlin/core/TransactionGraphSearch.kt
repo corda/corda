@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core
 
 import core.crypto.SecureHash
@@ -25,7 +17,7 @@ import java.util.concurrent.Callable
 class TransactionGraphSearch(val transactions: Map<SecureHash, SignedTransaction>,
                              val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
     class Query(
-        val withCommandOfType: Class<out CommandData>? = null
+            val withCommandOfType: Class<out CommandData>? = null
     )
 
     var query: Query = Query()

@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core
 
 import co.paralleluniverse.fibers.Suspendable
@@ -104,7 +96,9 @@ data class WireTransaction(val inputs: List<StateRef>,
 /** Container for a [WireTransaction] and attached signatures. */
 data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
                              val sigs: List<DigitalSignature.WithKey>) : NamedByHash {
-    init { check(sigs.isNotEmpty()) }
+    init {
+        check(sigs.isNotEmpty())
+    }
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
     val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
@@ -298,6 +292,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
+
     fun outputStates(): List<ContractState> = ArrayList(outputs)
     fun commands(): List<Command> = ArrayList(commands)
     fun attachments(): List<SecureHash> = ArrayList(attachments)

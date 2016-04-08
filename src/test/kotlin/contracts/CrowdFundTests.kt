@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package contracts
 
 import core.*
@@ -21,10 +13,10 @@ import kotlin.test.assertTrue
 class CrowdFundTests {
     val CF_1 = CrowdFund.State(
             campaign = CrowdFund.Campaign(
-                owner = MINI_CORP_PUBKEY,
-                name = "kickstart me",
-                target = 1000.DOLLARS,
-                closingTime = TEST_TX_TIME + 7.days
+                    owner = MINI_CORP_PUBKEY,
+                    name = "kickstart me",
+                    target = 1000.DOLLARS,
+                    closingTime = TEST_TX_TIME + 7.days
             ),
             closed = false,
             pledges = ArrayList<CrowdFund.Pledge>()
@@ -146,7 +138,7 @@ class CrowdFundTests {
                 400.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY
         )
         // MiniCorp closes their campaign.
-        fun makeFundedTX(time: Instant): LedgerTransaction  {
+        fun makeFundedTX(time: Instant): LedgerTransaction {
             val ptx = TransactionBuilder()
             ptx.setTime(time, DUMMY_TIMESTAMPER.identity, 30.seconds)
             CrowdFund().generateClose(ptx, pledgeTX.outRef(0), miniCorpWallet)

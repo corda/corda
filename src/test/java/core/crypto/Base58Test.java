@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.crypto;
 
 import org.junit.*;
@@ -13,11 +5,11 @@ import org.junit.*;
 import java.math.*;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
-/** From the bitcoinj library */
+/**
+ * From the bitcoinj library
+ */
 public class Base58Test {
     @Test
     public void testEncode() throws Exception {

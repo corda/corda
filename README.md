@@ -24,6 +24,16 @@ Things you need to know:
 
 * There will be a mailing list for discussion, brainstorming etc called [r3dlg-awg](https://groups.google.com/forum/#!forum/r3dlg-awg). 
 
+
+# License
+
+This code is not yet released under a traditional open source license. Until it is, the following license applies:
+
+_Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
+pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
+set forth therein.  Distributed as Non-Project IP to R3 LRC Members pursuant to their respective Member
+and Services Agreements and subject to the Non-Project IP license terms. set forth therein. All other rights reserved._
+
 # Instructions for installing prerequisite software
 
 ## JDK  for Java 8
@@ -52,6 +62,7 @@ The code should build, the unit tests should show as all green.
 You can catch up with the latest code by selecting "VCS -> Update Project" in the menu.
 
 ## IntelliJ Troubleshooting
+
 If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:
 
     Configure -> Project Defaults -> Project Structure
@@ -65,6 +76,17 @@ click on New… next to the red <No SDK> symbol, and select JDK.  It should then
     jdk1.8.0_xx…/Contents/Home
 
 Also select Project language level: as 8.  Click OK.  Open should now work.
+
+## Other troubleshooting
+
+If you get an error about a missing Quasar agent, then your JVM is being invoked without a needed command line argument.
+Make sure an argument like `-javaagent:lib/quasar.jar` is being passed to the invocation.
+
+You may need/want to edit your default JUnit run config in IntelliJ to ensure that parameter is being set, along with
+`-Dco.paralleluniverse.fibers.verifyInstrumentation` which is useful to catch mistakes. To do that, click the dropdown
+in the toolbar and select "Edit configurations", then expand the defaults tree, then select JUnit and add the two
+arguments to the VM options edit.
+
 
 ## Accessing Source Without an IDE
 

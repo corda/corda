@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.utilities
 
 import core.TransientProperty
@@ -45,9 +37,11 @@ class ProgressTracker(vararg steps: Step) {
         class Position(val tracker: ProgressTracker, val newStep: Step) : Change() {
             override fun toString() = newStep.label
         }
+
         class Rendering(val tracker: ProgressTracker, val ofStep: Step) : Change() {
             override fun toString() = ofStep.label
         }
+
         class Structural(val tracker: ProgressTracker, val parent: Step) : Change() {
             override fun toString() = "Structural step change in child of ${parent.label}"
         }
@@ -75,6 +69,7 @@ class ProgressTracker(vararg steps: Step) {
     object UNSTARTED : Step("Unstarted") {
         override fun equals(other: Any?) = other is UNSTARTED
     }
+
     object DONE : Step("Done") {
         override fun equals(other: Any?) = other is DONE
     }

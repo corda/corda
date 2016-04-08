@@ -6,8 +6,9 @@ import contracts.DealState
 import contracts.InterestRateSwap
 import core.StateAndRef
 import core.node.Node
-import core.node.services.NodeInfo
 import core.node.services.MockNetworkMapCache
+import core.node.services.NodeInfo
+import core.node.services.linearHeadsOfType
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.deserialize
@@ -41,14 +42,14 @@ object UpdateBusinessDayProtocol {
         override fun call(): Boolean {
             // Get deals
             progressTracker.currentStep = FETCHING
-            val dealStateRefs = serviceHub.walletService.linearHeadsInstanceOf(DealState::class.java)
+            val dealStateRefs = serviceHub.walletService.linearHeadsOfType<DealState>()
             val otherPartyToDeals = dealStateRefs.values.groupBy { otherParty(it.state) }
 
             // TODO we need to process these in parallel to stop there being an ordering problem across more than two nodes
             val sortedParties = otherPartyToDeals.keys.sortedBy { it.identity.name }
             for (party in sortedParties) {
                 val sortedDeals = otherPartyToDeals[party]!!.sortedBy { it.state.ref }
-                for(deal in sortedDeals) {
+                for (deal in sortedDeals) {
                     progressTracker.currentStep = ITERATING_DEALS
                     processDeal(party, deal, date, sessionID)
                 }
@@ -65,8 +66,9 @@ object UpdateBusinessDayProtocol {
         // TODO we should make this more object oriented when we can ask a state for it's contract
         @Suspendable
         fun processDeal(party: NodeInfo, deal: StateAndRef<DealState>, date: LocalDate, sessionID: Long) {
-            when(deal.state) {
-                is InterestRateSwap.State -> processInterestRateSwap(party, StateAndRef(deal.state as InterestRateSwap.State, deal.ref), date, sessionID)
+            val s = deal.state
+            when (s) {
+                is InterestRateSwap.State -> processInterestRateSwap(party, StateAndRef(s, deal.ref), date, sessionID)
             }
         }
 
@@ -160,7 +162,7 @@ object UpdateBusinessDayProtocol {
 
         @Suspendable
         private fun doNextRecipient(recipient: NodeInfo, message: UpdateBusinessDayMessage) {
-            if(recipient.address is MockNetworkMapCache.MockAddress) {
+            if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages

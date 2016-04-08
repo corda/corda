@@ -156,6 +156,8 @@ task getIRSDemo(type: CreateStartScripts) {
 // that have @Suspendable sub implementations.  These tend to cause NPEs and are not caught by the verifier
 // NOTE: need to make sure the output isn't on the classpath or every other run it generates empty results, so
 // we explicitly delete to avoid that happening.  We also need to turn off what seems to be a spurious warning in the IDE
+//
+// TODO: Make this task incremental, as it can be quite slow.
 
 //noinspection GroovyAssignabilityCheck
 task quasarScan(dependsOn: ['classes', 'core:classes', 'contracts:classes']) << {

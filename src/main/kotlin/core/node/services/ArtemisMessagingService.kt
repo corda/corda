@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.node.services
 
 import com.google.common.net.HostAndPort
@@ -82,11 +74,13 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         var running = false
         val sendClients = HashMap<Address, ClientProducer>()
     }
+
     private val mutex = ThreadBox(InnerState())
 
     /** A registration to handle messages of different types */
     inner class Handler(val executor: Executor?, val topic: String,
                         val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+
     private val handlers = CopyOnWriteArrayList<Handler>()
 
     private fun getSendClient(addr: Address): ClientProducer {

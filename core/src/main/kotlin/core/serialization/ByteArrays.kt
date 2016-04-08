@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.serialization
 
 import com.google.common.io.BaseEncoding
@@ -17,13 +9,15 @@ import java.util.*
  * functionality to Java, but it won't arrive for a few years yet!
  */
 open class OpaqueBytes(val bits: ByteArray) {
-    init { check(bits.isNotEmpty()) }
+    init {
+        check(bits.isNotEmpty())
+    }
 
     companion object {
         fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
     }
 
-    override fun equals(other: Any?): Boolean{
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is OpaqueBytes) return false
         return Arrays.equals(bits, other.bits)

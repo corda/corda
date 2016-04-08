@@ -11,7 +11,7 @@ import javax.ws.rs.ext.Provider
  * and to organise serializers / deserializers for java.time.* classes as necessary
  */
 @Provider
-class Config(val services: ServiceHub): ContextResolver<ObjectMapper> {
+class Config(val services: ServiceHub) : ContextResolver<ObjectMapper> {
     val defaultObjectMapper = JsonSupport.createDefaultMapper(services.identityService)
     override fun getContext(type: java.lang.Class<*>) = defaultObjectMapper
 }

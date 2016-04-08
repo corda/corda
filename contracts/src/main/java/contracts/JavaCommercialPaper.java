@@ -1,35 +1,22 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package contracts;
 
 import core.*;
-import core.TransactionForVerification.InOutGroup;
-import core.crypto.NullPublicKey;
-import core.crypto.SecureHash;
+import core.TransactionForVerification.*;
+import core.crypto.*;
 import core.node.services.*;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.*;
 
-import java.security.PublicKey;
-import java.time.Instant;
-import java.util.List;
+import java.security.*;
+import java.time.*;
+import java.util.*;
 
-import static core.ContractsDSLKt.requireSingleCommand;
-import static kotlin.collections.CollectionsKt.single;
-
-
+import static core.ContractsDSLKt.*;
+import static kotlin.collections.CollectionsKt.*;
 
 
 /**
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
- *
  */
 public class JavaCommercialPaper implements Contract {
     public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
@@ -40,7 +27,8 @@ public class JavaCommercialPaper implements Contract {
         private Amount faceValue;
         private Instant maturityDate;
 
-        public State() {}  // For serialization
+        public State() {
+        }  // For serialization
 
         public State(PartyReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate) {
             this.issuance = issuance;
@@ -133,6 +121,7 @@ public class JavaCommercialPaper implements Contract {
                 return obj instanceof Redeem;
             }
         }
+
         public static class Issue extends Commands {
             @Override
             public boolean equals(Object obj) {
@@ -173,16 +162,16 @@ public class JavaCommercialPaper implements Contract {
 
                 Instant time = timestampCommand.getBefore();
 
-                if (! time.isBefore(output.maturityDate)) {
+                if (!time.isBefore(output.maturityDate)) {
                     throw new IllegalStateException("Failed Requirement: the maturity date is not in the past");
                 }
 
                 if (!cmd.getSigners().contains(output.issuance.getParty().getOwningKey())) {
                     throw new IllegalStateException("Failed Requirement: the issuance is signed by the claimed issuer of the paper");
                 }
-            }
-            else { // Everything else (Move, Redeem) requires inputs (they are not first to be actioned)
-                   // There should be only a single input due to aggregation above
+            } else {
+                // Everything else (Move, Redeem) requires inputs (they are not first to be actioned)
+                // There should be only a single input due to aggregation above
                 State input = single(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner()))
@@ -196,9 +185,7 @@ public class JavaCommercialPaper implements Contract {
                             !output.getIssuance().equals(input.getIssuance()) ||
                             !output.getMaturityDate().equals(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
-                }
-                else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem)
-                {
+                } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
                     TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
                     if (timestampCommand == null)
                         throw new IllegalArgumentException("Failed Requirement: must be timestamped");
@@ -206,7 +193,7 @@ public class JavaCommercialPaper implements Contract {
 
                     Amount received = CashKt.sumCashBy(tx.getOutStates(), input.getOwner());
 
-                    if (! received.equals(input.getFaceValue()))
+                    if (!received.equals(input.getFaceValue()))
                         throw new IllegalStateException("Failed Requirement: received amount equals the face value");
                     if (time.isBefore(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the paper must have matured");
@@ -227,14 +214,14 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
-        State state = new State(issuance,issuance.getParty().getOwningKey(), faceValue, maturityDate);
-        return new TransactionBuilder().withItems(state,  new Command( new Commands.Issue(), issuance.getParty().getOwningKey()));
+        State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
+        return new TransactionBuilder().withItems(state, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
         new Cash().generateSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
         tx.addInputState(paper.getRef());
-        tx.addCommand(new Command( new Commands.Redeem(), paper.getState().getOwner()));
+        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getOwner()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {

@@ -1,16 +1,8 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.node.services.ServiceHub
 import core.messaging.MessageRecipients
+import core.node.services.ServiceHub
 import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -47,12 +39,15 @@ abstract class ProtocolLogic<T> {
                                                 sessionIDForReceive: Long, obj: Any): UntrustworthyData<T> {
         return psm.sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, T::class.java)
     }
+
     inline fun <reified T : Any> receive(topic: String, sessionIDForReceive: Long): UntrustworthyData<T> {
         return receive(topic, sessionIDForReceive, T::class.java)
     }
+
     @Suspendable fun <T : Any> receive(topic: String, sessionIDForReceive: Long, clazz: Class<T>): UntrustworthyData<T> {
         return psm.receive(topic, sessionIDForReceive, clazz)
     }
+
     @Suspendable fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
         psm.send(topic, destination, sessionID, obj)
     }

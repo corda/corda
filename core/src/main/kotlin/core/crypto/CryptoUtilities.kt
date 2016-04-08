@@ -1,11 +1,3 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 package core.crypto
 
 import com.google.common.io.BaseEncoding
@@ -18,7 +10,10 @@ import java.security.interfaces.ECPublicKey
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
-        init { require(bits.size == 32) }
+        init {
+            require(bits.size == 32)
+        }
+
         override val signatureAlgorithmName: String get() = "SHA256withECDSA"
     }
 
@@ -97,6 +92,7 @@ fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
 fun PrivateKey.signWithECDSA(bitsToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
     return DigitalSignature.WithKey(publicKey, signWithECDSA(bitsToSign).bits)
 }
+
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToSign, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA(bitsToSign.bits, party)
@@ -124,6 +120,7 @@ fun PublicKey.toStringShort(): String {
 
 // Allow Kotlin destructuring:    val (private, public) = keypair
 operator fun KeyPair.component1() = this.private
+
 operator fun KeyPair.component2() = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */

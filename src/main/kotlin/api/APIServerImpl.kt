@@ -2,10 +2,14 @@ package api
 
 import com.google.common.util.concurrent.ListenableFuture
 import contracts.DealState
-import core.*
+import core.ContractState
+import core.SignedTransaction
+import core.StateRef
+import core.WireTransaction
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.node.AbstractNode
+import core.node.services.linearHeadsOfType
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.utilities.ANSIProgressRenderer
@@ -14,7 +18,7 @@ import java.util.*
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
 
-class APIServerImpl(val node: AbstractNode): APIServer {
+class APIServerImpl(val node: AbstractNode) : APIServer {
 
     override fun serverTime(): LocalDateTime = LocalDateTime.now(node.services.clock)
 
@@ -26,10 +30,9 @@ class APIServerImpl(val node: AbstractNode): APIServer {
             if (query.criteria is StatesQuery.Criteria.AllDeals) {
                 val states = node.services.walletService.linearHeads
                 return states.values.map { it.ref }
-            }
-            else if (query.criteria is StatesQuery.Criteria.Deal) {
-                val states = node.services.walletService.linearHeadsInstanceOf(DealState::class.java) {
-                    it.ref == query.criteria.ref
+            } else if (query.criteria is StatesQuery.Criteria.Deal) {
+                val states = node.services.walletService.linearHeadsOfType<DealState>().filterValues {
+                    it.state.ref == query.criteria.ref
                 }
                 return states.values.map { it.ref }
             }
@@ -62,9 +65,9 @@ class APIServerImpl(val node: AbstractNode): APIServer {
     }
 
     private fun invokeProtocolAsync(type: ProtocolRef, args: Map<String, Any?>): ListenableFuture<out Any?> {
-        if(type is ProtocolClassRef) {
+        if (type is ProtocolClassRef) {
             val clazz = Class.forName(type.className)
-            if(ProtocolLogic::class.java.isAssignableFrom(clazz)) {
+            if (ProtocolLogic::class.java.isAssignableFrom(clazz)) {
                 // TODO for security, check annotated as exposed on API?  Or have PublicProtocolLogic... etc
                 nextConstructor@ for (constructor in clazz.kotlin.constructors) {
                     val params = HashMap<KParameter, Any?>()
@@ -91,7 +94,7 @@ class APIServerImpl(val node: AbstractNode): APIServer {
                     // If we get here then we matched every parameter
                     val protocol = constructor.callBy(params) as ProtocolLogic<*>
                     ANSIProgressRenderer.progressTracker = protocol.progressTracker
-                    val future = node.smm.add("api-call",protocol)
+                    val future = node.smm.add("api-call", protocol)
                     return future
                 }
             }
