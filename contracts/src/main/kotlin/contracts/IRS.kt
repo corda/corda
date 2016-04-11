@@ -59,7 +59,7 @@ abstract class RatePaymentEvent(date: LocalDate,
     abstract val flow: Amount
 
     val days: Int get() =
-        dayCountCalculator(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
+        calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
 
     val dayCountFactor: BigDecimal get() =
         // TODO : Fix below (use daycount convention for division)

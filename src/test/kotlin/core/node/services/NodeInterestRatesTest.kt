@@ -8,6 +8,7 @@ import core.bd
 import core.testing.MockNetwork
 import core.testutils.*
 import core.utilities.BriefLogFormatter
+import org.junit.Assert
 import org.junit.Test
 import protocols.RatesFixProtocol
 import kotlin.test.assertEquals
@@ -16,16 +17,18 @@ import kotlin.test.assertFailsWith
 class NodeInterestRatesTest {
     val TEST_DATA = NodeInterestRates.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
-        LIBOR 2016-03-16 2M = 0.655
+        LIBOR 2016-03-16 2M = 0.685
+        LIBOR 2016-03-16 1Y = 0.890
+        LIBOR 2016-03-16 2Y = 0.962
         EURIBOR 2016-03-15 1M = 0.123
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
 
-    val service = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY).apply { knownFixes = TEST_DATA }
+    val oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY).apply { knownFixes = TEST_DATA }
 
     @Test fun `query successfully`() {
         val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val res = service.query(listOf(q))
+        val res = oracle.query(listOf(q))
         assertEquals(1, res.size)
         assertEquals("0.678".bd, res[0].value)
         assertEquals(q, res[0].of)
@@ -34,36 +37,41 @@ class NodeInterestRatesTest {
     @Test fun `query with one success and one missing`() {
         val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
-        val e = assertFailsWith<NodeInterestRates.UnknownFix> { service.query(listOf(q1, q2)) }
+        val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2)) }
         assertEquals(e.fix, q2)
     }
 
-    @Test fun `query successfully with one date beyond`() {
-        val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-19 1M")
-        val res = service.query(listOf(q))
+    @Test fun `query successfully with interpolated rate`() {
+        val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
+        val res = oracle.query(listOf(q))
         assertEquals(1, res.size)
-        assertEquals("0.678".bd, res[0].value)
+        Assert.assertEquals(0.7316228, res[0].value.toDouble(), 0.0000001)
         assertEquals(q, res[0].of)
     }
 
+    @Test fun `rate missing and unable to interpolate`() {
+        val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
+        assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q)) }
+    }
+
     @Test fun `empty query`() {
-        assertFailsWith<IllegalArgumentException> { service.query(emptyList()) }
+        assertFailsWith<IllegalArgumentException> { oracle.query(emptyList()) }
     }
 
     @Test fun `refuse to sign with no relevant commands`() {
         val tx = makeTX()
-        assertFailsWith<IllegalArgumentException> { service.sign(tx.toWireTransaction()) }
+        assertFailsWith<IllegalArgumentException> { oracle.sign(tx.toWireTransaction()) }
         tx.addCommand(Cash.Commands.Move(), ALICE)
-        assertFailsWith<IllegalArgumentException> { service.sign(tx.toWireTransaction()) }
+        assertFailsWith<IllegalArgumentException> { oracle.sign(tx.toWireTransaction()) }
     }
 
     @Test fun `sign successfully`() {
         val tx = makeTX()
-        val fix = service.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
-        tx.addCommand(fix, service.identity.owningKey)
+        val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
+        tx.addCommand(fix, oracle.identity.owningKey)
 
         // Sign successfully.
-        val signature = service.sign(tx.toWireTransaction())
+        val signature = oracle.sign(tx.toWireTransaction())
         tx.checkAndAddSignature(signature)
     }
 
@@ -71,9 +79,9 @@ class NodeInterestRatesTest {
         val tx = makeTX()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val badFix = Fix(fixOf, "0.6789".bd)
-        tx.addCommand(badFix, service.identity.owningKey)
+        tx.addCommand(badFix, oracle.identity.owningKey)
 
-        val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { service.sign(tx.toWireTransaction()) }
+        val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(tx.toWireTransaction()) }
         assertEquals(fixOf, e1.fix)
     }
 
