@@ -6,12 +6,12 @@ import contracts.DealState
 import contracts.InterestRateSwap
 import core.StateAndRef
 import core.node.Node
-import core.node.services.MockNetworkMapCache
-import core.node.services.NodeInfo
+import core.node.NodeInfo
 import core.node.services.linearHeadsOfType
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.deserialize
+import core.testing.MockNetworkMapCache
 import core.utilities.ANSIProgressRenderer
 import core.utilities.ProgressTracker
 import demos.DemoClock

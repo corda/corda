@@ -6,7 +6,7 @@ import core.WireTransaction
 import core.crypto.DigitalSignature
 import core.messaging.MessageRecipients
 import core.messaging.StateMachineManager
-import core.node.services.NodeInfo
+import core.node.NodeInfo
 import core.node.services.NodeTimestamperService
 import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic

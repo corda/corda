@@ -7,7 +7,7 @@ import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
-import core.node.services.NodeInfo
+import core.node.NodeInfo
 import core.protocols.ProtocolLogic
 import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData

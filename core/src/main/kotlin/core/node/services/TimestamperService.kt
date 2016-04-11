@@ -15,6 +15,7 @@ import core.serialization.SerializedBytes
  * themselves.
  */
 interface TimestamperService {
+    object Type : ServiceType("corda.timestamper")
     @Suspendable
     fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable
 

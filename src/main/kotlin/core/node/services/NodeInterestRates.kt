@@ -25,6 +25,7 @@ import javax.annotation.concurrent.ThreadSafe
  * for signing.
  */
 object NodeInterestRates {
+    object Type : ServiceType("corda.interest_rates")
     /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [FixOf] and [Fix] */
     fun parseOneRate(s: String): Pair<FixOf, Fix> {
         val (key, value) = s.split('=').map { it.trim() }

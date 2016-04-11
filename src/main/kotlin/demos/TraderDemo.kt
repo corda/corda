@@ -12,8 +12,8 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.services.ArtemisMessagingService
+import core.node.NodeInfo
 import core.node.services.NodeAttachmentService
-import core.node.services.NodeInfo
 import core.node.services.NodeWalletService
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
