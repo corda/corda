@@ -59,7 +59,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     val info: NodeInfo by lazy {
-        NodeInfo(net.myAddress, storage.myLegalIdentity, findMyLocation())
+        NodeInfo(net.myAddress, storage.myLegalIdentity, emptySet(), findMyLocation())
     }
 
     protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
@@ -91,8 +91,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var api: APIServer
 
     open fun start(): AbstractNode {
-        require(timestamperAddress == null || timestamperAddress.advertisedServices.contains(ServiceType.Timestamping),
-                {"Timestamper address must indicate a node that provides timestamping services"})
+        require(timestamperAddress == null || timestamperAddress.advertisedServices.contains(TimestamperService.Type))
+                {"Timestamper address must indicate a node that provides timestamping services"}
         log.info("Node starting up ...")
 
         storage = initialiseStorageService(dir)
@@ -120,7 +120,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             timestamperAddress
         } else {
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
-            NodeInfo(net.myAddress, storage.myLegalIdentity, advertisedServices = setOf(ServiceType.Timestamping))
+            NodeInfo(net.myAddress, storage.myLegalIdentity, setOf(TimestamperService.Type))
         }
         (services.networkMapCache as MockNetworkMapCache).timestampingNodes.add(tsid)
     }

@@ -11,6 +11,7 @@ import core.node.NodeInfo
 import core.node.PhysicalLocation
 import core.node.services.FixedIdentityService
 import core.node.services.ServiceType
+import core.node.services.TimestamperService
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -131,7 +132,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, setOf(ServiceType.Timestamping)),
+                createNode(null, -1, nodeFactory, setOf(TimestamperService.Type)),
                 createNode(nodes[0].info, -1, nodeFactory)
         )
     }

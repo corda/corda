@@ -10,6 +10,7 @@ import core.node.NodeInfo
 import core.node.services.DummyTimestampingAuthority
 import core.node.services.NodeTimestamperService
 import core.node.services.ServiceType
+import core.node.services.TimestamperService
 import core.utilities.loggerFor
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -151,7 +152,7 @@ class InMemoryMessagingNetwork {
         val (handle, builder) = createNode(manuallyPumped)
         val node = builder.start().get()
         NodeTimestamperService(node, DummyTimestampingAuthority.identity, DummyTimestampingAuthority.key)
-        timestampingAdvert = NodeInfo(handle, DummyTimestampingAuthority.identity, advertisedServices = setOf(ServiceType.Timestamping))
+        timestampingAdvert = NodeInfo(handle, DummyTimestampingAuthority.identity, setOf(TimestamperService.Type))
         return Pair(timestampingAdvert!!, node)
     }
 

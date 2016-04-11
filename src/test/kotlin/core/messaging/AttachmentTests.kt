@@ -6,7 +6,7 @@ import core.crypto.sha256
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.services.NodeAttachmentService
-import core.node.services.ServiceType
+import core.node.services.TimestamperService
 import core.serialization.OpaqueBytes
 import core.testing.MockNetwork
 import core.testutils.rootCauseExceptions
@@ -96,7 +96,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, advertisedServices = setOf(ServiceType.Timestamping))
+        }, advertisedServices = setOf(TimestamperService.Type))
         val n1 = network.createNode(n0.info)
 
         // Insert an attachment into node zero's store directly.

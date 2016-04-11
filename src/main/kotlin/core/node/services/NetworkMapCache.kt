@@ -17,6 +17,7 @@ import java.util.*
  * This interface assumes fast, synchronous access to an in-memory map.
  */
 interface NetworkMapCache {
+    object Type : ServiceType("corda.network_map")
     val timestampingNodes: List<NodeInfo>
     val ratesOracleNodes: List<NodeInfo>
     val partyNodes: List<NodeInfo>

@@ -9,6 +9,7 @@ import java.security.PublicKey
  * service would provide.
  */
 interface IdentityService {
+    object Type : ServiceType("corda.identity")
     fun partyFromKey(key: PublicKey): Party?
     fun partyFromName(name: String): Party?
 }

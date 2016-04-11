@@ -9,7 +9,9 @@ import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
 import core.node.services.ArtemisMessagingService
+import core.node.services.NodeInterestRates
 import core.node.services.ServiceType
+import core.node.services.TimestamperService
 import core.testing.MockNetworkMapCache
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
@@ -72,7 +74,7 @@ fun main(args: Array<String>) {
         null
     } else {
         try {
-            nodeInfo(options.valueOf(timestamperNetAddr), options.valueOf(timestamperIdentityFile), setOf(ServiceType.Timestamping))
+            nodeInfo(options.valueOf(timestamperNetAddr), options.valueOf(timestamperIdentityFile), setOf(TimestamperService.Type))
         } catch (e: Exception) {
             null
         }
@@ -83,7 +85,7 @@ fun main(args: Array<String>) {
         null
     } else {
         try {
-            nodeInfo(options.valueOf(rateOracleNetAddr), options.valueOf(rateOracleIdentityFile), setOf(ServiceType.RatesOracle))
+            nodeInfo(options.valueOf(rateOracleNetAddr), options.valueOf(rateOracleIdentityFile), setOf(NodeInterestRates.Type))
         } catch (e: Exception) {
             null
         }
@@ -128,7 +130,7 @@ fun nodeInfo(hostAndPortString: String, identityFile: String, advertisedServices
         val addr = HostAndPort.fromString(hostAndPortString).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(identityFile)
         val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
-        return NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices = advertisedServices)
+        return NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices)
     } catch (e: Exception) {
         println("Could not find identify file $identityFile.  If the file has just been created as part of starting the demo, please restart this node")
         throw e

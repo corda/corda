@@ -12,8 +12,8 @@ import core.messaging.SingleMessageRecipient
 import core.node.services.ServiceType
 
 /**
- * Info about a network node that acts on behalf of some sort of verified identity.
+ * Info about a network node that acts on behalf of some form of contract party.
  */
 data class NodeInfo(val address: SingleMessageRecipient, val identity: Party,
-                    val physicalLocation: PhysicalLocation? = null,
-                    var advertisedServices: Set<ServiceType> = emptySet())
+                    var advertisedServices: Set<ServiceType> = emptySet(),
+                    val physicalLocation: PhysicalLocation? = null)
