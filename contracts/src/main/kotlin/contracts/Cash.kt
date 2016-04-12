@@ -62,7 +62,9 @@ class Cash : Contract {
             override val amount: Amount,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
-            override val owner: PublicKey
+            override val owner: PublicKey,
+
+            override val notary: Party
     ) : CommonCashState<Cash.IssuanceDefinition> {
         override val issuanceDef: Cash.IssuanceDefinition
             get() = Cash.IssuanceDefinition(deposit, amount.currency)
@@ -160,16 +162,16 @@ class Cash : Contract {
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, issuanceDef: CashIssuanceDefinition, pennies: Long, owner: PublicKey)
-        = generateIssue(tx, Amount(pennies, issuanceDef.currency), issuanceDef.deposit, owner)
+    fun generateIssue(tx: TransactionBuilder, issuanceDef: CashIssuanceDefinition, pennies: Long, owner: PublicKey, notary: Party)
+        = generateIssue(tx, Amount(pennies, issuanceDef.currency), issuanceDef.deposit, owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyAndReference, owner: PublicKey) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyAndReference, owner: PublicKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
-        tx.addOutputState(Cash.State(at, amount, owner))
+        tx.addOutputState(Cash.State(at, amount, owner, notary))
         tx.addCommand(Cash.Commands.Issue(), at.party.owningKey)
     }
 
@@ -230,7 +232,7 @@ class Cash : Contract {
         val states = gathered.groupBy { it.state.deposit }.map {
             val (deposit, coins) = it
             val totalAmount = coins.map { it.state.amount }.sumOrThrow()
-            State(deposit, totalAmount, to)
+            State(deposit, totalAmount, to, coins.first().state.notary)
         }
 
         val outputs = if (change.pennies > 0) {
@@ -241,7 +243,7 @@ class Cash : Contract {
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
                     states.last().let { it.copy(amount = it.amount - change) } +
-                    State(gathered.last().state.deposit, change, changeKey)
+                    State(gathered.last().state.deposit, change, changeKey, gathered.last().state.notary)
         } else states
 
         for (state in gathered) tx.addInputState(state.ref)

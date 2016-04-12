@@ -2,7 +2,6 @@ package core.node.subsystems
 
 import contracts.Cash
 import core.*
-import core.node.subsystems.NodeWalletService
 import core.node.ServiceHub
 import core.testutils.*
 import core.utilities.BriefLogFormatter
@@ -37,7 +36,7 @@ class NodeWalletServiceTest {
 
         kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
-        wallet.fillWithSomeTestCash(100.DOLLARS, 3, 3, Random(0L))
+        wallet.fillWithSomeTestCash(DUMMY_NOTARY, 100.DOLLARS, 3, 3, Random(0L))
 
         val w = wallet.currentWallet
         assertEquals(3, w.states.size)
@@ -46,7 +45,7 @@ class NodeWalletServiceTest {
         assertEquals(services.storageService.myLegalIdentity, state.deposit.party)
         assertEquals(services.storageService.myLegalIdentityKey.public, state.deposit.party.owningKey)
         assertEquals(29.01.DOLLARS, state.amount)
-        assertEquals(ALICE, state.owner)
+        assertEquals(ALICE_PUBKEY, state.owner)
 
         assertEquals(33.34.DOLLARS, (w.states[2].state as Cash.State).amount)
         assertEquals(35.61.DOLLARS, (w.states[1].state as Cash.State).amount)
@@ -59,20 +58,20 @@ class NodeWalletServiceTest {
         // A tx that sends us money.
         val freshKey = services.keyManagementService.freshKey()
         val usefulTX = TransactionBuilder().apply {
-            Cash().generateIssue(this, 100.DOLLARS, MEGA_CORP.ref(1), freshKey.public)
+            Cash().generateIssue(this, 100.DOLLARS, MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction()
         val myOutput = usefulTX.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments).outRef<Cash.State>(0)
 
         // A tx that spends our money.
         val spendTX = TransactionBuilder().apply {
-            Cash().generateSpend(this, 80.DOLLARS, BOB, listOf(myOutput))
+            Cash().generateSpend(this, 80.DOLLARS, BOB_PUBKEY, listOf(myOutput))
             signWith(freshKey)
         }.toSignedTransaction()
 
         // A tx that doesn't send us anything.
         val irrelevantTX = TransactionBuilder().apply {
-            Cash().generateIssue(this, 100.DOLLARS, MEGA_CORP.ref(1), BOB_KEY.public)
+            Cash().generateIssue(this, 100.DOLLARS, MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction()
 

@@ -1,18 +1,19 @@
 package core
 
 import com.codahale.metrics.MetricRegistry
-import core.crypto.*
+import core.crypto.SecureHash
+import core.crypto.generateKeyPair
+import core.crypto.sha256
 import core.messaging.MessagingService
 import core.node.ServiceHub
-import core.node.services.*
 import core.node.storage.Checkpoint
 import core.node.storage.CheckpointStorage
 import core.node.subsystems.*
-import core.serialization.SerializedBytes
-import core.serialization.deserialize
+import core.node.services.AttachmentStorage
+import core.node.services.IdentityService
+import core.node.services.NetworkMapService
 import core.testing.MockNetworkMapCache
 import core.testutils.MockIdentityService
-import core.testutils.TEST_TX_TIME
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -21,31 +22,10 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Clock
-import java.time.Duration
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
-
-/**
- * A test/mock timestamping service that doesn't use any signatures or security. It timestamps with
- * the provided clock which defaults to [TEST_TX_TIME], an arbitrary point on the timeline.
- */
-class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.systemDefault()),
-                       val tolerance: Duration = 30.seconds) : TimestamperService {
-    override val identity = DummyTimestampingAuthority.identity
-
-    override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
-        val wtx = wtxBytes.deserialize()
-        val timestamp = wtx.commands.mapNotNull { it.value as? TimestampCommand }.single()
-        if (timestamp.before!! until clock.instant() > tolerance)
-            throw TimestampingError.NotOnTimeException()
-        return DummyTimestampingAuthority.key.signWithECDSA(wtxBytes.bits, identity)
-    }
-}
-
-val DUMMY_TIMESTAMPER = DummyTimestamper()
 
 class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementService {
     override val keys: MutableMap<PublicKey, PrivateKey>

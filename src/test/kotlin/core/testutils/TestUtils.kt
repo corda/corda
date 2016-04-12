@@ -7,7 +7,7 @@ import com.google.common.net.HostAndPort
 import contracts.*
 import core.*
 import core.crypto.*
-import core.node.services.DummyTimestampingAuthority
+import core.node.AbstractNode
 import core.serialization.serialize
 import core.testing.MockIdentityService
 import core.visualiser.GraphVisualiser
@@ -57,17 +57,22 @@ val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
 
 val ALICE_KEY = generateKeyPair()
-val ALICE = ALICE_KEY.public
+val ALICE_PUBKEY = ALICE_KEY.public
+val ALICE = Party("Alice", ALICE_PUBKEY)
 
 val BOB_KEY = generateKeyPair()
-val BOB = BOB_KEY.public
+val BOB_PUBKEY = BOB_KEY.public
+val BOB = Party("Bob", BOB_PUBKEY)
 
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DummyTimestampingAuthority.key)
+val DUMMY_NOTARY_KEY = generateKeyPair()
+val DUMMY_NOTARY = Party("Notary Service", DUMMY_NOTARY_KEY.public)
 
-val MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_TIMESTAMPER.identity))
+val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
+
+val MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
 // In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
 // a sandbox. For unit tests we just have a hard-coded list.
@@ -79,6 +84,18 @@ val TEST_PROGRAM_MAP: Map<Contract, Class<out Contract>> = mapOf(
         DUMMY_PROGRAM_ID to DummyContract::class.java,
         IRS_PROGRAM_ID to InterestRateSwap::class.java
 )
+
+fun generateState(notary: Party = DUMMY_NOTARY) = DummyContract.State(Random().nextInt(), notary)
+fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
+
+fun issueState(node: AbstractNode, notary: Party = DUMMY_NOTARY): StateRef {
+    val tx = DummyContract().generateInitial(node.info.identity.ref(0), Random().nextInt(), DUMMY_NOTARY)
+    tx.signWith(node.storage.myLegalIdentityKey)
+    tx.signWith(DUMMY_NOTARY_KEY)
+    val stx = tx.toSignedTransaction()
+    node.services.recordTransactions(listOf(stx))
+    return StateRef(stx.id, 0)
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -107,7 +124,7 @@ infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner =
 infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
 
 // Allows you to write 100.DOLLARS.CASH
-val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1, 2, 3), this, NullPublicKey)
+val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1, 2, 3), this, NullPublicKey, DUMMY_NOTARY)
 
 class LabeledOutput(val label: String?, val state: ContractState) {
     override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
@@ -143,7 +160,7 @@ abstract class AbstractTransactionForTest {
     }
 
     fun timestamp(data: TimestampCommand) {
-        commands.add(Command(data, DUMMY_TIMESTAMPER.identity.owningKey))
+        commands.add(Command(data, DUMMY_NOTARY.owningKey))
     }
 
     // Forbid patterns like:  transaction { ... transaction { ... } }

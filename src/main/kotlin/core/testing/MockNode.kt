@@ -1,8 +1,6 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import core.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
@@ -11,13 +9,14 @@ import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.PhysicalLocation
 import core.node.services.NetworkMapService
+import core.node.services.NotaryService
 import core.node.services.ServiceType
-import core.node.services.TimestamperService
 import core.utilities.AffinityExecutor
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.KeyPair
 import java.time.Clock
 import java.util.*
 
@@ -47,19 +46,19 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
     /** Allows customisation of how nodes are created. */
     interface Factory {
-        fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                   networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode
+        fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+                   advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNode
     }
 
     object DefaultFactory : Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                            networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode {
-            return MockNode(dir, config, network, networkMapAddr, advertisedServices, id)
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+                            advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNode {
+            return MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair)
         }
     }
 
-    open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, val id: Int) : AbstractNode(dir, config, networkMapAddr, advertisedServices, Clock.systemUTC()) {
+    open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
+                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -81,6 +80,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             // Nothing to do
         }
 
+        override fun generateKeyPair(): KeyPair? = keyPair ?: super.generateKeyPair()
+
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
 
@@ -95,7 +96,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
     /** Returns a started node, optionally created by the passed factory method */
     fun createNode(networkMapAddress: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
-                   vararg advertisedServices: ServiceType): MockNode {
+                   legalName: String? = null, keyPair: KeyPair? = null, vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -103,11 +104,11 @@ class MockNetwork(private val threadPerNode: Boolean = false,
         if (newNode)
             Files.createDirectories(path.resolve("attachments"))
         val config = object : NodeConfiguration {
-            override val myLegalName: String = "Mock Company $id"
+            override val myLegalName: String = legalName ?: "Mock Company $id"
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id).start()
+        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair).start()
         _nodes.add(node)
         return node
     }
@@ -128,16 +129,19 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /**
-     * Sets up a two node network, in which the first node runs network map and timestamping services and the other
+     * Sets up a two node network, in which the first node runs network map and notary services and the other
      * doesn't.
      */
-    fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
+    fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, NetworkMapService.Type, TimestamperService.Type),
-                createNode(nodes[0].info, -1, nodeFactory)
+                createNode(null, -1, nodeFactory, null, notaryKeyPair, NetworkMapService.Type, NotaryService.Type),
+                createNode(nodes[0].info, -1, nodeFactory, null)
         )
     }
+
+    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, legalName, keyPair, NetworkMapService.Type, NotaryService.Type)
+    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, legalName, keyPair)
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
 }

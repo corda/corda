@@ -107,7 +107,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     }
 
     /**
-     * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found matches
+     * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
      * the set of pubkeys in the commands. If any signatures are missing, either throws an exception (by default) or
      * returns the list of keys that have missing signatures, depending on the parameter.
      *
@@ -115,25 +115,34 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      */
     fun verify(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
         verifySignatures()
-        // Verify that every command key was in the set that we just verified: there should be no commands that were
-        // unverified.
-        val cmdKeys = tx.commands.flatMap { it.signers }.toSet()
-        val sigKeys = sigs.map { it.by }.toSet()
-        if (sigKeys == cmdKeys)
-            return emptySet()
 
-        val missing = cmdKeys - sigKeys
-        if (throwIfSignaturesAreMissing)
+        val missing = getMissingSignatures()
+        if (missing.isNotEmpty() && throwIfSignaturesAreMissing)
             throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${missing.map { it.toStringShort() }}")
-        else
-            return missing
+
+        return missing
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature */
-    fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
+    fun withAdditionalSignature(sig: DigitalSignature.WithKey): SignedTransaction {
+        // TODO: need to make sure the Notary signs last
+        return copy(sigs = sigs + sig)
+    }
 
     /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
     operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)
+
+    /**
+     * Returns the set of missing signatures - a signature must be present for every command pub key
+     * and the Notary (if it is specified)
+     */
+    fun getMissingSignatures(): Set<PublicKey> {
+        val requiredKeys = tx.commands.flatMap { it.signers }.toSet()
+        val sigKeys = sigs.map { it.by }.toSet()
+
+        if (sigKeys.containsAll(requiredKeys)) return emptySet()
+        return requiredKeys - sigKeys
+    }
 }
 
 /**

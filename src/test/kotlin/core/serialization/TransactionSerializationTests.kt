@@ -2,7 +2,6 @@ package core.serialization
 
 import contracts.Cash
 import core.*
-import core.crypto.SecureHash
 import core.testutils.*
 import org.junit.Before
 import org.junit.Test
@@ -14,10 +13,10 @@ class TransactionSerializationTests {
     // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
-    val outputState = Cash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1)
-    val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public)
+    val outputState = Cash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1, DUMMY_NOTARY)
+    val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public, DUMMY_NOTARY)
 
-    val fakeStateRef = StateRef(SecureHash.sha256("fake tx id"), 0)
+    val fakeStateRef = generateStateRef()
     lateinit var tx: TransactionBuilder
 
     @Before
@@ -33,27 +32,18 @@ class TransactionSerializationTests {
         val signedTX = tx.toSignedTransaction()
 
         // Now check that the signature we just made verifies.
-        signedTX.verify()
+        signedTX.verifySignatures()
 
         // Corrupt the data and ensure the signature catches the problem.
         signedTX.txBits.bits[5] = 0
         assertFailsWith(SignatureException::class) {
-            signedTX.verify()
-        }
-    }
-
-    @Test
-    fun tooManyKeys() {
-        assertFailsWith(IllegalStateException::class) {
-            tx.signWith(TestUtils.keypair)
-            tx.signWith(TestUtils.keypair2)
-            tx.toSignedTransaction()
+            signedTX.verifySignatures()
         }
     }
 
     @Test
     fun wrongKeys() {
-        // Can't convert if we don't have enough signatures.
+        // Can't convert if we don't have signatures for all commands
         assertFailsWith(IllegalStateException::class) {
             tx.toSignedTransaction()
         }
@@ -78,14 +68,14 @@ class TransactionSerializationTests {
 
     @Test
     fun timestamp() {
-        tx.setTime(TEST_TX_TIME, DUMMY_TIMESTAMPER.identity, 30.seconds)
-        tx.timestamp(DUMMY_TIMESTAMPER)
+        tx.setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
         tx.signWith(TestUtils.keypair)
+        tx.signWith(DUMMY_NOTARY_KEY)
         val stx = tx.toSignedTransaction()
         val ltx = stx.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments)
         assertEquals(tx.commands().map { it.value }, ltx.commands.map { it.value })
         assertEquals(tx.inputStates(), ltx.inputs)
         assertEquals(tx.outputStates(), ltx.outputs)
-        assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_TIMESTAMPER.identity)!!.midpoint)
+        assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_NOTARY)!!.midpoint)
     }
 }

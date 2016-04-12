@@ -59,7 +59,7 @@ object UpdateBusinessDayProtocol {
         // This assumes we definitely have one key or the other
         fun otherParty(deal: DealState): NodeInfo {
             val ourKeys = serviceHub.keyManagementService.keys.keys
-            return serviceHub.networkMapCache.nodeForPartyName(deal.parties.single { !ourKeys.contains(it.owningKey) }.name)!!
+            return serviceHub.networkMapCache.getNodeByLegalName(deal.parties.single { !ourKeys.contains(it.owningKey) }.name)!!
         }
 
         // TODO we should make this more object oriented when we can ask a state for it's contract
@@ -102,7 +102,7 @@ object UpdateBusinessDayProtocol {
             val deal: InterestRateSwap.State = dealStateAndRef.state
             val myOldParty = deal.parties.single { it.name == myName }
             val keyPair = serviceHub.keyManagementService.toKeyPair(myOldParty.owningKey)
-            val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.timestampingNodes[0], dealStateAndRef,
+            val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.notaryNodes[0], dealStateAndRef,
                     keyPair,
                     sessionID, progressTracker.childrenFor[FIXING]!!)
             val result = subProtocol(participant)
@@ -114,7 +114,7 @@ object UpdateBusinessDayProtocol {
             progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Secondary.tracker()
             progressTracker.currentStep = FIXING
 
-            val participant = TwoPartyDealProtocol.Fixer(party.address, serviceHub.networkMapCache.timestampingNodes[0].identity, dealStateAndRef, sessionID, progressTracker.childrenFor[FIXING]!!)
+            val participant = TwoPartyDealProtocol.Fixer(party.address, serviceHub.networkMapCache.notaryNodes[0].identity, dealStateAndRef, sessionID, progressTracker.childrenFor[FIXING]!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
@@ -124,7 +124,7 @@ object UpdateBusinessDayProtocol {
 
     object Handler {
         fun register(node: Node) {
-            node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
+            node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
                 // Just to validate we got the message
                 val updateBusinessDayMessage = msg.data.deserialize<UpdateBusinessDayMessage>()
                 if ((node.services.clock as DemoClock).updateDate(updateBusinessDayMessage.date)) {

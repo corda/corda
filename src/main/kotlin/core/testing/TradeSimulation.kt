@@ -23,24 +23,24 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val buyer = banks[buyerBankIndex]
         val seller = banks[sellerBankIndex]
 
-        (buyer.services.walletService as NodeWalletService).fillWithSomeTestCash(1500.DOLLARS)
+        (buyer.services.walletService as NodeWalletService).fillWithSomeTestCash(notary.info.identity, 1500.DOLLARS)
 
         val issuance = run {
-            val tx = CommercialPaper().generateIssue(seller.info.identity.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days)
-            tx.setTime(Instant.now(), timestamper.info.identity, 30.seconds)
-            tx.signWith(timestamper.storage.myLegalIdentityKey)
+            val tx = CommercialPaper().generateIssue(seller.info.identity.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days, notary.info.identity)
+            tx.setTime(Instant.now(), notary.info.identity, 30.seconds)
+            tx.signWith(notary.storage.myLegalIdentityKey)
             tx.signWith(seller.storage.myLegalIdentityKey)
             tx.toSignedTransaction(true)
         }
         seller.services.storageService.validatedTransactions[issuance.id] = issuance
 
         val sessionID = random63BitValue()
-        val buyerProtocol = TwoPartyTradeProtocol.Buyer(seller.net.myAddress, timestamper.info.identity,
+        val buyerProtocol = TwoPartyTradeProtocol.Buyer(seller.net.myAddress, notary.info.identity,
                 1000.DOLLARS, CommercialPaper.State::class.java, sessionID)
-        val sellerProtocol = TwoPartyTradeProtocol.Seller(buyer.net.myAddress, timestamper.info,
+        val sellerProtocol = TwoPartyTradeProtocol.Seller(buyer.net.myAddress, notary.info,
                 issuance.tx.outRef(0), 1000.DOLLARS, seller.storage.myLegalIdentityKey, sessionID)
 
-        linkConsensus(listOf(buyer, seller, timestamper), sellerProtocol)
+        linkConsensus(listOf(buyer, seller, notary), sellerProtocol)
         linkProtocolProgress(buyer, buyerProtocol)
         linkProtocolProgress(seller, sellerProtocol)
 

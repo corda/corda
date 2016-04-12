@@ -2,15 +2,11 @@ package contracts
 
 import core.*
 import core.crypto.SecureHash
-import core.node.services.DummyTimestampingAuthority
-import core.node.services.TimestampingError
 import core.testutils.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.time.Clock
 import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -26,7 +22,8 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
             MEGA_CORP.ref(123),
             MEGA_CORP_PUBKEY,
             1000.DOLLARS,
-            TEST_TX_TIME + 7.days
+            TEST_TX_TIME + 7.days,
+            DUMMY_NOTARY
     )
 
     override fun getIssueCommand(): CommandData = JavaCommercialPaper.Commands.Issue()
@@ -39,7 +36,8 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_PUBKEY,
             faceValue = 1000.DOLLARS,
-            maturityDate = TEST_TX_TIME + 7.days
+            maturityDate = TEST_TX_TIME + 7.days,
+            notary = DUMMY_NOTARY
     )
 
     override fun getIssueCommand(): CommandData = CommercialPaper.Commands.Issue()
@@ -109,28 +107,6 @@ class CommercialPaperTestsGeneric {
     }
 
     @Test
-    fun `timestamp out of range`() {
-        // Check what happens if the timestamp on the transaction itself defines a range that doesn't include true
-        // time as measured by a TSA (which is running five hours ahead in this test).
-        CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
-            setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
-            signWith(MINI_CORP_KEY)
-            assertFailsWith(TimestampingError.NotOnTimeException::class) {
-                timestamp(DummyTimestamper(Clock.fixed(TEST_TX_TIME + 5.hours, ZoneOffset.UTC)))
-            }
-        }
-        // Check that it also fails if true time is before the threshold (we are trying to timestamp too early).
-        CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
-            setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
-            signWith(MINI_CORP_KEY)
-            assertFailsWith(TimestampingError.NotOnTimeException::class) {
-                val tsaClock = Clock.fixed(TEST_TX_TIME - 5.hours, ZoneOffset.UTC)
-                timestamp(DummyTimestamper(tsaClock), Clock.fixed(TEST_TX_TIME, ZoneOffset.UTC))
-            }
-        }
-    }
-
-    @Test
     fun `issue cannot replace an existing state`() {
         transactionGroup {
             roots {
@@ -166,30 +142,30 @@ class CommercialPaperTestsGeneric {
     fun `issue move and then redeem`() {
         // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val issueTX: LedgerTransaction = run {
-            val ptx = CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
-                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+            val ptx = CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
+                setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
                 signWith(MINI_CORP_KEY)
-                timestamp(DUMMY_TIMESTAMPER)
+                signWith(DUMMY_NOTARY_KEY)
             }
             val stx = ptx.toSignedTransaction()
             stx.verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
-                3000.DOLLARS.CASH `owned by` ALICE,
-                3000.DOLLARS.CASH `owned by` ALICE,
-                3000.DOLLARS.CASH `owned by` ALICE
+                3000.DOLLARS.CASH `owned by` ALICE_PUBKEY,
+                3000.DOLLARS.CASH `owned by` ALICE_PUBKEY,
+                3000.DOLLARS.CASH `owned by` ALICE_PUBKEY
         )
 
         // Alice pays $9000 to MiniCorp to own some of their debt.
         val moveTX: LedgerTransaction = run {
             val ptx = TransactionBuilder()
             Cash().generateSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
-            CommercialPaper().generateMove(ptx, issueTX.outRef(0), ALICE)
+            CommercialPaper().generateMove(ptx, issueTX.outRef(0), ALICE_PUBKEY)
             ptx.signWith(MINI_CORP_KEY)
             ptx.signWith(ALICE_KEY)
-            val stx = ptx.toSignedTransaction()
-            stx.verifyToLedgerTransaction(MockIdentityService, attachments)
+            ptx.signWith(DUMMY_NOTARY_KEY)
+            ptx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
         // Won't be validated.
@@ -200,11 +176,11 @@ class CommercialPaperTestsGeneric {
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
             val ptx = TransactionBuilder()
-            ptx.setTime(time, DummyTimestampingAuthority.identity, 30.seconds)
+            ptx.setTime(time, DUMMY_NOTARY, 30.seconds)
             CommercialPaper().generateRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)
-            ptx.timestamp(DUMMY_TIMESTAMPER)
+            ptx.signWith(DUMMY_NOTARY_KEY)
             return ptx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService, attachments)
         }
 
@@ -226,7 +202,7 @@ class CommercialPaperTestsGeneric {
         val someProfits = 1200.DOLLARS
         return transactionGroupFor() {
             roots {
-                transaction(900.DOLLARS.CASH `owned by` ALICE label "alice's $900")
+                transaction(900.DOLLARS.CASH `owned by` ALICE_PUBKEY label "alice's $900")
                 transaction(someProfits.CASH `owned by` MEGA_CORP_PUBKEY label "some profits")
             }
 
@@ -243,8 +219,8 @@ class CommercialPaperTestsGeneric {
                 input("paper")
                 input("alice's $900")
                 output("borrowed $900") { 900.DOLLARS.CASH `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output `owned by` ALICE }
-                arg(ALICE) { Cash.Commands.Move() }
+                output("alice's paper") { "paper".output `owned by` ALICE_PUBKEY }
+                arg(ALICE_PUBKEY) { Cash.Commands.Move() }
                 arg(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
             }
 
@@ -254,13 +230,13 @@ class CommercialPaperTestsGeneric {
                 input("alice's paper")
                 input("some profits")
 
-                output("Alice's profit") { aliceGetsBack.CASH `owned by` ALICE }
+                output("Alice's profit") { aliceGetsBack.CASH `owned by` ALICE_PUBKEY }
                 output("Change") { (someProfits - aliceGetsBack).CASH `owned by` MEGA_CORP_PUBKEY }
                 if (!destroyPaperAtRedemption)
                     output { "paper".output }
 
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                arg(ALICE) { thisTest.getRedeemCommand() }
+                arg(ALICE_PUBKEY) { thisTest.getRedeemCommand() }
 
                 timestamp(redemptionTime)
             }

@@ -23,10 +23,11 @@ interface NamedByHash {
  * updated, instead, any changes must generate a new successor state.
  */
 interface ContractState {
-    /**
-     * Contract by which the state belongs
-     */
+    /** Contract by which the state belongs */
     val contract: Contract
+
+    /** Identity of the notary that ensures this state is not used as an input to a transaction more than once */
+    val notary: Party
 }
 
 /**

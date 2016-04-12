@@ -2,7 +2,6 @@ package contracts
 
 import core.*
 import core.crypto.SecureHash
-import core.node.services.DummyTimestampingAuthority
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -46,6 +45,7 @@ class CrowdFund : Contract {
 
     data class State(
             val campaign: Campaign,
+            override val notary: Party,
             val closed: Boolean = false,
             val pledges: List<Pledge> = ArrayList()
     ) : ContractState {
@@ -74,7 +74,7 @@ class CrowdFund : Contract {
         val outputCrowdFund: CrowdFund.State = tx.outStates.filterIsInstance<CrowdFund.State>().single()
         val outputCash: List<Cash.State> = tx.outStates.filterIsInstance<Cash.State>()
 
-        val time = tx.getTimestampBy(DummyTimestampingAuthority.identity)?.midpoint
+        val time = tx.commands.getTimestampByName("Notary Service")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         when (command.value) {
@@ -136,9 +136,9 @@ class CrowdFund : Contract {
      * Returns a transaction that registers a crowd-funding campaing, owned by the issuing institution's key. Does not update
      * an existing transaction because it's not possible to register multiple campaigns in a single transaction
      */
-    fun generateRegister(owner: PartyAndReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
+    fun generateRegister(owner: PartyAndReference, fundingTarget: Amount, fundingName: String, closingTime: Instant, notary: Party): TransactionBuilder {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
-        val state = State(campaign)
+        val state = State(campaign, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Register(), owner.party.owningKey))
     }
 

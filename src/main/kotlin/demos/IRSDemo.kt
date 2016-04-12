@@ -8,8 +8,11 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
+import core.node.services.NetworkMapService
+import core.node.services.NodeInterestRates
+import core.node.services.NotaryService
+import core.node.services.ServiceType
 import core.node.subsystems.ArtemisMessagingService
-import core.node.services.*
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
 import demos.protocols.AutoOfferProtocol
@@ -60,13 +63,13 @@ fun main(args: Array<String>) {
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
 
     val networkMapId = if (options.valueOf(networkMapNetAddr).equals(options.valueOf(networkAddressArg))) {
-        // This node provides network map and timestamping services
-        advertisedServices = setOf(NetworkMapService.Type, TimestamperService.Type)
+        // This node provides network map and notary services
+        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
         null
     } else {
         advertisedServices = setOf(NodeInterestRates.Type)
         try {
-            nodeInfo(options.valueOf(networkMapNetAddr), options.valueOf(networkMapIdentityFile), setOf(NetworkMapService.Type, TimestamperService.Type))
+            nodeInfo(options.valueOf(networkMapNetAddr), options.valueOf(networkMapIdentityFile), setOf(NetworkMapService.Type, NotaryService.Type))
         } catch (e: Exception) {
             null
         }
@@ -86,7 +89,7 @@ fun main(args: Array<String>) {
             val peerId = nodeInfo(hostAndPortString, identityFile)
             node.services.identityService.registerIdentity(peerId.identity)
         } catch (e: Exception) {
-            println("Could not load peer identity file \"${identityFile}\".")
+            println("Could not load peer identity file \"$identityFile\".")
         }
     }
 

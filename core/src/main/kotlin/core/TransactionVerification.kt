@@ -3,9 +3,6 @@ package core
 import core.crypto.SecureHash
 import java.util.*
 
-class TransactionResolutionException(val hash: SecureHash) : Exception()
-class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
-
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
 
 /**
@@ -63,25 +60,35 @@ data class TransactionForVerification(val inStates: List<ContractState>,
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
 
     /**
-     * Runs the contracts for this transaction.
+     * Verifies that the transaction is valid:
+     * - Checks that the input states and the timestamp point to the same Notary
+     * - Runs the contracts for this transaction. If any contract fails to verify, the whole transaction
+     *   is considered to be invalid
      *
      * TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.
      *
-     * @throws TransactionVerificationException if a contract throws an exception, the original is in the cause field
-     * @throws IllegalStateException if a state refers to an unknown contract.
+     * @throws TransactionVerificationException if a contract throws an exception (the original is in the cause field)
+     *                                          or the transaction has references to more than one Notary
      */
-    @Throws(TransactionVerificationException::class, IllegalStateException::class)
+    @Throws(TransactionVerificationException::class)
     fun verify() {
-        // For each input and output state, locate the program to run. Then execute the verification function. If any
-        // throws an exception, the entire transaction is invalid.
-        val programs = (inStates.map { it.contract } + outStates.map { it.contract }).toSet()
-        for (program in programs) {
+        verifySingleNotary()
+        val contracts = (inStates.map { it.contract } + outStates.map { it.contract }).toSet()
+        for (contract in contracts) {
             try {
-                program.verify(this)
+                contract.verify(this)
             } catch(e: Throwable) {
-                throw TransactionVerificationException(this, program, e)
+                throw TransactionVerificationException.ContractRejection(this, contract, e)
             }
         }
+    }
+
+    private fun verifySingleNotary() {
+        if (inStates.isEmpty()) return
+        val notary = inStates.first().notary
+        if (inStates.any { it.notary != notary }) throw TransactionVerificationException.MoreThanOneNotary(this)
+        val timestampCmd = commands.singleOrNull { it.value is TimestampCommand } ?: return
+        if (!timestampCmd.signers.contains(notary.owningKey)) throw TransactionVerificationException.MoreThanOneNotary(this)
     }
 
     /**
@@ -99,6 +106,8 @@ data class TransactionForVerification(val inStates: List<ContractState>,
 
     /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
     fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
+    /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */
+    fun getTimestampByName(vararg authorityName: String): TimestampCommand? = commands.getTimestampByName(*authorityName)
 
     /**
      * Given a type and a function that returns a grouping key, associates inputs and outputs together so that they
@@ -152,5 +161,10 @@ data class TransactionForVerification(val inStates: List<ContractState>,
     }
 }
 
-/** Thrown if a verification fails due to a contract rejection. */
-class TransactionVerificationException(val tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : Exception(cause)
+class TransactionResolutionException(val hash: SecureHash) : Exception()
+class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
+
+sealed class TransactionVerificationException(val tx: TransactionForVerification, cause: Throwable?) : Exception(cause) {
+    class ContractRejection(tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
+    class MoreThanOneNotary(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
+}

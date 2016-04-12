@@ -15,6 +15,7 @@ import core.random63BitValue
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.utilities.AddOrRemove
+import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -28,8 +29,8 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
         get() = get(NetworkMapService.Type)
     override val regulators: List<NodeInfo>
         get() = get(RegulatorService.Type)
-    override val timestampingNodes: List<NodeInfo>
-        get() = get(TimestamperService.Type)
+    override val notaryNodes: List<NodeInfo>
+        get() = get(NotaryService.Type)
     override val ratesOracleNodes: List<NodeInfo>
         get() = get(NodeInterestRates.Type)
     override val partyNodes: List<NodeInfo>
@@ -41,6 +42,8 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
     override fun get() = registeredNodes.map { it.value }
     override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.contains(serviceType) }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
+    override fun getNodeByLegalName(name: String) = get().singleOrNull { it.identity.name == name }
+    override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull { it.identity.owningKey == publicKey }
 
     override fun addMapService(net: MessagingService, service: NodeInfo, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {

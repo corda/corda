@@ -48,7 +48,7 @@ object AutoOfferProtocol {
         }
 
         fun register(node: Node) {
-            node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
+            node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
                 val progressTracker = tracker()
                 ANSIProgressRenderer.progressTracker = progressTracker
                 progressTracker.currentStep = RECEIVED
@@ -57,7 +57,7 @@ object AutoOfferProtocol {
                 progressTracker.currentStep = DEALING
                 // TODO required as messaging layer does not currently queue messages that arrive before we expect them
                 Thread.sleep(100)
-                val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, node.services.networkMapCache.timestampingNodes.first(),
+                val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, node.services.networkMapCache.notaryNodes.first(),
                         autoOfferMessage.dealBeingOffered, node.services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.childrenFor[DEALING]!!)
                 val future = node.smm.add("${TwoPartyDealProtocol.DEAL_TOPIC}.seller", seller)
                 // This is required because we are doing child progress outside of a subprotocol.  In future, we should just wrap things like this in a protocol to avoid it
@@ -93,19 +93,19 @@ object AutoOfferProtocol {
 
         @Suspendable
         override fun call(): SignedTransaction {
-            require(serviceHub.networkMapCache.timestampingNodes.isNotEmpty()) { "No timestamping nodes registered" }
+            require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             val ourSessionID = random63BitValue()
 
-            val timestampingAuthority = serviceHub.networkMapCache.timestampingNodes.first()
+            val notary = serviceHub.networkMapCache.notaryNodes.first()
             // need to pick which ever party is not us
             val otherParty = notUs(*dealToBeOffered.parties).single()
-            val otherNode = (serviceHub.networkMapCache.nodeForPartyName(otherParty.name))
+            val otherNode = (serviceHub.networkMapCache.getNodeByLegalName(otherParty.name))
             requireNotNull(otherNode) { "Cannot identify other party " + otherParty.name + ", know about: " + serviceHub.networkMapCache.partyNodes.map { it.identity } }
             val otherSide = otherNode!!.address
             progressTracker.currentStep = ANNOUNCING
             send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.networkService.myAddress, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING
-            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, timestampingAuthority.identity, dealToBeOffered, ourSessionID, progressTracker.childrenFor[DEALING]!!))
+            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, notary.identity, dealToBeOffered, ourSessionID, progressTracker.childrenFor[DEALING]!!))
             return stx
         }
 

@@ -6,11 +6,6 @@ import com.google.common.util.concurrent.MoreExecutors
 import core.ThreadBox
 import core.crypto.sha256
 import core.messaging.*
-import core.node.NodeInfo
-import core.node.services.DummyTimestampingAuthority
-import core.node.services.NodeTimestamperService
-import core.node.services.ServiceType
-import core.node.services.TimestamperService
 import core.utilities.loggerFor
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -142,18 +137,6 @@ class InMemoryMessagingNetwork {
         override fun toString() = "In memory node $id"
         override fun equals(other: Any?) = other is Handle && other.id == id
         override fun hashCode() = id.hashCode()
-    }
-
-    private var timestampingAdvert: NodeInfo? = null
-
-    @Synchronized
-    fun setupTimestampingNode(manuallyPumped: Boolean): Pair<NodeInfo, InMemoryMessaging> {
-        check(timestampingAdvert == null)
-        val (handle, builder) = createNode(manuallyPumped)
-        val node = builder.start().get()
-        NodeTimestamperService(node, DummyTimestampingAuthority.identity, DummyTimestampingAuthority.key)
-        timestampingAdvert = NodeInfo(handle, DummyTimestampingAuthority.identity, setOf(TimestamperService.Type))
-        return Pair(timestampingAdvert!!, node)
     }
 
     /**

@@ -7,15 +7,16 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import core.Party
-import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
 import core.messaging.runOnNextMessage
 import core.node.services.*
+import core.node.subsystems.*
 import core.node.storage.CheckpointStorage
 import core.node.storage.PerFileCheckpointStorage
 import core.node.subsystems.*
 import core.random63BitValue
+import core.seconds
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.utilities.AddOrRemove
@@ -85,7 +86,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
-    var inNodeTimestampingService: NodeTimestamperService? = null
+    var inNodeNotaryService: NotaryService? = null
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
     lateinit var api: APIServer
@@ -103,7 +104,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         // Build services we're advertising
         if (NetworkMapService.Type in info.advertisedServices) makeNetworkMapService()
-        if (TimestamperService.Type in info.advertisedServices) makeTimestampingService()
+        if (NotaryService.Type in info.advertisedServices) makeNotaryService()
 
         identity = makeIdentityService()
 
@@ -161,8 +162,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }
 
-    open protected fun makeTimestampingService() {
-        inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
+    open protected fun makeNotaryService() {
+        val uniquenessProvider = InMemoryUniquenessProvider()
+        val timestampChecker = TimestampChecker(platformClock, 30.seconds)
+        inNodeNotaryService = NotaryService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, uniquenessProvider, timestampChecker)
     }
 
     lateinit var interestRatesService: NodeInterestRates.Service
@@ -243,7 +246,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         }
     }
 
-    private fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
+    protected open fun generateKeyPair() = core.crypto.generateKeyPair()
+
+    protected fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
         val attachmentsDir = dir.resolve("attachments")
         try {
             Files.createDirectory(attachmentsDir)

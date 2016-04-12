@@ -16,7 +16,6 @@ import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
-import java.time.Instant
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
@@ -44,18 +43,18 @@ import java.time.Instant
 object TwoPartyTradeProtocol {
     val TRADE_TOPIC = "platform.trade"
 
-    fun runSeller(smm: StateMachineManager, timestampingAuthority: NodeInfo,
+    fun runSeller(smm: StateMachineManager, notary: NodeInfo,
                   otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
                   myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
-        val seller = Seller(otherSide, timestampingAuthority, assetToSell, price, myKeyPair, buyerSessionID)
+        val seller = Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
         return smm.add("${TRADE_TOPIC}.seller", seller)
     }
 
-    fun runBuyer(smm: StateMachineManager, timestampingAuthority: NodeInfo,
+    fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
                  otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
                  sessionID: Long): ListenableFuture<SignedTransaction> {
-        val buyer = Buyer(otherSide, timestampingAuthority.identity, acceptablePrice, typeToBuy, sessionID)
-        return smm.add("${TRADE_TOPIC}.buyer", buyer)
+        val buyer = Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
+        return smm.add("$TRADE_TOPIC.buyer", buyer)
     }
 
     class UnacceptablePriceException(val givenPrice: Amount) : Exception()
@@ -71,10 +70,11 @@ object TwoPartyTradeProtocol {
             val sessionID: Long
     )
 
-    class SignaturesFromSeller(val timestampAuthoritySig: DigitalSignature.WithKey, val sellerSig: DigitalSignature.WithKey)
+    class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
+                               val notarySig: DigitalSignature.WithKey)
 
     open class Seller(val otherSide: SingleMessageRecipient,
-                      val timestampingAuthority: NodeInfo,
+                      val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount,
                       val myKeyPair: KeyPair,
@@ -83,12 +83,16 @@ object TwoPartyTradeProtocol {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
+
             object VERIFYING : ProgressTracker.Step("Verifying transaction proposal")
+
             object SIGNING : ProgressTracker.Step("Signing transaction")
-            object TIMESTAMPING : ProgressTracker.Step("Timestamping transaction")
+
+            object NOTARY : ProgressTracker.Step("Getting notary signature")
+
             object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to buyer")
 
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, TIMESTAMPING, SENDING_SIGS)
+            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS)
         }
 
         @Suspendable
@@ -97,15 +101,15 @@ object TwoPartyTradeProtocol {
 
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
             val ourSignature = signWithOurKey(partialTX)
-            val tsaSig = timestamp(partialTX)
+            val notarySignature = getNotarySignature(partialTX)
 
-            return sendSignatures(partialTX, ourSignature, tsaSig)
+            return sendSignatures(partialTX, ourSignature, notarySignature)
         }
 
         @Suspendable
-        private fun timestamp(partialTX: SignedTransaction): DigitalSignature.LegallyIdentifiable {
-            progressTracker.currentStep = TIMESTAMPING
-            return subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits))
+        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+            progressTracker.currentStep = NOTARY
+            return subProtocol(NotaryProtocol(stx.tx))
         }
 
         @Suspendable
@@ -126,7 +130,7 @@ object TwoPartyTradeProtocol {
 
                 // Check that the tx proposed by the buyer is valid.
                 val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public, timestampingAuthority.identity.owningKey))
+                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
                     throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
 
                 val wtx: WireTransaction = it.tx
@@ -162,7 +166,6 @@ object TwoPartyTradeProtocol {
             subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
         }
 
-        @Suspendable
         open fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
             return myKeyPair.signWithECDSA(partialTX.txBits)
@@ -170,26 +173,29 @@ object TwoPartyTradeProtocol {
 
         @Suspendable
         private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                   tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+                                   notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
-            val fullySigned = partialTX + tsaSig + ourSignature
+            val fullySigned = partialTX + ourSignature + notarySignature
 
             logger.trace { "Built finished transaction, sending back to secondary!" }
 
-            send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(tsaSig, ourSignature))
+            send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(ourSignature, notarySignature))
             return fullySigned
         }
     }
 
     open class Buyer(val otherSide: SingleMessageRecipient,
-                     val timestampingAuthority: Party,
+                     val notary: Party,
                      val acceptablePrice: Amount,
                      val typeToBuy: Class<out OwnableState>,
                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
 
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
+
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
+
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
+
         object SWAPPING_SIGNATURES : ProgressTracker.Step("Swapping signatures with the seller")
 
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES)
@@ -207,7 +213,7 @@ object TwoPartyTradeProtocol {
             val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
             logger.trace { "Got signatures from seller, verifying ... " }
-            val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
+            val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
             logger.trace { "Signatures received are valid. Trade complete! :-)" }
@@ -281,7 +287,8 @@ object TwoPartyTradeProtocol {
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
-            ptx.setTime(Instant.now(), timestampingAuthority, 30.seconds)
+            val currentTime = serviceHub.clock.instant()
+            ptx.setTime(currentTime, notary, 30.seconds)
             return Pair(ptx, cashSigningPubKeys)
         }
     }

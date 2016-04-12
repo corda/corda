@@ -7,7 +7,6 @@ import com.google.common.util.concurrent.SettableFuture
 import contracts.InterestRateSwap
 import core.*
 import core.crypto.SecureHash
-import core.testing.MockIdentityService
 import core.node.subsystems.linearHeadsOfType
 import core.utilities.JsonSupport
 import protocols.TwoPartyDealProtocol
@@ -64,9 +63,9 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         if (nextFixingDate > currentDay)
             currentDay = nextFixingDate
 
-        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, timestamper.info,
+        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, notary.info,
                 theDealRef, node1.services.keyManagementService.freshKey(), sessionID)
-        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, timestamper.info.identity,
+        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, notary.info.identity,
                 theDealRef, sessionID)
 
         linkConsensus(listOf(node1, node2, regulators[0]), sideB)
@@ -108,9 +107,9 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
 
         val sessionID = random63BitValue()
 
-        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, timestamper.info,
+        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, notary.info,
                 irs, node1.services.keyManagementService.freshKey(), sessionID)
-        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, timestamper.info.identity,
+        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, notary.info.identity,
                 irs, sessionID)
 
         // TODO: Eliminate the need for linkProtocolProgress

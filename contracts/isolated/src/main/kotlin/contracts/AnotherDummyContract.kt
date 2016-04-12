@@ -9,9 +9,6 @@
 package contracts.isolated
 
 import core.*
-import core.Contract
-import core.ContractState
-import core.TransactionForVerification
 import core.crypto.SecureHash
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
@@ -19,7 +16,7 @@ import core.crypto.SecureHash
 val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
 class AnotherDummyContract : Contract, core.node.DummyContractBackdoor {
-    class State(val magicNumber: Int = 0) : ContractState {
+    class State(val magicNumber: Int = 0, override val notary: Party) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
     }
 
@@ -34,11 +31,11 @@ class AnotherDummyContract : Contract, core.node.DummyContractBackdoor {
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("https://anotherdummy.org")
 
-    override fun generateInitial(owner: PartyAndReference, magicNumber: Int) : TransactionBuilder {
-        val state = State(magicNumber)
-        return TransactionBuilder().withItems( state, Command(Commands.Create(), owner.party.owningKey) )
+    override fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
+        val state = State(magicNumber, notary)
+        return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 
-    override fun inspectState(state: core.ContractState) : Int = (state as State).magicNumber
+    override fun inspectState(state: core.ContractState): Int = (state as State).magicNumber
 
 }

@@ -41,7 +41,8 @@ class CommercialPaper : Contract {
             val issuance: PartyAndReference,
             override val owner: PublicKey,
             val faceValue: Amount,
-            val maturityDate: Instant
+            val maturityDate: Instant,
+            override val notary: Party
     ) : OwnableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
 
@@ -76,7 +77,7 @@ class CommercialPaper : Contract {
         // Here, we match acceptable timestamp authorities by name. The list of acceptable TSAs (oracles) must be
         // hard coded into the contract because otherwise we could fail to gain consensus, if nodes disagree about
         // who or what is a trusted authority.
-        val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Timestamping Service", "Bank A")
+        val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
 
         for ((inputs, outputs, key) in groups) {
             when (command.value) {
@@ -129,8 +130,8 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(issuance: PartyAndReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
-        val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
+    fun generateIssue(issuance: PartyAndReference, faceValue: Amount, maturityDate: Instant, notary: Party): TransactionBuilder {
+        val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 

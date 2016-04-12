@@ -6,6 +6,7 @@ import core.*
 import core.crypto.SecureHash
 import core.node.services.AttachmentStorage
 import core.serialization.*
+import core.testutils.DUMMY_NOTARY
 import core.testutils.MEGA_CORP
 import org.apache.commons.io.IOUtils
 import org.junit.Test
@@ -19,7 +20,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 interface DummyContractBackdoor {
-    fun generateInitial(owner: PartyAndReference, magicNumber: Int): TransactionBuilder
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
     fun inspectState(state: ContractState): Int
 }
 
@@ -183,7 +184,7 @@ class AttachmentClassLoaderTests {
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
-        val tx = DUMMY_PROGRAM_ID.generateInitial(MEGA_CORP.ref(0), 42)
+        val tx = DUMMY_PROGRAM_ID.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val wireTransaction = tx.toWireTransaction()
         val bytes = wireTransaction.serialize()
         val copiedWireTransaction = bytes.deserialize()
@@ -197,7 +198,7 @@ class AttachmentClassLoaderTests {
         val child = ClassLoaderForTests()
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
-        val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
+        val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
         val kryo = createKryo()
 
@@ -228,7 +229,7 @@ class AttachmentClassLoaderTests {
         val child = ClassLoaderForTests()
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
-        val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
+        val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
         val kryo = createKryo()
 

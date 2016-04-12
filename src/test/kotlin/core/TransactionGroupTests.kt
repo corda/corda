@@ -1,7 +1,6 @@
 package core
 
 import contracts.Cash
-import core.crypto.SecureHash
 import core.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -9,7 +8,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
 class TransactionGroupTests {
-    val A_THOUSAND_POUNDS = Cash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY)
+    val A_THOUSAND_POUNDS = Cash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY, DUMMY_NOTARY)
 
     @Test
     fun success() {
@@ -20,13 +19,13 @@ class TransactionGroupTests {
 
             transaction {
                 input("£1000")
-                output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE }
+                output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE) { Cash.Commands.Move() }
+                arg(ALICE_PUBKEY) { Cash.Commands.Move() }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
             }
 
@@ -44,7 +43,7 @@ class TransactionGroupTests {
 
             val conflict1 = transaction {
                 input("cash")
-                val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` BOB
+                val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` BOB_PUBKEY
                 output { HALF }
                 output { HALF }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -55,7 +54,7 @@ class TransactionGroupTests {
             // Alice tries to double spend back to herself.
             val conflict2 = transaction {
                 input("cash")
-                val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` ALICE
+                val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` ALICE_PUBKEY
                 output { HALF }
                 output { HALF }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -82,23 +81,23 @@ class TransactionGroupTests {
 
             transaction {
                 input("cash")
-                output { A_THOUSAND_POUNDS `owned by` BOB }
+                output { A_THOUSAND_POUNDS `owned by` BOB_PUBKEY }
             }
         }
 
         // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
         // points nowhere.
-        val ref = StateRef(SecureHash.randomSHA256(), 0)
+        val input = generateStateRef()
         tg.txns += TransactionBuilder().apply {
-            addInputState(ref)
+            addInputState(input)
             addOutputState(A_THOUSAND_POUNDS)
-            addCommand(Cash.Commands.Move(), BOB)
+            addCommand(Cash.Commands.Move(), BOB_PUBKEY)
         }.toWireTransaction()
 
         val e = assertFailsWith(TransactionResolutionException::class) {
             tg.verify()
         }
-        assertEquals(e.hash, ref.txhash)
+        assertEquals(e.hash, input.txhash)
     }
 
     @Test
@@ -132,19 +131,21 @@ class TransactionGroupTests {
 
             transaction {
                 input("£1000")
-                output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE }
+                output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE) { Cash.Commands.Move() }
+                arg(ALICE_PUBKEY) { Cash.Commands.Move() }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
             }
         }.signAll()
 
         // Now go through the conversion -> verification path with them.
-        val ltxns = signedTxns.map { it.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments) }.toSet()
+        val ltxns = signedTxns.map {
+            it.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments)
+        }.toSet()
         TransactionGroup(ltxns, emptySet()).verify()
     }
 }

@@ -7,8 +7,8 @@ import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.services.NetworkMapService
 import core.node.services.NodeAttachmentService
+import core.node.services.NotaryService
 import core.node.services.ServiceType
-import core.node.services.TimestamperService
 import core.serialization.OpaqueBytes
 import core.testing.MockNetwork
 import core.testutils.rootCauseExceptions
@@ -23,6 +23,7 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.security.KeyPair
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -90,8 +91,8 @@ class AttachmentTests {
         // Make a node that doesn't do sanity checking at load time.
         val n0 = network.createNode(null, -1, object : MockNetwork.Factory {
             override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
-                                advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id) {
+                                advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     override fun start(): MockNetwork.MockNode {
                         super.start()
                         (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false
@@ -99,7 +100,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, NetworkMapService.Type, TimestamperService.Type)
+        }, null, null, NetworkMapService.Type, NotaryService.Type)
         val n1 = network.createNode(n0.info)
 
         // Insert an attachment into node zero's store directly.

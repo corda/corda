@@ -39,7 +39,7 @@ elif [[ "$mode" == "nodeB" ]]; then
     do
         build/install/r3prototyping/bin/irsdemo --dir=nodeB --network-address=localhost:31340 \
 		--fake-trade-with-address=localhost --fake-trade-with-identity=nodeA/identity-public \
-		-network-map-identity-file=nodeA/identity-public --network-map-address=localhost &
+		--network-map-identity-file=nodeA/identity-public --network-map-address=localhost &
         while ! curl -F rates=@scripts/example.rates.txt http://localhost:31341/upload/interest-rates; do
             echo "Retry to upload interest rates to oracle after 5 seconds"
             sleep 5

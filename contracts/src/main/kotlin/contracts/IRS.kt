@@ -492,7 +492,7 @@ class InterestRateSwap() : Contract {
         val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
 
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
-        val time = tx.commands.getTimestampByName("Mock Company 0", "Timestamping Service", "Bank A")?.midpoint
+        val time = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         for ((inputs, outputs, key) in groups) {
@@ -586,7 +586,8 @@ class InterestRateSwap() : Contract {
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
-            val common: Common
+            val common: Common,
+            override val notary: Party
     ) : FixableDealState {
 
         override val contract = IRS_PROGRAM_ID
@@ -616,7 +617,7 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common)
+        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix) {
             InterestRateSwap().generateFix(ptx, StateAndRef(this, oldStateRef), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
@@ -660,7 +661,8 @@ class InterestRateSwap() : Contract {
      *  This generates the agreement state and also the schedules from the initial data.
      *  Note: The day count, interest rate calculation etc are not finished yet, but they are demonstrable.
      */
-    fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation, common: Common): TransactionBuilder {
+    fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation,
+                          common: Common, notary: Party): TransactionBuilder {
 
         val fixedLegPaymentSchedule = HashMap<LocalDate, FixedRatePaymentEvent>()
         var dates = BusinessCalendar.createGenericSchedule(fixedLeg.effectiveDate, fixedLeg.paymentFrequency, fixedLeg.paymentCalendar, fixedLeg.rollConvention, endDate = fixedLeg.terminationDate)
@@ -709,7 +711,7 @@ class InterestRateSwap() : Contract {
         val newCalculation = Calculation(calculation.expression, floatingLegPaymentSchedule, fixedLegPaymentSchedule)
 
         // Put all the above into a new State object.
-        val state = State(fixedLeg, floatingLeg, newCalculation, common)
+        val state = State(fixedLeg, floatingLeg, newCalculation, common, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 

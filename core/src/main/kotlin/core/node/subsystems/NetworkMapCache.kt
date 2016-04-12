@@ -3,10 +3,17 @@ package core.node.subsystems
 import com.google.common.util.concurrent.ListenableFuture
 import core.Contract
 import core.Party
+import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.node.NodeInfo
-import core.node.services.ServiceType
+import core.node.services.*
+import core.serialization.deserialize
+import core.serialization.serialize
 import org.slf4j.LoggerFactory
+import java.security.PublicKey
+import java.security.SignatureException
+import java.util.*
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -21,22 +28,18 @@ interface NetworkMapCache {
 
     /** A list of nodes that advertise a network map service */
     val networkMapNodes: List<NodeInfo>
-    /** A list of nodes that advertise a timestamping service */
-    val timestampingNodes: List<NodeInfo>
+    /** A list of nodes that advertise a notary service */
+    val notaryNodes: List<NodeInfo>
     /** A list of nodes that advertise a rates oracle service */
     val ratesOracleNodes: List<NodeInfo>
     /** A list of all nodes the cache is aware of */
     val partyNodes: List<NodeInfo>
-    /** A list of nodes that advertise a regulatory service. Identifying the correct regulator for a trade is outwith
+    /**
+     * A list of nodes that advertise a regulatory service. Identifying the correct regulator for a trade is outside
      * the scope of the network map service, and this is intended solely as a sanity check on configuration stored
      * elsewhere.
      */
     val regulators: List<NodeInfo>
-
-    /**
-     * Look up the node info for a party.
-     */
-    fun nodeForPartyName(name: String): NodeInfo? = partyNodes.singleOrNull { it.identity.name == name }
 
     /**
      * Get a copy of all nodes in the map.
@@ -54,6 +57,16 @@ interface NetworkMapCache {
      * or the appropriate oracle for a contract.
      */
     fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo?
+
+    /**
+     * Look up the node info for a legal name.
+     */
+    fun getNodeByLegalName(name: String): NodeInfo?
+
+    /**
+     * Look up the node info for a public key.
+     */
+    fun getNodeByPublicKey(publicKey: PublicKey): NodeInfo?
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further

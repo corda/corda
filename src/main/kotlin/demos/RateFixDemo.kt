@@ -5,9 +5,9 @@ import core.*
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeInfo
-import core.node.subsystems.ArtemisMessagingService
 import core.node.services.NodeInterestRates
 import core.node.services.ServiceType
+import core.node.subsystems.ArtemisMessagingService
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
 import core.utilities.BriefLogFormatter
@@ -76,9 +76,11 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress, advertisedServices).start() }
 
+    val notary = node.services.networkMapCache.notaryNodes[0]
+
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionBuilder()
-    tx.addOutputState(Cash.State(node.storage.myLegalIdentity.ref(1), 1500.DOLLARS, node.keyManagement.freshKey().public))
+    tx.addOutputState(Cash.State(node.storage.myLegalIdentity.ref(1), 1500.DOLLARS, node.keyManagement.freshKey().public, notary.identity))
     val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance)
     ANSIProgressRenderer.progressTracker = protocol.progressTracker
     node.smm.add("demo.ratefix", protocol).get()

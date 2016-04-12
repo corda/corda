@@ -61,7 +61,7 @@ class NodeInterestRatesTest {
     @Test fun `refuse to sign with no relevant commands`() {
         val tx = makeTX()
         assertFailsWith<IllegalArgumentException> { oracle.sign(tx.toWireTransaction()) }
-        tx.addCommand(Cash.Commands.Move(), ALICE)
+        tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
         assertFailsWith<IllegalArgumentException> { oracle.sign(tx.toWireTransaction()) }
     }
 
@@ -89,7 +89,7 @@ class NodeInterestRatesTest {
     fun network() {
         val net = MockNetwork()
         val (n1, n2) = net.createTwoNodes()
-        NodeInterestRates.Service(n2).oracle.knownFixes = TEST_DATA
+        n2.interestRatesService.oracle.knownFixes = TEST_DATA
 
         val tx = TransactionBuilder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
@@ -106,5 +106,5 @@ class NodeInterestRatesTest {
         assertEquals("0.678".bd, fix.value)
     }
 
-    private fun makeTX() = TransactionBuilder(outputs = mutableListOf(1000.DOLLARS.CASH `owned by` ALICE))
+    private fun makeTX() = TransactionBuilder(outputs = mutableListOf(1000.DOLLARS.CASH `owned by` ALICE_PUBKEY))
 }

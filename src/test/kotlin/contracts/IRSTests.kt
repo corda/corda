@@ -1,7 +1,6 @@
 package contracts
 
 import core.*
-import core.node.services.DummyTimestampingAuthority
 import core.testutils.*
 import org.junit.Test
 import java.math.BigDecimal
@@ -96,7 +95,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
+            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, notary = DUMMY_NOTARY)
         }
         2 -> {
             // 10y swap, we pay 1.3% fixed 30/360 semi, rec 3m usd libor act/360 Q on 25m notional (mod foll/adj on both sides)
@@ -186,7 +185,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
+            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, notary = DUMMY_NOTARY)
 
         }
         else -> TODO("IRS number $irsSelect not defined")
@@ -203,7 +202,8 @@ class IRSTests {
             exampleIRS.fixedLeg,
             exampleIRS.floatingLeg,
             exampleIRS.calculation,
-            exampleIRS.common
+            exampleIRS.common,
+            DUMMY_NOTARY
     )
 
     val outState = inState.copy()
@@ -228,15 +228,14 @@ class IRSTests {
                     fixedLeg = dummyIRS.fixedLeg,
                     floatingLeg = dummyIRS.floatingLeg,
                     calculation = dummyIRS.calculation,
-                    common = dummyIRS.common).apply {
-                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+                    common = dummyIRS.common,
+                    notary = DUMMY_NOTARY).apply {
+                setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
                 signWith(MEGA_CORP_KEY)
                 signWith(MINI_CORP_KEY)
-                timestamp(DUMMY_TIMESTAMPER)
+                signWith(DUMMY_NOTARY_KEY)
             }
-
-            val stx = gtx.toSignedTransaction()
-            stx.verifyToLedgerTransaction(MockIdentityService, attachments)
+            gtx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService, attachments)
         }
         return genTX
     }
@@ -286,7 +285,7 @@ class IRSTests {
             newCalculation = newCalculation.applyFixing(it.key, FixedRate(PercentageRatioUnit(it.value)))
         }
 
-        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common)
+        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common, DUMMY_NOTARY)
         println(newIRS.exportIRSToCSV())
     }
 
@@ -315,13 +314,12 @@ class IRSTests {
                 val fixing = Pair(nextFixingDate, FixedRate("0.052".percent))
                 InterestRateSwap().generateFix(tx, previousTXN.outRef(0), fixing)
                 with(tx) {
-                    setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+                    setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
                     signWith(MEGA_CORP_KEY)
                     signWith(MINI_CORP_KEY)
-                    timestamp(DUMMY_TIMESTAMPER)
+                    signWith(DUMMY_NOTARY_KEY)
                 }
-                val stx = tx.toSignedTransaction()
-                stx.verifyToLedgerTransaction(MockIdentityService, attachments)
+                tx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService, attachments)
             }
             currentIRS = previousTXN.outputs.filterIsInstance<InterestRateSwap.State>().single()
             println(currentIRS.prettyPrint())

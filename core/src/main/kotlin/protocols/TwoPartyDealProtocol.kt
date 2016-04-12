@@ -41,7 +41,7 @@ object TwoPartyDealProtocol {
             val sessionID: Long
     )
 
-    class SignaturesFromPrimary(val timestampAuthoritySig: DigitalSignature.WithKey, val sellerSig: DigitalSignature.WithKey)
+    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.WithKey)
 
     /**
      * Abstracted bilateral deal protocol participant that initiates communication/handshake.
@@ -53,21 +53,19 @@ object TwoPartyDealProtocol {
                               val otherSide: SingleMessageRecipient,
                               val otherSessionID: Long,
                               val myKeyPair: KeyPair,
-                              val timestampingAuthority: NodeInfo,
+                              val notaryNode: NodeInfo,
                               override val progressTracker: ProgressTracker = Primary.tracker()) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal")
             object VERIFYING : ProgressTracker.Step("Verifying proposed transaction")
             object SIGNING : ProgressTracker.Step("Signing transaction")
-            object TIMESTAMPING : ProgressTracker.Step("Timestamping transaction")
+            object NOTARY : ProgressTracker.Step("Getting notary signature")
             object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to other party")
             object RECORDING : ProgressTracker.Step("Recording completed transaction")
             object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator")
 
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, TIMESTAMPING, SENDING_SIGS, RECORDING, COPYING_TO_REGULATOR).apply {
-                childrenFor[TIMESTAMPING] = TimestampingProtocol.tracker()
-            }
+            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS, RECORDING, COPYING_TO_REGULATOR)
         }
 
         @Suspendable
@@ -93,7 +91,7 @@ object TwoPartyDealProtocol {
 
                 // Check that the tx proposed by the buyer is valid.
                 val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public, timestampingAuthority.identity.owningKey))
+                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
                     throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
 
                 val wtx: WireTransaction = it.tx
@@ -128,13 +126,13 @@ object TwoPartyDealProtocol {
 
         @Suspendable
         override fun call(): SignedTransaction {
-            val partialTX: SignedTransaction = verifyPartialTransaction(getPartialTransaction())
+            val stx: SignedTransaction = verifyPartialTransaction(getPartialTransaction())
 
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
-            val ourSignature = signWithOurKey(partialTX)
-            val tsaSig = timestamp(partialTX)
+            val ourSignature = signWithOurKey(stx)
+            val notarySignature = getNotarySignature(stx)
 
-            val fullySigned = sendSignatures(partialTX, ourSignature, tsaSig)
+            val fullySigned = sendSignatures(stx, ourSignature, notarySignature)
 
             progressTracker.currentStep = RECORDING
 
@@ -155,12 +153,11 @@ object TwoPartyDealProtocol {
         }
 
         @Suspendable
-        private fun timestamp(partialTX: SignedTransaction): DigitalSignature.LegallyIdentifiable {
-            progressTracker.currentStep = TIMESTAMPING
-            return subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits, progressTracker.childrenFor[TIMESTAMPING]!!))
+        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+            progressTracker.currentStep = NOTARY
+            return subProtocol(NotaryProtocol(stx.tx))
         }
 
-        @Suspendable
         open fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
             return myKeyPair.signWithECDSA(partialTX.txBits)
@@ -168,13 +165,13 @@ object TwoPartyDealProtocol {
 
         @Suspendable
         private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                   tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+                                   notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
             progressTracker.currentStep = SENDING_SIGS
-            val fullySigned = partialTX + tsaSig + ourSignature
+            val fullySigned = partialTX + ourSignature + notarySignature
 
             logger.trace { "Built finished transaction, sending back to other party!" }
 
-            send(DEAL_TOPIC, otherSide, otherSessionID, SignaturesFromPrimary(tsaSig, ourSignature))
+            send(DEAL_TOPIC, otherSide, otherSessionID, SignaturesFromPrimary(ourSignature, notarySignature))
             return fullySigned
         }
     }
@@ -187,7 +184,7 @@ object TwoPartyDealProtocol {
      * and helper methods etc.
      */
     abstract class Secondary<U>(val otherSide: SingleMessageRecipient,
-                                val timestampingAuthority: Party,
+                                val notary: Party,
                                 val sessionID: Long,
                                 override val progressTracker: ProgressTracker = Secondary.tracker()) : ProtocolLogic<SignedTransaction>() {
 
@@ -212,7 +209,7 @@ object TwoPartyDealProtocol {
             val signatures = swapSignaturesWithPrimary(stx, handshake.sessionID)
 
             logger.trace { "Got signatures from other party, verifying ... " }
-            val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
+            val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
             logger.trace { "Signatures received are valid. Deal transaction complete! :-)" }
@@ -264,22 +261,20 @@ object TwoPartyDealProtocol {
      * One side of the protocol for inserting a pre-agreed deal.
      */
     open class Instigator<T : DealState>(otherSide: SingleMessageRecipient,
-                                         timestampingAuthority: NodeInfo,
+                                         notaryNode: NodeInfo,
                                          dealBeingOffered: T,
                                          myKeyPair: KeyPair,
                                          buyerSessionID: Long,
-                                         override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<T>(dealBeingOffered, otherSide, buyerSessionID, myKeyPair, timestampingAuthority)
+                                         override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<T>(dealBeingOffered, otherSide, buyerSessionID, myKeyPair, notaryNode)
 
     /**
      * One side of the protocol for inserting a pre-agreed deal.
      */
     open class Acceptor<T : DealState>(otherSide: SingleMessageRecipient,
-                                       timestampingAuthority: Party,
+                                       notary: Party,
                                        val dealToBuy: T,
                                        sessionID: Long,
-                                       override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<T>(otherSide, timestampingAuthority, sessionID) {
-
-        @Suspendable
+                                       override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<T>(otherSide, notary, sessionID) {
         override fun validateHandshake(handshake: Handshake<T>): Handshake<T> {
             with(handshake) {
                 // What is the seller trying to sell us?
@@ -307,13 +302,12 @@ object TwoPartyDealProtocol {
 
         }
 
-        @Suspendable
         override fun assembleSharedTX(handshake: Handshake<T>): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = handshake.payload.generateAgreement()
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
-            ptx.setTime(serviceHub.clock.instant(), timestampingAuthority, 30.seconds)
+            ptx.setTime(serviceHub.clock.instant(), notary, 30.seconds)
             return Pair(ptx, arrayListOf(handshake.payload.parties.single { it.name == serviceHub.storageService.myLegalIdentity.name }.owningKey))
         }
 
@@ -327,10 +321,10 @@ object TwoPartyDealProtocol {
      * who does what in the protocol.
      */
     open class Fixer<T : FixableDealState>(otherSide: SingleMessageRecipient,
-                                           timestampingAuthority: Party,
+                                           notary: Party,
                                            val dealToFix: StateAndRef<T>,
                                            sessionID: Long,
-                                           val replacementProgressTracker: ProgressTracker? = null) : Secondary<StateRef>(otherSide, timestampingAuthority, sessionID) {
+                                           val replacementProgressTracker: ProgressTracker? = null) : Secondary<StateRef>(otherSide, notary, sessionID) {
         private val ratesFixTracker = RatesFixProtocol.tracker(dealToFix.state.nextFixingOf()!!.name)
 
         override val progressTracker: ProgressTracker = replacementProgressTracker ?: createTracker()
@@ -339,7 +333,6 @@ object TwoPartyDealProtocol {
             childrenFor[SIGNING] = ratesFixTracker
         }
 
-        @Suspendable
         override fun validateHandshake(handshake: Handshake<StateRef>): Handshake<StateRef> {
             with(handshake) {
                 logger.trace { "Got fixing request for: ${dealToFix.state}" }
@@ -377,7 +370,7 @@ object TwoPartyDealProtocol {
 
                     // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
                     // to have one.
-                    ptx.setTime(serviceHub.clock.instant(), timestampingAuthority, 30.seconds)
+                    ptx.setTime(serviceHub.clock.instant(), notary, 30.seconds)
                 }
             }
             subProtocol(addFixing)
@@ -395,9 +388,9 @@ object TwoPartyDealProtocol {
      */
     open class Floater<T : FixableDealState>(otherSide: SingleMessageRecipient,
                                              otherSessionID: Long,
-                                             timestampingAuthority: NodeInfo,
+                                             notary: NodeInfo,
                                              dealToFix: StateAndRef<T>,
                                              myKeyPair: KeyPair,
                                              val sessionID: Long,
-                                             override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<StateRef>(dealToFix.ref, otherSide, otherSessionID, myKeyPair, timestampingAuthority)
+                                             override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<StateRef>(dealToFix.ref, otherSide, otherSessionID, myKeyPair, notary)
 }

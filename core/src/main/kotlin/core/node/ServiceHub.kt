@@ -57,4 +57,14 @@ interface ServiceHub {
             txStorage.putAll(txns)
         walletService.notifyAll(txs.map { it.tx })
     }
+
+    /**
+     * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState]
+     *
+     * @throws TransactionResolutionException if the [StateRef] points to a non-existent transaction
+     */
+    fun loadState(stateRef: StateRef): ContractState {
+        val definingTx = storageService.validatedTransactions[stateRef.txhash] ?: throw TransactionResolutionException(stateRef.txhash)
+        return definingTx.tx.outputs[stateRef.index]
+    }
 }

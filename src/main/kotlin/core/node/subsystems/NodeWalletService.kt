@@ -139,8 +139,8 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
      *
      * TODO: Move this out of NodeWalletService
      */
-    fun fillWithSomeTestCash(howMuch: Amount, atLeastThisManyStates: Int = 3, atMostThisManyStates: Int = 10,
-                             rng: Random = Random()) {
+    fun fillWithSomeTestCash(notary: Party, howMuch: Amount, atLeastThisManyStates: Int = 3,
+                             atMostThisManyStates: Int = 10, rng: Random = Random()) {
         val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
         val myIdentity = services.storageService.myLegalIdentity
@@ -155,7 +155,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
 
             val issuance = TransactionBuilder()
             val freshKey = services.keyManagementService.freshKey()
-            cash.generateIssue(issuance, Amount(pennies, howMuch.currency), depositRef, freshKey.public)
+            cash.generateIssue(issuance, Amount(pennies, howMuch.currency), depositRef, freshKey.public, notary)
             issuance.signWith(myKey)
 
             return@map issuance.toSignedTransaction(true)

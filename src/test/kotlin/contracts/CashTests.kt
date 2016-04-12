@@ -18,7 +18,8 @@ class CashTests {
     val inState = Cash.State(
             deposit = MEGA_CORP.ref(1),
             amount = 1000.DOLLARS,
-            owner = DUMMY_PUBKEY_1
+            owner = DUMMY_PUBKEY_1,
+            notary = DUMMY_NOTARY
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
 
@@ -63,7 +64,7 @@ class CashTests {
     fun issueMoney() {
         // Check we can't "move" money into existence.
         transaction {
-            input { DummyContract.State() }
+            input { DummyContract.State(notary = DUMMY_NOTARY) }
             output { outState }
             arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
@@ -82,7 +83,8 @@ class CashTests {
                 Cash.State(
                         amount = 1000.DOLLARS,
                         owner = DUMMY_PUBKEY_1,
-                        deposit = MINI_CORP.ref(12, 34)
+                        deposit = MINI_CORP.ref(12, 34),
+                        notary = DUMMY_NOTARY
                 )
             }
             tweak {
@@ -95,7 +97,7 @@ class CashTests {
 
         // Test generation works.
         val ptx = TransactionBuilder()
-        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1)
+        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0] as Cash.State
         assertEquals(100.DOLLARS, s.amount)
@@ -332,7 +334,7 @@ class CashTests {
     fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
-            val pounds = Cash.State(MINI_CORP.ref(3, 4, 5), 658.POUNDS, DUMMY_PUBKEY_2)
+            val pounds = Cash.State(MINI_CORP.ref(3, 4, 5), 658.POUNDS, DUMMY_PUBKEY_2, DUMMY_NOTARY)
             input { inState `owned by` DUMMY_PUBKEY_1 }
             input { pounds }
             output { inState `owned by` DUMMY_PUBKEY_2 }
@@ -352,7 +354,7 @@ class CashTests {
 
     fun makeCash(amount: Amount, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
-                    Cash.State(corp.ref(depositRef), amount, OUR_PUBKEY_1),
+                    Cash.State(corp.ref(depositRef), amount, OUR_PUBKEY_1, DUMMY_NOTARY),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
@@ -374,13 +376,13 @@ class CashTests {
         val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
     }
 
     @Test
     fun generateSimpleSpendWithParties() {
         val tx = TransactionBuilder()
-        Cash().generateSpend(tx, 80.DOLLARS, ALICE, WALLET, setOf(MINI_CORP))
+        Cash().generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, WALLET, setOf(MINI_CORP))
         assertEquals(WALLET[2].ref, tx.inputStates()[0])
     }
 
@@ -390,7 +392,7 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputs[0])
         assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputs[1])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
     }
 
     @Test
@@ -399,7 +401,7 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[1].ref, wtx.inputs[1])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
     }
 
     @Test
@@ -410,7 +412,7 @@ class CashTests {
         assertEquals(WALLET[2].ref, wtx.inputs[2])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
         assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
     }
 
     @Test
