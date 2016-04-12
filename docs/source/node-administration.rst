@@ -77,10 +77,10 @@ The file looks like this::
 
     # Some pretend noddy rate fixes, for the interest rate oracles.
 
-    LIBOR 2016-03-16 30 = 0.678
-    LIBOR 2016-03-16 60 = 0.655
-    EURIBOR 2016-03-15 30 = 0.123
-    EURIBOR 2016-03-15 60 = 0.111
+    LIBOR 2016-03-16 1M = 0.678
+    LIBOR 2016-03-16 2M = 0.655
+    EURIBOR 2016-03-15 1M = 0.123
+    EURIBOR 2016-03-15 2M = 0.111
 
 The columns are:
 
