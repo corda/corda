@@ -51,7 +51,6 @@ configurations {
 
 dependencies {
     compile project(':contracts')
-    testCompile project(':contracts:isolated')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
     compile "org.slf4j:slf4j-jdk14:1.7.13"
