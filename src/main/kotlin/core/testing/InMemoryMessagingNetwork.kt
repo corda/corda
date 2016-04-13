@@ -6,9 +6,11 @@ import com.google.common.util.concurrent.MoreExecutors
 import core.ThreadBox
 import core.crypto.sha256
 import core.messaging.*
+import core.node.NodeInfo
 import core.node.services.DummyTimestampingAuthority
-import core.node.services.NodeInfo
 import core.node.services.NodeTimestamperService
+import core.node.services.ServiceType
+import core.node.services.TimestamperService
 import core.utilities.loggerFor
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -150,7 +152,7 @@ class InMemoryMessagingNetwork {
         val (handle, builder) = createNode(manuallyPumped)
         val node = builder.start().get()
         NodeTimestamperService(node, DummyTimestampingAuthority.identity, DummyTimestampingAuthority.key)
-        timestampingAdvert = NodeInfo(handle, DummyTimestampingAuthority.identity)
+        timestampingAdvert = NodeInfo(handle, DummyTimestampingAuthority.identity, setOf(TimestamperService.Type))
         return Pair(timestampingAdvert!!, node)
     }
 

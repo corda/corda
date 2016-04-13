@@ -47,6 +47,7 @@ data class Wallet(val states: List<StateAndRef<ContractState>>) {
  * consumed by someone else first!
  */
 interface WalletService {
+    object Type : ServiceType("corda.wallet")
     /**
      * Returns a read-only snapshot of the wallet at the time the call is made. Note that if you consume states or
      * keys in this wallet, you must inform the wallet service so it can update its internal state.
@@ -101,6 +102,7 @@ inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearH
  * interface if/when one is developed.
  */
 interface KeyManagementService {
+    object Type : ServiceType("corda.key_management")
     /** Returns a snapshot of the current pubkey->privkey mapping. */
     val keys: Map<PublicKey, PrivateKey>
 
@@ -116,6 +118,7 @@ interface KeyManagementService {
  * anything like that, this interface is only big enough to support the prototyping work.
  */
 interface StorageService {
+    object Type : ServiceType("corda.storage")
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
@@ -140,7 +143,9 @@ interface StorageService {
  * Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
  * This is not an interface because it is too lightweight to bother mocking out.
  */
-class MonitoringService(val metrics: MetricRegistry)
+class MonitoringService(val metrics: MetricRegistry) {
+    object Type : ServiceType("corda.monitoring")
+}
 
 /**
  * A service hub simply vends references to the other services a node has. Some of those services may be missing or

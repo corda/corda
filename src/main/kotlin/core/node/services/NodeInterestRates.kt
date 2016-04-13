@@ -3,6 +3,9 @@ package core.node.services
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
+import core.math.CubicSplineInterpolator
+import core.math.Interpolator
+import core.math.InterpolatorFactory
 import core.messaging.send
 import core.node.AbstractNode
 import core.node.AcceptsFileUpload
@@ -25,35 +28,7 @@ import javax.annotation.concurrent.ThreadSafe
  * for signing.
  */
 object NodeInterestRates {
-    /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [FixOf] and [Fix] */
-    fun parseOneRate(s: String): Pair<FixOf, Fix> {
-        val (key, value) = s.split('=').map { it.trim() }
-        val of = parseFixOf(key)
-        val rate = BigDecimal(value)
-        return of to Fix(of, rate)
-    }
-
-    /** Parses a string of the form "LIBOR 16-March-2016 1M" into a [FixOf] */
-    fun parseFixOf(key: String): FixOf {
-        val words = key.split(' ')
-        val tenorString = words.last()
-        val date = words.dropLast(1).last()
-        val name = words.dropLast(2).joinToString(" ")
-        return FixOf(name, LocalDate.parse(date), Tenor(tenorString))
-    }
-
-    /** Parses lines containing fixes */
-    fun parseFile(s: String): Map<FixOf, TreeMap<LocalDate, Fix>> {
-        val results = HashMap<FixOf, TreeMap<LocalDate, Fix>>()
-        for (line in s.lines()) {
-            val (fixOf, fix) = parseOneRate(line)
-            val genericKey = FixOf(fixOf.name, LocalDate.MIN, fixOf.ofTenor)
-            val existingMap = results.computeIfAbsent(genericKey, { TreeMap() })
-            existingMap[fixOf.forDay] = fix
-        }
-        return results
-    }
-
+    object Type : ServiceType("corda.interest_rates")
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
@@ -88,30 +63,21 @@ object NodeInterestRates {
         override val acceptableFileExtensions = listOf(".rates", ".txt")
 
         override fun upload(data: InputStream): String {
-            val fixes: Map<FixOf, TreeMap<LocalDate, Fix>> = parseFile(data.
-                    bufferedReader().
-                    readLines().
-                    map { it.trim() }.
-                    // Filter out comment and empty lines.
-                    filterNot { it.startsWith("#") || it.isBlank() }.
-                    joinToString("\n"))
-
+            val fixes = parseFile(data.bufferedReader().readText())
             // TODO: Save the uploaded fixes to the storage service and reload on construction.
 
             // This assignment is thread safe because knownFixes is volatile and the oracle code always snapshots
             // the pointer to the stack before working with the map.
             oracle.knownFixes = fixes
 
-            val sumOfFixes = fixes.map { it.value.size }.sum()
-            return "Accepted $sumOfFixes new interest rate fixes"
+            return "Accepted $fixes.size new interest rate fixes"
         }
     }
 
     /**
      * An implementation of an interest rate fix oracle which is given data in a simple string format.
      *
-     * NOTE the implementation has changed such that it will find the nearest dated entry on OR BEFORE the date
-     * requested so as not to need to populate every possible date in the flat file that (typically) feeds this service
+     * The oracle will try to interpolate the missing value of a tenor for the given fix name and date.
      */
     @ThreadSafe
     class Oracle(val identity: Party, private val signingKey: KeyPair) {
@@ -119,38 +85,20 @@ object NodeInterestRates {
             require(signingKey.public == identity.owningKey)
         }
 
-        /** The fix data being served by this oracle.
-         *
-         * This is now a map of FixOf (but with date set to LocalDate.MIN, so just index name and tenor)
-         * to a sorted map of LocalDate to Fix, allowing for approximate date finding so that we do not need
-         * to populate the file with a rate for every day.
-         */
-        @Volatile var knownFixes = emptyMap<FixOf, TreeMap<LocalDate, Fix>>()
+        @Volatile var knownFixes = FixContainer(emptyList<Fix>())
             set(value) {
-                require(value.isNotEmpty())
+                require(value.size > 0)
                 field = value
             }
 
         fun query(queries: List<FixOf>): List<Fix> {
             require(queries.isNotEmpty())
-            val knownFixes = knownFixes   // Snapshot
-
-            val answers: List<Fix?> = queries.map { getKnownFix(knownFixes, it) }
+            val knownFixes = knownFixes // Snapshot
+            val answers: List<Fix?> = queries.map { knownFixes[it] }
             val firstNull = answers.indexOf(null)
             if (firstNull != -1)
                 throw UnknownFix(queries[firstNull])
             return answers.filterNotNull()
-        }
-
-        private fun getKnownFix(knownFixes: Map<FixOf, TreeMap<LocalDate, Fix>>, fixOf: FixOf): Fix? {
-            val rates = knownFixes[FixOf(fixOf.name, LocalDate.MIN, fixOf.ofTenor)]
-            // Greatest key less than or equal to the date we're looking for
-            val floor = rates?.floorEntry(fixOf.forDay)?.value
-            return if (floor != null) {
-                Fix(fixOf, floor.value)
-            } else {
-                null
-            }
         }
 
         fun sign(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
@@ -164,9 +112,9 @@ object NodeInterestRates {
                 throw IllegalArgumentException()
 
             // For each fix, verify that the data is correct.
-            val knownFixes = knownFixes   // Snapshot
+            val knownFixes = knownFixes // Snapshot
             for (fix in fixes) {
-                val known = getKnownFix(knownFixes, fix.of)
+                val known = knownFixes[fix.of]
                 if (known == null || known != fix)
                     throw UnknownFix(fix.of)
             }
@@ -181,5 +129,107 @@ object NodeInterestRates {
 
     class UnknownFix(val fix: FixOf) : Exception() {
         override fun toString() = "Unknown fix: $fix"
+    }
+
+    /** Fix container, for every fix name & date pair stores a tenor to interest rate map - [InterpolatingRateMap] */
+    class FixContainer(val fixes: List<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator.Factory) {
+        private val container = buildContainer(fixes)
+        val size = fixes.size
+
+        operator fun get(fixOf: FixOf): Fix? {
+            val rates = container[fixOf.name to fixOf.forDay]
+            val fixValue = rates?.getRate(fixOf.ofTenor) ?: return null
+            return Fix(fixOf, fixValue)
+        }
+
+        private fun buildContainer(fixes: List<Fix>): Map<Pair<String, LocalDate>, InterpolatingRateMap> {
+            val tempContainer = HashMap<Pair<String, LocalDate>, HashMap<Tenor, BigDecimal>>()
+            for (fix in fixes) {
+                val fixOf = fix.of
+                val rates = tempContainer.getOrPut(fixOf.name to fixOf.forDay) { HashMap<Tenor, BigDecimal>() }
+                rates[fixOf.ofTenor] = fix.value
+            }
+
+            // TODO: the calendar data needs to be specified for every fix type in the input string
+            val calendar = BusinessCalendar.getInstance("London", "NewYork")
+
+            return tempContainer.mapValues { InterpolatingRateMap(it.key.second, it.value, calendar, factory) }
+        }
+    }
+
+    /**
+     * Stores a mapping between tenors and interest rates.
+     * Interpolates missing values using the provided interpolation mechanism.
+     */
+    class InterpolatingRateMap(val date: LocalDate,
+                               val inputRates: Map<Tenor, BigDecimal>,
+                               val calendar: BusinessCalendar,
+                               val factory: InterpolatorFactory) {
+
+        /** Snapshot of the input */
+        private val rates = HashMap(inputRates)
+
+        /** Number of rates excluding the interpolated ones */
+        val size = inputRates.size
+
+        private val interpolator: Interpolator? by lazy {
+            // Need to convert tenors to doubles for interpolation
+            val numericMap = rates.mapKeys { daysToMaturity(it.key) }.toSortedMap()
+            val keys = numericMap.keys.map { it.toDouble() }.toDoubleArray()
+            val values = numericMap.values.map { it.toDouble() }.toDoubleArray()
+
+            try {
+                factory.create(keys, values)
+            } catch (e: IllegalArgumentException) {
+                null // Not enough data points for interpolation
+            }
+        }
+
+        /**
+         * Returns the interest rate for a given [Tenor],
+         * or _null_ if the rate is not found and cannot be interpolated
+         */
+        fun getRate(tenor: Tenor): BigDecimal? {
+            return rates.getOrElse(tenor) {
+                val rate = interpolate(tenor)
+                if (rate != null) rates.put(tenor, rate)
+                return rate
+            }
+        }
+
+        private fun daysToMaturity(tenor: Tenor) = tenor.daysToMaturity(date, calendar)
+
+        private fun interpolate(tenor: Tenor): BigDecimal? {
+            val key = daysToMaturity(tenor).toDouble()
+            val value = interpolator?.interpolate(key) ?: return null
+            return BigDecimal(value)
+        }
+    }
+
+    /** Parses lines containing fixes */
+    fun parseFile(s: String): FixContainer {
+        val fixes = s.lines().
+                map { it.trim() }.
+                // Filter out comment and empty lines.
+                filterNot { it.startsWith("#") || it.isBlank() }.
+                map { parseFix(it) }
+        return FixContainer(fixes)
+    }
+
+    /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [Fix] */
+    fun parseFix(s: String): Fix {
+        val (key, value) = s.split('=').map { it.trim() }
+        val of = parseFixOf(key)
+        val rate = BigDecimal(value)
+        return Fix(of, rate)
+    }
+
+    /** Parses a string of the form "LIBOR 16-March-2016 1M" into a [FixOf] */
+    fun parseFixOf(key: String): FixOf {
+        val words = key.split(' ')
+        val tenorString = words.last()
+        val date = words.dropLast(1).last()
+        val name = words.dropLast(2).joinToString(" ")
+        return FixOf(name, LocalDate.parse(date), Tenor(tenorString))
     }
 }

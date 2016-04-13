@@ -5,6 +5,7 @@ import contracts.CommercialPaper
 import core.*
 import core.crypto.SecureHash
 import core.node.NodeConfiguration
+import core.node.NodeInfo
 import core.node.services.*
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork

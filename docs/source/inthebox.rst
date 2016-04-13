@@ -54,6 +54,9 @@ the issuing party after a certain time. Commercial paper states define the face 
 at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
 contract is implemented twice, once in Java and once in a language called Kotlin.
 
+``InterestRateSwap`` implements a vanilla OTC same currency bilateral fixed / floating leg swap. For further details,
+see :doc:`irs`
+
 Each contract comes with unit tests.
 
 Kotlin

@@ -6,6 +6,7 @@ import core.messaging.MessagingService
 import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
+import core.testing.MockNetworkMapCache
 import core.testutils.MockIdentityService
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME

@@ -58,8 +58,7 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
     operator fun times(other: Long): Amount = Amount(Math.multiplyExact(pennies, other), currency)
     operator fun div(other: Int): Amount = Amount(pennies / other, currency)
     operator fun times(other: Int): Amount = Amount(Math.multiplyExact(pennies, other.toLong()), currency)
-
-//    override fun toString(): String = currency.currencyCode + " " + (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
+    
     override fun toString(): String = (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
 
     override fun compareTo(other: Amount): Int {
@@ -76,6 +75,7 @@ fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) s
 //
 // Interest rate fixes
 //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc) */
 data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
@@ -83,10 +83,7 @@ data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
 /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
 data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
 
-/**
- * Represents a textual expression of e.g. a formula
- *
- */
+/** Represents a textual expression of e.g. a formula */
 @JsonDeserialize(using = ExpressionDeserializer::class)
 @JsonSerialize(using = ExpressionSerializer::class)
 data class Expression(val expr: String)
@@ -103,32 +100,63 @@ object ExpressionDeserializer : JsonDeserializer<Expression>() {
     }
 }
 
-/**
- *  Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */
+/** Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity */
 data class Tenor(val name: String) {
+    private val amount: Int
+    private val unit: TimeUnit
+
     init {
-        val verifier = Regex("([0-9])+([DMYW])") // Only doing Overnight, Day, Week, Month, Year for now.
-        if (!(name == "ON" || verifier.containsMatchIn(name))) {
-            throw IllegalArgumentException("Unrecognized tenor : $name")
+        if (name == "ON") {
+            // Overnight
+            amount = 1
+            unit = TimeUnit.Day
+        } else {
+            val regex = """(\d+)([DMYW])""".toRegex()
+            val match = regex.matchEntire(name)?.groupValues ?: throw IllegalArgumentException("Unrecognised tenor name: $name")
+
+            amount = match[1].toInt()
+            unit = TimeUnit.values().first { it.code == match[2] }
         }
     }
 
+    fun daysToMaturity(startDate: LocalDate, calendar: BusinessCalendar): Int {
+        val maturityDate = when (unit) {
+            TimeUnit.Day -> startDate.plusDays(amount.toLong())
+            TimeUnit.Week -> startDate.plusWeeks(amount.toLong())
+            TimeUnit.Month -> startDate.plusMonths(amount.toLong())
+            TimeUnit.Year -> startDate.plusYears(amount.toLong())
+            else -> throw IllegalStateException("Invalid tenor time unit: $unit")
+        }
+        // Move date to the closest business day when it falls on a weekend/holiday
+        val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
+        val daysToMaturity = calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
+
+        return daysToMaturity.toInt()
+    }
+
     override fun toString(): String = "$name"
+
+    enum class TimeUnit(val code: String) {
+        Day("D"), Week("W"), Month("M"), Year("Y")
+    }
 }
 
-/** Simple enum for returning accurals adjusted or unadjusted.
+/**
+ * Simple enum for returning accurals adjusted or unadjusted.
  * We don't actually do anything with this yet though, so it's ignored for now.
  */
 enum class AccrualAdjustment {
     Adjusted, Unadjusted
 }
 
-/** This is utilised in the [DateRollConvention] class to determine which way we should initially step when
+/**
+ * This is utilised in the [DateRollConvention] class to determine which way we should initially step when
  * finding a business day
  */
 enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
 
-/** This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
+/**
+ * This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
  * Depending on the accounting requirement, we can move forward until we get to a business day, or backwards
  * There are some additional rules which are explained in the individual cases below
  */
@@ -173,9 +201,10 @@ enum class DateRollConvention {
 
 
 /**
- *  This forms the day part of the "Day Count Basis" used for interest calculation.
- *  Note that the first character cannot be a number (enum naming constraints), so we drop that
- *  in the toString lest some people get confused. */
+ * This forms the day part of the "Day Count Basis" used for interest calculation.
+ * Note that the first character cannot be a number (enum naming constraints), so we drop that
+ * in the toString lest some people get confused.
+ */
 enum class DayCountBasisDay {
     // We have to prefix 30 etc with a letter due to enum naming constraints.
     D30,
@@ -358,13 +387,14 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
     }
 }
 
-fun dayCountCalculator(startDate: LocalDate, endDate: LocalDate,
-                       dcbYear: DayCountBasisYear,
-                       dcbDay: DayCountBasisDay): Int {
+fun calculateDaysBetween(startDate: LocalDate,
+                         endDate: LocalDate,
+                         dcbYear: DayCountBasisYear,
+                         dcbDay: DayCountBasisDay): Int {
     // Right now we are only considering Actual/360 and 30/360 .. We'll do the rest later.
     // TODO: The rest.
     return when {
-        dcbDay == DayCountBasisDay.DActual && dcbYear == DayCountBasisYear.Y360 -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
+        dcbDay == DayCountBasisDay.DActual -> (endDate.toEpochDay() - startDate.toEpochDay()).toInt()
         dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
         else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
     }

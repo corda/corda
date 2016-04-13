@@ -102,7 +102,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="">Using the visualiser</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 </ul>
 
@@ -126,7 +126,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -159,7 +159,7 @@ early and the diagrams it produces are not especially beautiful. The intention i
 <p>Briefly, define a set of transactions in a group using the same DSL that is used in the unit tests. Here&#8217;s an example
 of a trade lifecycle using the commercial paper contract</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre>val group: TransactionGroupDSL&lt;ContractState&gt; = transactionGroupFor() {
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>val group: TransactionGroupDSL&lt;ContractState&gt; = transactionGroupFor() {
       roots {
           transaction(900.DOLLARS.CASH `owned by` ALICE label &quot;alice&#39;s $900&quot;)
           transaction(someProfits.CASH `owned by` MEGA_CORP_PUBKEY label &quot;some profits&quot;)
@@ -202,7 +202,7 @@ of a trade lifecycle using the commercial paper contract</p>
 </div>
 <p>Now you can define a main method in your unit test class that takes the <code class="docutils literal"><span class="pre">TransactionGroupDSL</span></code> object and uses it:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">CommercialPaperTests</span><span class="p">().</span><span class="n">trade</span><span class="p">().</span><span class="n">visualise</span><span class="p">()</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">CommercialPaperTests</span><span class="p">().</span><span class="n">trade</span><span class="p">().</span><span class="n">visualise</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>

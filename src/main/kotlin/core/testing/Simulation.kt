@@ -1,11 +1,10 @@
 package core.testing
 
 import com.google.common.util.concurrent.ListenableFuture
+import core.node.CityDatabase
 import core.node.NodeConfiguration
-import core.node.services.CityDatabase
-import core.node.services.MockNetworkMapCache
-import core.node.services.NodeInfo
-import core.node.services.PhysicalLocation
+import core.node.NodeInfo
+import core.node.PhysicalLocation
 import core.protocols.ProtocolLogic
 import core.then
 import core.utilities.ProgressTracker
@@ -49,11 +48,7 @@ abstract class Simulation(val runAsync: Boolean,
                 override val exportJMXto: String = ""
                 override val nearestCity: String = city
             }
-            val node = SimulatedNode(dir, cfg, network, timestamperAddr)
-            // TODO: This is obviously bogus: there should be a single network map for the whole simulated network.
-            (node.services.networkMapCache as MockNetworkMapCache).ratesOracleNodes += ratesOracle.info
-            (node.services.networkMapCache as MockNetworkMapCache).regulators += regulators.map { it.info }
-            return node
+            return SimulatedNode(dir, cfg, network, timestamperAddr)
         }
 
         fun createAll(): List<SimulatedNode> = bankLocations.map { network.createNode(timestamper.info, nodeFactory = this) as SimulatedNode }
@@ -84,7 +79,6 @@ abstract class Simulation(val runAsync: Boolean,
                 override fun makeInterestRatesOracleService() {
                     super.makeInterestRatesOracleService()
                     interestRatesService.upload(javaClass.getResourceAsStream("example.rates.txt"))
-                    (services.networkMapCache as MockNetworkMapCache).ratesOracleNodes += info
                 }
             }
             return n
@@ -110,11 +104,20 @@ abstract class Simulation(val runAsync: Boolean,
 
     val network = MockNetwork(false)
 
+    val regulators: List<SimulatedNode> = listOf(network.createNode(null, nodeFactory = RegulatorFactory) as SimulatedNode)
     val timestamper: SimulatedNode = network.createNode(null, nodeFactory = TimestampingNodeFactory) as SimulatedNode
     val ratesOracle: SimulatedNode = network.createNode(null, nodeFactory = RatesOracleFactory) as SimulatedNode
     val serviceProviders: List<SimulatedNode> = listOf(timestamper, ratesOracle)
     val banks: List<SimulatedNode> = bankFactory.createAll()
-    val regulators: List<SimulatedNode> = listOf(network.createNode(null, nodeFactory = RegulatorFactory) as SimulatedNode)
+
+    init {
+        // Now wire up the network maps for each node.
+        // TODO: This is obviously bogus: there should be a single network map for the whole simulated network.
+        for (node in regulators + serviceProviders + banks) {
+            (node.services.networkMapCache as MockNetworkMapCache).ratesOracleNodes += ratesOracle.info
+            (node.services.networkMapCache as MockNetworkMapCache).regulators += regulators.map { it.info }
+        }
+    }
 
     private val _allProtocolSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()

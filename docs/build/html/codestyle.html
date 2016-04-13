@@ -102,7 +102,7 @@
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Code style guide</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Code style guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#general-style">1. General style</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#comments">2. Comments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#threading">3. Threading</a></li>
@@ -131,7 +131,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -221,14 +221,14 @@ is not always right.</li>
 <li>Make good use of <a class="reference external" href="mailto:{&#37;&#52;&#48;link">{<span>&#64;</span>link</a>} annotations.</li>
 </ul>
 <p>Bad JavaDocs look like this:</p>
-<div class="highlight-java"><div class="highlight"><pre><span class="cm">/** @return the size of the Bloom filter. */</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="cm">/** @return the size of the Bloom filter. */</span>
 <span class="kd">public</span> <span class="kt">int</span> <span class="nf">getBloomFilterSize</span><span class="o">()</span> <span class="o">{</span>
     <span class="k">return</span> <span class="n">block</span><span class="o">;</span>
 <span class="o">}</span>
 </pre></div>
 </div>
 <p>Good JavaDocs look like this:</p>
-<div class="highlight-java"><div class="highlight"><pre><span class="cm">/**</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="cm">/**</span>
 <span class="cm"> * Returns the size of the current {@link BloomFilter} in bytes. Larger filters have</span>
 <span class="cm"> * lower false positive rates for the same number of inserted keys and thus lower privacy,</span>
 <span class="cm"> * but bandwidth usage is also correspondingly reduced.</span>
@@ -279,11 +279,11 @@ and instead prefer to use the <code class="docutils literal"><span class="pre">c
 <p>We define new exception types liberally. We prefer not to provide English language error messages in exceptions at
 the throw site, instead we define new types with any useful information as fields, with a toString() method if
 really necessary. In other words, don&#8217;t do this:</p>
-<div class="highlight-java"><div class="highlight"><pre><span class="k">throw</span> <span class="k">new</span> <span class="n">Exception</span><span class="o">(</span><span class="s">&quot;The foo broke&quot;</span><span class="o">)</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="k">throw</span> <span class="k">new</span> <span class="n">Exception</span><span class="o">(</span><span class="s">&quot;The foo broke&quot;</span><span class="o">)</span>
 </pre></div>
 </div>
 <p>instead do this</p>
-<div class="highlight-java"><div class="highlight"><pre><span class="kd">class</span> <span class="nc">FooBrokenException</span> <span class="kd">extends</span> <span class="n">Exception</span> <span class="o">{}</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">FooBrokenException</span> <span class="kd">extends</span> <span class="n">Exception</span> <span class="o">{}</span>
 <span class="k">throw</span> <span class="k">new</span> <span class="n">FooBrokenException</span><span class="o">()</span>
 </pre></div>
 </div>

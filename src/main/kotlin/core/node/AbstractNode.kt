@@ -13,6 +13,7 @@ import core.messaging.StateMachineManager
 import core.node.services.*
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.testing.MockNetworkMapCache
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -56,7 +57,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     val info: NodeInfo by lazy {
-        NodeInfo(net.myAddress, storage.myLegalIdentity, findMyLocation())
+        NodeInfo(net.myAddress, storage.myLegalIdentity, emptySet(), findMyLocation())
     }
 
     protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
@@ -71,6 +72,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var api: APIServer
 
     open fun start(): AbstractNode {
+        require(timestamperAddress == null || timestamperAddress.advertisedServices.contains(TimestamperService.Type))
+                {"Timestamper address must indicate a node that provides timestamping services"}
         log.info("Node starting up ...")
 
         storage = initialiseStorageService(dir)
@@ -98,7 +101,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             timestamperAddress
         } else {
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
-            NodeInfo(net.myAddress, storage.myLegalIdentity)
+            NodeInfo(net.myAddress, storage.myLegalIdentity, setOf(TimestamperService.Type))
         }
         (services.networkMapCache as MockNetworkMapCache).timestampingNodes.add(tsid)
     }

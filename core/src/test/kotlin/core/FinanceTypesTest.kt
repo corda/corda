@@ -29,6 +29,19 @@ class FinanceTypesTest {
     }
 
     @Test
+    fun `tenor days to maturity adjusted for holiday`() {
+        val tenor = Tenor("1M")
+        val calendar = BusinessCalendar.getInstance("London")
+        val currentDay = LocalDate.of(2016, 2, 27)
+        val maturityDate = currentDay.plusMonths(1).plusDays(2) // 2016-3-27 is a Sunday, next day is a holiday
+        val expectedDaysToMaturity = (maturityDate.toEpochDay() - currentDay.toEpochDay()).toInt()
+
+        val actualDaysToMaturity = tenor.daysToMaturity(currentDay, calendar)
+
+        assertEquals(actualDaysToMaturity, expectedDaysToMaturity)
+    }
+
+    @Test
     fun `schedule generator 1`() {
         var ret = BusinessCalendar.createGenericSchedule(startDate = LocalDate.of(2014, 11, 25), period = Frequency.Monthly, noOfAdditionalPeriods = 3)
         // We know that Jan 25th 2015 is on the weekend -> It should not be in this list returned.

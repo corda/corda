@@ -611,7 +611,7 @@ In this example we see some new features of the DSL:
 * The ``transaction`` function can also be given a time, to override the default timestamp on a transaction.
 
 The ``trade`` function is not itself a unit test. Instead it builds up a trade/transaction group, with some slight
-differences depending on the parameters provided (Kotlin allows parameters to have default valus). Then it returns
+differences depending on the parameters provided (Kotlin allows parameters to have default values). Then it returns
 it, unexecuted.
 
 We use it like this:

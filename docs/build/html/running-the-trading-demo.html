@@ -91,7 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Running the trading demo</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running the trading demo</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
@@ -126,7 +126,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -151,17 +151,17 @@
   <div class="section" id="running-the-trading-demo">
 <h1>Running the trading demo<a class="headerlink" href="#running-the-trading-demo" title="Permalink to this headline">¶</a></h1>
 <p>The repository contains a program that implements a demo of two nodes running the two-party trading protocol, which you
-can learn about in <a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a>.</p>
+can learn about in <a class="reference internal" href="protocol-state-machines.html"><span class="doc">Protocol state machines</span></a>.</p>
 <p>The node has only currently been tested on MacOS X and Ubuntu Linux. If you have success on other platforms, please
 let us know.</p>
 <p>Now, open two terminals, and in the first run::</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">buyer</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">buyer</span>
 </pre></div>
 </div>
 <p>It will compile things, if necessary, then create a directory named &#8220;buyer&#8221; with a bunch of files inside and start
 the node. You should see it waiting for a trade to begin.</p>
 <p>In the second terminal, run:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">seller</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">seller</span>
 </pre></div>
 </div>
 <p>You should see some log lines scroll past, and within a few seconds the messages &#8220;Purchase complete - we are a
