@@ -2,21 +2,64 @@ package core.math
 
 import java.util.*
 
+interface Interpolator {
+    fun interpolate(x: Double): Double
+}
+
+interface InterpolatorFactory {
+    fun create(xs: DoubleArray, ys: DoubleArray): Interpolator
+}
+
+/**
+ * Interpolates values between the given data points using straight lines
+ */
+class LinearInterpolator(private val xs: DoubleArray, private val ys: DoubleArray) : Interpolator {
+    init {
+        require(xs.size == ys.size) { "x and y dimensions should match: ${xs.size} != ${ys.size}" }
+        require(xs.size >= 2) { "At least 2 data points are required for linear interpolation, received: ${xs.size}" }
+    }
+
+    companion object Factory : InterpolatorFactory {
+        override fun create(xs: DoubleArray, ys: DoubleArray) = LinearInterpolator(xs, ys)
+    }
+
+    override fun interpolate(x: Double): Double {
+        val x0 = xs.first()
+        if (x0 == x) return x0
+
+        require(x > x0) { "Can't interpolate below $x0" }
+
+        for (i in 1..xs.size - 1) {
+            if (xs[i] == x) return xs[i]
+            else if (xs[i] > x) return interpolateBetween(x, xs[i - 1], xs[i], ys[i - 1], ys[i])
+        }
+        throw IllegalArgumentException("Can't interpolate above ${xs.last()}")
+    }
+
+    private fun interpolateBetween(x: Double, x1: Double, x2: Double, y1: Double, y2: Double): Double {
+        return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
+    }
+}
+
 /**
  * Interpolates values between the given data points using a [SplineFunction].
  *
  * Implementation uses the Natural Cubic Spline algorithm as described in
  * R. L. Burden and J. D. Faires (2011), *Numerical Analysis*. 9th ed. Boston, MA: Brooks/Cole, Cengage Learning. p149-150.
  */
-class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: DoubleArray) {
+class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: DoubleArray) : Interpolator {
     init {
         require(xs.size == ys.size) { "x and y dimensions should match: ${xs.size} != ${ys.size}" }
-        require(xs.size >= 3) { "At least 3 data points are required for interpolation, received: ${xs.size}" }
+        require(xs.size >= 3) { "At least 3 data points are required for cubic interpolation, received: ${xs.size}" }
+    }
+
+    companion object Factory : InterpolatorFactory {
+        override fun create(xs: DoubleArray, ys: DoubleArray) = CubicSplineInterpolator(xs, ys)
     }
 
     private val splineFunction by lazy { computeSplineFunction() }
 
-    fun interpolate(x: Double): Double {
+    override fun interpolate(x: Double): Double {
         require(x >= xs.first() && x <= xs.last()) { "Can't interpolate below ${xs.first()} or above ${xs.last()}" }
         return splineFunction.getValue(x)
     }
