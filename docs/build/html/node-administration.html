@@ -92,7 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-trading-demo.html">Running the trading demo</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Node administration</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Node administration</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#monitoring-your-node">Monitoring your node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#uploading-and-downloading-attachments">Uploading and downloading attachments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#uploading-interest-rate-fixes">Uploading interest rate fixes</a></li>
@@ -131,7 +131,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -189,22 +189,22 @@ data to their service on a regular schedule.</li>
 hash and they are public, in that they propagate through the network to wherever they are needed.</p>
 <p>All attachments are zip files. Thus to upload a file to the ledger you must first wrap it into a zip (or jar) file. Then
 you can upload it by running this command from a UNIX terminal:</p>
-<div class="highlight-shell"><div class="highlight"><pre>curl -F <span class="nv">myfile</span><span class="o">=</span>@path/to/my/file.zip http://localhost:31338/upload/attachment
+<div class="highlight-shell"><div class="highlight"><pre><span></span>curl -F <span class="nv">myfile</span><span class="o">=</span>@path/to/my/file.zip http://localhost:31338/upload/attachment
 </pre></div>
 </div>
 <p>The attachment will be identified by the SHA-256 hash of the contents, which you can get by doing:</p>
-<div class="highlight-shell"><div class="highlight"><pre>shasum -a <span class="m">256</span> file.zip
+<div class="highlight-shell"><div class="highlight"><pre><span></span>shasum -a <span class="m">256</span> file.zip
 </pre></div>
 </div>
 <p>on a Mac or by using <code class="docutils literal"><span class="pre">sha256sum</span></code> on Linux. Alternatively, the hash will be returned to you when you upload the
 attachment.</p>
 <p>An attachment may be downloaded by fetching:</p>
-<div class="highlight-shell"><div class="highlight"><pre>http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9
+<div class="highlight-shell"><div class="highlight"><pre><span></span>http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9
 </pre></div>
 </div>
 <p>where DECD... is of course replaced with the hash identifier of your own attachment. Because attachments are always
 containers, you can also fetch a specific file within the attachment by appending its path, like this:</p>
-<div class="highlight-shell"><div class="highlight"><pre>http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9/path/within/zip.txt
+<div class="highlight-shell"><div class="highlight"><pre><span></span>http://localhost:31338/attachments/DECD098666B9657314870E192CED0C3519C2C9D395507A238338F8D003929DE9/path/within/zip.txt
 </pre></div>
 </div>
 </div>
@@ -213,12 +213,12 @@ containers, you can also fetch a specific file within the attachment by appendin
 <p>If you would like to operate an interest rate fixing service (oracle), you can upload fix data by uploading data in
 a simple text format to the <code class="docutils literal"><span class="pre">/upload/interest-rates</span></code> path on the web server.</p>
 <p>The file looks like this:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre># Some pretend noddy rate fixes, for the interest rate oracles.
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span># Some pretend noddy rate fixes, for the interest rate oracles.
 
-LIBOR 2016-03-16 30 = 0.678
-LIBOR 2016-03-16 60 = 0.655
-EURIBOR 2016-03-15 30 = 0.123
-EURIBOR 2016-03-15 60 = 0.111
+LIBOR 2016-03-16 1M = 0.678
+LIBOR 2016-03-16 2M = 0.655
+EURIBOR 2016-03-15 1M = 0.123
+EURIBOR 2016-03-15 2M = 0.111
 </pre></div>
 </div>
 <p>The columns are:</p>

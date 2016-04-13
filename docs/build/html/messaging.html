@@ -90,7 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Networking and messaging</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Networking and messaging</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#messaging-vs-networking">Messaging vs networking</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#in-memory-implementation">In memory implementation</a></li>
@@ -131,7 +131,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -211,7 +211,7 @@ unit tests to be fast, repeatable and you want to be able to insert your own cha
 message sequence. This is what the manual mode is for. In this mode, all logic runs on the same thread (the thread
 running the unit tests). You can create and use a node like this:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre>val (aliceAddr, aliceNode) = makeNode(inBackground = false)
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>val (aliceAddr, aliceNode) = makeNode(inBackground = false)
 val (bobAddr, bobNode) = makeNode(false)
 
 aliceNode.send(&quot;test.topic&quot;, aliceAddr, &quot;foo&quot;)

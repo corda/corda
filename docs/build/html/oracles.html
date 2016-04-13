@@ -98,7 +98,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Writing oracle services</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing oracle services</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-two-basic-approaches">The two basic approaches</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#asserting-continuously-varying-data-that-is-publicly-known">Asserting continuously varying data that is publicly known</a></li>
@@ -133,7 +133,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -239,7 +239,7 @@ value.</p>
 clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.</p>
 </div>
 <p>We fix it by including explicit tolerances in the command, which is defined like this:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">data</span> <span class="k">class</span> <span class="nc">TimestampCommand</span><span class="p">(</span><span class="k">val</span> <span class="py">after</span><span class="p">:</span> <span class="n">Instant</span><span class="p">?,</span> <span class="k">val</span> <span class="py">before</span><span class="p">:</span> <span class="n">Instant</span><span class="p">?)</span> <span class="p">:</span> <span class="n">CommandData</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">TimestampCommand</span><span class="p">(</span><span class="k">val</span> <span class="py">after</span><span class="p">:</span> <span class="n">Instant</span><span class="p">?,</span> <span class="k">val</span> <span class="py">before</span><span class="p">:</span> <span class="n">Instant</span><span class="p">?)</span> <span class="p">:</span> <span class="n">CommandData</span>
     <span class="n">init</span> <span class="p">{</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">after</span> <span class="p">==</span> <span class="k">null</span> <span class="p">&amp;&amp;</span> <span class="n">before</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span>
             <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;At least one of before/after must be specified&quot;</span><span class="p">)</span>
@@ -283,11 +283,11 @@ would be conclusive evidence of intent to disobey the rules of the service (<em>
 where parties are legally identifiable, usage of such a contract would by itself be sufficient to trigger some sort of
 punishment.</p>
 <p>Here is an extract from the <code class="docutils literal"><span class="pre">NodeService.Oracle</span></code> class and supporting types:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="cm">/** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix (&quot;LIBOR&quot;, &quot;EURIBOR&quot; etc) */</span>
-<span class="n">data</span> <span class="k">class</span> <span class="nc">FixOf</span><span class="p">(</span><span class="k">val</span> <span class="py">name</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">forDay</span><span class="p">:</span> <span class="n">LocalDate</span><span class="p">,</span> <span class="k">val</span> <span class="py">ofTenor</span><span class="p">:</span> <span class="n">Duration</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** A [FixOf] identifies the question side of a fix: what day, tenor and type of fix (&quot;LIBOR&quot;, &quot;EURIBOR&quot; etc) */</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">FixOf</span><span class="p">(</span><span class="k">val</span> <span class="py">name</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">forDay</span><span class="p">:</span> <span class="n">LocalDate</span><span class="p">,</span> <span class="k">val</span> <span class="py">ofTenor</span><span class="p">:</span> <span class="n">Duration</span><span class="p">)</span>
 
 <span class="cm">/** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */</span>
-<span class="n">data</span> <span class="k">class</span> <span class="nc">Fix</span><span class="p">(</span><span class="k">val</span> <span class="py">of</span><span class="p">:</span> <span class="n">FixOf</span><span class="p">,</span> <span class="k">val</span> <span class="py">value</span><span class="p">:</span> <span class="n">BigDecimal</span><span class="p">)</span> <span class="p">:</span> <span class="n">CommandData</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">Fix</span><span class="p">(</span><span class="k">val</span> <span class="py">of</span><span class="p">:</span> <span class="n">FixOf</span><span class="p">,</span> <span class="k">val</span> <span class="py">value</span><span class="p">:</span> <span class="n">BigDecimal</span><span class="p">)</span> <span class="p">:</span> <span class="n">CommandData</span>
 
 <span class="k">class</span> <span class="nc">Oracle</span> <span class="p">{</span>
     <span class="k">fun</span> <span class="nf">query</span><span class="p">(</span><span class="n">queries</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">FixOf</span><span class="p">&gt;):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">Fix</span><span class="p">&gt;</span>
@@ -305,7 +305,7 @@ requested via <code class="docutils literal"><span class="pre">query</span></cod
 <ol class="arabic simple">
 <li>Defining a high level oracle class, that exposes the basic API operations.</li>
 <li>Defining a lower level service class, that binds network messages to the API.</li>
-<li>Defining a protocol using the <a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a> framework to make it easy for a client to interact
+<li>Defining a protocol using the <a class="reference internal" href="protocol-state-machines.html"><span class="doc">Protocol state machines</span></a> framework to make it easy for a client to interact
 with the oracle.</li>
 </ol>
 <p>An example of how to do this can be found in the <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code>, <code class="docutils literal"><span class="pre">NodeInterestRates.Service</span></code> and

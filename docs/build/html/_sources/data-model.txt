@@ -56,7 +56,7 @@ factors are:
 * Improved contract flexibility vs Bitcoin
 * Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)
 * No reliance on proof of work
-* Re-us of existing sandboxing virtual machines
+* Re-use of existing sandboxing virtual machines
 * Use of type safe GCd implementation languages.
 * Simplified auditing
 

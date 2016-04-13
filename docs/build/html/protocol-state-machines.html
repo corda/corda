@@ -97,7 +97,7 @@
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Protocol state machines</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Protocol state machines</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#theory">Theory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#a-two-party-trading-protocol">A two party trading protocol</a></li>
@@ -136,7 +136,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -243,7 +243,7 @@ represents an atomic asset swap.</p>
 of the protocol, and two classes that will contain the protocol definition. We also pick what data will be used by
 each side.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">object</span> <span class="nc">TwoPartyTradeProtocol</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">object</span> <span class="nc">TwoPartyTradeProtocol</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">TRADE_TOPIC</span> <span class="p">=</span> <span class="s">&quot;platform.trade&quot;</span>
 
     <span class="k">fun</span> <span class="nf">runSeller</span><span class="p">(</span><span class="n">smm</span><span class="p">:</span> <span class="n">StateMachineManager</span><span class="p">,</span> <span class="n">timestampingAuthority</span><span class="p">:</span> <span class="n">LegallyIdentifiableNode</span><span class="p">,</span>
@@ -317,7 +317,7 @@ the first parameter, this is just a standard JDK logging identifier string, and 
 <p>Going through the data needed to become a seller, we have:</p>
 <ul class="simple">
 <li><code class="docutils literal"><span class="pre">timestampingAuthority:</span> <span class="pre">LegallyIdentifiableNode</span></code> - a reference to a node on the P2P network that acts as a trusted
-timestamper. The use of timestamping is described in <a class="reference internal" href="data-model.html"><em>Data model</em></a>.</li>
+timestamper. The use of timestamping is described in <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a>.</li>
 <li><code class="docutils literal"><span class="pre">otherSide:</span> <span class="pre">SingleMessageRecipient</span></code> - the network address of the node with which you are trading.</li>
 <li><code class="docutils literal"><span class="pre">assetToSell:</span> <span class="pre">StateAndRef&lt;OwnableState&gt;</span></code> - a pointer to the ledger entry that represents the thing being sold.</li>
 <li><code class="docutils literal"><span class="pre">price:</span> <span class="pre">Amount</span></code> - the agreed on price that the asset is being sold for.</li>
@@ -377,7 +377,7 @@ unit tests to see how it&#8217;s done.</p>
 <p>Let&#8217;s implement the <code class="docutils literal"><span class="pre">Seller.call</span></code> method. This will be invoked by the platform when the protocol is started by the
 <code class="docutils literal"><span class="pre">StateMachineManager</span></code>.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
 
 <span class="c1">// These two steps could be done in parallel, in theory. Our framework doesn&#39;t support that yet though.</span>
 <span class="k">val</span> <span class="py">ourSignature</span> <span class="p">=</span> <span class="n">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
@@ -403,7 +403,7 @@ This is where we can see the benefits of using continuations/fibers as a program
 </div>
 <p>Let&#8217;s fill out the <code class="docutils literal"><span class="pre">receiveAndCheckProposedTransaction()</span></code> method.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">@Suspendable</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
 <span class="k">open</span> <span class="k">fun</span> <span class="nf">receiveAndCheckProposedTransaction</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">sessionID</span> <span class="p">=</span> <span class="n">random63BitValue</span><span class="p">()</span>
 
@@ -472,7 +472,7 @@ other ways. It doesn&#8217;t add any functionality, but acts as a reminder to &#
 simply involves checking the signatures on it. Then we go ahead and check all the dependencies of this partial
 transaction for validity. Here&#8217;s the code to do that:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">@Suspendable</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
 <span class="k">private</span> <span class="k">fun</span> <span class="nf">checkDependencies</span><span class="p">(</span><span class="n">stx</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// Download and check all the transactions that this transaction depends on, but do not check this</span>
     <span class="c1">// transaction itself.</span>
@@ -499,7 +499,7 @@ leak will come later.</p>
 well (but having handled the fact that some signatures are missing ourselves).</p>
 <p>Here&#8217;s the rest of the code:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">open</span> <span class="k">fun</span> <span class="nf">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">txBits</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="k">fun</span> <span class="nf">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">txBits</span><span class="p">)</span>
 
 <span class="n">@Suspendable</span>
 <span class="k">open</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
@@ -531,7 +531,7 @@ future version of the code.</p>
 <h2>Implementing the buyer<a class="headerlink" href="#implementing-the-buyer" title="Permalink to this headline">¶</a></h2>
 <p>OK, let&#8217;s do the same for the buyer side:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre>@Suspendable
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Suspendable
 override fun call(): SignedTransaction {
     val tradeRequest = receiveAndValidateTradeRequest()
     val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)

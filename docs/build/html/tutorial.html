@@ -96,7 +96,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="">Writing a contract</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing a contract</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#starting-the-commercial-paper-class">Starting the commercial paper class</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#states">States</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a></li>
@@ -137,7 +137,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -171,7 +171,7 @@ for how Kotlin syntax works.</p>
 codebase, as dynamic loading of contract code is not yet implemented. Therefore, we start by creating a file named
 either <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code> or <code class="docutils literal"><span class="pre">CommercialPaper.java</span></code> in the src/contracts directory with the following contents:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
 
     <span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForVerification</span><span class="p">)</span> <span class="p">{</span>
@@ -180,7 +180,7 @@ either <code class="docutils literal"><span class="pre">CommercialPaper.kt</span
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Cash</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Cash</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
     <span class="nd">@Override</span>
     <span class="kd">public</span> <span class="n">SecureHash</span> <span class="nf">getLegalContractReference</span><span class="o">()</span> <span class="o">{</span>
         <span class="k">return</span> <span class="n">SecureHash</span><span class="o">.</span><span class="na">Companion</span><span class="o">.</span><span class="na">sha256</span><span class="o">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="o">);</span>
@@ -209,7 +209,7 @@ piece of issued paper.</p>
 <h2>States<a class="headerlink" href="#states" title="Permalink to this headline">¶</a></h2>
 <p>A state is a class that stores data that is checked by the contract.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
   <span class="k">val</span> <span class="py">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span>
   <span class="k">val</span> <span class="py">owner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">,</span>
   <span class="k">val</span> <span class="py">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
@@ -221,7 +221,7 @@ piece of issued paper.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">State</span> <span class="kd">implements</span> <span class="n">ContractState</span><span class="o">,</span> <span class="n">SerializeableWithKryo</span> <span class="o">{</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">State</span> <span class="kd">implements</span> <span class="n">ContractState</span><span class="o">,</span> <span class="n">SerializeableWithKryo</span> <span class="o">{</span>
   <span class="kd">private</span> <span class="n">InstitutionReference</span> <span class="n">issuance</span><span class="o">;</span>
   <span class="kd">private</span> <span class="n">PublicKey</span> <span class="n">owner</span><span class="o">;</span>
   <span class="kd">private</span> <span class="n">Amount</span> <span class="n">faceValue</span><span class="o">;</span>
@@ -323,14 +323,14 @@ checked, so from the contract code&#8217;s perspective, a command is simply a da
 public keys. Each key had a signature proving that the corresponding private key was used to sign.</p>
 <p>Let&#8217;s define a few commands now:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">interface</span> <span class="n">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">interface</span> <span class="nc">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
     <span class="k">object</span> <span class="nc">Move</span> <span class="p">:</span> <span class="n">Commands</span>
     <span class="k">object</span> <span class="nc">Redeem</span> <span class="p">:</span> <span class="n">Commands</span>
     <span class="k">object</span> <span class="nc">Issue</span> <span class="p">:</span> <span class="n">Commands</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Commands</span> <span class="kd">implements</span> <span class="n">core</span><span class="o">.</span><span class="na">Command</span> <span class="o">{</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Commands</span> <span class="kd">implements</span> <span class="n">core</span><span class="o">.</span><span class="na">Command</span> <span class="o">{</span>
     <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Move</span> <span class="kd">extends</span> <span class="n">Commands</span> <span class="o">{</span>
         <span class="nd">@Override</span>
         <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
@@ -369,13 +369,13 @@ by taking the code references inside each state. Each contract is run only once.
 2 cash states and 1 commercial paper state as input, and has as output 1 cash state and 1 commercial paper state, will
 run two contracts one time each: Cash and CommercialPaper.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForVerification</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForVerification</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.</span>
     <span class="k">val</span> <span class="py">groups</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">groupStates</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;()</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">withoutOwner</span><span class="p">()</span> <span class="p">}</span>
     <span class="k">val</span> <span class="py">command</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">requireSingleCommand</span><span class="p">&lt;</span><span class="n">CommercialPaper</span><span class="p">.</span><span class="n">Commands</span><span class="p">&gt;()</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span class="nd">@Override</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Override</span>
 <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verify</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForVerification</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
     <span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;&gt;</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">State</span><span class="o">::</span><span class="n">withoutOwner</span><span class="o">);</span>
     <span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">Command</span><span class="o">&gt;</span> <span class="n">cmd</span> <span class="o">=</span> <span class="n">requireSingleCommand</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">(),</span> <span class="n">Commands</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
@@ -435,7 +435,7 @@ trade many different pieces of commercial paper in a single atomic step.</p>
 <p>After extracting the command and the groups, we then iterate over each group and verify it meets the required business
 logic.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">val</span> <span class="py">time</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">time</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">time</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">time</span>
 <span class="k">for</span> <span class="p">(</span><span class="n">group</span> <span class="k">in</span> <span class="n">groups</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">when</span> <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">value</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">is</span> <span class="n">Commands</span><span class="p">.</span><span class="n">Move</span> <span class="p">-&gt;</span> <span class="p">{</span>
@@ -478,7 +478,7 @@ logic.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span class="n">Instant</span> <span class="n">time</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">getTime</span><span class="o">();</span>   <span class="c1">// Can be null/missing.</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="n">Instant</span> <span class="n">time</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">getTime</span><span class="o">();</span>   <span class="c1">// Can be null/missing.</span>
 <span class="k">for</span> <span class="o">(</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">group</span> <span class="o">:</span> <span class="n">groups</span><span class="o">)</span> <span class="o">{</span>
     <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">inputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getInputs</span><span class="o">();</span>
     <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">outputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getOutputs</span><span class="o">();</span>
@@ -582,7 +582,7 @@ is a Kotlin DSL, and therefore this section will not show Java equivalent code (
 benefit from the DSL and would write them by hand).</p>
 <p>We start by defining a new test class, with a basic CP state:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">class</span> <span class="nc">CommercialPaperTests</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaperTests</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">PAPER_1</span> <span class="p">=</span> <span class="n">CommercialPaper</span><span class="p">.</span><span class="n">State</span><span class="p">(</span>
             <span class="n">issuance</span> <span class="p">=</span> <span class="n">InstitutionReference</span><span class="p">(</span><span class="n">MEGA_CORP</span><span class="p">,</span> <span class="n">OpaqueBytes</span><span class="p">.</span><span class="n">of</span><span class="p">(</span><span class="m">123</span><span class="p">)),</span>
             <span class="n">owner</span> <span class="p">=</span> <span class="n">MEGA_CORP_KEY</span><span class="p">,</span>
@@ -644,7 +644,7 @@ invoke all the involved contracts.</p>
 Java, it&#8217;s actually not, and so you can embed arbitrary code anywhere inside any of these blocks.</p>
 <p>Let&#8217;s set up a full trade and ensure it works:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre>  <span class="c1">// Generate a trade lifecycle with various parameters.</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>  <span class="c1">// Generate a trade lifecycle with various parameters.</span>
   <span class="k">private</span> <span class="k">fun</span> <span class="nf">trade</span><span class="p">(</span><span class="n">redemptionTime</span><span class="p">:</span> <span class="n">Instant</span> <span class="p">=</span> <span class="n">TEST_TX_TIME</span> <span class="p">+</span> <span class="m">8.</span><span class="n">days</span><span class="p">,</span>
                     <span class="n">aliceGetsBack</span><span class="p">:</span> <span class="n">Amount</span> <span class="p">=</span> <span class="m">1000.</span><span class="n">DOLLARS</span><span class="p">,</span>
                     <span class="n">destroyPaperAtRedemption</span><span class="p">:</span> <span class="n">Boolean</span> <span class="p">=</span> <span class="k">true</span><span class="p">):</span> <span class="n">TransactionGroupForTest</span> <span class="p">{</span>
@@ -709,11 +709,11 @@ then, the <code class="docutils literal"><span class="pre">input</span></code> m
 <li>The <code class="docutils literal"><span class="pre">transaction</span></code> function can also be given a time, to override the default timestamp on a transaction.</li>
 </ul>
 <p>The <code class="docutils literal"><span class="pre">trade</span></code> function is not itself a unit test. Instead it builds up a trade/transaction group, with some slight
-differences depending on the parameters provided (Kotlin allows parameters to have default valus). Then it returns
+differences depending on the parameters provided (Kotlin allows parameters to have default values). Then it returns
 it, unexecuted.</p>
 <p>We use it like this:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">@Test</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Test</span>
 <span class="k">fun</span> <span class="nf">ok</span><span class="p">()</span> <span class="p">{</span>
     <span class="n">trade</span><span class="p">().</span><span class="n">verify</span><span class="p">()</span>
 <span class="p">}</span>
@@ -748,7 +748,7 @@ like a module), the basic concept is the same: preparation of a transaction usin
 <p>For our commercial paper contract however, the things that can be done with it are quite simple. Let&#8217;s start with
 a method to wrap up the issuance process:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">generateIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">TransactionBuilder</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">generateIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">TransactionBuilder</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">state</span> <span class="p">=</span> <span class="n">State</span><span class="p">(</span><span class="n">issuance</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">TransactionBuilder</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
 <span class="p">}</span>
@@ -779,7 +779,7 @@ any <code class="docutils literal"><span class="pre">ContractStateRef</span></co
 for you.</p>
 <p>What about moving the paper, i.e. reassigning ownership to someone else?</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">generateMove</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">newOwner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">generateMove</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">newOwner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addInputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">ref</span><span class="p">)</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addOutputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">copy</span><span class="p">(</span><span class="n">owner</span> <span class="p">=</span> <span class="n">newOwner</span><span class="p">))</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addArg</span><span class="p">(</span><span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Move</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">))</span>
@@ -796,7 +796,7 @@ a small object that has a (copy of) a state object, and also the (txhash, index)
 state on the ledger.</p>
 <p>Finally, we can do redemption.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">@Throws</span><span class="p">(</span><span class="n">InsufficientBalanceException</span><span class="o">::</span><span class="k">class</span><span class="p">)</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Throws</span><span class="p">(</span><span class="n">InsufficientBalanceException</span><span class="o">::</span><span class="k">class</span><span class="p">)</span>
 <span class="k">fun</span> <span class="nf">generateRedeem</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">wallet</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;&gt;)</span> <span class="p">{</span>
     <span class="c1">// Add the cash movement using the states in our wallet.</span>
     <span class="n">Cash</span><span class="p">().</span><span class="n">generateSpend</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">faceValue</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">wallet</span><span class="p">)</span>
@@ -826,7 +826,7 @@ is recognised by the network. The most important next step is for the participat
 signature inside the <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>. Once all parties have signed, you can call <code class="docutils literal"><span class="pre">TransactionBuilder.toSignedTransaction()</span></code>
 to get a <code class="docutils literal"><span class="pre">SignedTransaction</span></code> object. This is an immutable form of the transaction that&#8217;s ready for <em>timestamping</em>,
 which can be done using a <code class="docutils literal"><span class="pre">TimestamperClient</span></code>. To learn more about that, please refer to the
-<a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a> document.</p>
+<a class="reference internal" href="protocol-state-machines.html"><span class="doc">Protocol state machines</span></a> document.</p>
 <p>You can see how transactions flow through the different stages of construction by examining the commercial paper
 unit tests.</p>
 </div>
