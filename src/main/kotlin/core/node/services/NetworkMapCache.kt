@@ -25,4 +25,3 @@ interface NetworkMapCache {
 
     fun nodeForPartyName(name: String): NodeInfo? = partyNodes.singleOrNull { it.identity.name == name }
 }
-

@@ -393,7 +393,7 @@ class InterestRateSwap() : Contract {
      */
     override fun verify(tx: TransactionForVerification) {
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
-        val time = tx.commands.getTimestampByName("Mock Company 0", "European Timestamping Service", "Bank A")?.midpoint
+        val time = tx.commands.getTimestampByName("Mock Company 0", "Timestamping Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         val irs = tx.outStates.filterIsInstance<InterestRateSwap.State>().single()

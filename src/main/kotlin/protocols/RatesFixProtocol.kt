@@ -24,16 +24,17 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
                             private val oracle: NodeInfo,
                             private val fixOf: FixOf,
                             private val expectedRate: BigDecimal,
-                            private val rateTolerance: BigDecimal) : ProtocolLogic<Unit>() {
+                            private val rateTolerance: BigDecimal,
+                            override val progressTracker: ProgressTracker = RatesFixProtocol.tracker(fixOf.name)) : ProtocolLogic<Unit>() {
     companion object {
         val TOPIC = "platform.rates.interest.fix"
 
         class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
         object WORKING : ProgressTracker.Step("Working with data returned by oracle")
-        object SIGNING : ProgressTracker.Step("Requesting transaction signature from interest rate oracle")
-    }
+        object SIGNING : ProgressTracker.Step("Requesting confirmation signature from interest rate oracle")
 
-    override val progressTracker = ProgressTracker(QUERYING(fixOf.name), WORKING, SIGNING)
+        fun tracker(fixName: String) = ProgressTracker(QUERYING(fixName), WORKING, SIGNING)
+    }
 
     class FixOutOfRange(val byAmount: BigDecimal) : Exception()
 
