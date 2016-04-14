@@ -23,9 +23,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 interface DummyContractBackdoor {
-    fun generateInitial(owner: PartyReference, magicNumber: Int) : TransactionBuilder
+    fun generateInitial(owner: PartyReference, magicNumber: Int): TransactionBuilder
 
-    fun inspectState(state: ContractState) : Int
+    fun inspectState(state: ContractState): Int
 }
 
 class ClassLoaderTests {
@@ -61,37 +61,33 @@ class ClassLoaderTests {
 
         val jar = attachment.openAsJAR()
 
-        assert( jar.nextEntry != null )
+        assert(jar.nextEntry != null)
     }
 
     @Test
     fun `test overlapping file exception`() {
-
         val storage = MockAttachmentStorage()
 
         val att0 = importJar(storage)
-        val att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file.txt", "some data")) )
-        val att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file.txt", "some other data")) )
+        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some data")))
+        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some other data")))
 
-        assertFailsWith( OverlappingAttachments::class ) {
-
+        assertFailsWith(OverlappingAttachments::class) {
             AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
-
         }
     }
 
     @Test
     fun `basic`() {
-
         val storage = MockAttachmentStorage()
 
         val att0 = importJar(storage)
-        val att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
-        val att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
+        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
+        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }).use {
             val txt = IOUtils.toString(it.getResourceAsStream("file1.txt"))
-            assertEquals( "some data", txt )
+            assertEquals("some data", txt)
         }
     }
 
@@ -100,14 +96,12 @@ class ClassLoaderTests {
         val storage = MockAttachmentStorage()
 
         val att0 = importJar(storage)
-        val att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
-        val att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
+        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
+        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }).use {
-
             val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, it)
             val contract = contractClass.newInstance() as Contract
-
             assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
         }
     }
@@ -133,7 +127,7 @@ class ClassLoaderTests {
         assertNotNull(contract)
     }
 
-    fun createContract2Cash() : Contract {
+    fun createContract2Cash(): Contract {
         val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as Contract
@@ -149,8 +143,8 @@ class ClassLoaderTests {
         val storage = MockAttachmentStorage()
 
         val att0 = importJar(storage)
-        val att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
-        val att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
+        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
+        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         val clsLoader = AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
@@ -163,11 +157,11 @@ class ClassLoaderTests {
     }
 
     // top level wrapper
-    class Data( val contract: Contract )
+    class Data(val contract: Contract)
 
     @Test
     fun `testing Kryo with ClassLoader (without top level class name)`() {
-        val data =  Data( createContract2Cash() )
+        val data = Data(createContract2Cash())
 
         assertNotNull(data.contract)
 
@@ -176,8 +170,8 @@ class ClassLoaderTests {
         val storage = MockAttachmentStorage()
 
         val att0 = importJar(storage)
-        val att1 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file1.txt", "some data")) )
-        val att2 = storage.importAttachment( ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")) )
+        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
+        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         val clsLoader = AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
@@ -192,29 +186,21 @@ class ClassLoaderTests {
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
         val tx = DUMMY_PROGRAM_ID.generateInitial(MEGA_CORP.ref(0), 42)
-
         val wireTransaction = tx.toWireTransaction()
-
         val bytes = wireTransaction.serialize()
-
         val copiedWireTransaction = bytes.deserialize()
 
         assertEquals(1, copiedWireTransaction.outputs.size)
-
         assertEquals(42, (copiedWireTransaction.outputs[0] as DummyContract.State).magicNumber)
     }
 
     @Test
     fun `test serialization of WireTransaction with dynamically loaded contract`() {
         val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
-
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
-
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
-
         val storage = MockAttachmentStorage()
-
         val kryo = createKryo()
 
         // todo - think about better way to push attachmentStorage down to serializer
@@ -238,20 +224,16 @@ class ClassLoaderTests {
         assertEquals(1, copiedWireTransaction.outputs.size)
 
         val contract2 = copiedWireTransaction.outputs[0].contract as DummyContractBackdoor
-        assertEquals(42, contract2.inspectState( copiedWireTransaction.outputs[0] ))
+        assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0]))
     }
 
     @Test
     fun `test deserialize of WireTransaction where contract cannot be found`() {
         val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
-
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
-
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
-
         val storage = MockAttachmentStorage()
-
         val kryo = createKryo()
 
         // todo - think about better way to push attachmentStorage down to serializer
