@@ -20,18 +20,34 @@ import kotlin.test.assertNotNull
 
 interface DummyContractBackdoor {
     fun generateInitial(owner: PartyReference, magicNumber: Int): TransactionBuilder
-
     fun inspectState(state: ContractState): Int
 }
 
 class AttachmentClassLoaderTests {
-    val ISOLATED_CONTRACTS_JAR_PATH = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
+    companion object {
+        val ISOLATED_CONTRACTS_JAR_PATH = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
+    }
 
     fun importJar(storage: AttachmentStorage) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
 
+    // These ClassLoaders work together to load 'AnotherDummyContract' in a disposable way, such that even though
+    // the class may be on the unit test class path (due to default IDE settings, etc), it won't be loaded into the
+    // regular app classloader but rather than ClassLoaderForTests. This helps keep our environment clean and
+    // ensures we have precise control over where it's loaded.
+    object FilteringClassLoader : ClassLoader() {
+        override fun loadClass(name: String, resolve: Boolean): Class<*>? {
+            if ("AnotherDummyContract" in name) {
+                return null
+            } else
+                return super.loadClass(name, resolve)
+        }
+    }
+
+    class ClassLoaderForTests : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
+
     @Test
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {
-        val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
+        val child = ClassLoaderForTests()
 
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as Contract
@@ -94,24 +110,13 @@ class AttachmentClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, cl)
         val contract = contractClass.newInstance() as Contract
+        assertEquals(cl, contract.javaClass.classLoader)
         assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
     }
 
-
-    /**
-     * If this test starts failing it is either because you haven't build with gradle first
-     * or because you have reimported gradle project in IDEA (revert change to .idea/modules.xml)
-     */
-    @Test
-    fun `verify that contract AnotherDummyContract is not in classPath`() {
-        assertFailsWith(ClassNotFoundException::class) {
-            val contractClass = Class.forName("contracts.isolated.AnotherDummyContract")
-            contractClass.newInstance() as Contract
-        }
-    }
 
     @Test
     fun `verify that contract DummyContract is in classPath`() {
@@ -122,10 +127,9 @@ class AttachmentClassLoaderTests {
     }
 
     fun createContract2Cash(): Contract {
-        val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
-        val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
-        val contract = contractClass.newInstance() as Contract
-        return contract
+        val cl = ClassLoaderForTests()
+        val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, cl)
+        return contractClass.newInstance() as Contract
     }
 
     @Test
@@ -140,13 +144,13 @@ class AttachmentClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
         val kryo = createKryo()
         kryo.classLoader = cl
 
         val state2 = bytes.deserialize(kryo, true)
-
+        assert(state2.javaClass.classLoader is AttachmentsClassLoader)
         assertNotNull(state2)
     }
 
@@ -167,13 +171,13 @@ class AttachmentClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
         val kryo = createKryo()
         kryo.classLoader = cl
 
         val state2 = bytes.deserialize(kryo)
-
+        assertEquals(cl, state2.contract.javaClass.classLoader)
         assertNotNull(state2)
     }
 
@@ -190,7 +194,7 @@ class AttachmentClassLoaderTests {
 
     @Test
     fun `test serialization of WireTransaction with dynamically loaded contract`() {
-        val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
+        val child = ClassLoaderForTests()
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)
@@ -209,21 +213,19 @@ class AttachmentClassLoaderTests {
         val bytes = wireTransaction.serialize(kryo)
 
         val kryo2 = createKryo()
-
         // use empty attachmentStorage
         kryo2.attachmentStorage = storage
 
         val copiedWireTransaction = bytes.deserialize(kryo2)
 
         assertEquals(1, copiedWireTransaction.outputs.size)
-
         val contract2 = copiedWireTransaction.outputs[0].contract as DummyContractBackdoor
         assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0]))
     }
 
     @Test
     fun `test deserialize of WireTransaction where contract cannot be found`() {
-        val child = URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH))
+        val child = ClassLoaderForTests()
         val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, child)
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42)

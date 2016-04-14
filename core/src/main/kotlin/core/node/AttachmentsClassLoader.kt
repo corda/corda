@@ -20,7 +20,7 @@ import java.util.*
  * AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
  * file paths.
  */
-class AttachmentsClassLoader(attachments: List<Attachment>) : SecureClassLoader() {
+class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) : SecureClassLoader(parent) {
     private val pathsToAttachments = HashMap<String, Attachment>()
     private val idsToAttachments = HashMap<SecureHash, Attachment>()
 
