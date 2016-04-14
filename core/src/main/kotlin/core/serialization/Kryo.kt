@@ -12,6 +12,7 @@ import core.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256
+import core.node.AttachmentsClassLoader
 import core.node.services.AttachmentStorage
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
@@ -21,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.util.*
+import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.*
 import kotlin.reflect.jvm.javaType
 
@@ -189,6 +191,51 @@ inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     }
 }
 
+/** Thrown during deserialisation to indicate that an attachment needed to construct the [WireTransaction] is not found */
+class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
+
+/** A serialisation engine that knows how to deserialise code inside a sandbox */
+@ThreadSafe
+object WireTransactionSerializer : Serializer<WireTransaction>() {
+    override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
+        kryo.writeClassAndObject(output, obj.inputs)
+        kryo.writeClassAndObject(output, obj.attachments)
+        kryo.writeClassAndObject(output, obj.outputs)
+        kryo.writeClassAndObject(output, obj.commands)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
+        val inputs = kryo.readClassAndObject(input) as List<StateRef>
+        val attachmentHashes = kryo.readClassAndObject(input) as List<SecureHash>
+
+        // If we're deserialising in the sandbox context, we use our special attachments classloader.
+        // Otherwise we just assume the code we need is on the classpath already.
+        val attachmentStorage = kryo.attachmentStorage
+        val classLoader = if (attachmentStorage != null) {
+            val missing = ArrayList<SecureHash>()
+            val attachments = ArrayList<Attachment>()
+            for (id in attachmentHashes) {
+                val attachment = attachmentStorage.openAttachment(id)
+                if (attachment == null)
+                    missing += id
+                else
+                    attachments += attachment
+            }
+            if (missing.isNotEmpty())
+                throw MissingAttachmentsException(missing)
+            AttachmentsClassLoader(attachments)
+        } else javaClass.classLoader
+
+        kryo.useClassLoader(classLoader) {
+            val outputs = kryo.readClassAndObject(input) as List<ContractState>
+            val commands = kryo.readClassAndObject(input) as List<Command>
+
+            return WireTransaction(inputs, attachmentHashes, outputs, commands)
+        }
+    }
+}
+
 fun createKryo(k: Kryo = Kryo()): Kryo {
     return k.apply {
         // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
@@ -211,35 +258,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
             }
         })
 
-       register(WireTransaction::class.java, object : Serializer<WireTransaction>() {
-            override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
-
-                kryo.writeClassAndObject( output, obj.inputs )
-                kryo.writeClassAndObject( output, obj.attachments )
-
-                kryo.writeClassAndObject( output, obj.outputs )
-                kryo.writeClassAndObject( output, obj.commands )
-
-            }
-
-            @Suppress("UNCHECKED_CAST")
-            override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
-                var inputs = kryo.readClassAndObject( input ) as List<StateRef>
-                var attachments = kryo.readClassAndObject( input ) as List<SecureHash>
-
-                val attachmentStorage = kryo.attachmentStorage
-
-                // .filterNotNull in order for TwoPartyTradeProtocolTests.checkDependenciesOfSaleAssetAreResolved test to run
-                val classLoader = core.node.AttachmentsClassLoader.create( attachments.map { attachmentStorage?.openAttachment(it) }.filterNotNull() )
-
-                kryo.useClassLoader(classLoader) {
-                    var outputs = kryo.readClassAndObject(input) as List<ContractState>
-                    var commands = kryo.readClassAndObject(input) as List<Command>
-
-                    return WireTransaction(inputs, attachments, outputs, commands)
-                }
-            }
-        })
+        register(WireTransaction::class.java, WireTransactionSerializer)
 
         // Some things where the JRE provides an efficient custom serialisation.
         val ser = JavaSerializer()

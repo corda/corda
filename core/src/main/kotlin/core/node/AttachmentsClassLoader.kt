@@ -1,66 +1,105 @@
 package core.node
 
 import core.Attachment
-import java.io.Closeable
-import java.io.File
-import java.io.FileOutputStream
+import core.crypto.SecureHash
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.FileNotFoundException
+import java.io.InputStream
 import java.net.URL
-import java.net.URLClassLoader
+import java.net.URLConnection
+import java.net.URLStreamHandler
+import java.security.CodeSigner
+import java.security.CodeSource
+import java.security.SecureClassLoader
 import java.util.*
-import java.util.jar.JarEntry
-
-class OverlappingAttachments : Exception()
 
 /**
- * A custom ClassLoader for creating contracts distributed as attachments and for contracts to
- * access attachments.
+ * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
+ * need to provide JAR streams, and so could be fetched from a database, local disk, etc. Constructing an
+ * AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
+ * file paths.
  */
-class AttachmentsClassLoader private constructor(val tmpFiles: List<File>)
-: URLClassLoader(tmpFiles.map { URL("file", "", it.toString()) }.toTypedArray()), Closeable {
+class AttachmentsClassLoader(attachments: List<Attachment>) : SecureClassLoader() {
+    private val pathsToAttachments = HashMap<String, Attachment>()
+    private val idsToAttachments = HashMap<SecureHash, Attachment>()
 
-    override fun close() {
-        super.close()
+    class OverlappingAttachments(val path: String) : Exception() {
+        override fun toString() = "Multiple attachments define a file at path $path"
+    }
 
-        for (file in tmpFiles) {
-            file.delete()
+    init {
+        for (attachment in attachments) {
+            attachment.openAsJAR().use { jar ->
+                while (true) {
+                    val entry = jar.nextJarEntry ?: break
+
+                    // We already verified that paths are not strange/game playing when we inserted the attachment
+                    // into the storage service. So we don't need to repeat it here.
+                    //
+                    // We forbid files that differ only in case to avoid issues for Windows/Mac developers where the
+                    // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
+                    //
+                    // TODO: Do we need extra overlap checks?
+                    val path = entry.name.toLowerCase()
+                    if (path in pathsToAttachments)
+                        throw OverlappingAttachments(path)
+                    pathsToAttachments[path] = attachment
+                }
+            }
+            idsToAttachments[attachment.id] = attachment
         }
     }
 
-    override fun loadClass(name: String?, resolve: Boolean): Class<*>? {
-        return super.loadClass(name, resolve)
+    // Example: attachment://0b4fc1327f3bbebf1bfe98330ea402ae035936c3cb6da9bd3e26eeaa9584e74d/some/file.txt
+    //
+    // We have to provide a fake stream handler to satisfy the URL class that the scheme is known. But it's not
+    // a real scheme and we don't register it. It's just here to ensure that there aren't codepaths that could
+    // lead to data loading that we don't control right here in this class (URLs can have evil security properties!)
+    private val fakeStreamHandler = object : URLStreamHandler() {
+        override fun openConnection(u: URL?): URLConnection? {
+            throw UnsupportedOperationException()
+        }
     }
 
-    companion object {
-        fun create(streams: List<Attachment>): AttachmentsClassLoader {
+    private fun Attachment.toURL(path: String?) = URL(null, "attachment://$id/" + (path ?: ""), fakeStreamHandler)
 
-            validate(streams)
-
-            var tmpFiles = streams.map {
-                var filename = File.createTempFile("jar", "")
-                it.open().use {
-                    str ->
-                    FileOutputStream(filename).use { str.copyTo(it) }
-                }
-                filename
-            }
-
-            return AttachmentsClassLoader(tmpFiles)
+    override fun findClass(name: String): Class<*> {
+        val path = name.replace('.', '/').toLowerCase() + ".class"
+        val attachment = pathsToAttachments[path] ?: throw ClassNotFoundException(name)
+        val stream = ByteArrayOutputStream()
+        try {
+            attachment.extractFile(path, stream)
+        } catch(e: FileNotFoundException) {
+            throw ClassNotFoundException(name)
         }
+        val bytes = stream.toByteArray()
+        // We don't attempt to propagate signatures from the JAR into the codesource, because our sandbox does not
+        // depend on external policy files to specify what it can do, so the data wouldn't be useful.
+        val codesource = CodeSource(attachment.toURL(null), emptyArray<CodeSigner>())
+        // TODO: Define an empty ProtectionDomain to start enforcing the standard Java sandbox.
+        // The standard Java sandbox is insufficient for our needs and a much more sophisticated sandboxing
+        // ClassLoader will appear here in future, but it can't hurt to use the default one too: defence in depth!
+        return defineClass(name, bytes, 0, bytes.size, codesource)
+    }
 
-        private fun validate(streams: List<Attachment>) {
-            val set = HashSet<String>()
+    override fun findResource(name: String): URL? {
+        val attachment = pathsToAttachments[name.toLowerCase()] ?: return null
+        return attachment.toURL(name)
+    }
 
-            val jars = streams.map { it.openAsJAR() }
-
-            for (jar in jars) {
-
-                var entry: JarEntry = jar.nextJarEntry ?: continue
-                if (set.add(entry.name) == false) {
-                    throw OverlappingAttachments()
-                }
-            }
+    override fun getResourceAsStream(name: String): InputStream? {
+        val url = getResource(name) ?: return null   // May check parent classloaders, for example.
+        if (url.protocol != "attachment") return null
+        val attachment = idsToAttachments[SecureHash.parse(url.host)] ?: return null
+        val path = url.path?.substring(1) ?: return null   // Chop off the leading slash.
+        try {
+            val stream = ByteArrayOutputStream()
+            attachment.extractFile(path, stream)
+            return ByteArrayInputStream(stream.toByteArray())
+        } catch(e: FileNotFoundException) {
+            return null
         }
-
     }
 }
 

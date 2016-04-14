@@ -1,15 +1,11 @@
 package core.node
 
-import com.esotericsoftware.kryo.KryoException
 import contracts.DUMMY_PROGRAM_ID
 import contracts.DummyContract
 import core.*
 import core.crypto.SecureHash
 import core.node.services.AttachmentStorage
-import core.serialization.attachmentStorage
-import core.serialization.createKryo
-import core.serialization.deserialize
-import core.serialization.serialize
+import core.serialization.*
 import core.testutils.MEGA_CORP
 import org.apache.commons.io.IOUtils
 import org.junit.Test
@@ -28,8 +24,8 @@ interface DummyContractBackdoor {
     fun inspectState(state: ContractState): Int
 }
 
-class ClassLoaderTests {
-    val ISOLATED_CONTRACTS_JAR_PATH = ClassLoaderTests::class.java.getResource("isolated.jar")
+class AttachmentClassLoaderTests {
+    val ISOLATED_CONTRACTS_JAR_PATH = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
 
     fun importJar(storage: AttachmentStorage) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
 
@@ -72,8 +68,8 @@ class ClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file.txt", "some other data")))
 
-        assertFailsWith(OverlappingAttachments::class) {
-            AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        assertFailsWith(AttachmentsClassLoader.OverlappingAttachments::class) {
+            AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
         }
     }
 
@@ -85,10 +81,9 @@ class ClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }).use {
-            val txt = IOUtils.toString(it.getResourceAsStream("file1.txt"))
-            assertEquals("some data", txt)
-        }
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"))
+        assertEquals("some data", txt)
     }
 
     @Test
@@ -99,11 +94,10 @@ class ClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }).use {
-            val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, it)
-            val contract = contractClass.newInstance() as Contract
-            assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
-        }
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val contractClass = Class.forName("contracts.isolated.AnotherDummyContract", true, cl)
+        val contract = contractClass.newInstance() as Contract
+        assertEquals(SecureHash.sha256("https://anotherdummy.org"), contract.legalContractReference)
     }
 
 
@@ -146,10 +140,10 @@ class ClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        val clsLoader = AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
         val kryo = createKryo()
-        kryo.classLoader = clsLoader
+        kryo.classLoader = cl
 
         val state2 = bytes.deserialize(kryo, true)
 
@@ -173,10 +167,10 @@ class ClassLoaderTests {
         val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file1.txt", "some data")))
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
-        val clsLoader = AttachmentsClassLoader.create(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
+        val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
 
         val kryo = createKryo()
-        kryo.classLoader = clsLoader
+        kryo.classLoader = cl
 
         val state2 = bytes.deserialize(kryo)
 
@@ -251,8 +245,9 @@ class ClassLoaderTests {
         // use empty attachmentStorage
         kryo2.attachmentStorage = MockAttachmentStorage()
 
-        assertFailsWith(KryoException::class) {
+        val e = assertFailsWith(MissingAttachmentsException::class) {
             bytes.deserialize(kryo2)
         }
+        assertEquals(attachmentRef, e.ids.single())
     }
 }

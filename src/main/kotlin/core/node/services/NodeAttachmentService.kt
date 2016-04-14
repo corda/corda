@@ -144,7 +144,7 @@ class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : 
                 val cursor = stream.nextJarEntry ?: break
                 val entryPath = Paths.get(cursor.name)
                 // Security check to stop zips trying to escape their rightful place.
-                if (entryPath.isAbsolute || entryPath.normalize() != entryPath)
+                if (entryPath.isAbsolute || entryPath.normalize() != entryPath || '\\' in cursor.name)
                     throw IllegalArgumentException("Path is either absolute or non-normalised: $entryPath")
             }
         }
