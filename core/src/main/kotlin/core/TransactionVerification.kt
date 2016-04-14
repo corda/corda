@@ -95,7 +95,7 @@ data class TransactionForVerification(val inStates: List<ContractState>,
      * up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
      * be used to simplify this logic.
      */
-    data class InOutGroup<T : ContractState>(val inputs: List<T>, val outputs: List<T>)
+    data class InOutGroup<T : ContractState, K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
 
     /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
     fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
@@ -114,38 +114,38 @@ data class TransactionForVerification(val inStates: List<ContractState>,
      * currency. To solve this, you would use groupStates with a type of Cash.State and a selector that returns the
      * currency field: the resulting list can then be iterated over to perform the per-currency calculation.
      */
-    fun <T : ContractState> groupStates(ofType: Class<T>, selector: (T) -> Any): List<InOutGroup<T>> {
+    fun <T : ContractState, K : Any> groupStates(ofType: Class<T>, selector: (T) -> K): List<InOutGroup<T, K>> {
         val inputs = inStates.filterIsInstance(ofType)
         val outputs = outStates.filterIsInstance(ofType)
 
-        val inGroups = inputs.groupBy(selector)
-        val outGroups = outputs.groupBy(selector)
+        val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
+        val outGroups: Map<K, List<T>> = outputs.groupBy(selector)
 
         @Suppress("DEPRECATION")
         return groupStatesInternal(inGroups, outGroups)
     }
 
     /** See the documentation for the reflection-based version of [groupStates] */
-    inline fun <reified T : ContractState> groupStates(selector: (T) -> Any): List<InOutGroup<T>> {
+    inline fun <reified T : ContractState, K : Any> groupStates(selector: (T) -> K): List<InOutGroup<T, K>> {
         val inputs = inStates.filterIsInstance<T>()
         val outputs = outStates.filterIsInstance<T>()
 
-        val inGroups = inputs.groupBy(selector)
-        val outGroups = outputs.groupBy(selector)
+        val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
+        val outGroups: Map<K, List<T>> = outputs.groupBy(selector)
 
         @Suppress("DEPRECATION")
         return groupStatesInternal(inGroups, outGroups)
     }
 
     @Deprecated("Do not use this directly: exposed as public only due to function inlining")
-    fun <T : ContractState> groupStatesInternal(inGroups: Map<Any, List<T>>, outGroups: Map<Any, List<T>>): List<InOutGroup<T>> {
-        val result = ArrayList<InOutGroup<T>>()
+    fun <T : ContractState, K : Any> groupStatesInternal(inGroups: Map<K, List<T>>, outGroups: Map<K, List<T>>): List<InOutGroup<T, K>> {
+        val result = ArrayList<InOutGroup<T, K>>()
 
         for ((k, v) in inGroups.entries)
-            result.add(InOutGroup(v, outGroups[k] ?: emptyList()))
+            result.add(InOutGroup(v, outGroups[k] ?: emptyList(), k))
         for ((k, v) in outGroups.entries) {
             if (inGroups[k] == null)
-                result.add(InOutGroup(emptyList(), v))
+                result.add(InOutGroup(emptyList(), v, k))
         }
 
         return result

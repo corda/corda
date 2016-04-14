@@ -99,6 +99,7 @@ class CashTests {
             this.accepts()
         }
 
+        // Test generation works.
         val ptx = TransactionBuilder()
         Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1)
         assertTrue(ptx.inputStates().isEmpty())
@@ -108,6 +109,40 @@ class CashTests {
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(ptx.commands()[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
+
+        // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
+        transaction {
+            input { inState }
+            output { inState.copy(amount = inState.amount * 2) }
+
+            // Move fails: not allowed to summon money.
+            tweak {
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this `fails requirement` "at issuer MegaCorp the amounts balance"
+            }
+
+            // Issue works.
+            tweak {
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+                this.accepts()
+            }
+        }
+
+        // Can't use an issue command to lower the amount.
+        transaction {
+            input { inState }
+            output { inState.copy(amount = inState.amount / 2) }
+            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            this `fails requirement` "output values sum to more than the inputs"
+        }
+
+        // Can't have an issue command that doesn't actually issue money.
+        transaction {
+            input { inState }
+            output { inState }
+            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            this `fails requirement` "output values sum to more than the inputs"
+        }
     }
 
     @Test
@@ -135,15 +170,20 @@ class CashTests {
                 this.accepts()
             }
         }
-
     }
 
     @Test
-    fun zeroSizedInputs() {
+    fun zeroSizedValues() {
         transaction {
             input { inState }
             input { inState.copy(amount = 0.DOLLARS) }
             this `fails requirement` "zero sized inputs"
+        }
+        transaction {
+            input { inState }
+            output { inState }
+            output { inState.copy(amount = 0.DOLLARS) }
+            this `fails requirement` "zero sized outputs"
         }
     }
 
@@ -264,11 +304,6 @@ class CashTests {
             output { inState.copy(owner = DUMMY_PUBKEY_2) `issued by` MINI_CORP }
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this.accepts()
-        }
-
-        transaction {
-            input { inState }
-            input { inState }
         }
     }
 

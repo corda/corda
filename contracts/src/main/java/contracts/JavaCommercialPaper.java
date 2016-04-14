@@ -138,13 +138,13 @@ public class JavaCommercialPaper implements Contract {
         // Issuance, trading (aka moving in this prototype) and redeeming.
         // Each command has it's own set of restrictions which the verify function ... verifies.
 
-        List<InOutGroup<State>> groups = tx.groupStates(State.class, State::withoutOwner);
+        List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
 
         // Find the command that instructs us what to do and check there's exactly one.
 
         AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), JavaCommercialPaper.Commands.class);
 
-        for (InOutGroup<State> group : groups) {
+        for (InOutGroup<State, State> group : groups) {
             List<State> inputs = group.getInputs();
             List<State> outputs = group.getOutputs();
 
@@ -164,7 +164,7 @@ public class JavaCommercialPaper implements Contract {
 
                 Instant time = timestampCommand.getBefore();
 
-                if (!time.isBefore(output.maturityDate)) {
+                if (time == null || !time.isBefore(output.maturityDate)) {
                     throw new IllegalStateException("Failed Requirement: the maturity date is not in the past");
                 }
 
@@ -197,7 +197,7 @@ public class JavaCommercialPaper implements Contract {
 
                     if (!received.equals(input.getFaceValue()))
                         throw new IllegalStateException("Failed Requirement: received amount equals the face value");
-                    if (time.isBefore(input.getMaturityDate()))
+                    if (time == null || time.isBefore(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the paper must have matured");
                     if (!input.getFaceValue().equals(received))
                         throw new IllegalStateException("Failed requirement: the received amount equals the face value");

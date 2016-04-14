@@ -82,53 +82,50 @@ class Cash : Contract {
     override fun verify(tx: TransactionForVerification) {
         // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
         // of cash are not fungible and must be kept separated for bookkeeping purposes.
-        val groups = tx.groupStates<Cash.State>() { Pair(it.deposit, it.amount.currency) }
+        val groups = tx.groupStates() { it: Cash.State -> Pair(it.deposit, it.amount.currency) }
 
-        for ((inputs, outputs) in groups) {
+        for ((inputs, outputs, key) in groups) {
+            // Either inputs or outputs could be empty.
+            val (deposit, currency) = key
+            val issuer = deposit.party
+
             requireThat {
-                "all outputs represent at least one penny" by outputs.none { it.amount.pennies == 0L }
+                "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0L }
             }
 
-
             val issueCommand = tx.commands.select<Commands.Issue>().singleOrNull()
-            if (issueCommand != null) {
+            if (issueCommand != null && outputs.isNotEmpty()) {
                 // If we have an issue command, perform special processing: the group is allowed to have no inputs,
-                // and the output states must have a deposit reference owned by the signer. Note that this means
-                // literally anyone with access to the network can issue cash claims of arbitrary amounts! It is up
-                // to the recipient to decide if the backing party is trustworthy or not, via some
+                // and the output states must have a deposit reference owned by the signer.
+                //
+                // Whilst the transaction *may* have no inputs, it can have them, and in this case the outputs must
+                // sum to more than the inputs. An issuance of zero size is not allowed.
+                //
+                // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
+                // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
                 // as-yet-unwritten identity service. See ADP-22 for discussion.
-                val outputsInstitution = outputs.map { it.deposit.party }.distinct().singleOrNull()
-                if (outputsInstitution != null) {
-                    requireThat {
-                        "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-                        "output deposits are owned by a command signer" by
-                                outputs.all { issueCommand.signingParties.contains(it.deposit.party) }
-                        "there are no inputs in this group" by inputs.isEmpty()
-                    }
-                    continue
-                } else {
-                    // There was an issue command, but it wasn't signed for this group. It may apply to other
-                    // groups.
+
+                // The grouping ensures that all outputs have the same deposit reference and currency.
+                val inputAmount = inputs.sumCashOrZero(currency)
+                val outputAmount = outputs.sumCash()
+                requireThat {
+                    "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
+                    "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
+                    "output values sum to more than the inputs" by (outputAmount > inputAmount)
                 }
+                continue
             }
 
             val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
-            val outputAmount = outputs.sumCashOrZero(inputAmount.currency)
+            val outputAmount = outputs.sumCashOrZero(currency)
 
-            val deposit = inputs.first().deposit
+            // If we want to remove cash from the ledger, that must be signed for by the issuer.
+            // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
+            val exitCommand = tx.commands.select<Commands.Exit>(party = issuer).singleOrNull()
+            val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, currency)
 
             requireThat {
-                "there is at least one cash input" by inputs.isNotEmpty()
                 "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0L }
-                "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0L }
-                "all outputs in this group use the currency of the inputs" by
-                        outputs.all { it.amount.currency == inputAmount.currency }
-            }
-
-            val exitCommand = tx.commands.select<Commands.Exit>(party = deposit.party).singleOrNull()
-            val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, inputAmount.currency)
-
-            requireThat {
                 "for deposit ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
                         (inputAmount == outputAmount + amountExitingLedger)
             }

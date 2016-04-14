@@ -67,7 +67,7 @@ class CommercialPaper : Contract {
 
     override fun verify(tx: TransactionForVerification) {
         // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
-        val groups = tx.groupStates<State>() { it.withoutOwner() }
+        val groups = tx.groupStates() { it: State -> it.withoutOwner() }
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
@@ -78,39 +78,43 @@ class CommercialPaper : Contract {
         // who or what is a trusted authority.
         val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Timestamping Service", "Bank A")
 
-        for (group in groups) {
+        for ((inputs, outputs, key) in groups) {
             when (command.value) {
                 is Commands.Move -> {
-                    val input = group.inputs.single()
+                    val input = inputs.single()
                     requireThat {
-                        "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
-                        "the state is propagated" by (group.outputs.size == 1)
+                        "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                        "the state is propagated" by (outputs.size == 1)
+                        // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
+                        // the input ignoring the owner field due to the grouping.
                     }
                 }
 
+            // Redemption of the paper requires movement of on-ledger cash.
                 is Commands.Redeem -> {
-                    val input = group.inputs.single()
+                    val input = inputs.single()
                     val received = tx.outStates.sumCashBy(input.owner)
                     val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                     requireThat {
-                        "the paper must have matured" by (time > input.maturityDate)
+                        "the paper must have matured" by (time >= input.maturityDate)
                         "the received amount equals the face value" by (received == input.faceValue)
-                        "the paper must be destroyed" by group.outputs.isEmpty()
-                        "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
+                        "the paper must be destroyed" by outputs.isEmpty()
+                        "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
                     }
                 }
 
                 is Commands.Issue -> {
-                    val output = group.outputs.single()
+                    val output = outputs.single()
                     val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
                         "the issuance is signed by the claimed issuer of the paper" by
-                                (command.signers.contains(output.issuance.party.owningKey))
+                                (output.issuance.party.owningKey in command.signers)
                         "the face value is not zero" by (output.faceValue.pennies > 0)
                         "the maturity date is not in the past" by (time < output.maturityDate)
                         // Don't allow an existing CP state to be replaced by this issuance.
-                        "there is no input state" by group.inputs.isEmpty()
+                        // TODO: Consider how to handle the case of mistaken issuances, or other need to patch.
+                        "there is no input state" by inputs.isEmpty()
                     }
                 }
 
