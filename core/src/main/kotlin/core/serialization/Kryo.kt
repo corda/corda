@@ -69,34 +69,44 @@ class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
 }
 
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
-inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T {
-    if (includeClassName)
-        return kryo.readClassAndObject(Input(this)) as T
-    else
-        return kryo.readObject(Input(this), T::class.java)
+fun <T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
+    @Suppress("UNCHECKED_CAST")
+    return kryo.readClassAndObject(Input(this)) as T
 }
 
-inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T {
-    return this.bits.deserialize(kryo, includeClassName)
+fun <T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
+    return this.bits.deserialize(kryo)
 }
 
 // The more specific deserialize version results in the bytes being cached, which is faster.
 @JvmName("SerializedBytesWireTransaction")
 fun SerializedBytes<WireTransaction>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): WireTransaction = WireTransaction.deserialize(this, kryo)
 
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T = bits.deserialize(kryo, includeClassName)
+fun <T : Any> SerializedBytes<T>.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = bits.deserialize(kryo)
+
+/**
+ * A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring [SerializedBytes] is a pure
+ * type safety hack.
+ */
+object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
+    override fun write(kryo: Kryo, output: Output, obj: SerializedBytes<Any>) {
+        output.writeVarInt(obj.bits.size, true)
+        output.writeBytes(obj.bits)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<SerializedBytes<Any>>): SerializedBytes<Any> {
+        return SerializedBytes(input.readBytes(input.readVarInt(true)))
+    }
+}
 
 /**
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
  * the type is marked as serializable or was designed for it (so be careful!)
  */
-fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): SerializedBytes<T> {
+fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
-        if (includeClassName)
-            kryo.writeClassAndObject(it, this)
-        else
-            kryo.writeObject(it, this)
+        kryo.writeClassAndObject(it, this)
     }
     return SerializedBytes(stream.toByteArray())
 }
@@ -258,8 +268,6 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
             }
         })
 
-        register(WireTransaction::class.java, WireTransactionSerializer)
-
         // Some things where the JRE provides an efficient custom serialisation.
         val ser = JavaSerializer()
         val keyPair = generateKeyPair()
@@ -269,16 +277,13 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
-        val immutables = listOf(
-                SignedTransaction::class,
-                SerializedBytes::class
-        )
+        register(SignedTransaction::class.java, ImmutableClassSerializer(SignedTransaction::class))
 
-        immutables.forEach {
-            register(it.java, ImmutableClassSerializer(it))
-        }
+        // This class has special handling.
+        register(WireTransaction::class.java, WireTransactionSerializer)
 
-        // TODO: See if we can make Lazy<T> serialize properly so we can use "by lazy" in serialized object.
+        // This ensures a SerializedBytes<Foo> wrapper is written out as just a byte array.
+        register(SerializedBytes::class.java, SerializedBytesSerializer)
     }
 }
 

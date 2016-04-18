@@ -4,8 +4,8 @@ import contracts.Cash
 import core.*
 import core.node.Node
 import core.node.NodeConfiguration
-import core.node.services.ArtemisMessagingService
 import core.node.NodeInfo
+import core.node.services.ArtemisMessagingService
 import core.node.services.NodeInterestRates
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
@@ -51,7 +51,7 @@ fun main(args: Array<String>) {
 
     // Load oracle stuff (in lieu of having a network map service)
     val oracleAddr = ArtemisMessagingService.makeRecipient(options.valueOf(oracleAddrArg))
-    val oracleIdentity = Files.readAllBytes(Paths.get(options.valueOf(oracleIdentityArg))).deserialize<Party>(includeClassName = true)
+    val oracleIdentity = Files.readAllBytes(Paths.get(options.valueOf(oracleIdentityArg))).deserialize<Party>()
     val oracleNode = NodeInfo(oracleAddr, oracleIdentity)
 
     val fixOf: FixOf = NodeInterestRates.parseFixOf(options.valueOf(fixOfArg))

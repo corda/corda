@@ -174,13 +174,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             val myIdentity = Party(configuration.myLegalName, keypair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
             // wrong type by mistake.
-            myIdentity.serialize(includeClassName = true).writeToFile(pubIdentityFile)
+            myIdentity.serialize().writeToFile(pubIdentityFile)
             Pair(myIdentity, keypair)
         } else {
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
-            val myIdentity = Files.readAllBytes(pubIdentityFile).deserialize<Party>(includeClassName = true)
+            val myIdentity = Files.readAllBytes(pubIdentityFile).deserialize<Party>()
             if (myIdentity.name != configuration.myLegalName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
                         "${configuration.myLegalName} vs ${myIdentity.name}")

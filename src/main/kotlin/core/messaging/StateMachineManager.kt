@@ -115,7 +115,10 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
             // And now re-wire the deserialised continuation back up to the network service.
             serviceHub.networkService.runOnNextMessage(topic, runInThread) { netMsg ->
-                val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), awaitingObjectOfType)
+                // TODO: See security note below.
+                val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
+                if (!awaitingObjectOfType.isInstance(obj))
+                    throw ClassCastException("Received message of unexpected type: ${obj.javaClass.name} vs ${awaitingObjectOfType.name}")
                 logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
                 iterateStateMachine(psm, serviceHub.networkService, logger, obj, checkpointKey) {
                     try {
@@ -221,7 +224,16 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
-            val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)
+            // TODO: This is insecure: we should not deserialise whatever we find and *then* check.
+            //
+            // We should instead verify as we read the data that it's what we are expecting and throw as early as
+            // possible. We only do it this way for convenience during the prototyping stage. Note that this means
+            // we could simply not require the programmer to specify the expected return type at all, and catch it
+            // at the last moment when we do the downcast. However this would make protocol code harder to read and
+            // make it more difficult to migrate to a more explicit serialisation scheme later.
+            val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
+            if (!responseType.isInstance(obj))
+                throw ClassCastException("Expected message of type ${responseType.name} but got ${obj.javaClass.name}")
             logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
             iterateStateMachine(psm, net, logger, obj, newCheckpointKey) {
                 try {
@@ -247,7 +259,11 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                 val responseType: Class<R>
         ) : FiberRequest(topic, destination, sessionIDForSend, sessionIDForReceive, obj)
 
-        class NotExpectingResponse(topic: String, destination: MessageRecipients, sessionIDForSend: Long, obj: Any?)
-        : FiberRequest(topic, destination, sessionIDForSend, -1, obj)
+        class NotExpectingResponse(
+                topic: String,
+                destination: MessageRecipients,
+                sessionIDForSend: Long,
+                obj: Any?
+        ) : FiberRequest(topic, destination, sessionIDForSend, -1, obj)
     }
 }

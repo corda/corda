@@ -12,8 +12,8 @@ import core.node.services.ArtemisMessagingService
 import core.node.services.NodeInterestRates
 import core.node.services.ServiceType
 import core.node.services.TimestamperService
-import core.testing.MockNetworkMapCache
 import core.serialization.deserialize
+import core.testing.MockNetworkMapCache
 import core.utilities.BriefLogFormatter
 import demos.protocols.AutoOfferProtocol
 import demos.protocols.ExitServerProtocol
@@ -129,7 +129,7 @@ fun nodeInfo(hostAndPortString: String, identityFile: String, advertisedServices
     try {
         val addr = HostAndPort.fromString(hostAndPortString).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(identityFile)
-        val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
+        val party = Files.readAllBytes(path).deserialize<Party>()
         return NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices)
     } catch (e: Exception) {
         println("Could not find identify file $identityFile.  If the file has just been created as part of starting the demo, please restart this node")

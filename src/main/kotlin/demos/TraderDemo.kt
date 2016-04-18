@@ -87,7 +87,7 @@ fun main(args: Array<String>) {
     val timestamperId = if (options.has(timestamperIdentityFile)) {
         val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(timestamperIdentityFile))
-        val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
+        val party = Files.readAllBytes(path).deserialize<Party>()
         NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices = setOf(TimestamperService.Type))
     } else null
 

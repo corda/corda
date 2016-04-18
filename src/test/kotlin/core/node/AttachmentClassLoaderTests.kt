@@ -136,7 +136,7 @@ class AttachmentClassLoaderTests {
     fun `testing Kryo with ClassLoader (with top level class name)`() {
         val contract = createContract2Cash()
 
-        val bytes = contract.serialize(includeClassName = true)
+        val bytes = contract.serialize()
 
         val storage = MockAttachmentStorage()
 
@@ -149,7 +149,7 @@ class AttachmentClassLoaderTests {
         val kryo = createKryo()
         kryo.classLoader = cl
 
-        val state2 = bytes.deserialize(kryo, true)
+        val state2 = bytes.deserialize(kryo)
         assert(state2.javaClass.classLoader is AttachmentsClassLoader)
         assertNotNull(state2)
     }

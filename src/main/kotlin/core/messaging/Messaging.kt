@@ -74,8 +74,8 @@ fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = 
     }
 }
 
-fun MessagingService.send(topic: String, to: MessageRecipients, obj: Any, includeClassName: Boolean = false) {
-    send(createMessage(topic, obj.serialize(includeClassName = includeClassName).bits), to)
+fun MessagingService.send(topic: String, to: MessageRecipients, obj: Any) {
+    send(createMessage(topic, obj.serialize().bits), to)
 }
 
 /**
