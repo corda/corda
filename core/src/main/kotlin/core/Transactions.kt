@@ -323,30 +323,4 @@ data class LedgerTransaction(
 ) {
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(hash, index))
-
-    fun toWireTransaction(): WireTransaction {
-        val wtx = WireTransaction(inputs, attachments.map { it.id }, outputs, commands.map { Command(it.value, it.signers) })
-        check(wtx.serialize().hash == hash)
-        return wtx
-    }
-
-    /**
-     * Converts this transaction to [SignedTransaction] form, optionally using the provided keys to sign. There is
-     * no requirement that [andSignWithKeys] include all required keys.
-     *
-     * @throws IllegalArgumentException if a key is provided that isn't listed in any command and [allowUnusedKeys]
-     *                                  is false.
-     */
-    fun toSignedTransaction(andSignWithKeys: List<KeyPair> = emptyList(), allowUnusedKeys: Boolean = false): SignedTransaction {
-        val allPubKeys = commands.flatMap { it.signers }.toSet()
-        val wtx = toWireTransaction()
-        val bits = wtx.serialize()
-        val sigs = ArrayList<DigitalSignature.WithKey>()
-        for (key in andSignWithKeys) {
-            if (!allPubKeys.contains(key.public) && !allowUnusedKeys)
-                throw IllegalArgumentException("Key provided that is not listed by any command")
-            sigs += key.signWithECDSA(bits)
-        }
-        return wtx.toSignedTransaction(sigs)
-    }
 }
