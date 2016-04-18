@@ -17,6 +17,8 @@ tags
 /core/build
 /docs/build/doctrees
 
+/network-explorer
+
 lib/dokka.jar
 
 buyer
