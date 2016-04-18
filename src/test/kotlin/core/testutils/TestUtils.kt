@@ -351,7 +351,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
                     allPubKeys -= key.public
                 }
             }
-            wtx.toSignedTransaction(sigs)
+            SignedTransaction(bits, sigs)
         }
     }
 }

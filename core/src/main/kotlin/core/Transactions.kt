@@ -58,11 +58,6 @@ data class WireTransaction(val inputs: List<StateRef>,
         }
     }
 
-    /** Serialises and returns this transaction as a [SignedTransaction] with no signatures attached. */
-    fun toSignedTransaction(withSigs: List<DigitalSignature.WithKey>): SignedTransaction {
-        return SignedTransaction(serialized, withSigs)
-    }
-
     /** Returns a [StateAndRef] for the given output index. */
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int): StateAndRef<T> {
