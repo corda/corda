@@ -11,10 +11,11 @@ import core.messaging.SingleMessageRecipient
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
-import core.node.services.ArtemisMessagingService
 import core.node.NodeInfo
+import core.node.services.ArtemisMessagingService
 import core.node.services.NodeAttachmentService
 import core.node.services.NodeWalletService
+import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
@@ -87,7 +88,7 @@ fun main(args: Array<String>) {
         val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(timestamperIdentityFile))
         val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
-        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party)
+        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices = setOf(TimestamperService.Type))
     } else null
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId).start() }
