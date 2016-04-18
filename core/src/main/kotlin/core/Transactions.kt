@@ -102,6 +102,8 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         check(sigs.isNotEmpty())
     }
 
+    // TODO: This needs to be reworked to ensure that the inner WireTransaction is only ever deserialised sandboxed.
+
     /** Lazily calculated access to the deserialised/hashed transaction data. */
     val tx: WireTransaction by lazy { WireTransaction.deserialize(txBits) }
 
