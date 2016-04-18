@@ -72,8 +72,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var api: APIServer
 
     open fun start(): AbstractNode {
-        require(timestamperAddress == null || timestamperAddress.advertisedServices.contains(TimestamperService.Type))
-                {"Timestamper address must indicate a node that provides timestamping services"}
         log.info("Node starting up ...")
 
         storage = initialiseStorageService(dir)
@@ -98,6 +96,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
         val tsid = if (timestamperAddress != null) {
             inNodeTimestampingService = null
+            require(TimestamperService.Type in timestamperAddress.advertisedServices) {
+                "Timestamper address must indicate a node that provides timestamping services, actually " +
+                        "has ${timestamperAddress.advertisedServices}"
+            }
             timestamperAddress
         } else {
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)

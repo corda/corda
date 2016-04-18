@@ -88,12 +88,32 @@ data class TransactionForVerification(val inStates: List<ContractState>,
      * Utilities for contract writers to incorporate into their logic.
      */
 
+    /**
+     * A set of related inputs and outputs that are connected by some common attributes. An InOutGroup is calculated
+     * using [groupStates] and is useful for handling cases where a transaction may contain similar but unrelated
+     * state evolutions, for example, a transaction that moves cash in two different currencies. The numbers must add
+     * up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
+     * be used to simplify this logic.
+     */
     data class InOutGroup<T : ContractState>(val inputs: List<T>, val outputs: List<T>)
 
-    // A shortcut to make IDE auto-completion more intuitive for Java users.
+    /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
     fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
 
-    // For Java users.
+    /**
+     * Given a type and a function that returns a grouping key, associates inputs and outputs together so that they
+     * can be processed as one. The grouping key is any arbitrary object that can act as a map key (so must implement
+     * equals and hashCode).
+     *
+     * The purpose of this function is to simplify the writing of verification logic for transactions that may contain
+     * similar but unrelated state evolutions which need to be checked independently. Consider a transaction that
+     * simultaneously moves both dollars and euros (e.g. is an atomic FX trade). There may be multiple dollar inputs and
+     * multiple dollar outputs, depending on things like how fragmented the owners wallet is and whether various privacy
+     * techniques are in use. The quantity of dollars on the output side must sum to the same as on the input side, to
+     * ensure no money is being lost track of. This summation and checking must be repeated independently for each
+     * currency. To solve this, you would use groupStates with a type of Cash.State and a selector that returns the
+     * currency field: the resulting list can then be iterated over to perform the per-currency calculation.
+     */
     fun <T : ContractState> groupStates(ofType: Class<T>, selector: (T) -> Any): List<InOutGroup<T>> {
         val inputs = inStates.filterIsInstance(ofType)
         val outputs = outStates.filterIsInstance(ofType)
@@ -105,7 +125,7 @@ data class TransactionForVerification(val inStates: List<ContractState>,
         return groupStatesInternal(inGroups, outGroups)
     }
 
-    // For Kotlin users: this version has nicer syntax and avoids reflection/object creation for the lambda.
+    /** See the documentation for the reflection-based version of [groupStates] */
     inline fun <reified T : ContractState> groupStates(selector: (T) -> Any): List<InOutGroup<T>> {
         val inputs = inStates.filterIsInstance<T>()
         val outputs = outStates.filterIsInstance<T>()
