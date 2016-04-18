@@ -31,6 +31,7 @@ Read on to learn:
    messaging
    running-the-trading-demo
    node-administration
+   irs
 
 .. toctree::
    :maxdepth: 2
