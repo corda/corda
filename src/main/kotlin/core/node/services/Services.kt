@@ -5,6 +5,7 @@ import contracts.Cash
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
+import core.utilities.RecordingMap
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -176,12 +177,21 @@ interface ServiceHub {
     }
 
     /**
-     * Use this for storing transactions to StorageService and WalletService
+     * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
+     * sends them to the wallet for further processing.
      *
-     * TODO Need to come up with a way for preventing transactions being written other than by this method
+     * TODO: Need to come up with a way for preventing transactions being written other than by this method
+     *
+     * @param txs The transactions to record
+     * @param skipRecordingMap This is used in unit testing and can be ignored most of the time.
      */
-    fun recordTransactions(txs: List<SignedTransaction>) {
-        storageService.validatedTransactions.putAll(txs.groupBy { it.id }.mapValues { it.value.first() })
+    fun recordTransactions(txs: List<SignedTransaction>, skipRecordingMap: Boolean = false) {
+        val txns: Map<SecureHash, SignedTransaction> = txs.groupBy { it.id }.mapValues { it.value.first() }
+        val txStorage = storageService.validatedTransactions
+        if (txStorage is RecordingMap && skipRecordingMap)
+            txStorage.putAllUnrecorded(txns)
+        else
+            txStorage.putAll(txns)
         walletService.notifyAll(txs.map { it.tx })
     }
 }

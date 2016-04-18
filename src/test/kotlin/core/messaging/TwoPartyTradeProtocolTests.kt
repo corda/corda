@@ -356,20 +356,9 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     private fun TransactionGroupDSL<ContractState>.insertFakeTransactions(wtxToSign: List<WireTransaction>,
                                                                           services: ServiceHub,
                                                                           vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val txStorage = services.storageService.validatedTransactions
-        val signed = signAll(wtxToSign, *extraKeys).associateBy { it.id }
-        if (txStorage is RecordingMap) {
-            txStorage.putAllUnrecorded(signed)
-        } else
-            txStorage.putAll(signed)
-
-        try {
-            services.walletService.notifyAll(signed.map { it.value.tx })
-        } catch(e: Throwable) {
-            // TODO: Remove this hack once all the tests are converted to use MockNode.
-        }
-
-        return signed
+        val signed: List<SignedTransaction> = signAll(wtxToSign, *extraKeys)
+        services.recordTransactions(signed, skipRecordingMap = true)
+        return signed.associateBy { it.id }
     }
 
     private fun TransactionGroupDSL<ContractState>.fillUpForBuyer(withError: Boolean, bobKey: PublicKey = BOB): Pair<Wallet, List<WireTransaction>> {
