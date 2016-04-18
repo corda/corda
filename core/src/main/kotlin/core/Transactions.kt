@@ -319,8 +319,8 @@ data class LedgerTransaction(
         /** Arbitrary data passed to the program of each input state. */
         val commands: List<AuthenticatedObject<CommandData>>,
         /** The hash of the original serialised WireTransaction */
-        val hash: SecureHash
-) {
+        override val id: SecureHash
+) : NamedByHash {
     @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(hash, index))
+    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(id, index))
 }

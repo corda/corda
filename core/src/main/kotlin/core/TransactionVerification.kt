@@ -26,7 +26,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
         // Cycles should be impossible due to the use of hashes as pointers.
         check(transactions.intersect(nonVerifiedRoots).isEmpty())
 
-        val hashToTXMap: Map<SecureHash, List<LedgerTransaction>> = (transactions + nonVerifiedRoots).groupBy { it.hash }
+        val hashToTXMap: Map<SecureHash, List<LedgerTransaction>> = (transactions + nonVerifiedRoots).groupBy { it.id }
         val refToConsumingTXMap = hashMapOf<StateRef, LedgerTransaction>()
 
         val resolved = HashSet<TransactionForVerification>(transactions.size)
@@ -43,7 +43,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
                 // Look up the output in that transaction by index.
                 inputs.add(ltx.outputs[ref.index])
             }
-            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.hash))
+            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.id))
         }
 
         for (tx in resolved)

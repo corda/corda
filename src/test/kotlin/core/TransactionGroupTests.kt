@@ -67,7 +67,7 @@ class TransactionGroupTests {
                 verify()
             }
             assertEquals(StateRef(t.id, 0), e.conflictRef)
-            assertEquals(setOf(conflict1.id, conflict2.id), setOf(e.tx1.hash, e.tx2.hash))
+            assertEquals(setOf(conflict1.id, conflict2.id), setOf(e.tx1.id, e.tx2.id))
         }
     }
 

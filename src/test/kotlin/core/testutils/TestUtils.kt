@@ -300,7 +300,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     fun labelForTransaction(tx: WireTransaction): String? = txnToLabelMap[tx.id]
-    fun labelForTransaction(tx: LedgerTransaction): String? = txnToLabelMap[tx.hash]
+    fun labelForTransaction(tx: LedgerTransaction): String? = txnToLabelMap[tx.id]
 
     @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
     fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {

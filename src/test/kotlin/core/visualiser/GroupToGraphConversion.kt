@@ -22,7 +22,7 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
         for ((txIndex, tx) in (tg.transactions + tg.nonVerifiedRoots).withIndex()) {
             val txNode = graph.addNode<Node>("tx$txIndex")
             if (tx !in tg.nonVerifiedRoots)
-                txNode.label = dsl.labelForTransaction(tx).let { it ?: "TX ${tx.hash.prefixChars()}" }
+                txNode.label = dsl.labelForTransaction(tx).let { it ?: "TX ${tx.id.prefixChars()}" }
             txNode.styleClass = "tx"
 
             // Now create a vertex for each output state.
