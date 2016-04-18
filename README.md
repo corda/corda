@@ -61,7 +61,9 @@ The code should build, the unit tests should show as all green.
 
 You can catch up with the latest code by selecting "VCS -> Update Project" in the menu.
 
-## IntelliJ Troubleshooting
+# Troubleshooting
+
+## IntelliJ
 
 If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:
 
@@ -77,7 +79,7 @@ click on New… next to the red <No SDK> symbol, and select JDK.  It should then
 
 Also select Project language level: as 8.  Click OK.  Open should now work.
 
-## Other troubleshooting
+## Quasar
 
 If you get an error about a missing Quasar agent, then your JVM is being invoked without a needed command line argument.
 Make sure an argument like `-javaagent:lib/quasar.jar` is being passed to the invocation.
@@ -87,8 +89,11 @@ You may need/want to edit your default JUnit run config in IntelliJ to ensure th
 in the toolbar and select "Edit configurations", then expand the defaults tree, then select JUnit and add the two
 arguments to the VM options edit.
 
+## ClassNotFoundException during Gradle quasarScan task
 
-## Accessing Source Without an IDE
+Your Gradle build server is hosed. Run `gradle --stop` and then try `gradle clean build`.
+
+# Accessing Source Without an IDE
 
 If you don't want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:
 
@@ -105,7 +110,7 @@ Run the following to run the unit tests:
 For the first time only, this will download and configure Gradle.
 Run "git pull" to upgrade
 
-## Starting point - the Tutorial
+# Starting point - the Tutorial
 
 We have prepared a comprehensive tutorial.
 One you have access to the source, open the following in a browser:
