@@ -29,7 +29,7 @@ Read on to learn:
    getting-set-up
    data-model
    messaging
-   running-the-trading-demo
+   running-the-demos
    node-administration
    irs
 

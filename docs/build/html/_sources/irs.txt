@@ -68,7 +68,6 @@ event.
 Currently, there are no matured, termination or dispute operations.
 
 
-
 Technical Details
 -----------------
 
