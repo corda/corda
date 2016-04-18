@@ -8,7 +8,6 @@ import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.testing.MockNetworkMapCache
 import core.testutils.MockIdentityService
-import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -59,19 +58,6 @@ class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementServi
     }
 }
 
-class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletService {
-    override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
-        get() = TODO("Use NodeWalletService instead")
-    override val cashBalances: Map<Currency, Amount>
-        get() = TODO("Use NodeWalletService instead")
-
-    override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
-        TODO("Use NodeWalletService instead")
-    }
-
-    override val currentWallet = Wallet(states)
-}
-
 class MockAttachmentStorage : AttachmentStorage {
     val files = HashMap<SecureHash, ByteArray>()
 
@@ -102,8 +88,7 @@ class MockAttachmentStorage : AttachmentStorage {
 }
 
 @ThreadSafe
-class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), generateKeyPair()) {
-}
+class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), generateKeyPair())
 
 class MockServices(
         val wallet: WalletService? = null,
