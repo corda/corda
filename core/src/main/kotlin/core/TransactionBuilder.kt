@@ -25,7 +25,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
                          private val outputs: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<Command> = arrayListOf()) {
 
-    val time: TimestampCommand? get() = commands.mapNotNull { it.data as? TimestampCommand }.singleOrNull()
+    val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
 
     /**
      * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
@@ -41,7 +41,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
      */
     fun setTime(time: Instant, authenticatedBy: Party, timeTolerance: Duration) {
         check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
-        commands.removeAll { it.data is TimestampCommand }
+        commands.removeAll { it.value is TimestampCommand }
         addCommand(TimestampCommand(time, timeTolerance), authenticatedBy.owningKey)
     }
 
@@ -63,7 +63,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
 
     fun signWith(key: KeyPair) {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
-        check(commands.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
+        check(commands.count { it.signers.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
         val data = toWireTransaction().serialize()
         addSignatureUnchecked(key.signWithECDSA(data.bits))
     }
@@ -87,7 +87,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkSignature(sig: DigitalSignature.WithKey) {
-        require(commands.count { it.pubkeys.contains(sig.by) } > 0) { "Signature key doesn't match any command" }
+        require(commands.count { it.signers.contains(sig.by) } > 0) { "Signature key doesn't match any command" }
         sig.verifyWithECDSA(toWireTransaction().serialized)
     }
 
@@ -129,8 +129,8 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
             for (command in commands) {
-                if (!gotKeys.containsAll(command.pubkeys))
-                    throw IllegalStateException("Missing signatures on the transaction for a ${command.data.javaClass.canonicalName} command")
+                if (!gotKeys.containsAll(command.signers))
+                    throw IllegalStateException("Missing signatures on the transaction for a ${command.value.javaClass.canonicalName} command")
             }
         }
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))

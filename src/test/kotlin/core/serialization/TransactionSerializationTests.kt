@@ -83,7 +83,7 @@ class TransactionSerializationTests {
         tx.signWith(TestUtils.keypair)
         val stx = tx.toSignedTransaction()
         val ltx = stx.verifyToLedgerTransaction(MockIdentityService, MockStorageService().attachments)
-        assertEquals(tx.commands().map { it.data }, ltx.commands.map { it.value })
+        assertEquals(tx.commands().map { it.value }, ltx.commands.map { it.value })
         assertEquals(tx.inputStates(), ltx.inputs)
         assertEquals(tx.outputStates(), ltx.outputs)
         assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_TIMESTAMPER.identity)!!.midpoint)

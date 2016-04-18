@@ -45,7 +45,7 @@ class TransactionGraphSearch(val transactions: Map<SecureHash, SignedTransaction
 
     private fun Query.matches(tx: WireTransaction): Boolean {
         if (withCommandOfType != null) {
-            if (tx.commands.any { it.data.javaClass.isAssignableFrom(withCommandOfType) })
+            if (tx.commands.any { it.value.javaClass.isAssignableFrom(withCommandOfType) })
                 return true
         }
         return false

@@ -101,7 +101,7 @@ class NodeInterestRatesTest {
         future.get()
 
         // We should now have a valid signature over our tx from the oracle.
-        val fix = tx.toSignedTransaction(true).tx.commands.map { it.data as Fix }.first()
+        val fix = tx.toSignedTransaction(true).tx.commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)
         assertEquals("0.678".bd, fix.value)
     }

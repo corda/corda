@@ -118,7 +118,7 @@ abstract class AbstractTransactionForTest {
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, s()).apply { outStates.add(this) }
 
     protected fun commandsToAuthenticatedObjects(): List<AuthenticatedObject<CommandData>> {
-        return commands.map { AuthenticatedObject(it.pubkeys, it.pubkeys.mapNotNull { MockIdentityService.partyFromKey(it) }, it.data) }
+        return commands.map { AuthenticatedObject(it.signers, it.signers.mapNotNull { MockIdentityService.partyFromKey(it) }, it.value) }
     }
 
     fun attachment(attachmentID: SecureHash) {
@@ -341,7 +341,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
 
     fun signAll(txnsToSign: List<WireTransaction> = txns, vararg extraKeys: KeyPair): List<SignedTransaction> {
         return txnsToSign.map { wtx ->
-            val allPubKeys = wtx.commands.flatMap { it.pubkeys }.toMutableSet()
+            val allPubKeys = wtx.commands.flatMap { it.signers }.toMutableSet()
             val bits = wtx.serialize()
             require(bits == wtx.serialized)
             val sigs = ArrayList<DigitalSignature.WithKey>()

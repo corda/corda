@@ -95,15 +95,15 @@ abstract class TypeOnlyCommandData : CommandData {
 }
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
-data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
+data class Command(val value: CommandData, val signers: List<PublicKey>) {
     init {
-        require(pubkeys.isNotEmpty())
+        require(signers.isNotEmpty())
     }
 
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
-    private fun commandDataToString() = data.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
-    override fun toString() = "${commandDataToString()} with pubkeys ${pubkeys.map { it.toStringShort() }}"
+    private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
+    override fun toString() = "${commandDataToString()} with pubkeys ${signers.map { it.toStringShort() }}"
 }
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */

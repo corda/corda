@@ -33,7 +33,7 @@ class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.syste
 
     override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
         val wtx = wtxBytes.deserialize()
-        val timestamp = wtx.commands.mapNotNull { it.data as? TimestampCommand }.single()
+        val timestamp = wtx.commands.mapNotNull { it.value as? TimestampCommand }.single()
         if (timestamp.before!! until clock.instant() > tolerance)
             throw TimestampingError.NotOnTimeException()
         return DummyTimestampingAuthority.key.signWithECDSA(wtxBytes.bits, identity)

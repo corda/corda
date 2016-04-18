@@ -12,8 +12,8 @@ import java.io.FileNotFoundException
 fun WireTransaction.toLedgerTransaction(identityService: IdentityService,
                                         attachmentStorage: AttachmentStorage): LedgerTransaction {
     val authenticatedArgs = commands.map {
-        val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
-        AuthenticatedObject(it.pubkeys, institutions, it.data)
+        val institutions = it.signers.mapNotNull { pk -> identityService.partyFromKey(pk) }
+        AuthenticatedObject(it.signers, institutions, it.value)
     }
     val attachments = attachments.map {
         attachmentStorage.openAttachment(it) ?: throw FileNotFoundException(it.toString())

@@ -106,8 +106,8 @@ class CashTests {
         assertEquals(100.DOLLARS, s.amount)
         assertEquals(MINI_CORP, s.deposit.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
-        assertTrue(ptx.commands()[0].data is Cash.Commands.Issue)
-        assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].pubkeys[0])
+        assertTrue(ptx.commands()[0].value is Cash.Commands.Issue)
+        assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
     }
 
     @Test
@@ -318,7 +318,7 @@ class CashTests {
         val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
     }
 
     @Test
@@ -334,7 +334,7 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputs[0])
         assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputs[1])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
     }
 
     @Test
@@ -343,7 +343,7 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[1].ref, wtx.inputs[1])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
     }
 
     @Test
@@ -354,7 +354,7 @@ class CashTests {
         assertEquals(WALLET[2].ref, wtx.inputs[2])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
         assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1])
-        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].signers[0])
     }
 
     @Test

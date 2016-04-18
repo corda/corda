@@ -122,7 +122,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         verifySignatures()
         // Verify that every command key was in the set that we just verified: there should be no commands that were
         // unverified.
-        val cmdKeys = tx.commands.flatMap { it.pubkeys }.toSet()
+        val cmdKeys = tx.commands.flatMap { it.signers }.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
         if (sigKeys == cmdKeys)
             return emptySet()

@@ -98,8 +98,8 @@ object NodeInterestRates {
         fun sign(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
             // Extract the fix commands marked as being signable by us.
             val fixes: List<Fix> = wtx.commands.
-                    filter { identity.owningKey in it.pubkeys && it.data is Fix }.
-                    map { it.data as Fix }
+                    filter { identity.owningKey in it.signers && it.value is Fix }.
+                    map { it.value as Fix }
 
             // Reject this signing attempt if there are no commands of the right kind.
             if (fixes.isEmpty())

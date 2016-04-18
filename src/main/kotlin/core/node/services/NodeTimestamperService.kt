@@ -56,12 +56,12 @@ class NodeTimestamperService(net: MessagingService,
         // except the relevant command, and a future privacy upgrade should ensure we only get a torn-off command
         // rather than the full transaction.
         val tx = req.tx.deserialize()
-        val cmd = tx.commands.filter { it.data is TimestampCommand }.singleOrNull()
+        val cmd = tx.commands.filter { it.value is TimestampCommand }.singleOrNull()
         if (cmd == null)
             throw TimestampingError.RequiresExactlyOneCommand()
-        if (!cmd.pubkeys.contains(identity.owningKey))
+        if (!cmd.signers.contains(identity.owningKey))
             throw TimestampingError.NotForMe()
-        val tsCommand = cmd.data as TimestampCommand
+        val tsCommand = cmd.value as TimestampCommand
 
         val before = tsCommand.before
         val after = tsCommand.after
