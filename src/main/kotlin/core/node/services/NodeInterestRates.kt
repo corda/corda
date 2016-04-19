@@ -6,10 +6,13 @@ import core.crypto.signWithECDSA
 import core.math.CubicSplineInterpolator
 import core.math.Interpolator
 import core.math.InterpolatorFactory
+import core.messaging.Message
+import core.messaging.MessagingService
 import core.messaging.send
 import core.node.AbstractNode
 import core.node.AcceptsFileUpload
 import core.serialization.deserialize
+import org.slf4j.LoggerFactory
 import protocols.RatesFixProtocol
 import java.io.InputStream
 import java.math.BigDecimal
@@ -32,30 +35,21 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(node: AbstractNode) : AcceptsFileUpload {
+    class Service(node: AbstractNode) : AcceptsFileUpload, AbstractNodeService(node.services.networkService) {
         val ss = node.services.storageService
         val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey)
-        val net = node.services.networkService
+
+        private val logger = LoggerFactory.getLogger(NodeInterestRates.Service::class.java)
 
         init {
-            handleQueries()
-            handleSignRequests()
-        }
-
-        private fun handleSignRequests() {
-            net.addMessageHandler(RatesFixProtocol.TOPIC + ".sign.0") { message, registration ->
-                val request = message.data.deserialize<RatesFixProtocol.SignRequest>()
-                val sig = oracle.sign(request.tx)
-                net.send("${RatesFixProtocol.TOPIC}.sign.${request.sessionID}", request.replyTo, sig)
-            }
-        }
-
-        private fun handleQueries() {
-            net.addMessageHandler(RatesFixProtocol.TOPIC + ".query.0") { message, registration ->
-                val request = message.data.deserialize<RatesFixProtocol.QueryRequest>()
-                val answers = oracle.query(request.queries)
-                net.send("${RatesFixProtocol.TOPIC}.query.${request.sessionID}", request.replyTo, answers)
-            }
+            addMessageHandler(RatesFixProtocol.TOPIC_SIGN,
+                    { req: RatesFixProtocol.SignRequest -> oracle.sign(req.tx) },
+                    { message, e -> logger.error("Exception during interest rate oracle request processing", e) }
+            )
+            addMessageHandler(RatesFixProtocol.TOPIC_QUERY,
+                    { req: RatesFixProtocol.QueryRequest -> oracle.query(req.queries) },
+                    { message, e -> logger.error("Exception during interest rate oracle request processing", e) }
+            )
         }
 
         // File upload support

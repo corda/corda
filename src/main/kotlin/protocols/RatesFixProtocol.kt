@@ -28,6 +28,8 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
                             override val progressTracker: ProgressTracker = RatesFixProtocol.tracker(fixOf.name)) : ProtocolLogic<Unit>() {
     companion object {
         val TOPIC = "platform.rates.interest.fix"
+        val TOPIC_SIGN = TOPIC + ".sign"
+        val TOPIC_QUERY = TOPIC + ".query"
 
         class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
         object WORKING : ProgressTracker.Step("Working with data returned by oracle")
@@ -38,8 +40,8 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     class FixOutOfRange(val byAmount: BigDecimal) : Exception()
 
-    data class QueryRequest(val queries: List<FixOf>, val replyTo: SingleMessageRecipient, val sessionID: Long)
-    data class SignRequest(val tx: WireTransaction, val replyTo: SingleMessageRecipient, val sessionID: Long)
+    class QueryRequest(val queries: List<FixOf>, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class SignRequest(val tx: WireTransaction, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
 
     @Suspendable
     override fun call() {
@@ -74,7 +76,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
         val sessionID = random63BitValue()
         val wtx = tx.toWireTransaction()
         val req = SignRequest(wtx, serviceHub.networkService.myAddress, sessionID)
-        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(TOPIC + ".sign", oracle.address, 0, sessionID, req)
+        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(TOPIC_SIGN, oracle.address, 0, sessionID, req)
 
         return resp.validate { sig ->
             check(sig.signer == oracle.identity)
@@ -87,7 +89,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
     fun query(): Fix {
         val sessionID = random63BitValue()
         val req = QueryRequest(listOf(fixOf), serviceHub.networkService.myAddress, sessionID)
-        val resp = sendAndReceive<ArrayList<Fix>>(TOPIC + ".query", oracle.address, 0, sessionID, req)
+        val resp = sendAndReceive<ArrayList<Fix>>(TOPIC_QUERY, oracle.address, 0, sessionID, req)
 
         return resp.validate {
             val fix = it.first()

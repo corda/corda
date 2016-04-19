@@ -90,14 +90,14 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         // Zero commands is not OK.
         assertFailsWith(TimestampingError.RequiresExactlyOneCommand::class) {
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
         }
         // More than one command is not OK.
         assertFailsWith(TimestampingError.RequiresExactlyOneCommand::class) {
             ptx.addCommand(TimestampCommand(clock.instant(), 30.seconds), ALICE)
             ptx.addCommand(TimestampCommand(clock.instant(), 40.seconds), ALICE)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
         }
     }
 
@@ -107,7 +107,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
             val now = clock.instant()
             ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), ALICE)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
         }
     }
 
@@ -117,7 +117,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
             val now = clock.instant()
             ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), ALICE)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
         }
     }
 
@@ -126,7 +126,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         val now = clock.instant()
         ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), ALICE)
         val wtx = ptx.toWireTransaction()
-        val sig = service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, "ignored"))
+        val sig = service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
         ptx.checkAndAddSignature(sig)
         ptx.toSignedTransaction(false).verifySignatures()
     }

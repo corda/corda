@@ -1,5 +1,6 @@
 package core.node.services
 
+import core.SignedTransaction
 import core.crypto.SecureHash
 import core.messaging.Message
 import core.messaging.MessagingService
@@ -7,6 +8,7 @@ import core.messaging.SingleMessageRecipient
 import core.messaging.send
 import core.serialization.deserialize
 import core.utilities.loggerFor
+import protocols.AbstractRequestMessage
 import protocols.FetchAttachmentsProtocol
 import protocols.FetchTransactionsProtocol
 import java.io.InputStream
@@ -25,36 +27,38 @@ import javax.annotation.concurrent.ThreadSafe
  * Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.
  */
 @ThreadSafe
-class DataVendingService(private val net: MessagingService, private val storage: StorageService) {
+class DataVendingService(net: MessagingService, private val storage: StorageService) : AbstractNodeService(net) {
     companion object {
         val logger = loggerFor<DataVendingService>()
     }
 
     init {
-        net.addMessageHandler("${FetchTransactionsProtocol.TOPIC}.0") { msg, registration -> handleTXRequest(msg) }
-        net.addMessageHandler("${FetchAttachmentsProtocol.TOPIC}.0") { msg, registration -> handleAttachmentRequest(msg) }
+        addMessageHandler(FetchTransactionsProtocol.TOPIC,
+                { req: Request -> handleTXRequest(req) },
+                { message, e -> logger.error("Failure processing data vending request.", e) }
+        )
+        addMessageHandler(FetchAttachmentsProtocol.TOPIC,
+                { req: Request -> handleAttachmentRequest(req) },
+                { message, e -> logger.error("Failure processing data vending request.", e) }
+        )
     }
 
-    // TODO: Give all messages a respond-to address+session ID automatically.
-    data class Request(val hashes: List<SecureHash>, val responseTo: SingleMessageRecipient, val sessionID: Long)
+    class Request(val hashes: List<SecureHash>, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
 
-    private fun handleTXRequest(msg: Message) {
-        val req = msg.data.deserialize<Request>()
+    private fun handleTXRequest(req: Request): List<SignedTransaction?> {
         require(req.hashes.isNotEmpty())
-        val answers = req.hashes.map {
+        return req.hashes.map {
             val tx = storage.validatedTransactions[it]
             if (tx == null)
                 logger.info("Got request for unknown tx $it")
             tx
         }
-        net.send("${FetchTransactionsProtocol.TOPIC}.${req.sessionID}", req.responseTo, answers)
     }
 
-    private fun handleAttachmentRequest(msg: Message) {
+    private fun handleAttachmentRequest(req: Request): List<ByteArray?> {
         // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
-        val req = msg.data.deserialize<Request>()
         require(req.hashes.isNotEmpty())
-        val answers: List<ByteArray?> = req.hashes.map {
+        return req.hashes.map {
             val jar: InputStream? = storage.attachments.openAttachment(it)?.open()
             if (jar == null) {
                 logger.info("Got request for unknown attachment $it")
@@ -63,6 +67,5 @@ class DataVendingService(private val net: MessagingService, private val storage:
                 jar.readBytes()
             }
         }
-        net.send("${FetchAttachmentsProtocol.TOPIC}.${req.sessionID}", req.responseTo, answers)
     }
 }
