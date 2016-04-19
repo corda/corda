@@ -5,6 +5,7 @@ import core.Party
 import core.TimestampCommand
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
+import core.messaging.Message
 import core.messaging.MessagingService
 import core.seconds
 import core.serialization.deserialize
@@ -24,11 +25,11 @@ import javax.annotation.concurrent.ThreadSafe
  * See the doc site to learn more about timestamping authorities (nodes) and the role they play in the data model.
  */
 @ThreadSafe
-class NodeTimestamperService(private val net: MessagingService,
+class NodeTimestamperService(net: MessagingService,
                              val identity: Party,
                              val signingKey: KeyPair,
                              val clock: Clock = Clock.systemDefaultZone(),
-                             val tolerance: Duration = 30.seconds) {
+                             val tolerance: Duration = 30.seconds) : AbstractNodeService(net) {
     companion object {
         val TIMESTAMPING_PROTOCOL_TOPIC = "platform.timestamping.request"
 
@@ -37,18 +38,16 @@ class NodeTimestamperService(private val net: MessagingService,
 
     init {
         require(identity.owningKey == signingKey.public)
-        net.addMessageHandler(TIMESTAMPING_PROTOCOL_TOPIC + ".0", null) { message, r ->
-            try {
-                val req = message.data.deserialize<TimestampingProtocol.Request>()
-                val signature = processRequest(req)
-                val msg = net.createMessage(req.replyToTopic, signature.serialize().bits)
-                net.send(msg, req.replyTo)
-            } catch(e: TimestampingError) {
-                logger.warn("Failure during timestamping request due to bad request: ${e.javaClass.name}")
-            } catch(e: Exception) {
-                logger.error("Exception during timestamping", e)
-            }
-        }
+        addMessageHandler(TIMESTAMPING_PROTOCOL_TOPIC,
+                { req: TimestampingProtocol.Request -> processRequest(req) },
+                { message, e ->
+                    if (e is TimestampingError) {
+                        logger.warn("Failure during timestamping request due to bad request: ${e.javaClass.name}")
+                    } else {
+                        logger.error("Exception during timestamping", e)
+                    }
+                }
+        )
     }
 
     @VisibleForTesting

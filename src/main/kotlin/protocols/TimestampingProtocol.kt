@@ -47,8 +47,7 @@ class TimestampingProtocol(private val node: NodeInfo,
     override fun call(): DigitalSignature.LegallyIdentifiable {
         progressTracker.currentStep = REQUESTING
         val sessionID = random63BitValue()
-        val replyTopic = "${NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
-        val req = Request(wtxBytes, serviceHub.networkService.myAddress, replyTopic)
+        val req = Request(wtxBytes, serviceHub.networkService.myAddress, sessionID)
 
         val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(
                 NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
@@ -61,6 +60,5 @@ class TimestampingProtocol(private val node: NodeInfo,
         }
     }
 
-    // TODO: Improve the messaging api to have a notion of sender+replyTo topic (optional?)
-    data class Request(val tx: SerializedBytes<WireTransaction>, val replyTo: MessageRecipients, val replyToTopic: String)
+    class Request(val tx: SerializedBytes<WireTransaction>, replyTo: MessageRecipients, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
 }
