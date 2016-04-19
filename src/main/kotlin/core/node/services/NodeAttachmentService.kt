@@ -101,6 +101,7 @@ class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : 
         return AttachmentImpl(id, path, checkAttachmentsOnLoad)
     }
 
+    // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     override fun importAttachment(jar: InputStream): SecureHash {
         require(jar !is JarInputStream)
         val hs = HashingInputStream(Hashing.sha256(), jar)
