@@ -91,7 +91,7 @@ class MockAttachmentStorage : AttachmentStorage {
 class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), generateKeyPair())
 
 class MockServices(
-        val wallet: WalletService? = null,
+        customWallet: WalletService? = null,
         val keyManagement: KeyManagementService? = null,
         val net: MessagingService? = null,
         val identity: IdentityService? = MockIdentityService,
@@ -99,8 +99,8 @@ class MockServices(
         val networkMap: NetworkMapCache? = MockNetworkMapCache(),
         val overrideClock: Clock? = Clock.systemUTC()
 ) : ServiceHub {
-    override val walletService: WalletService
-        get() = wallet ?: throw UnsupportedOperationException()
+    override val walletService: WalletService = customWallet ?: NodeWalletService(this)
+
     override val keyManagementService: KeyManagementService
         get() = keyManagement ?: throw UnsupportedOperationException()
     override val identityService: IdentityService

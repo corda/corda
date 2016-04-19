@@ -139,7 +139,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
      * TODO: Move this out of NodeWalletService
      */
     fun fillWithSomeTestCash(howMuch: Amount, atLeastThisManyStates: Int = 3, atMostThisManyStates: Int = 10,
-                             rng: Random = Random()): Wallet {
+                             rng: Random = Random()) {
         val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
         val myIdentity = services.storageService.myLegalIdentity
@@ -160,10 +160,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
             return@map issuance.toSignedTransaction(true)
         }
 
-        // TODO: Centralise the process of transaction acceptance and filtering into the wallet, then move this out.
-        services.storageService.validatedTransactions.putAll(transactions.associateBy { it.id })
-
-        return notifyAll(transactions.map { it.tx })
+        services.recordTransactions(transactions)
     }
 
     private fun calculateRandomlySizedAmounts(howMuch: Amount, min: Int, max: Int, rng: Random): LongArray {

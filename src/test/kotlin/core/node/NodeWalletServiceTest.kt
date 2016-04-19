@@ -15,7 +15,6 @@ import kotlin.test.assertNull
 
 class NodeWalletServiceTest {
     val kms = MockKeyManagementService(ALICE_KEY)
-    val services: ServiceHub = MockServices(keyManagement = kms)
 
     @Before
     fun setUp() {
@@ -27,9 +26,15 @@ class NodeWalletServiceTest {
         BriefLogFormatter.loggingOff(NodeWalletService::class)
     }
 
+    fun make(): Pair<NodeWalletService, ServiceHub> {
+        val services = MockServices(keyManagement = kms)
+        return Pair(services.walletService as NodeWalletService, services)
+    }
+
     @Test
     fun splits() {
-        val wallet = NodeWalletService(services)
+        val (wallet, services) = make()
+
         kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
         wallet.fillWithSomeTestCash(100.DOLLARS, 3, 3, Random(0L))
@@ -49,7 +54,7 @@ class NodeWalletServiceTest {
 
     @Test
     fun basics() {
-        val wallet = NodeWalletService(services)
+        val (wallet, services) = make()
 
         // A tx that sends us money.
         val freshKey = services.keyManagementService.freshKey()
