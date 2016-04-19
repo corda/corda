@@ -99,6 +99,5 @@
     "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360",
     "tradeID": "tradeXXX",
     "hashLegalDocs": "put hash here"
-  },
-  "programRef": "1E6BBA305D445341F0026E51B6C7F3ACB834AFC6C2510C0EF7BC0477235EFECF"
+  }
 }

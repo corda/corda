@@ -70,7 +70,7 @@ object NodeInterestRates {
             // the pointer to the stack before working with the map.
             oracle.knownFixes = fixes
 
-            return "Accepted $fixes.size new interest rate fixes"
+            return "Accepted ${fixes.size} new interest rate fixes"
         }
     }
 
