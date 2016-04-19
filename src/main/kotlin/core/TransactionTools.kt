@@ -7,7 +7,7 @@ import java.io.FileNotFoundException
 /**
  * Looks up identities and attachments from storage to generate a [LedgerTransaction].
  *
- * @throws FileNotFoundException if a required transaction was not found in storage.
+ * @throws FileNotFoundException if a required attachment was not found in storage.
  */
 fun WireTransaction.toLedgerTransaction(identityService: IdentityService,
                                         attachmentStorage: AttachmentStorage): LedgerTransaction {
