@@ -48,18 +48,18 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory {
         fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                   timestamperAddr: NodeInfo?): MockNode
+                   timestamperAddr: NodeInfo?, id: Int): MockNode
     }
 
     object DefaultFactory : Factory {
         override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                            timestamperAddr: NodeInfo?): MockNode {
-            return MockNode(dir, config, network, timestamperAddr)
+                            timestamperAddr: NodeInfo?, id: Int): MockNode {
+            return MockNode(dir, config, network, timestamperAddr, id)
         }
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        withTimestamper: NodeInfo?, val forcedID: Int = -1) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
+                        withTimestamper: NodeInfo?, val id: Int) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: ExecutorService =
                 if (mockNet.threadPerNode)
@@ -71,10 +71,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
 
         override fun makeMessagingService(): MessagingService {
-            if (forcedID == -1)
-                return mockNet.messagingNetwork.createNode(!mockNet.threadPerNode).second.start().get()
-            else
-                return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, forcedID).start().get()
+            require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id).start().get()
         }
 
         override fun makeIdentityService() = FixedIdentityService(mockNet.identities)
@@ -92,7 +90,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: NodeInfo?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
+    fun createNode(withTimestamper: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    advertisedServices: Set<ServiceType> = emptySet()): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
@@ -105,7 +103,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, withTimestamper).start()
+        val node = nodeFactory.create(path, config, this, withTimestamper, id).start()
         node.info.advertisedServices = advertisedServices
         _nodes.add(node)
         return node

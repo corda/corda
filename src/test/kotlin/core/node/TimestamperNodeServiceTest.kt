@@ -3,33 +3,27 @@ package core.node
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
-import core.messaging.StateMachineManager
-import core.messaging.TestWithInMemoryNetwork
 import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.serialize
-import core.testing.InMemoryMessagingNetwork
-import core.testing.MockNetworkMapCache
-import core.testutils.ALICE
-import core.testutils.ALICE_KEY
+import core.testing.MockNetwork
 import core.testutils.CASH
 import core.utilities.BriefLogFormatter
 import org.junit.Before
 import org.junit.Test
 import protocols.TimestampingProtocol
-import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-// TODO: Refactor this to use MockNode.
+class TimestamperNodeServiceTest {
+    lateinit var network: MockNetwork
 
-class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
-    lateinit var myMessaging: Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging>
-    lateinit var serviceMessaging: Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging>
-    lateinit var service: NodeTimestamperService
+    init {
+        BriefLogFormatter.initVerbose("dlg.timestamping.request")
+    }
 
     val ptx = TransactionBuilder().apply {
         addInputState(StateRef(SecureHash.randomSHA256(), 0))
@@ -37,25 +31,10 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
     }
 
     val clock = Clock.fixed(Instant.now(), ZoneId.systemDefault())
-    lateinit var mockServices: ServiceHub
-    lateinit var serverKey: PublicKey
-
-    init {
-        BriefLogFormatter.initVerbose("dlg.timestamping.request")
-    }
 
     @Before
     fun setup() {
-        myMessaging = makeNode()
-        serviceMessaging = makeNode()
-        mockServices = MockServices(net = serviceMessaging.second, storage = MockStorageService())
-
-        val timestampingNodeID = network.setupTimestampingNode(true).first
-        (mockServices.networkMapCache as MockNetworkMapCache).timestampingNodes.add(timestampingNodeID)
-        serverKey = timestampingNodeID.identity.owningKey
-
-        // And a separate one to be tested directly, to make the unit tests a bit faster.
-        service = NodeTimestamperService(serviceMessaging.second, Party("Unit test suite", ALICE), ALICE_KEY)
+        network = MockNetwork()
     }
 
     class TestPSM(val server: NodeInfo, val now: Instant) : ProtocolLogic<Boolean>() {
@@ -76,57 +55,73 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
 
     @Test
     fun successWithNetwork() {
-        val psm = runNetwork {
-            val smm = StateMachineManager(MockServices(net = myMessaging.second), RunOnCallerThread)
-            val logName = NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC
-            val psm = TestPSM(mockServices.networkMapCache.timestampingNodes[0], clock.instant())
-            smm.add(logName, psm)
-        }
-        assertTrue(psm.isDone)
+        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val logName = NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC
+        val psm = TestPSM(timestamperNode.info, clock.instant())
+        val future = timestamperNode.smm.add(logName, psm)
+
+        network.runNetwork()
+        assertTrue(future.isDone)
     }
 
     @Test
     fun wrongCommands() {
+        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
+        val service = timestamperNode.inNodeTimestampingService!!
+        
         // Zero commands is not OK.
         assertFailsWith(TimestampingError.RequiresExactlyOneCommand::class) {
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), timestamperNode.info.address, Long.MIN_VALUE))
         }
         // More than one command is not OK.
         assertFailsWith(TimestampingError.RequiresExactlyOneCommand::class) {
-            ptx.addCommand(TimestampCommand(clock.instant(), 30.seconds), ALICE)
-            ptx.addCommand(TimestampCommand(clock.instant(), 40.seconds), ALICE)
+            ptx.addCommand(TimestampCommand(clock.instant(), 30.seconds), timestamperKey)
+            ptx.addCommand(TimestampCommand(clock.instant(), 40.seconds), timestamperKey)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), timestamperNode.info.address, Long.MIN_VALUE))
         }
     }
 
     @Test
     fun tooEarly() {
+        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
+        val service = timestamperNode.inNodeTimestampingService!!
+
         assertFailsWith(TimestampingError.NotOnTimeException::class) {
             val now = clock.instant()
-            ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), ALICE)
+            ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), timestamperKey)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), timestamperNode.info.address, Long.MIN_VALUE))
         }
     }
 
     @Test
     fun tooLate() {
+        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
+        val service = timestamperNode.inNodeTimestampingService!!
+
         assertFailsWith(TimestampingError.NotOnTimeException::class) {
             val now = clock.instant()
-            ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), ALICE)
+            ptx.addCommand(TimestampCommand(now - 60.seconds, now - 40.seconds), timestamperKey)
             val wtx = ptx.toWireTransaction()
-            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
+            service.processRequest(TimestampingProtocol.Request(wtx.serialize(), timestamperNode.info.address, Long.MIN_VALUE))
         }
     }
 
     @Test
     fun success() {
+        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
+        val service = timestamperNode.inNodeTimestampingService!!
+
         val now = clock.instant()
-        ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), ALICE)
+        ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), timestamperKey)
         val wtx = ptx.toWireTransaction()
-        val sig = service.processRequest(TimestampingProtocol.Request(wtx.serialize(), myMessaging.first, Long.MIN_VALUE))
+        val sig = service.processRequest(TimestampingProtocol.Request(wtx.serialize(), timestamperNode.info.address, Long.MIN_VALUE))
         ptx.checkAndAddSignature(sig)
         ptx.toSignedTransaction(false).verifySignatures()
     }

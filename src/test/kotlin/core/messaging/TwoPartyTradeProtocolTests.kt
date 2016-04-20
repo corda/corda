@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
  *
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
-class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
+class TwoPartyTradeProtocolTests {
     lateinit var net: MockNetwork
 
     @Before
@@ -154,8 +154,8 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
             bobNode = net.createNode(timestamperAddr, bobAddr.id, object : MockNetwork.Factory {
-                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?): MockNetwork.MockNode {
-                    return object : MockNetwork.MockNode(dir, config, net, timestamperAddr, bobAddr.id) {
+                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
+                    return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, bobAddr.id) {
                         override fun initialiseStorageService(dir: Path): StorageService {
                             val ss = super.initialiseStorageService(dir)
                             val smMap = ss.stateMachines
@@ -184,9 +184,9 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     // of gets and puts.
     private fun makeNodeWithTracking(name: String): MockNetwork.MockNode {
         // Create a node in the mock network ...
-        return net.createNode(null, nodeFactory = object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr) {
+        return net.createNode(nodeFactory = object : MockNetwork.Factory {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, id) {
                     // That constructs the storage service object in a customised way ...
                     override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
                         // To use RecordingMaps instead of ordinary HashMaps.
