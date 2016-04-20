@@ -6,7 +6,6 @@ import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.utilities.RecordingMap
-import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -180,7 +179,8 @@ interface ServiceHub {
      * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
      * sends them to the wallet for further processing.
      *
-     * TODO: Need to come up with a way for preventing transactions being written other than by this method
+     * TODO: Need to come up with a way for preventing transactions being written other than by this method.
+     * TODO: RecordingMap is test infrastructure. Refactor it away or find a way to ensure it's only used in tests.
      *
      * @param txs The transactions to record
      * @param skipRecordingMap This is used in unit testing and can be ignored most of the time.
