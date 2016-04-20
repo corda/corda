@@ -90,7 +90,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: NodeInfo?, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
+    fun createNode(withTimestamper: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    advertisedServices: Set<ServiceType> = emptySet()): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID

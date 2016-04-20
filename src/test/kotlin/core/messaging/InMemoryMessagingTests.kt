@@ -3,57 +3,24 @@
 package core.messaging
 
 import core.serialization.deserialize
-import core.testing.InMemoryMessagingNetwork
-import org.junit.After
+import core.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-open class TestWithInMemoryNetwork {
-    val nodes: MutableMap<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging> = HashMap()
-    lateinit var network: InMemoryMessagingNetwork
+class InMemoryMessagingTests {
+    lateinit var network: MockNetwork
 
-    fun makeNode(inBackground: Boolean = false): Pair<InMemoryMessagingNetwork.Handle, InMemoryMessagingNetwork.InMemoryMessaging> {
-        // The manuallyPumped = true bit means that we must call the pump method on the system in order to
-        val (address, builder) = network.createNode(!inBackground)
-        val node = builder.start().get()
-        nodes[address] = node
-        return Pair(address, node)
+    init {
+        // BriefLogFormatter.initVerbose()
     }
 
     @Before
-    fun setupNetwork() {
-        network = InMemoryMessagingNetwork()
-        nodes.clear()
-    }
-
-    @After
-    fun stopNetwork() {
-        network.stop()
-    }
-
-    fun pumpAll(blocking: Boolean) = network.endpoints.map { it.pump(blocking) }
-
-    // Keep calling "pump" in rounds until every node in the network reports that it had nothing to do
-    fun <T> runNetwork(body: () -> T): T {
-        val result = body()
-        runNetwork()
-        return result
-    }
-
-    fun runNetwork() {
-        while (pumpAll(false).any { it }) {
-        }
-    }
-}
-
-class InMemoryMessagingTests : TestWithInMemoryNetwork() {
-    init {
-        // BriefLogFormatter.initVerbose()
+    fun setUp() {
+        network = MockNetwork()
     }
 
     @Test
@@ -73,46 +40,45 @@ class InMemoryMessagingTests : TestWithInMemoryNetwork() {
 
     @Test
     fun basics() {
-        val (addr1, node1) = makeNode()
-        val (addr2, node2) = makeNode()
-        val (addr3, node3) = makeNode()
+        val node1 = network.createNode()
+        val node2 = network.createNode()
+        val node3 = network.createNode()
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
 
         with(node2) {
-            addMessageHandler { msg, registration ->
-                send(msg, addr3)
+            node2.net.addMessageHandler { msg, registration ->
+                node2.net.send(msg, node3.info.address)
             }
         }
 
         with(node3) {
-            addMessageHandler { msg, registration ->
+            node2.net.addMessageHandler { msg, registration ->
                 finalDelivery = msg
             }
         }
 
-        // Node 1 sends a message and it should end up in finalDelivery, after we pump each node.
-        runNetwork {
-            node1.send(node1.createMessage("test.topic", bits), addr2)
-        }
+        // Node 1 sends a message and it should end up in finalDelivery, after we run the network
+        node1.net.send(node1.net.createMessage("test.topic", bits), node2.info.address)
+
+        network.runNetwork(rounds = 1)
 
         assertTrue(Arrays.equals(finalDelivery!!.data, bits))
     }
 
     @Test
     fun broadcast() {
-        val (addr1, node1) = makeNode()
-        val (addr2, node2) = makeNode()
-        val (addr3, node3) = makeNode()
+        val node1 = network.createNode()
+        val node2 = network.createNode()
+        val node3 = network.createNode()
 
         val bits = "test-content".toByteArray()
 
         var counter = 0
-        listOf(node1, node2, node3).forEach { it.addMessageHandler { msg, registration -> counter++ } }
-        runNetwork {
-            node1.send(node2.createMessage("test.topic", bits), network.everyoneOnline)
-        }
+        listOf(node1, node2, node3).forEach { it.net.addMessageHandler { msg, registration -> counter++ } }
+        node1.net.send(node2.net.createMessage("test.topic", bits), network.messagingNetwork.everyoneOnline)
+        network.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
 
@@ -121,34 +87,34 @@ class InMemoryMessagingTests : TestWithInMemoryNetwork() {
         // Test (re)delivery of messages to nodes that aren't created yet, or were stopped and then restarted.
         // The purpose of this functionality is to simulate a reliable messaging system that keeps trying until
         // messages are delivered.
-        val (addr1, node1) = makeNode()
-        var (addr2, node2) = makeNode()
+        val node1 = network.createNode()
+        var node2 = network.createNode()
 
-        node1.send("test.topic", addr2, "hello!")
-        node2.pump(false)   // No handler registered, so the message goes into a holding area.
+        node1.net.send("test.topic", node2.info.address, "hello!")
+        network.runNetwork(rounds = 1)   // No handler registered, so the message goes into a holding area.
         var runCount = 0
-        node2.addMessageHandler("test.topic") { msg, registration ->
+        node2.net.addMessageHandler("test.topic") { msg, registration ->
             if (msg.data.deserialize<String>() == "hello!")
                 runCount++
         }
-        node2.pump(false)  // Try again now the handler is registered
+        network.runNetwork(rounds = 1)  // Try again now the handler is registered
         assertEquals(1, runCount)
 
         // Shut node2 down for a while. Node 1 keeps sending it messages though.
         node2.stop()
 
-        node1.send("test.topic", addr2, "are you there?")
-        node1.send("test.topic", addr2, "wake up!")
+        node1.net.send("test.topic", node2.info.address, "are you there?")
+        node1.net.send("test.topic", node2.info.address, "wake up!")
 
         // Now re-create node2 with the same address as last time, and re-register a message handler.
         // Check that the messages that were sent whilst it was gone are still there, waiting for it.
-        node2 = network.createNodeWithID(true, addr2.id).start().get()
-        node2.addMessageHandler("test.topic") { a, b -> runCount++ }
-        assertTrue(node2.pump(false))
+        node2 = network.createNode(null, node2.id)
+        node2.net.addMessageHandler("test.topic") { a, b -> runCount++ }
+        network.runNetwork(rounds = 1)
         assertEquals(2, runCount)
-        assertTrue(node2.pump(false))
+        network.runNetwork(rounds = 1)
         assertEquals(3, runCount)
-        assertFalse(node2.pump(false))
+        network.runNetwork(rounds = 1)
         assertEquals(3, runCount)
     }
 }
