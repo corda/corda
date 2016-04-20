@@ -9,7 +9,9 @@
 package core.node.services
 
 /**
- * Identifier for service types a node can expose.
+ * Identifier for service types a node can expose over the network to other peers. These types are placed into network
+ * map advertisements. Services that are purely local and are not providing functionality to other parts of the network
+ * don't need a declared service type.
  */
 abstract class ServiceType(val id: String) {
     init {
@@ -28,6 +30,5 @@ abstract class ServiceType(val id: String) {
         }
 
     override fun hashCode(): Int = id.hashCode()
-
     override fun toString(): String = id.toString()
 }

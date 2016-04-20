@@ -1,11 +1,6 @@
 package core.node.services
 
-import core.Party
-import core.crypto.DummyPublicKey
-import core.messaging.SingleMessageRecipient
 import core.node.NodeInfo
-import core.node.PhysicalLocation
-import java.util.*
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -17,7 +12,6 @@ import java.util.*
  * This interface assumes fast, synchronous access to an in-memory map.
  */
 interface NetworkMapCache {
-    object Type : ServiceType("corda.network_map")
     val timestampingNodes: List<NodeInfo>
     val ratesOracleNodes: List<NodeInfo>
     val partyNodes: List<NodeInfo>
