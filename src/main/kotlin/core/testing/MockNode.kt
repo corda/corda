@@ -9,7 +9,7 @@ import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.PhysicalLocation
-import core.node.services.FixedIdentityService
+import core.testing.MockIdentityService
 import core.node.services.ServiceType
 import core.node.services.TimestamperService
 import core.utilities.loggerFor
@@ -75,7 +75,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id).start().get()
         }
 
-        override fun makeIdentityService() = FixedIdentityService(mockNet.identities)
+        override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
