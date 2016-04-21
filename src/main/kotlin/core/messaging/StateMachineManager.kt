@@ -93,9 +93,9 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     )
 
     init {
-        // Blank out the default uncaught exception handler because we always catch things ourselves, and the default
-        // just redundantly prints stack traces to the logs.
-        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable -> }
+        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
+            (fiber as ProtocolStateMachine<*>).logger.error("Caught exception from protocol", throwable)
+        }
         restoreCheckpoints()
     }
 
