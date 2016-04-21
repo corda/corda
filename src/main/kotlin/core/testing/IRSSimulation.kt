@@ -7,7 +7,7 @@ import com.google.common.util.concurrent.SettableFuture
 import contracts.InterestRateSwap
 import core.*
 import core.crypto.SecureHash
-import core.node.services.FixedIdentityService
+import core.testing.MockIdentityService
 import core.node.services.linearHeadsOfType
 import core.utilities.JsonSupport
 import protocols.TwoPartyDealProtocol
@@ -19,7 +19,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(runAsync, latencyInjector) {
-    val om = JsonSupport.createDefaultMapper(FixedIdentityService(network.identities))
+    val om = JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
 
     init {
         currentDay = LocalDate.of(2016, 3, 10)   // Should be 12th but the actual first fixing date gets rolled backwards.

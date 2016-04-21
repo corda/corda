@@ -108,6 +108,7 @@ fun main(args: Array<String>) {
         try {
             val peerId = nodeInfo(hostAndPortString, identityFile)
             (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(peerId)
+            node.services.identityService.registerIdentity(peerId.identity)
         } catch (e: Exception) {
         }
     }

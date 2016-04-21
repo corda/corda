@@ -121,24 +121,14 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // know about: our own, the identity of the remote timestamper node (if any), plus whatever is in the
         // network map.
         //
-        // TODO: All this will be replaced soon enough.
-        val fixedIdentities = if (timestamperAddress != null)
-            listOf(storage.myLegalIdentity, timestamperAddress.identity)
-        else
-            listOf(storage.myLegalIdentity)
+        val service = InMemoryIdentityService()
+        if (timestamperAddress != null)
+            service.registerIdentity(timestamperAddress.identity)
+        service.registerIdentity(storage.myLegalIdentity)
 
-        return object : IdentityService {
-            private val identities: List<Party> get() = fixedIdentities + services.networkMapCache.partyNodes.map { it.identity }
-            private val keyToParties: Map<PublicKey, Party> get() = identities.associateBy { it.owningKey }
-            private val nameToParties: Map<String, Party> get() = identities.associateBy { it.name }
+        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }
 
-            override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
-            override fun partyFromName(name: String): Party? = nameToParties[name]
-
-            override fun toString(): String {
-                return identities.joinToString { it.name }
-            }
-        }
+        return service
     }
 
     open fun stop() {

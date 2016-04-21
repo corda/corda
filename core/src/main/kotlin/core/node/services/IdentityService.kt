@@ -9,6 +9,8 @@ import java.security.PublicKey
  * service would provide.
  */
 interface IdentityService {
+    fun registerIdentity(party: Party)
+    fun deregisterIdentity(party: Party)
     fun partyFromKey(key: PublicKey): Party?
     fun partyFromName(name: String): Party?
 }
