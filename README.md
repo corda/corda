@@ -29,7 +29,7 @@ Things you need to know:
 
 This code is not yet released under a traditional open source license. Until it is, the following license applies:
 
-_Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
+_Copyright Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
 pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
 set forth therein.  Distributed as Non-Project IP to R3 LRC Members pursuant to their respective Member
 and Services Agreements and subject to the Non-Project IP license terms. set forth therein. All other rights reserved._

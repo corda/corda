@@ -46,8 +46,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'R3 Prototyping'
-copyright = u'2015, R3 CEV'
-author = u'R3 CEV'
+copyright = u'2016, Distributed Ledger Group, LLC'
+author = u'R3 DLG'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
