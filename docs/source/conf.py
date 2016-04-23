@@ -45,7 +45,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'R3 Prototyping'
+project = u'R3 Corda'
 copyright = u'2016, Distributed Ledger Group, LLC'
 author = u'R3 DLG'
 
