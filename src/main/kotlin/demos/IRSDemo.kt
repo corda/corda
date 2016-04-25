@@ -56,7 +56,7 @@ fun main(args: Array<String>) {
     }
 
     // Suppress the Artemis MQ noise, and activate the demo logging.
-    BriefLogFormatter.initVerbose("+demo.irsdemo", "-org.apache.activemq")
+    BriefLogFormatter.initVerbose("+demo.irsdemo", "+api-call", "+platform.deal", "-org.apache.activemq")
 
     val dir = Paths.get(options.valueOf(dirArg))
     val configFile = dir.resolve("config")
