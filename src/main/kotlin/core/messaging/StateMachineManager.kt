@@ -7,7 +7,6 @@ import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.io.Input
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import core.crypto.SecureHash
 import core.crypto.sha256
 import core.node.services.ServiceHub
@@ -54,6 +53,10 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExecutor) {
+    inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
+
+    val scheduler = FiberScheduler()
+
     // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
     // them across node restarts.
     private val checkpointsMap = serviceHub.storageService.stateMachines
@@ -125,7 +128,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
                 logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
                 iterateStateMachine(psm, serviceHub.networkService, logger, obj, checkpointKey) {
                     try {
-                        Fiber.unparkDeserialized(it, SameThreadFiberScheduler)
+                        Fiber.unparkDeserialized(it, scheduler)
                     } catch(e: Throwable) {
                         logError(e, logger, obj, topic, it)
                     }
@@ -159,7 +162,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
         try {
             val logger = LoggerFactory.getLogger(loggerName)
-            val fiber = ProtocolStateMachine(logic)
+            val fiber = ProtocolStateMachine(logic, scheduler)
             // Need to add before iterating in case of immediate completion
             _stateMachines.add(logic)
             executor.executeASAP {
@@ -263,9 +266,6 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         }
     }
 
-    // TODO: Override more of this to avoid the case where Strand.sleep triggers a call to a scheduler that then runs on the wrong thread.
-    object SameThreadFiberScheduler : FiberExecutorScheduler("Same thread scheduler", MoreExecutors.directExecutor())
-
     // TODO: Clean this up
     open class FiberRequest(val topic: String, val destination: MessageRecipients?,
                             val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
@@ -289,7 +289,6 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
                 obj: Any?
         ) : FiberRequest(topic, destination, sessionIDForSend, -1, obj)
     }
-
 }
 
 class StackSnapshot : Throwable("This is a stack trace to help identify the source of the underlying problem")

@@ -1,6 +1,7 @@
 package core.protocols
 
 import co.paralleluniverse.fibers.Fiber
+import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.io.Output
@@ -22,7 +23,7 @@ import java.io.ByteArrayOutputStream
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>) : Fiber<R>("protocol", StateMachineManager.SameThreadFiberScheduler) {
+class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler) : Fiber<R>("protocol", scheduler) {
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient private var suspendFunc: ((result: StateMachineManager.FiberRequest, serFiber: ByteArray) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
