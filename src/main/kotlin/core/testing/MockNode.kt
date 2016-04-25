@@ -1,7 +1,6 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
-import com.google.common.util.concurrent.MoreExecutors
 import core.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
@@ -12,14 +11,13 @@ import core.node.PhysicalLocation
 import core.testing.MockIdentityService
 import core.node.services.ServiceType
 import core.node.services.TimestamperService
+import core.utilities.AffinityExecutor
 import core.utilities.loggerFor
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
 import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -61,11 +59,11 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
                         withTimestamper: NodeInfo?, val id: Int) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
-        override val serverThread: ExecutorService =
+        override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
-                    Executors.newSingleThreadExecutor()
+                    AffinityExecutor.ServiceAffinityExecutor("Mock node thread", 1)
                 else
-                    MoreExecutors.newDirectExecutorService()
+                    AffinityExecutor.SAME_THREAD
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.

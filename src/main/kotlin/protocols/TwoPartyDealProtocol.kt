@@ -79,7 +79,7 @@ object TwoPartyDealProtocol {
             val sessionID = random63BitValue()
 
             // Make the first message we'll send to kick off the protocol.
-            val hello = Handshake<U>(payload, myKeyPair.public, sessionID)
+            val hello = Handshake(payload, myKeyPair.public, sessionID)
 
             val maybeSTX = sendAndReceive<SignedTransaction>(DEAL_TOPIC, otherSide, otherSessionID, sessionID, hello)
 

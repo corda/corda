@@ -1,7 +1,6 @@
 package demos.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.Strand
 import contracts.DealState
 import contracts.InterestRateSwap
 import core.StateAndRef
@@ -100,7 +99,6 @@ object UpdateBusinessDayProtocol {
             progressTracker.currentStep = FIXING
 
             val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.timestampingNodes[0], dealStateAndRef, serviceHub.keyManagementService.freshKey(), sessionID, progressTracker.childrenFor[FIXING]!!)
-            Strand.sleep(100)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
@@ -119,7 +117,6 @@ object UpdateBusinessDayProtocol {
     data class UpdateBusinessDayMessage(val date: LocalDate, val sessionID: Long)
 
     object Handler {
-
         fun register(node: Node) {
             node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
                 // Just to validate we got the message

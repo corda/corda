@@ -44,9 +44,14 @@ import javax.annotation.concurrent.ThreadSafe
  * The current implementation is skeletal and lacks features like security or firewall tunnelling (that is, you must
  * be able to receive TCP connections in order to receive messages). It is good enough for local communication within
  * a fully connected network, trusted network or on localhost.
+ *
+ * @param directory A place where Artemis can stash its message journal and other files.
+ * @param myHostPort What host and port to bind to for receiving inbound connections.
+ * @param defaultExecutor This will be used as the default executor to run message handlers on, if no other is specified.
  */
 @ThreadSafe
-class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) : MessagingService {
+class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
+                              val defaultExecutor: Executor = RunOnCallerThread) : MessagingService {
     // In future: can contain onion routing info, etc.
     private data class Address(val hostAndPort: HostAndPort) : SingleMessageRecipient
 
@@ -82,6 +87,9 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
                         val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
     private val handlers = CopyOnWriteArrayList<Handler>()
+
+    // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
+    private val undeliveredMessages = CopyOnWriteArrayList<Message>()
 
     private fun getSendClient(addr: Address): ClientProducer {
         return mutex.locked {
@@ -131,20 +139,10 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
             // This code runs for every inbound message.
             try {
                 if (!message.containsProperty(TOPIC_PROPERTY)) {
-                    log.warn("Received message without a ${TOPIC_PROPERTY} property, ignoring")
+                    log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
                     return@setMessageHandler
                 }
                 val topic = message.getStringProperty(TOPIC_PROPERTY)
-                // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
-                // or removed whilst the filter is executing will not affect anything.
-                val deliverTo = handlers.filter { if (it.topic.isBlank()) true else it.topic == topic }
-
-                if (deliverTo.isEmpty()) {
-                    // This should probably be downgraded to a trace in future, so the protocol can evolve with new topics
-                    // without causing log spam.
-                    log.warn("Received message for $topic that doesn't have any registered handlers.")
-                    return@setMessageHandler
-                }
 
                 val bits = ByteArray(message.bodySize)
                 message.bodyBuffer.readBytes(bits)
@@ -156,15 +154,8 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
                     override val debugMessageID: String = message.messageID.toString()
                     override fun serialise(): ByteArray = bits
                 }
-                for (handler in deliverTo) {
-                    (handler.executor ?: RunOnCallerThread).execute {
-                        try {
-                            handler.callback(msg, handler)
-                        } catch(e: Exception) {
-                            log.error("Caught exception whilst executing message handler for $topic", e)
-                        }
-                    }
-                }
+
+                deliverMessage(msg)
             } finally {
                 message.acknowledge()
             }
@@ -172,6 +163,36 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         session.start()
 
         mutex.locked { running = true }
+    }
+
+    private fun deliverMessage(msg: Message): Boolean {
+        // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
+        // or removed whilst the filter is executing will not affect anything.
+        val deliverTo = handlers.filter { if (it.topic.isBlank()) true else it.topic == msg.topic }
+
+        if (deliverTo.isEmpty()) {
+            // This should probably be downgraded to a trace in future, so the protocol can evolve with new topics
+            // without causing log spam.
+            log.warn("Received message for ${msg.topic} that doesn't have any registered handlers yet")
+
+            // This is a hack; transient messages held in memory isn't crash resistant.
+            // TODO: Use Artemis API more effectively so we don't pop messages off a queue that we aren't ready to use.
+            undeliveredMessages += msg
+
+            return false
+        }
+
+        for (handler in deliverTo) {
+            (handler.executor ?: defaultExecutor).execute {
+                try {
+                    handler.callback(msg, handler)
+                } catch(e: Exception) {
+                    log.error("Caught exception whilst executing message handler for ${msg.topic}", e)
+                }
+            }
+        }
+
+        return true
     }
 
     override fun stop() {
@@ -200,6 +221,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
                                    callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
         val handler = Handler(executor, topic, callback)
         handlers.add(handler)
+        undeliveredMessages.removeIf { deliverMessage(it) }
         return handler
     }
 

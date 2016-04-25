@@ -69,8 +69,8 @@ interface MessagingService {
  */
 fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = null, callback: (Message) -> Unit) {
     addMessageHandler(topic, executor) { msg, reg ->
-        callback(msg)
         removeMessageHandler(reg)
+        callback(msg)
     }
 }
 

@@ -17,6 +17,7 @@ import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.utilities.AffinityExecutor
 import core.utilities.ProgressTracker
 import core.utilities.trace
 import org.slf4j.Logger
@@ -24,7 +25,6 @@ import org.slf4j.LoggerFactory
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
-import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -38,6 +38,9 @@ import javax.annotation.concurrent.ThreadSafe
  * A "state machine" is a class with a single call method. The call method and any others it invokes are rewritten by
  * a bytecode rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.
  *
+ * The SMM will always invoke the protocol fibers on the given [AffinityExecutor], regardless of which thread actually
+ * starts them via [add].
+ *
  * TODO: Session IDs should be set up and propagated automatically, on demand.
  * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
  *       continuation is always unique?
@@ -50,7 +53,7 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.
  */
 @ThreadSafe
-class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
+class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExecutor) {
     // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
     // them across node restarts.
     private val checkpointsMap = serviceHub.storageService.stateMachines
@@ -114,7 +117,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
             val topic = checkpoint.awaitingTopic
 
             // And now re-wire the deserialised continuation back up to the network service.
-            serviceHub.networkService.runOnNextMessage(topic, runInThread) { netMsg ->
+            serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
                 // TODO: See security note below.
                 val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
                 if (!awaitingObjectOfType.isInstance(obj))
@@ -154,15 +157,22 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
      * restarted with checkpointed state machines in the storage service.
      */
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-        val logger = LoggerFactory.getLogger(loggerName)
-        val fiber = ProtocolStateMachine(logic)
-        // Need to add before iterating in case of immediate completion
-        _stateMachines.add(logic)
-        iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
-            it.start()
+        try {
+            val logger = LoggerFactory.getLogger(loggerName)
+            val fiber = ProtocolStateMachine(logic)
+            // Need to add before iterating in case of immediate completion
+            _stateMachines.add(logic)
+            executor.executeASAP {
+                iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
+                    it.start()
+                }
+                totalStartedProtocols.inc()
+            }
+            return fiber.resultFuture
+        } catch(e: Throwable) {
+            e.printStackTrace()
+            throw e
         }
-        totalStartedProtocols.inc()
-        return fiber.resultFuture
     }
 
     private fun persistCheckpoint(prevCheckpointKey: SecureHash?, new: ByteArray): SecureHash {
@@ -178,12 +188,12 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
     private fun iterateStateMachine(psm: ProtocolStateMachine<*>, net: MessagingService, logger: Logger,
                                     obj: Any?, prevCheckpointKey: SecureHash?, resumeFunc: (ProtocolStateMachine<*>) -> Unit) {
+        executor.checkOnThread()
         val onSuspend = fun(request: FiberRequest, serFiber: ByteArray) {
             // We have a request to do something: send, receive, or send-and-receive.
             if (request is FiberRequest.ExpectingResponse<*>) {
                 // Prepare a listener on the network that runs in the background thread when we received a message.
-                checkpointAndSetupMessageHandler(logger, net, psm, request.responseType,
-                        "${request.topic}.${request.sessionIDForReceive}", prevCheckpointKey, serFiber)
+                checkpointAndSetupMessageHandler(logger, net, psm, request, prevCheckpointKey, serFiber)
             }
             // If an object to send was provided (not null), send it now.
             request.obj?.let {
@@ -217,13 +227,22 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     private fun checkpointAndSetupMessageHandler(logger: Logger, net: MessagingService, psm: ProtocolStateMachine<*>,
-                                                 responseType: Class<*>, topic: String, prevCheckpointKey: SecureHash?,
+                                                 request: FiberRequest.ExpectingResponse<*>, prevCheckpointKey: SecureHash?,
                                                  serialisedFiber: ByteArray) {
-        val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
+        executor.checkOnThread()
+        val topic = "${request.topic}.${request.sessionIDForReceive}"
+        val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, request.responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
         persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
-        net.runOnNextMessage(topic, runInThread) { netMsg ->
+        logger.trace { "Waiting for message of type ${request.responseType.name} on $topic" }
+        var consumed = false
+        net.runOnNextMessage(topic, executor) { netMsg ->
+            // Some assertions to ensure we don't execute on the wrong thread or get executed more than once.
+            executor.checkOnThread()
+            check(netMsg.topic == topic) { "Topic mismatch: ${netMsg.topic} vs $topic" }
+            check(!consumed)
+            consumed = true
             // TODO: This is insecure: we should not deserialise whatever we find and *then* check.
             //
             // We should instead verify as we read the data that it's what we are expecting and throw as early as
@@ -232,9 +251,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
             // at the last moment when we do the downcast. However this would make protocol code harder to read and
             // make it more difficult to migrate to a more explicit serialisation scheme later.
             val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
-            if (!responseType.isInstance(obj))
-                throw ClassCastException("Expected message of type ${responseType.name} but got ${obj.javaClass.name}")
-            logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
+            if (!request.responseType.isInstance(obj))
+                throw IllegalStateException("Expected message of type ${request.responseType.name} but got ${obj.javaClass.name}", request.stackTraceInCaseOfProblems)
             iterateStateMachine(psm, net, logger, obj, newCheckpointKey) {
                 try {
                     Fiber.unpark(it, QUASAR_UNBLOCKER)
@@ -245,11 +263,16 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         }
     }
 
+    // TODO: Override more of this to avoid the case where Strand.sleep triggers a call to a scheduler that then runs on the wrong thread.
     object SameThreadFiberScheduler : FiberExecutorScheduler("Same thread scheduler", MoreExecutors.directExecutor())
 
     // TODO: Clean this up
     open class FiberRequest(val topic: String, val destination: MessageRecipients?,
                             val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
+        // This is used to identify where we suspended, in case of message mismatch errors and other things where we
+        // don't have the original stack trace because it's in a suspended fiber.
+        val stackTraceInCaseOfProblems = StackSnapshot()
+
         class ExpectingResponse<R : Any>(
                 topic: String,
                 destination: MessageRecipients?,
@@ -266,4 +289,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                 obj: Any?
         ) : FiberRequest(topic, destination, sessionIDForSend, -1, obj)
     }
+
 }
+
+class StackSnapshot : Throwable("This is a stack trace to help identify the source of the underlying problem")

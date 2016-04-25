@@ -3,10 +3,7 @@ package core.node
 import api.APIServer
 import api.APIServerImpl
 import com.codahale.metrics.MetricRegistry
-import contracts.*
-import core.Contract
 import core.Party
-import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
@@ -14,6 +11,7 @@ import core.node.services.*
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.testing.MockNetworkMapCache
+import core.utilities.AffinityExecutor
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -22,7 +20,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Clock
 import java.util.*
-import java.util.concurrent.Executors
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -36,9 +33,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected abstract val log: Logger
 
-    // We will run as much stuff in this thread as possible to keep the risk of thread safety bugs low during the
+    // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
-    protected open val serverThread = Executors.newSingleThreadExecutor()
+    protected open val serverThread: AffinityExecutor = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
     // Objects in this list will be scanned by the DataUploadServlet and can be handed new data via HTTP.
     // Don't mutate this after startup.

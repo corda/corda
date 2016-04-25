@@ -1,6 +1,5 @@
 package core.utilities
 
-import com.google.common.base.Preconditions.checkState
 import com.google.common.util.concurrent.Uninterruptibles
 import java.time.Duration
 import java.util.*
@@ -16,10 +15,18 @@ interface AffinityExecutor : Executor {
     val isOnThread: Boolean
 
     /** Throws an IllegalStateException if the current thread is equal to the thread this executor is backed by. */
-    fun checkOnThread()
+    fun checkOnThread() {
+        if (!isOnThread)
+            throw IllegalStateException("On wrong thread: " + Thread.currentThread())
+    }
 
     /** If isOnThread() then runnable is invoked immediately, otherwise the closure is queued onto the backing thread. */
-    fun executeASAP(runnable: () -> Unit)
+    fun executeASAP(runnable: () -> Unit) {
+        if (isOnThread)
+            runnable()
+        else
+            execute(runnable)
+    }
 
     /** Terminates any backing thread (pool) without waiting for tasks to finish. */
     fun shutdownNow()
@@ -35,43 +42,11 @@ interface AffinityExecutor : Executor {
             return CompletableFuture.supplyAsync(Supplier { fetcher() }, this).get()
     }
 
-    abstract class BaseAffinityExecutor protected constructor() : AffinityExecutor {
-        protected val exceptionHandler: Thread.UncaughtExceptionHandler
-
-        init {
-            exceptionHandler = Thread.currentThread().uncaughtExceptionHandler
-        }
-
-        abstract override val isOnThread: Boolean
-
-        override fun checkOnThread() {
-            checkState(isOnThread, "On wrong thread: %s", Thread.currentThread())
-        }
-
-        override fun executeASAP(runnable: () -> Unit) {
-            val command = {
-                try {
-                    runnable()
-                } catch (throwable: Throwable) {
-                    exceptionHandler.uncaughtException(Thread.currentThread(), throwable)
-                }
-            }
-            if (isOnThread)
-                command()
-            else {
-                execute(command)
-            }
-        }
-
-        // Must comply with the Executor definition w.r.t. exceptions here.
-        abstract override fun execute(command: Runnable)
-    }
-
     /**
      * An executor backed by thread pool (which may often have a single thread) which makes it easy to schedule
      * tasks in the future and verify code is running on the executor.
      */
-    class ServiceAffinityExecutor(threadName: String, numThreads: Int) : BaseAffinityExecutor() {
+    class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor {
         protected val threads = Collections.synchronizedSet(HashSet<Thread>())
 
         private val handler = Thread.currentThread().uncaughtExceptionHandler
@@ -81,8 +56,15 @@ interface AffinityExecutor : Executor {
             val threadFactory = fun(runnable: Runnable): Thread {
                 val thread = object : Thread() {
                     override fun run() {
-                        runnable.run()
-                        threads -= this
+                        try {
+                            runnable.run()
+                        } catch (e: Throwable) {
+                            e.printStackTrace()
+                            handler.uncaughtException(this, e)
+                            throw e
+                        } finally {
+                            threads -= this
+                        }
                     }
                 }
                 thread.isDaemon = true
@@ -100,29 +82,12 @@ interface AffinityExecutor : Executor {
 
         override fun execute(command: Runnable) {
             service.execute {
-                try {
-                    command.run()
-                } catch (e: Throwable) {
-                    if (handler != null)
-                        handler.uncaughtException(Thread.currentThread(), e)
-                    else
-                        e.printStackTrace()
-                }
+                command.run()
             }
         }
 
         fun <T> executeIn(time: Duration, command: () -> T): ScheduledFuture<T> {
-            return service.schedule(Callable {
-                try {
-                    command()
-                } catch (e: Throwable) {
-                    if (handler != null)
-                        handler.uncaughtException(Thread.currentThread(), e)
-                    else
-                        e.printStackTrace()
-                    throw e
-                }
-            }, time.toMillis(), TimeUnit.MILLISECONDS)
+            return service.schedule(Callable { command() }, time.toMillis(), TimeUnit.MILLISECONDS)
         }
 
         override fun shutdownNow() {
@@ -140,7 +105,7 @@ interface AffinityExecutor : Executor {
      *
      * @param alwaysQueue If true, executeASAP will never short-circuit and will always queue up.
      */
-    class Gate(private val alwaysQueue: Boolean = false) : BaseAffinityExecutor() {
+    class Gate(private val alwaysQueue: Boolean = false) : AffinityExecutor {
         private val thisThread = Thread.currentThread()
         private val commandQ = LinkedBlockingQueue<Runnable>()
 
@@ -163,7 +128,7 @@ interface AffinityExecutor : Executor {
     }
 
     companion object {
-        val SAME_THREAD: AffinityExecutor = object : BaseAffinityExecutor() {
+        val SAME_THREAD: AffinityExecutor = object : AffinityExecutor {
             override val isOnThread: Boolean get() = true
             override fun execute(command: Runnable) = command.run()
             override fun shutdownNow() {
