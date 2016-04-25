@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -239,13 +240,12 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         logger.trace { "Waiting for message of type ${request.responseType.name} on $topic" }
-        var consumed = false
+        val consumed = AtomicBoolean()
         net.runOnNextMessage(topic, executor) { netMsg ->
             // Some assertions to ensure we don't execute on the wrong thread or get executed more than once.
             executor.checkOnThread()
             check(netMsg.topic == topic) { "Topic mismatch: ${netMsg.topic} vs $topic" }
-            check(!consumed)
-            consumed = true
+            check(!consumed.getAndSet(true))
             // TODO: This is insecure: we should not deserialise whatever we find and *then* check.
             //
             // We should instead verify as we read the data that it's what we are expecting and throw as early as

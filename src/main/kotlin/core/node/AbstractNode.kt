@@ -17,7 +17,6 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.PublicKey
 import java.time.Clock
 import java.util.*
 
@@ -35,7 +34,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
-    protected open val serverThread: AffinityExecutor = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
+    protected abstract val serverThread: AffinityExecutor
 
     // Objects in this list will be scanned by the DataUploadServlet and can be handed new data via HTTP.
     // Don't mutate this after startup.
@@ -130,7 +129,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     open fun stop() {
         net.stop()
-        serverThread.shutdownNow()
     }
 
     protected abstract fun makeMessagingService(): MessagingService

@@ -1,7 +1,6 @@
 package core.utilities
 
 import com.google.common.util.concurrent.Uninterruptibles
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.*
 import java.util.function.Supplier
@@ -14,7 +13,7 @@ interface AffinityExecutor : Executor {
     /** Returns true if the current thread is equal to the thread this executor is backed by. */
     val isOnThread: Boolean
 
-    /** Throws an IllegalStateException if the current thread is equal to the thread this executor is backed by. */
+    /** Throws an IllegalStateException if the current thread is not one of the threads this executor is backed by. */
     fun checkOnThread() {
         if (!isOnThread)
             throw IllegalStateException("On wrong thread: " + Thread.currentThread())
@@ -28,9 +27,6 @@ interface AffinityExecutor : Executor {
             execute(runnable)
     }
 
-    /** Terminates any backing thread (pool) without waiting for tasks to finish. */
-    fun shutdownNow()
-
     /**
      * Runs the given function on the executor, blocking until the result is available. Be careful not to deadlock this
      * way! Make sure the executor can't possibly be waiting for the calling thread.
@@ -43,25 +39,28 @@ interface AffinityExecutor : Executor {
     }
 
     /**
+     * Posts a no-op task to the executor and blocks this thread waiting for it to complete. This can be useful in
+     * tests when you want to be sure that a previous task submitted via [execute] has completed.
+     */
+    fun flush() {
+        fetchFrom { }
+    }
+
+    /**
      * An executor backed by thread pool (which may often have a single thread) which makes it easy to schedule
      * tasks in the future and verify code is running on the executor.
      */
-    class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor {
+    class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor,
+            ThreadPoolExecutor(numThreads, numThreads, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>()) {
         protected val threads = Collections.synchronizedSet(HashSet<Thread>())
-
-        private val handler = Thread.currentThread().uncaughtExceptionHandler
-        val service: ScheduledThreadPoolExecutor
+        private val uncaughtExceptionHandler = Thread.currentThread().uncaughtExceptionHandler
 
         init {
-            val threadFactory = fun(runnable: Runnable): Thread {
+            setThreadFactory(fun(runnable: Runnable): Thread {
                 val thread = object : Thread() {
                     override fun run() {
                         try {
                             runnable.run()
-                        } catch (e: Throwable) {
-                            e.printStackTrace()
-                            handler.uncaughtException(this, e)
-                            throw e
                         } finally {
                             threads -= this
                         }
@@ -71,28 +70,15 @@ interface AffinityExecutor : Executor {
                 thread.name = threadName
                 threads += thread
                 return thread
-            }
-            // The scheduled variant of the JDK thread pool doesn't do automatic calibration of the thread pool size,
-            // it always uses the 'core size'. So there is no point in allowing separate specification of core and max
-            // numbers of threads.
-            service = ScheduledThreadPoolExecutor(numThreads, threadFactory)
+            })
+        }
+
+        override fun afterExecute(r: Runnable, t: Throwable?) {
+            if (t != null)
+                uncaughtExceptionHandler.uncaughtException(Thread.currentThread(), t)
         }
 
         override val isOnThread: Boolean get() = Thread.currentThread() in threads
-
-        override fun execute(command: Runnable) {
-            service.execute {
-                command.run()
-            }
-        }
-
-        fun <T> executeIn(time: Duration, command: () -> T): ScheduledFuture<T> {
-            return service.schedule(Callable { command() }, time.toMillis(), TimeUnit.MILLISECONDS)
-        }
-
-        override fun shutdownNow() {
-            service.shutdownNow()
-        }
 
         companion object {
             val logger = loggerFor<ServiceAffinityExecutor>()
@@ -122,17 +108,12 @@ interface AffinityExecutor : Executor {
         }
 
         val taskQueueSize: Int get() = commandQ.size
-
-        override fun shutdownNow() {
-        }
     }
 
     companion object {
         val SAME_THREAD: AffinityExecutor = object : AffinityExecutor {
             override val isOnThread: Boolean get() = true
             override fun execute(command: Runnable) = command.run()
-            override fun shutdownNow() {
-            }
         }
     }
 }

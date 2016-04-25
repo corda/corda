@@ -9,6 +9,7 @@ import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
 import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.DataUploadServlet
+import core.utilities.AffinityExecutor
 import core.utilities.loggerFor
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.HandlerCollection
@@ -51,6 +52,8 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     }
 
     override val log = loggerFor<Node>()
+
+    override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
     lateinit var webServer: Server
 
@@ -135,6 +138,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         webServer.stop()
         super.stop()
         nodeFileLock!!.release()
+        serverThread.shutdownNow()
     }
 
     private fun alreadyRunningNodeCheck() {

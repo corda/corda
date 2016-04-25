@@ -168,7 +168,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
     private fun deliverMessage(msg: Message): Boolean {
         // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
         // or removed whilst the filter is executing will not affect anything.
-        val deliverTo = handlers.filter { if (it.topic.isBlank()) true else it.topic == msg.topic }
+        val deliverTo = handlers.filter { it.topic.isBlank() || it.topic == msg.topic }
 
         if (deliverTo.isEmpty()) {
             // This should probably be downgraded to a trace in future, so the protocol can evolve with new topics
