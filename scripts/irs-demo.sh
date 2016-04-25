@@ -7,7 +7,7 @@ if [ ! -e ./gradlew ]; then
     exit 1
 fi
 
-if [ ! -d build/install/r3prototyping ]; then
+if [ ! -d build/install/r3prototyping ] && [[ "$SKIP_INSTALL" == "" ]]; then
     ./gradlew installDist
 fi
 

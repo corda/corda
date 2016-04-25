@@ -7,7 +7,9 @@ if [ ! -e ./gradlew ]; then
     exit 1
 fi
 
-./gradlew installDist
+if [[ "$SKIP_INSTALL" == "" ]]; then
+    ./gradlew installDist
+fi
 
 if [[ "$mode" == "buyer" ]]; then
     if [ ! -d buyer ]; then
