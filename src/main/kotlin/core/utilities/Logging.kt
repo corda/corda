@@ -33,7 +33,7 @@ class BriefLogFormatter : Formatter() {
             else -> ""
         }
         val fullClassName = logRecord.sourceClassName
-        val dollarIndex = fullClassName.indexOf('$')
+        val dollarIndex = fullClassName.lastIndexOf('$')
         val className = fullClassName.substring(fullClassName.lastIndexOf('.') + 1, if (dollarIndex == -1) fullClassName.length else dollarIndex)
         arguments[2] = className
         arguments[3] = logRecord.sourceMethodName
