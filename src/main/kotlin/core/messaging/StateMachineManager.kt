@@ -63,13 +63,13 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
     private val checkpointsMap = serviceHub.storageService.stateMachines
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
-    private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolLogic<*>>())
+    private val stateMachines = Collections.synchronizedList(ArrayList<ProtocolLogic<*>>())
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
 
     init {
-        metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { _stateMachines.size })
+        metrics.register("Protocols.InFlight", Gauge<kotlin.Int> { stateMachines.size })
     }
 
     private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
@@ -78,9 +78,9 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
 
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
     fun <T> findStateMachines(klass: Class<out ProtocolLogic<T>>): List<Pair<ProtocolLogic<T>, ListenableFuture<T>>> {
-        synchronized(_stateMachines) {
+        synchronized(stateMachines) {
             @Suppress("UNCHECKED_CAST")
-            return _stateMachines.filterIsInstance(klass).map { it to (it.psm as ProtocolStateMachine<T>).resultFuture }
+            return stateMachines.filterIsInstance(klass).map { it to (it.psm as ProtocolStateMachine<T>).resultFuture }
         }
     }
 
@@ -115,7 +115,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
             // Grab the Kryo engine configured by Quasar for its own stuff, and then do our own configuration on top
             // so we can deserialised the nested stream that holds the fiber.
             val psm = deserializeFiber(checkpoint.serialisedFiber)
-            _stateMachines.add(psm.logic)
+            stateMachines.add(psm.logic)
             val logger = LoggerFactory.getLogger(checkpoint.loggerName)
             val awaitingObjectOfType = Class.forName(checkpoint.awaitingObjectOfType)
             val topic = checkpoint.awaitingTopic
@@ -165,7 +165,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
             val logger = LoggerFactory.getLogger(loggerName)
             val fiber = ProtocolStateMachine(logic, scheduler)
             // Need to add before iterating in case of immediate completion
-            _stateMachines.add(logic)
+            stateMachines.add(logic)
             executor.executeASAP {
                 iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
                     it.start()
@@ -224,7 +224,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         // We're back! Check if the fiber is finished and if so, clean up.
         if (psm.isTerminated) {
             psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
-            _stateMachines.remove(psm.logic)
+            stateMachines.remove(psm.logic)
             checkpointsMap.remove(prevCheckpointKey)
             totalFinishedProtocols.inc()
         }
