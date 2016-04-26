@@ -89,6 +89,10 @@ You may need/want to edit your default JUnit run config in IntelliJ to ensure th
 in the toolbar and select "Edit configurations", then expand the defaults tree, then select JUnit and add the two
 arguments to the VM options edit.
 
+## "Foo is ambiguous" error during compilation
+
+Gradle's incremental compilation isn't always reliable. Run `./gradlew clean` and then try again.
+
 ## ClassNotFoundException during Gradle quasarScan task
 
 Your Gradle build server is hosed. Run `gradle --stop` and then try `gradle clean build`.
