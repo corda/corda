@@ -134,6 +134,11 @@ reason, for instance, you are working in Java or because you need an inheritance
 a class fully immutable may result in very awkward code if there's ever a need to make complex changes to it. If in
 doubt, ask. Remember, never apply any design pattern religiously.
 
+We have an extension to the ``Executor`` interface called ``AffinityExecutor``. It is useful when the thread safety
+of a piece of code is based on expecting to be called from a single thread only (or potentially, a single thread pool).
+``AffinityExecutor`` has additional methods that allow for thread assertions. These can be useful to ensure code is not
+accidentally being used in a multi-threaded way when it didn't expect that.
+
 4. Assertions and errors
 ########################
 
