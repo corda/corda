@@ -114,8 +114,11 @@ abstract class Simulation(val runAsync: Boolean,
         // Now wire up the network maps for each node.
         // TODO: This is obviously bogus: there should be a single network map for the whole simulated network.
         for (node in regulators + serviceProviders + banks) {
-            (node.services.networkMapCache as MockNetworkMapCache).ratesOracleNodes += ratesOracle.info
-            (node.services.networkMapCache as MockNetworkMapCache).regulators += regulators.map { it.info }
+            val cache = (node.services.networkMapCache as MockNetworkMapCache)
+            cache.addRegistration(ratesOracle.info)
+            regulators.forEach { regulator ->
+                cache.addRegistration(regulator.info)
+            }
         }
     }
 

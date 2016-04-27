@@ -94,10 +94,10 @@ fun main(args: Array<String>) {
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, DemoClock()).start() }
 
     // Add self to network map
-    (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(node.info)
+    (node.services.networkMapCache as MockNetworkMapCache).addRegistration(node.info)
 
-    // Add rates oracle to network map
-    (node.services.networkMapCache as MockNetworkMapCache).ratesOracleNodes.add(rateOracleId)
+    // Add rates oracle to network map if one has been specified
+    rateOracleId?.let { (node.services.networkMapCache as MockNetworkMapCache).addRegistration(it) }
 
     val hostAndPortStrings = options.valuesOf(fakeTradeWithAddr)
     val identityFiles = options.valuesOf(fakeTradeWithIdentityFile)
@@ -107,7 +107,7 @@ fun main(args: Array<String>) {
     for ((hostAndPortString, identityFile) in hostAndPortStrings.zip(identityFiles)) {
         try {
             val peerId = nodeInfo(hostAndPortString, identityFile)
-            (node.services.networkMapCache as MockNetworkMapCache).partyNodes.add(peerId)
+            (node.services.networkMapCache as MockNetworkMapCache).addRegistration(peerId)
             node.services.identityService.registerIdentity(peerId.identity)
         } catch (e: Exception) {
         }

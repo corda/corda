@@ -13,6 +13,11 @@ import java.time.Clock
 import java.util.*
 
 /**
+ * Postfix for base topics when sending a request to a service.
+ */
+val TOPIC_DEFAULT_POSTFIX = ".0"
+
+/**
  * This file defines various 'services' which are not currently fleshed out. A service is a module that provides
  * immutable snapshots of data that may be changing in response to user or network events.
  */

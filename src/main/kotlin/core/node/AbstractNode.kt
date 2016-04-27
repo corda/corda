@@ -98,10 +98,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             }
             timestamperAddress
         } else {
+            info.advertisedServices += TimestamperService.Type
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
             NodeInfo(net.myAddress, storage.myLegalIdentity, setOf(TimestamperService.Type))
         }
-        (services.networkMapCache as MockNetworkMapCache).timestampingNodes.add(tsid)
+        (services.networkMapCache as MockNetworkMapCache).addRegistration(tsid)
     }
 
     lateinit var interestRatesService: NodeInterestRates.Service
