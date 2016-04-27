@@ -45,12 +45,8 @@ fun main(args: Array<String>) {
     val serviceFakeTradesArg = parser.accepts("service-fake-trades")
     val fakeTradeWithArg = parser.accepts("fake-trade-with").requiredUnless(serviceFakeTradesArg).withRequiredArg()
 
-    // Temporary flags until network map and service discovery is fleshed out. The identity file does NOT contain the
-    // network address because all this stuff is meant to come from a dynamic discovery service anyway, and the identity
-    // is meant to be long-term stable. It could contain a domain name, but we may end up not routing messages directly
-    // to DNS-identified endpoints anyway (e.g. consider onion routing as a possibility).
-    val timestamperIdentityFile = parser.accepts("timestamper-identity-file").requiredIf(fakeTradeWithArg).withRequiredArg()
-    val timestamperNetAddr = parser.accepts("timestamper-address").requiredIf(timestamperIdentityFile).withRequiredArg()
+    val networkMapIdentityFile = parser.accepts("network-map-identity-file").requiredIf(fakeTradeWithArg).withRequiredArg()
+    val networkMapNetAddr = parser.accepts("network-map-address").requiredIf(networkMapIdentityFile).withRequiredArg()
 
     val options = try {
         parser.parse(*args)
@@ -81,15 +77,14 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    // The timestamping node runs in the same process as the buyer protocol is run.
-    val timestamperId = if (options.has(timestamperIdentityFile)) {
-        val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
-        val path = Paths.get(options.valueOf(timestamperIdentityFile))
+    val networkMapId = if (options.has(networkMapIdentityFile)) {
+        val addr = HostAndPort.fromString(options.valueOf(networkMapNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
+        val path = Paths.get(options.valueOf(networkMapIdentityFile))
         val party = Files.readAllBytes(path).deserialize<Party>()
-        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices = setOf(TimestamperService.Type))
+        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, setOf(NetworkMapService.Type))
     } else null
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, advertisedServices).start() }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId, advertisedServices).start() }
 
     if (listening) {
         // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.

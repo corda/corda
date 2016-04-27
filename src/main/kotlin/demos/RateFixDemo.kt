@@ -27,6 +27,8 @@ fun main(args: Array<String>) {
     val parser = OptionParser()
     val networkAddressArg = parser.accepts("network-address").withRequiredArg().required()
     val dirArg = parser.accepts("directory").withRequiredArg().defaultsTo("rate-fix-demo-data")
+    val networkMapAddrArg = parser.accepts("network-map").withRequiredArg().required()
+    val networkMapIdentityArg = parser.accepts("network-map-identity-file").withRequiredArg().required()
     val oracleAddrArg = parser.accepts("oracle").withRequiredArg().required()
     val oracleIdentityArg = parser.accepts("oracle-identity-file").withRequiredArg().required()
 
@@ -50,6 +52,10 @@ fun main(args: Array<String>) {
         Files.createDirectory(dir)
     }
 
+    val networkMapAddr = ArtemisMessagingService.makeRecipient(options.valueOf(networkMapAddrArg))
+    val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
+    val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity)
+
     // Load oracle stuff (in lieu of having a network map service)
     val oracleAddr = ArtemisMessagingService.makeRecipient(options.valueOf(oracleAddrArg))
     val oracleIdentity = Files.readAllBytes(Paths.get(options.valueOf(oracleIdentityArg))).deserialize<Party>()
@@ -67,7 +73,8 @@ fun main(args: Array<String>) {
         override val exportJMXto: String = "http"
         override val nearestCity: String = "Atlantis"
     }
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, null, advertisedServices).start() }
+
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress, advertisedServices).start() }
 
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionBuilder()

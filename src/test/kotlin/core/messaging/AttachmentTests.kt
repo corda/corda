@@ -5,6 +5,7 @@ import core.crypto.SecureHash
 import core.crypto.sha256
 import core.node.NodeConfiguration
 import core.node.NodeInfo
+import core.node.services.NetworkMapService
 import core.node.services.NodeAttachmentService
 import core.node.services.ServiceType
 import core.node.services.TimestamperService
@@ -87,10 +88,10 @@ class AttachmentTests {
     @Test
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
-        val n0 = network.createNode(null, nodeFactory = object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?,
+        val n0 = network.createNode(null, -1, object : MockNetwork.Factory {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                                 advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, advertisedServices, id) {
+                return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id) {
                     override fun start(): MockNetwork.MockNode {
                         super.start()
                         (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false
@@ -98,7 +99,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, advertisedServices = TimestamperService.Type)
+        }, NetworkMapService.Type, TimestamperService.Type)
         val n1 = network.createNode(n0.info)
 
         // Insert an attachment into node zero's store directly.

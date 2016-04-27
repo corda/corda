@@ -8,12 +8,8 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
-import core.node.services.ArtemisMessagingService
-import core.node.services.NodeInterestRates
-import core.node.services.ServiceType
-import core.node.services.TimestamperService
+import core.node.services.*
 import core.serialization.deserialize
-import core.testing.MockNetworkMapCache
 import core.utilities.BriefLogFormatter
 import demos.protocols.AutoOfferProtocol
 import demos.protocols.ExitServerProtocol
@@ -22,7 +18,6 @@ import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import kotlin.system.exitProcess
 
 // IRS DEMO
@@ -34,15 +29,8 @@ fun main(args: Array<String>) {
     val networkAddressArg = parser.accepts("network-address").withRequiredArg().required()
     val dirArg = parser.accepts("directory").withRequiredArg().defaultsTo("nodedata")
 
-    // Temporary flags until network map and service discovery is fleshed out. The identity file does NOT contain the
-    // network address because all this stuff is meant to come from a dynamic discovery service anyway, and the identity
-    // is meant to be long-term stable. It could contain a domain name, but we may end up not routing messages directly
-    // to DNS-identified endpoints anyway (e.g. consider onion routing as a possibility).
-    val timestamperIdentityFile = parser.accepts("timestamper-identity-file").withRequiredArg().required()
-    val timestamperNetAddr = parser.accepts("timestamper-address").requiredIf(timestamperIdentityFile).withRequiredArg()
-
-    val rateOracleIdentityFile = parser.accepts("rates-oracle-identity-file").withRequiredArg().required()
-    val rateOracleNetAddr = parser.accepts("rates-oracle-address").requiredIf(rateOracleIdentityFile).withRequiredArg()
+    val networkMapIdentityFile = parser.accepts("network-map-identity-file").withRequiredArg()
+    val networkMapNetAddr = parser.accepts("network-map-address").requiredIf(networkMapIdentityFile).withRequiredArg()
 
     // Use these to list one or more peers (again, will be superseded by discovery implementation)
     val fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withRequiredArg().required()
@@ -67,42 +55,26 @@ fun main(args: Array<String>) {
     }
 
     val config = loadConfigFile(configFile)
-    val advertisedServices = HashSet<ServiceType>()
+    val advertisedServices: Set<ServiceType>
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
 
-    // The timestamping node runs in the same process as the one that passes null to Node constructor.
-    val timestamperId = if (options.valueOf(timestamperNetAddr).equals(options.valueOf(networkAddressArg))) {
-        // This node provides timestamping services
-        advertisedServices.add(TimestamperService.Type)
+    val networkMapId = if (options.valueOf(networkMapNetAddr).equals(options.valueOf(networkAddressArg))) {
+        // This node provides network map and timestamping services
+        advertisedServices = setOf(NetworkMapService.Type, TimestamperService.Type)
         null
     } else {
+        advertisedServices = setOf(NodeInterestRates.Type)
         try {
-            nodeInfo(options.valueOf(timestamperNetAddr), options.valueOf(timestamperIdentityFile), setOf(TimestamperService.Type))
+            nodeInfo(options.valueOf(networkMapNetAddr), options.valueOf(networkMapIdentityFile), setOf(NetworkMapService.Type, TimestamperService.Type))
         } catch (e: Exception) {
             null
         }
     }
 
-    // The timestamping node runs in the same process as the one that passes null to Node constructor.
-    val rateOracleId = if (options.valueOf(rateOracleNetAddr).equals(options.valueOf(networkAddressArg))) {
-        advertisedServices.add(NodeInterestRates.Type)
-        null
-    } else {
-        try {
-            nodeInfo(options.valueOf(rateOracleNetAddr), options.valueOf(rateOracleIdentityFile), setOf(NodeInterestRates.Type))
-        } catch (e: Exception) {
-            null
-        }
-    }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId, advertisedServices, DemoClock()).start() }
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, advertisedServices, DemoClock()).start() }
-
-    // Add self to network map
-    node.services.networkMapCache.addNode(node.info)
-
-    // Add rates oracle to network map if one has been specified
-    rateOracleId?.let { node.services.networkMapCache.addNode(it) }
-
+    // TODO: This should all be replaced by the identity service being updated
+    // as the network map changes.
     val hostAndPortStrings = options.valuesOf(fakeTradeWithAddr)
     val identityFiles = options.valuesOf(fakeTradeWithIdentityFile)
     if (hostAndPortStrings.size != identityFiles.size) {
@@ -111,9 +83,9 @@ fun main(args: Array<String>) {
     for ((hostAndPortString, identityFile) in hostAndPortStrings.zip(identityFiles)) {
         try {
             val peerId = nodeInfo(hostAndPortString, identityFile)
-            (node.services.networkMapCache as MockNetworkMapCache).addRegistration(peerId)
             node.services.identityService.registerIdentity(peerId.identity)
         } catch (e: Exception) {
+            println("Could not load peer identity file \"${identityFile}\".")
         }
     }
 

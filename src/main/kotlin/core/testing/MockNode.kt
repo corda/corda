@@ -1,6 +1,8 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import core.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
@@ -46,19 +48,18 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory {
         fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                   timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode
+                   networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode
     }
 
     object DefaultFactory : Factory {
         override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                            timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode {
-            return MockNode(dir, config, network, timestamperAddr, advertisedServices, id)
+                            networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode {
+            return MockNode(dir, config, network, networkMapAddr, advertisedServices, id)
         }
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        withTimestamper: NodeInfo?, advertisedServices: Set<ServiceType>,
-                        val id: Int) : AbstractNode(dir, config, withTimestamper, advertisedServices, Clock.systemUTC()) {
+                        networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, val id: Int) : AbstractNode(dir, config, networkMapAddr, advertisedServices, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -76,6 +77,10 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
+        override fun startMessagingService() {
+            // Nothing to do
+        }
+
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
 
@@ -89,7 +94,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
+    fun createNode(networkMapAddress: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
@@ -102,7 +107,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, withTimestamper, advertisedServices.toSet(), id).start()
+        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id).start()
         _nodes.add(node)
         return node
     }
