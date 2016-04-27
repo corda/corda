@@ -10,7 +10,11 @@ import java.security.PublicKey
  */
 interface IdentityService {
     fun registerIdentity(party: Party)
-    fun deregisterIdentity(party: Party)
+
+    // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
+    // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
+    // but for now this is not supported.
+
     fun partyFromKey(key: PublicKey): Party?
     fun partyFromName(name: String): Party?
 }

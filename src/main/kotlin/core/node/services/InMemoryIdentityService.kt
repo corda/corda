@@ -17,10 +17,7 @@ class InMemoryIdentityService() : IdentityService {
         keyToParties[party.owningKey] = party
         nameToParties[party.name] = party
     }
-    override fun deregisterIdentity(party: Party) {
-        keyToParties.remove(party.owningKey)
-        nameToParties.remove(party.name)
-    }
+
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
 }

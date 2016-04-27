@@ -19,7 +19,6 @@ class MockIdentityService(val identities: List<Party>) : IdentityService {
         get() = synchronized(identities) { identities.associateBy { it.name } }
 
     override fun registerIdentity(party: Party) { throw UnsupportedOperationException() }
-    override fun deregisterIdentity(party: Party) { throw UnsupportedOperationException() }
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
 }
