@@ -7,6 +7,7 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
+import core.node.services.ServiceType
 import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.DataUploadServlet
 import core.utilities.AffinityExecutor
@@ -40,12 +41,15 @@ class ConfigurationException(message: String) : Exception(message)
  * @param p2pAddr The host and port that this server will use. It can't find out its own external hostname, so you
  *                have to specify that yourself.
  * @param configuration This is typically loaded from a .properties file
- * @param timestamperAddress If null, this node will become a timestamping node, otherwise, it will use that one.
+ * @param networkMapAddress An external network map service to use. Should only ever be null when creating the first
+ * network map service, while bootstrapping a network.
+ * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
+ * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all protocols etc
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
-           timestamperAddress: NodeInfo?,
-           clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, timestamperAddress, clock) {
+           networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
+           clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         val DEFAULT_PORT = 31337
@@ -62,6 +66,11 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     private var nodeFileLock: FileLock? = null
 
     override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, serverThread)
+
+    override fun startMessagingService() {
+        // Start up the MQ service.
+        (net as ArtemisMessagingService).start()
+    }
 
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
@@ -114,8 +123,6 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         alreadyRunningNodeCheck()
         super.start()
         webServer = initWebServer()
-        // Start up the MQ service.
-        (net as ArtemisMessagingService).start()
         // Begin exporting our own metrics via JMX.
         JmxReporter.
                 forRegistry(services.monitoringService.metrics).

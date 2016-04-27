@@ -1,6 +1,8 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import core.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
@@ -8,7 +10,7 @@ import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.PhysicalLocation
-import core.testing.MockIdentityService
+import core.node.services.NetworkMapService
 import core.node.services.ServiceType
 import core.node.services.TimestamperService
 import core.utilities.AffinityExecutor
@@ -46,18 +48,18 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory {
         fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                   timestamperAddr: NodeInfo?, id: Int): MockNode
+                   networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode
     }
 
     object DefaultFactory : Factory {
         override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                            timestamperAddr: NodeInfo?, id: Int): MockNode {
-            return MockNode(dir, config, network, timestamperAddr, id)
+                            networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode {
+            return MockNode(dir, config, network, networkMapAddr, advertisedServices, id)
         }
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        withTimestamper: NodeInfo?, val id: Int) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
+                        networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, val id: Int) : AbstractNode(dir, config, networkMapAddr, advertisedServices, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -75,6 +77,10 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
+        override fun startMessagingService() {
+            // Nothing to do
+        }
+
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
 
@@ -88,8 +94,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /** Returns a started node, optionally created by the passed factory method */
-    fun createNode(withTimestamper: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
-                   advertisedServices: Set<ServiceType> = emptySet()): MockNode {
+    fun createNode(networkMapAddress: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
+                   vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -101,8 +107,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, withTimestamper, id).start()
-        node.info.advertisedServices = advertisedServices
+        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id).start()
         _nodes.add(node)
         return node
     }
@@ -123,12 +128,13 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     /**
-     * Sets up a two node network in which the first node runs a timestamping service and the other doesn't.
+     * Sets up a two node network, in which the first node runs network map and timestamping services and the other
+     * doesn't.
      */
     fun createTwoNodes(nodeFactory: Factory = defaultFactory): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, setOf(TimestamperService.Type)),
+                createNode(null, -1, nodeFactory, NetworkMapService.Type, TimestamperService.Type),
                 createNode(nodes[0].info, -1, nodeFactory)
         )
     }

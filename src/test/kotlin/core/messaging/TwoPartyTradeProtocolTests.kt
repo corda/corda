@@ -98,7 +98,11 @@ class TwoPartyTradeProtocolTests {
             var (aliceNode, bobNode) = net.createTwoNodes()
             val aliceAddr = aliceNode.net.myAddress
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
+            val networkMapAddr = aliceNode.info
             val timestamperAddr = aliceNode.info
+
+            // Clear network map registration messages through before we start
+            net.runNetwork()
 
             (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, timestamperAddr.identity, null).second
@@ -153,9 +157,10 @@ class TwoPartyTradeProtocolTests {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = net.createNode(timestamperAddr, bobAddr.id, object : MockNetwork.Factory {
-                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
-                    return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, bobAddr.id) {
+            bobNode = net.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
+                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+                                    advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
+                    return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id) {
                         override fun initialiseStorageService(dir: Path): StorageService {
                             val ss = super.initialiseStorageService(dir)
                             val smMap = ss.stateMachines
@@ -183,10 +188,12 @@ class TwoPartyTradeProtocolTests {
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
     private fun makeNodeWithTracking(name: String): MockNetwork.MockNode {
+        val networkMapAddr: NodeInfo? = null
         // Create a node in the mock network ...
-        return net.createNode(nodeFactory = object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, id) {
+        return net.createNode(null, nodeFactory = object : MockNetwork.Factory {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+                                advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id) {
                     // That constructs the storage service object in a customised way ...
                     override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
                         // To use RecordingMaps instead of ordinary HashMaps.

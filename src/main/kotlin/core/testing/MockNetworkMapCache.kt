@@ -7,23 +7,41 @@
  */
 package core.testing
 
+import co.paralleluniverse.common.util.VisibleForTesting
 import core.Party
 import core.crypto.DummyPublicKey
 import core.messaging.SingleMessageRecipient
-import core.node.services.NetworkMapCache
+import core.node.services.InMemoryNetworkMapCache
 import core.node.NodeInfo
-import java.util.*
 
-class MockNetworkMapCache : NetworkMapCache {
-    data class MockAddress(val id: String) : SingleMessageRecipient
-
-    override val timestampingNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
-    override val ratesOracleNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
-    override val partyNodes = Collections.synchronizedList(ArrayList<NodeInfo>())
-    override val regulators = Collections.synchronizedList(ArrayList<NodeInfo>())
+/**
+ * Network map cache with no backing map service.
+ */
+class MockNetworkMapCache() : InMemoryNetworkMapCache() {
+    data class MockAddress(val id: String): SingleMessageRecipient
 
     init {
-        partyNodes.add(NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C"))))
-        partyNodes.add(NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D"))))
+        var mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")))
+        var mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")))
+        registeredNodes[mockNodeA.identity] = mockNodeA
+        registeredNodes[mockNodeB.identity] = mockNodeB
+    }
+
+    /**
+     * Directly add a registration to the internal cache. DOES NOT fire the change listeners, as it's
+     * not a change being received.
+     */
+    @VisibleForTesting
+    fun addRegistration(node: NodeInfo) {
+        registeredNodes[node.identity] = node
+    }
+
+    /**
+     * Directly remove a registration from the internal cache. DOES NOT fire the change listeners, as it's
+     * not a change being received.
+     */
+    @VisibleForTesting
+    fun deleteRegistration(identity: Party) : Boolean {
+        return registeredNodes.remove(identity) != null
     }
 }

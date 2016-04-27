@@ -20,7 +20,9 @@ if [[ "$mode" == "nodeA" ]]; then
     RC=83
     while [ $RC -eq 83 ]
     do
-        build/install/r3prototyping/bin/irsdemo --dir=nodeA --network-address=localhost --fake-trade-with-address=localhost:31340 --fake-trade-with-identity=nodeB/identity-public --timestamper-identity-file=nodeA/identity-public --timestamper-address=localhost --rates-oracle-address=localhost:31340 --rates-oracle-identity-file=nodeB/identity-public
+        build/install/r3prototyping/bin/irsdemo --dir=nodeA --network-address=localhost \
+		--fake-trade-with-address=localhost:31340 --fake-trade-with-identity=nodeB/identity-public \
+		--network-map-identity-file=nodeA/identity-public --network-map-address=localhost
         RC=$?
     done
 elif [[ "$mode" == "nodeB" ]]; then
@@ -35,7 +37,9 @@ elif [[ "$mode" == "nodeB" ]]; then
     RC=83
     while [ $RC -eq 83 ]
     do
-        build/install/r3prototyping/bin/irsdemo --dir=nodeB --network-address=localhost:31340 --fake-trade-with-address=localhost --fake-trade-with-identity=nodeA/identity-public --timestamper-identity-file=nodeA/identity-public --timestamper-address=localhost --rates-oracle-address=localhost:31340 --rates-oracle-identity-file=nodeB/identity-public &
+        build/install/r3prototyping/bin/irsdemo --dir=nodeB --network-address=localhost:31340 \
+		--fake-trade-with-address=localhost --fake-trade-with-identity=nodeA/identity-public \
+		-network-map-identity-file=nodeA/identity-public --network-map-address=localhost &
         while ! curl -F rates=@scripts/example.rates.txt http://localhost:31341/upload/interest-rates; do
             echo "Retry to upload interest rates to oracle after 5 seconds"
             sleep 5
