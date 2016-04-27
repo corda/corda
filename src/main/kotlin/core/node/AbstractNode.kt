@@ -11,6 +11,7 @@ import core.node.services.*
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.testing.MockNetworkMapCache
+import core.utilities.AddOrRemove
 import core.utilities.AffinityExecutor
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
@@ -18,6 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
+import java.time.Instant
 import java.util.*
 
 /**
@@ -44,7 +46,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     val services = object : ServiceHub {
         override val networkService: MessagingService get() = net
-        override val networkMapCache: NetworkMapCache = MockNetworkMapCache()
+        override val networkMapCache: NetworkMapCache = InMemoryNetworkMapCache()
         override val storageService: StorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -63,6 +65,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
+    var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeTimestampingService: NodeTimestamperService? = null
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
@@ -78,6 +81,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
         api = APIServerImpl(this)
+
+        // Build services we're advertising
+        if (NetworkMapService.Type in info.advertisedServices) makeNetworkMapService()
         makeTimestampingService(timestamperAddress)
         identity = makeIdentityService()
 
@@ -86,6 +92,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         DataVendingService(net, storage)
 
         return this
+    }
+
+    open protected fun makeNetworkMapService() {
+        val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
+        inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }
 
     private fun makeTimestampingService(timestamperAddress: NodeInfo?) {
@@ -103,7 +115,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             inNodeTimestampingService = NodeTimestamperService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, platformClock)
             NodeInfo(net.myAddress, storage.myLegalIdentity, setOf(TimestamperService.Type))
         }
-        (services.networkMapCache as MockNetworkMapCache).addRegistration(tsid)
+        services.networkMapCache.addNode(tsid)
     }
 
     lateinit var interestRatesService: NodeInterestRates.Service

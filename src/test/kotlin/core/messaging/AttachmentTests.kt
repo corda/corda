@@ -98,7 +98,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, advertisedServices = setOf(TimestamperService.Type))
+        }, advertisedServices = TimestamperService.Type)
         val n1 = network.createNode(n0.info)
 
         // Insert an attachment into node zero's store directly.

@@ -55,7 +55,7 @@ class TimestamperNodeServiceTest {
 
     @Test
     fun successWithNetwork() {
-        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperNode = network.createNode(null, advertisedServices = TimestamperService.Type)
         val logName = NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC
         val psm = TestPSM(timestamperNode.info, clock.instant())
         val future = timestamperNode.smm.add(logName, psm)
@@ -66,7 +66,7 @@ class TimestamperNodeServiceTest {
 
     @Test
     fun wrongCommands() {
-        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperNode = network.createNode(null, advertisedServices = TimestamperService.Type)
         val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
         val service = timestamperNode.inNodeTimestampingService!!
         
@@ -86,7 +86,7 @@ class TimestamperNodeServiceTest {
 
     @Test
     fun tooEarly() {
-        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperNode = network.createNode(null, advertisedServices = TimestamperService.Type)
         val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
         val service = timestamperNode.inNodeTimestampingService!!
 
@@ -100,7 +100,7 @@ class TimestamperNodeServiceTest {
 
     @Test
     fun tooLate() {
-        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperNode = network.createNode(null, advertisedServices = TimestamperService.Type)
         val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
         val service = timestamperNode.inNodeTimestampingService!!
 
@@ -114,7 +114,7 @@ class TimestamperNodeServiceTest {
 
     @Test
     fun success() {
-        val timestamperNode = network.createNode(null, advertisedServices = setOf(TimestamperService.Type))
+        val timestamperNode = network.createNode(null, advertisedServices = TimestamperService.Type)
         val timestamperKey = timestamperNode.services.storageService.myLegalIdentity.owningKey
         val service = timestamperNode.inNodeTimestampingService!!
 

@@ -98,10 +98,10 @@ fun main(args: Array<String>) {
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, advertisedServices, DemoClock()).start() }
 
     // Add self to network map
-    (node.services.networkMapCache as MockNetworkMapCache).addRegistration(node.info)
+    node.services.networkMapCache.addNode(node.info)
 
     // Add rates oracle to network map if one has been specified
-    rateOracleId?.let { (node.services.networkMapCache as MockNetworkMapCache).addRegistration(it) }
+    rateOracleId?.let { node.services.networkMapCache.addNode(it) }
 
     val hostAndPortStrings = options.valuesOf(fakeTradeWithAddr)
     val identityFiles = options.valuesOf(fakeTradeWithIdentityFile)
