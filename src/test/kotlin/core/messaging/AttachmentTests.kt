@@ -6,6 +6,7 @@ import core.crypto.sha256
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.services.NodeAttachmentService
+import core.node.services.ServiceType
 import core.node.services.TimestamperService
 import core.serialization.OpaqueBytes
 import core.testing.MockNetwork
@@ -87,8 +88,9 @@ class AttachmentTests {
     fun maliciousResponse() {
         // Make a node that doesn't do sanity checking at load time.
         val n0 = network.createNode(null, nodeFactory = object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, id) {
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?,
+                                advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
+                return object : MockNetwork.MockNode(dir, config, network, timestamperAddr, advertisedServices, id) {
                     override fun start(): MockNetwork.MockNode {
                         super.start()
                         (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false

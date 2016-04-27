@@ -12,10 +12,7 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
-import core.node.services.ArtemisMessagingService
-import core.node.services.NodeAttachmentService
-import core.node.services.NodeWalletService
-import core.node.services.TimestamperService
+import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
@@ -75,6 +72,7 @@ fun main(args: Array<String>) {
 
     val config = loadConfigFile(configFile)
 
+    var advertisedServices: Set<ServiceType> = emptySet()
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
@@ -91,7 +89,7 @@ fun main(args: Array<String>) {
         NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, advertisedServices = setOf(TimestamperService.Type))
     } else null
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId).start() }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, advertisedServices).start() }
 
     if (listening) {
         // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.

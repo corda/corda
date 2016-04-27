@@ -7,6 +7,7 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import core.messaging.MessagingService
 import core.node.services.ArtemisMessagingService
+import core.node.services.ServiceType
 import core.node.servlets.AttachmentDownloadServlet
 import core.node.servlets.DataUploadServlet
 import core.utilities.AffinityExecutor
@@ -41,11 +42,13 @@ class ConfigurationException(message: String) : Exception(message)
  *                have to specify that yourself.
  * @param configuration This is typically loaded from a .properties file
  * @param timestamperAddress If null, this node will become a timestamping node, otherwise, it will use that one.
+ * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
+ * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all protocols etc
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
-           timestamperAddress: NodeInfo?,
-           clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, timestamperAddress, clock) {
+           timestamperAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
+           clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, timestamperAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         val DEFAULT_PORT = 31337

@@ -24,7 +24,8 @@ import java.util.*
  * A base node implementation that can be customised either for production (with real implementations that do real
  * I/O), or a mock implementation suitable for unit test environments.
  */
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: NodeInfo?, val platformClock: Clock) {
+abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val timestamperAddress: NodeInfo?,
+                            val advertisedServices: Set<ServiceType>, val platformClock: Clock) {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -53,7 +54,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     val info: NodeInfo by lazy {
-        NodeInfo(net.myAddress, storage.myLegalIdentity, emptySet(), findMyLocation())
+        NodeInfo(net.myAddress, storage.myLegalIdentity, advertisedServices, findMyLocation())
     }
 
     protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]

@@ -8,7 +8,6 @@ import core.node.AbstractNode
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.PhysicalLocation
-import core.testing.MockIdentityService
 import core.node.services.ServiceType
 import core.node.services.TimestamperService
 import core.utilities.AffinityExecutor
@@ -46,18 +45,19 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     /** Allows customisation of how nodes are created. */
     interface Factory {
         fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                   timestamperAddr: NodeInfo?, id: Int): MockNode
+                   timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode
     }
 
     object DefaultFactory : Factory {
         override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
-                            timestamperAddr: NodeInfo?, id: Int): MockNode {
-            return MockNode(dir, config, network, timestamperAddr, id)
+                            timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNode {
+            return MockNode(dir, config, network, timestamperAddr, advertisedServices, id)
         }
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork,
-                        withTimestamper: NodeInfo?, val id: Int) : AbstractNode(dir, config, withTimestamper, Clock.systemUTC()) {
+                        withTimestamper: NodeInfo?, advertisedServices: Set<ServiceType>,
+                        val id: Int) : AbstractNode(dir, config, withTimestamper, advertisedServices, Clock.systemUTC()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -101,8 +101,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, withTimestamper, id).start()
-        node.info.advertisedServices = advertisedServices
+        val node = nodeFactory.create(path, config, this, withTimestamper, advertisedServices, id).start()
         _nodes.add(node)
         return node
     }

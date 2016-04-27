@@ -5,6 +5,7 @@ import core.node.CityDatabase
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.PhysicalLocation
+import core.node.services.ServiceType
 import core.protocols.ProtocolLogic
 import core.then
 import core.utilities.ProgressTracker
@@ -32,14 +33,15 @@ abstract class Simulation(val runAsync: Boolean,
     // This puts together a mock network of SimulatedNodes.
 
     open class SimulatedNode(dir: Path, config: NodeConfiguration, mockNet: MockNetwork,
-                             withTimestamper: NodeInfo?, id: Int) : MockNetwork.MockNode(dir, config, mockNet, withTimestamper, id) {
+                             withTimestamper: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int)
+    : MockNetwork.MockNode(dir, config, mockNet, withTimestamper, advertisedServices, id) {
         override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
     }
 
     inner class BankFactory : MockNetwork.Factory {
         var counter = 0
 
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
             val letter = 'A' + counter
             val city = bankLocations[counter++ % bankLocations.size]
             val cfg = object : NodeConfiguration {
@@ -48,7 +50,7 @@ abstract class Simulation(val runAsync: Boolean,
                 override val exportJMXto: String = ""
                 override val nearestCity: String = city
             }
-            return SimulatedNode(dir, cfg, network, timestamperAddr, id)
+            return SimulatedNode(dir, cfg, network, timestamperAddr, advertisedServices, id)
         }
 
         fun createAll(): List<SimulatedNode> = bankLocations.map { network.createNode(timestamper.info, nodeFactory = this) as SimulatedNode }
@@ -57,25 +59,25 @@ abstract class Simulation(val runAsync: Boolean,
     val bankFactory = BankFactory()
 
     object TimestampingNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
             val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Timestamping Service"   // A magic string recognised by the CP contract
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Zurich"
             }
-            return SimulatedNode(dir, cfg, network, timestamperAddr, id)
+            return SimulatedNode(dir, cfg, network, timestamperAddr, advertisedServices, id)
         }
     }
 
     object RatesOracleFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
             val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Rates Service Provider"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Madrid"
             }
 
-            val n = object : SimulatedNode(dir, cfg, network, timestamperAddr, id) {
+            val n = object : SimulatedNode(dir, cfg, network, timestamperAddr, advertisedServices, id) {
                 override fun makeInterestRatesOracleService() {
                     super.makeInterestRatesOracleService()
                     interestRatesService.upload(javaClass.getResourceAsStream("example.rates.txt"))
@@ -86,14 +88,14 @@ abstract class Simulation(val runAsync: Boolean,
     }
 
     object RegulatorFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, id: Int): MockNetwork.MockNode {
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, timestamperAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
             val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Regulator A"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Paris"
             }
 
-            val n = object : SimulatedNode(dir, cfg, network, timestamperAddr, id) {
+            val n = object : SimulatedNode(dir, cfg, network, timestamperAddr, advertisedServices, id) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
                 //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
                 //       But that's fine for visualisation purposes.

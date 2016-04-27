@@ -22,6 +22,7 @@ import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import kotlin.system.exitProcess
 
 // IRS DEMO
@@ -66,11 +67,13 @@ fun main(args: Array<String>) {
     }
 
     val config = loadConfigFile(configFile)
-
+    val advertisedServices = HashSet<ServiceType>()
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
 
     // The timestamping node runs in the same process as the one that passes null to Node constructor.
     val timestamperId = if (options.valueOf(timestamperNetAddr).equals(options.valueOf(networkAddressArg))) {
+        // This node provides timestamping services
+        advertisedServices.add(TimestamperService.Type)
         null
     } else {
         try {
@@ -82,6 +85,7 @@ fun main(args: Array<String>) {
 
     // The timestamping node runs in the same process as the one that passes null to Node constructor.
     val rateOracleId = if (options.valueOf(rateOracleNetAddr).equals(options.valueOf(networkAddressArg))) {
+        advertisedServices.add(NodeInterestRates.Type)
         null
     } else {
         try {
@@ -91,7 +95,7 @@ fun main(args: Array<String>) {
         }
     }
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, DemoClock()).start() }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, timestamperId, advertisedServices, DemoClock()).start() }
 
     // Add self to network map
     (node.services.networkMapCache as MockNetworkMapCache).addRegistration(node.info)

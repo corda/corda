@@ -7,6 +7,7 @@ import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.services.ArtemisMessagingService
 import core.node.services.NodeInterestRates
+import core.node.services.ServiceType
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
 import core.utilities.BriefLogFormatter
@@ -59,13 +60,14 @@ fun main(args: Array<String>) {
     val rateTolerance = BigDecimal(options.valueOf(rateToleranceArg))
 
     // Bring up node.
+    var advertisedServices: Set<ServiceType> = emptySet()
     val myNetAddr = ArtemisMessagingService.toHostAndPort(options.valueOf(networkAddressArg))
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
         override val exportJMXto: String = "http"
         override val nearestCity: String = "Atlantis"
     }
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, null).start() }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, null, advertisedServices).start() }
 
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionBuilder()
