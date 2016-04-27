@@ -3,6 +3,8 @@ package core.crypto
 import com.google.common.io.BaseEncoding
 import core.Party
 import core.serialization.OpaqueBytes
+import core.serialization.SerializedBytes
+import core.serialization.deserialize
 import java.math.BigInteger
 import java.security.*
 import java.security.interfaces.ECPublicKey
@@ -60,6 +62,40 @@ open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueByte
     }
 
     class LegallyIdentifiable(val signer: Party, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
+}
+
+/**
+ * A serialized piece of data and its signature. Enforces signature validity in order to deserialize the data
+ * contained within.
+ *
+ * @param raw the raw serialized data
+ * @param sig the (unverified) signature for the data
+ */
+open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignature.WithKey) {
+    /**
+     * Return the deserialized data if the signature can be verified.
+     *
+     * @throws IllegalArgumentException if the data is invalid (only used if verifyData() is overloaded).
+     * @throws SignatureException if the signature is invalid.
+     */
+    @Throws(SignatureException::class)
+    fun verified(): T {
+        sig.by.verifyWithECDSA(raw.bits, sig)
+        val data = raw.deserialize()
+        verifyData(data)
+        return data
+    }
+
+    /**
+     * Verify the wrapped data after the signature has been verified and the data deserialised. Provided as an extension
+     * point for subclasses.
+     *
+     * @throws IllegalArgumentException if the data is invalid.
+     */
+    @Throws(IllegalArgumentException::class)
+    open protected fun verifyData(data: T) {
+        // By default we accept anything
+    }
 }
 
 object NullPublicKey : PublicKey, Comparable<PublicKey> {
