@@ -17,7 +17,8 @@ import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
-import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
+import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants.HOST_PROP_NAME
+import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants.PORT_PROP_NAME
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
@@ -91,12 +92,13 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
     // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
     private val undeliveredMessages = CopyOnWriteArrayList<Message>()
 
-    private fun getSendClient(addr: Address): ClientProducer {
+    private fun getSendClient(address: Address): ClientProducer {
         return mutex.locked {
-            sendClients.getOrPut(addr) {
-                maybeSetupConnection(addr.hostAndPort)
-                val qName = addr.hostAndPort.toString()
-                session.createProducer(qName)
+            sendClients.getOrPut(address) {
+                if (address != myAddress) {
+                    maybeSetupConnection(address.hostAndPort)
+                }
+                session.createProducer(address.hostAndPort.toString())
             }
         }
     }
@@ -144,15 +146,15 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
                 }
                 val topic = message.getStringProperty(TOPIC_PROPERTY)
 
-                val bits = ByteArray(message.bodySize)
-                message.bodyBuffer.readBytes(bits)
+                val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
                 val msg = object : Message {
                     override val topic = topic
-                    override val data: ByteArray = bits
+                    override val data: ByteArray = body
                     override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
                     override val debugMessageID: String = message.messageID.toString()
-                    override fun serialise(): ByteArray = bits
+                    override fun serialise(): ByteArray = body
+                    override fun toString() = topic + "#" + String(data)
                 }
 
                 deliverMessage(msg)
@@ -302,8 +304,8 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
                         ConnectionDirection.OUTBOUND -> NettyConnectorFactory::class.java.name
                     },
                     mapOf(
-                            TransportConstants.HOST_PROP_NAME to host,
-                            TransportConstants.PORT_PROP_NAME to port.toInt()
+                            HOST_PROP_NAME to host,
+                            PORT_PROP_NAME to port.toInt()
                     )
             )
 

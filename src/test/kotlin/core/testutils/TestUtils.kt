@@ -3,13 +3,15 @@
 package core.testutils
 
 import com.google.common.base.Throwables
+import com.google.common.net.HostAndPort
 import contracts.*
 import core.*
 import core.crypto.*
 import core.node.services.DummyTimestampingAuthority
-import core.testing.MockIdentityService
 import core.serialization.serialize
+import core.testing.MockIdentityService
 import core.visualiser.GraphVisualiser
+import java.net.ServerSocket
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Instant
@@ -25,6 +27,11 @@ inline fun <R> rootCauseExceptions(body: () -> R): R {
     } catch(e: Exception) {
         throw Throwables.getRootCause(e)
     }
+}
+
+fun freeLocalHostAndPort(): HostAndPort {
+    val freePort = ServerSocket(0).use { it.localPort }
+    return HostAndPort.fromParts("localhost", freePort)
 }
 
 object TestUtils {

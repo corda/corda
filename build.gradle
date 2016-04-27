@@ -118,6 +118,7 @@ dependencies {
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
+    testCompile 'org.assertj:assertj-core:3.4.1'
 }
 
 // These lines tell Gradle to add a couple of JVM command line arguments to unit test and program runs, which set up
