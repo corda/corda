@@ -17,6 +17,7 @@ build-arch := $(shell uname -m \
 build-platform := \
 	$(shell uname -s | tr [:upper:] [:lower:] \
 		| sed \
+			-e 's/^mingw32.*$$/mingw32/' \
 			-e 's/^cygwin.*$$/cygwin/' \
 			-e 's/^darwin.*$$/macosx/')
 
@@ -24,7 +25,7 @@ arch = $(build-arch)
 target-arch = $(arch)
 
 bootimage-platform = \
-	$(subst cygwin,windows,$(build-platform))
+	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 
 platform = $(bootimage-platform)
 
@@ -148,7 +149,7 @@ windows-path = echo
 
 path-separator = :
 
-ifneq (,$(filter cygwin,$(build-platform)))
+ifneq (,$(filter mingw32 cygwin,$(build-platform)))
 	path-separator = ;
 endif
 
@@ -415,6 +416,14 @@ endif
 
 input = List
 
+ifeq ($(use-clang),true)
+	build-cxx = clang++ -std=c++11
+	build-cc = clang
+else
+	build-cxx = g++
+	build-cc = gcc
+endif
+
 mflag =
 ifneq ($(kernel),darwin)
 	ifeq ($(arch),i386)
@@ -425,18 +434,10 @@ ifneq ($(kernel),darwin)
 	endif
 endif
 
-ifeq ($(use-clang),true)
-	build-cxx = clang++ -std=c++11
-	build-cc = clang
-else
-	build-cxx = g++ $(mflag)
-	build-cc = gcc $(mflag)
-endif
-
 target-format = elf
 
-cxx = $(build-cxx)
-cc = $(build-cc)
+cxx = $(build-cxx) $(mflag)
+cc = $(build-cc) $(mflag)
 
 ar = ar
 ranlib = ranlib
@@ -682,15 +683,15 @@ ifeq ($(platform),android)
 
 	build-cflags = $(common-cflags) -I$(src)
 	build-lflags = -lz -lpthread
-	ifeq ($(subst cygwin,windows,$(build-platform)),windows)
-		toolchain-host-platform = $(subst cygwin,windows,$(build-platform))
+	ifeq ($(subst cygwin,windows,$(subst mingw32,windows,$(build-platform))),windows)
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 		build-system = windows
 		build-cxx = i686-w64-mingw32-g++
 		build-cc = i686-w64-mingw32-gcc
 		sysroot = "$$(cygpath -w "$(ndk)/platforms/android-$(android-version)/arch-arm")"
 		build-cflags += "-I$(JAVA_HOME)/include/win32"
 	else
-		toolchain-host-platform = $(subst cygwin,windows,$(build-platform))-*
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))-*
 		sysroot = $(ndk)/platforms/android-$(android-version)/arch-arm
 		build-cflags += "-I$(JAVA_HOME)/include/linux"
 		build-lflags += -ldl
@@ -918,7 +919,7 @@ ifeq ($(platform),windows)
 
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -U__STRICT_ANSI__
 
-	ifeq (,$(filter cygwin,$(build-platform)))
+	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
 		prefix := $(shell i686-w64-mingw32-gcc --version >/dev/null 2>&1 \
 			&& echo i686-w64-mingw32- || echo x86_64-w64-mingw32-)

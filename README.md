@@ -21,6 +21,12 @@ to use forward slashes in the path.
     $ make
     $ build/macosx-x86_64/avian -cp build/macosx-x86_64/test Hello
 
+#### on Windows (MSYS):
+    $ git clone git@github.com:ReadyTalk/win64.git ../win64
+    $ export JAVA_HOME="C:/Program Files/Java/jdk1.7.0_45"
+    $ make
+    $ build/windows-x86_64/avian -cp build/windows-x86_64/test Hello
+
 #### on Windows (Cygwin):
     $ git clone git@github.com:ReadyTalk/win64.git ../win64
     $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.7.0_45"
@@ -174,7 +180,17 @@ devices.  See [here](https://github.com/ReadyTalk/hello-ios) for an
 example of an Xcode project for iOS which uses Avian.
 
 If you are compiling for Windows, you may either cross-compile using
-MinGW or build natively on Windows under Cygwin.
+MinGW or build natively on Windows under MSYS or Cygwin.
+
+#### Installing MSYS:
+
+  __1.__ Download and install the current MinGW and MSYS packages from
+  mingw.org, selecting the C and C++ compilers when prompted.  Use the
+  post-install script to create the filesystem link to the compiler.
+
+  __2.__ Download GNU Make 3.81 from the MSYS download page
+  (make-3.81-MSYS-1.0.11-2.tar.bz2) and extract the tar file into
+  _e.g. c:/msys/1.0_.
 
 #### Installing Cygwin:
 
