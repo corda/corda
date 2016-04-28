@@ -3,6 +3,8 @@ package core
 import com.codahale.metrics.MetricRegistry
 import core.crypto.*
 import core.messaging.MessagingService
+import core.node.ServiceHub
+import core.node.subsystems.*
 import core.node.services.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize

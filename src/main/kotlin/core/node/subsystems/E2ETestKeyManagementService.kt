@@ -1,7 +1,8 @@
-package core.node.services
+package core.node.subsystems
 
 import core.ThreadBox
 import core.crypto.generateKeyPair
+import core.node.subsystems.KeyManagementService
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey

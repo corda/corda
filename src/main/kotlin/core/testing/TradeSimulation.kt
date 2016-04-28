@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import contracts.CommercialPaper
 import core.*
-import core.node.services.NodeWalletService
+import core.node.subsystems.NodeWalletService
 import core.utilities.BriefLogFormatter
 import protocols.TwoPartyTradeProtocol
 import java.time.Instant

@@ -2,6 +2,7 @@ package core.node.services
 
 import core.messaging.Message
 import core.messaging.MessagingService
+import core.node.subsystems.TOPIC_DEFAULT_POSTFIX
 import core.serialization.deserialize
 import core.serialization.serialize
 import protocols.AbstractRequestMessage

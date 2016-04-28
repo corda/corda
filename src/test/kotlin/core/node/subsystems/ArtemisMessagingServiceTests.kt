@@ -1,7 +1,8 @@
-package core.node.services
+package core.node.subsystems
 
 import core.messaging.Message
 import core.messaging.MessageRecipients
+import core.node.subsystems.ArtemisMessagingService
 import core.testutils.freeLocalHostAndPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

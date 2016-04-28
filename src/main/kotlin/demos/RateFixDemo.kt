@@ -5,7 +5,7 @@ import core.*
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeInfo
-import core.node.services.ArtemisMessagingService
+import core.node.subsystems.ArtemisMessagingService
 import core.node.services.NodeInterestRates
 import core.node.services.ServiceType
 import core.serialization.deserialize

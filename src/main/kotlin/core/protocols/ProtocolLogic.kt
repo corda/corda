@@ -2,7 +2,7 @@ package core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import core.messaging.MessageRecipients
-import core.node.services.ServiceHub
+import core.node.ServiceHub
 import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData
 import org.slf4j.Logger

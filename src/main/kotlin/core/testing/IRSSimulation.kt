@@ -8,7 +8,7 @@ import contracts.InterestRateSwap
 import core.*
 import core.crypto.SecureHash
 import core.testing.MockIdentityService
-import core.node.services.linearHeadsOfType
+import core.node.subsystems.linearHeadsOfType
 import core.utilities.JsonSupport
 import protocols.TwoPartyDealProtocol
 import java.time.LocalDate

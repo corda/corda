@@ -11,6 +11,8 @@ import core.messaging.MessageRecipients
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
 import core.node.NodeInfo
+import core.node.subsystems.NetworkMapCache
+import core.node.subsystems.TOPIC_DEFAULT_POSTFIX
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
