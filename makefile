@@ -3,7 +3,7 @@ MAKEFLAGS = -s
 name = avian
 version := $(shell grep version gradle.properties | cut -d'=' -f2)
 
-java-version := $(shell $(JAVA_HOME)/bin/java -version 2>&1 \
+java-version := $(shell "$(JAVA_HOME)/bin/java" -version 2>&1 \
 	| head -n 1 \
 	| sed 's/.*version "1.\([^.]*\).*/\1/')
 
@@ -17,6 +17,7 @@ build-arch := $(shell uname -m \
 build-platform := \
 	$(shell uname -s | tr [:upper:] [:lower:] \
 		| sed \
+			-e 's/^mingw64.*$$/mingw32/' \
 			-e 's/^mingw32.*$$/mingw32/' \
 			-e 's/^cygwin.*$$/cygwin/' \
 			-e 's/^darwin.*$$/macosx/')
