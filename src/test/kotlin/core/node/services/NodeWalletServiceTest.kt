@@ -1,4 +1,4 @@
-package core.node
+package core.node.services
 
 import contracts.Cash
 import core.*
