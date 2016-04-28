@@ -144,6 +144,7 @@ interface Contract {
      * rather than an argument so that additional data can be added without breaking binary compatibility with
      * existing contract code.
      */
+    @Throws(IllegalArgumentException::class)
     fun verify(tx: TransactionForVerification)
 
     /**
