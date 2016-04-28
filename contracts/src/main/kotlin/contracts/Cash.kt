@@ -130,14 +130,7 @@ class Cash : Contract {
                         (inputAmount == outputAmount + amountExitingLedger)
             }
 
-            // Now check the digital signatures on the move command. Every input has an owning public key, and we must
-            // see a signature from each of those keys. The actual signatures have been verified against the transaction
-            // data by the platform before execution.
-            val owningPubKeys = inputs.map { it.owner }.toSet()
-            val keysThatSigned = tx.commands.requireSingleCommand<Commands.Move>().signers.toSet()
-            requireThat {
-                "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
-            }
+            verifyMoveCommand<Commands.Move>(inputs, tx)
         }
     }
 
