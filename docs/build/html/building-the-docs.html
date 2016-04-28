@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
@@ -9,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; R3 Prototyping latest documentation</title>
+  <title>Building the documentation &mdash; R3 Prototyping latest documentation</title>
   
 
   
@@ -31,7 +30,8 @@
   
 
   
-    <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/> 
+    <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
+        <link rel="prev" title="Code style guide" href="codestyle.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -101,10 +101,14 @@
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Building the documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#build">Build</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -127,7 +131,7 @@
         <div class="rst-content">
           
 
-
+ 
 
 
 
@@ -135,9 +139,11 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li></li>
+    <li>Building the documentation</li>
       <li class="wy-breadcrumbs-aside">
         
+          
+            <a href="_sources/building-the-docs.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -147,17 +153,62 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- 
+  <div class="section" id="building-the-documentation">
+<h1>Building the documentation<a class="headerlink" href="#building-the-documentation" title="Permalink to this headline">¶</a></h1>
+<p>The documentation is under the <code class="docutils literal"><span class="pre">docs</span></code> folder, and is written in reStructuredText format. Documentation in HTML format
+is pre-generated, as well as code documentation, and this can be done automatically via a provided script.</p>
+<div class="section" id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<p>To build the documentation, you will need:</p>
+<ul class="simple">
+<li>GNU Make</li>
+<li>Python and pip (tested with Python 2.7.10)</li>
+<li>Dokka: <a class="reference external" href="https://github.com/Kotlin/dokka">https://github.com/Kotlin/dokka</a></li>
+<li>Sphinx: <a class="reference external" href="http://www.sphinx-doc.org/">http://www.sphinx-doc.org/</a></li>
+<li>sphinx_rtd_theme: <a class="reference external" href="https://github.com/snide/sphinx_rtd_theme">https://github.com/snide/sphinx_rtd_theme</a></li>
+</ul>
+<p>The Dokka JAR file needs to be placed under the <code class="docutils literal"><span class="pre">lib</span></code> directory within the <code class="docutils literal"><span class="pre">r3prototyping</span></code> directory, in order for the
+script to find it, as in:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>r3prototyping/lib/dokka.jar
+</pre></div>
+</div>
+<p>Note that to install under OS X El Capitan, you will need to tell pip to install under <code class="docutils literal"><span class="pre">/usr/local</span></code>, which can be
+done by specifying the installation target on the command line:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>sudo -H pip install --install-option <span class="s1">&#39;--install-data=/usr/local&#39;</span> Sphinx
+sudo -H pip install --install-option <span class="s1">&#39;--install-data=/usr/local&#39;</span> sphinx_rtd_theme
+</pre></div>
+</div>
+</div>
+<div class="section" id="build">
+<h2>Build<a class="headerlink" href="#build" title="Permalink to this headline">¶</a></h2>
+<p>Once the requirements are installed, you can automatically build the HTML format user documentation and the API
+documentation by running the following script:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>scripts/generate-docsite.sh
+</pre></div>
+</div>
+<p>Alternatively you can build non-HTML formats from the <code class="docutils literal"><span class="pre">docs</span></code> folder. Change directory to the folder and then run the
+following to see a list of all available formats:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>make
+</pre></div>
+</div>
+<p>For example to produce the documentation in HTML format:</p>
+<div class="highlight-shell"><div class="highlight"><pre><span></span>make html
+</pre></div>
+</div>
+</div>
 </div>
 
 
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="codestyle.html" class="btn btn-neutral" title="Code style guide" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>
