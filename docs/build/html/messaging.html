@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
-    <link rel="next" title="Running the demos" href="running-the-demos.html"/>
+        <link rel="next" title="Running the demos" href="running-the-demos.html"/>
         <link rel="prev" title="Data model" href="data-model.html"/> 
 
   
@@ -94,9 +94,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#messaging-vs-networking">Messaging vs networking</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#in-memory-implementation">In memory implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#network-map-service">Network Map Service</a></li>
 </ul>
 </li>
-    <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
 </ul>
@@ -110,6 +111,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
 
             
@@ -237,6 +239,30 @@ sit around waiting for messages to be delivered. Handlers will then be invoked o
 more difficult style of programming that can be used to increase the realism of the unit tests by ensuring multiple
 nodes run in parallel, just as they would on a real network spread over multiple machines.</p>
 </div>
+<div class="section" id="network-map-service">
+<h2>Network Map Service<a class="headerlink" href="#network-map-service" title="Permalink to this headline">¶</a></h2>
+<p>Supporting the messaging layer is a network map service, which is responsible for tracking public nodes on the network.
+Nodes have an internal component, the network map cache, which contains a copy of the network map. When a node starts up
+its cache fetches a copy of the full network map, and requests to be notified of changes. The node then registers itself
+with the network map service, and the service notifies subscribers that a new node has joined the network. Nodes do not
+automatically deregister themselves, so far (for example) nodes going offline briefly for maintenance</p>
+<p>Nodes submit signed changes to the map service, which then forwards them on to nodes which have requested to be notified
+of changes. This process achieves basic consensus of the overall network map, although currently it has no formal
+process for identifying or recovering from issues such as network outages. Later versions are planned to address this.</p>
+<p>Registration change notifications contain a serial number, which indicates their relative ordering, similar to the
+serial number on DNS records. These numbers must increase with each change, but are not expected to be sequential.
+Changes are then signed by the party whom the node represents to confirm the association between party and node.
+The change, signature and public key are then sent to the network map service, which verifies the signature and then
+updates the network map accordingly.</p>
+<p>The network map cache currently supports:</p>
+<ul class="simple">
+<li>Looking up nodes by service</li>
+<li>Looking up node for a party</li>
+<li>Suggesting a node providing a specific service, based on suitability for a contract and parties, for example suggesting</li>
+</ul>
+<p>an appropriate interest rates oracle for a interest rate swap contract. Currently no recommendation logic is in place
+(the code simply picks the first registered node that supports the required service), however.</p>
+</div>
 </div>
 
 
@@ -245,9 +271,8 @@ nodes run in parallel, just as they would on a real network spread over multiple
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-
-        <a href="running-the-demos.html" class="btn btn-neutral float-right" title="Running the demos" accesskey="n">Next
-            <span class="fa fa-arrow-circle-right"></span></a>
+      
+        <a href="running-the-demos.html" class="btn btn-neutral float-right" title="Running the demos" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="data-model.html" class="btn btn-neutral" title="Data model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

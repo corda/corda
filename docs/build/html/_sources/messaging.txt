@@ -94,4 +94,29 @@ sit around waiting for messages to be delivered. Handlers will then be invoked o
 more difficult style of programming that can be used to increase the realism of the unit tests by ensuring multiple
 nodes run in parallel, just as they would on a real network spread over multiple machines.
 
+Network Map Service
+-------------------
 
+Supporting the messaging layer is a network map service, which is responsible for tracking public nodes on the network.
+Nodes have an internal component, the network map cache, which contains a copy of the network map. When a node starts up
+its cache fetches a copy of the full network map, and requests to be notified of changes. The node then registers itself
+with the network map service, and the service notifies subscribers that a new node has joined the network. Nodes do not
+automatically deregister themselves, so far (for example) nodes going offline briefly for maintenance
+
+Nodes submit signed changes to the map service, which then forwards them on to nodes which have requested to be notified
+of changes. This process achieves basic consensus of the overall network map, although currently it has no formal
+process for identifying or recovering from issues such as network outages. Later versions are planned to address this.
+
+Registration change notifications contain a serial number, which indicates their relative ordering, similar to the
+serial number on DNS records. These numbers must increase with each change, but are not expected to be sequential.
+Changes are then signed by the party whom the node represents to confirm the association between party and node.
+The change, signature and public key are then sent to the network map service, which verifies the signature and then
+updates the network map accordingly.
+
+The network map cache currently supports:
+
+* Looking up nodes by service
+* Looking up node for a party
+* Suggesting a node providing a specific service, based on suitability for a contract and parties, for example suggesting
+an appropriate interest rates oracle for a interest rate swap contract. Currently no recommendation logic is in place
+(the code simply picks the first registered node that supports the required service), however.
