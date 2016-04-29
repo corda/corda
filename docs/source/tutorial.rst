@@ -245,46 +245,41 @@ run two contracts one time each: Cash and CommercialPaper.
 
       override fun verify(tx: TransactionForVerification) {
           // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
-          val groups = tx.groupStates<State>() { it.withoutOwner() }
+          val groups = tx.groupStates() { it: State -> it.withoutOwner() }
           val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
 
    .. sourcecode:: java
 
       @Override
       public void verify(@NotNull TransactionForVerification tx) {
-          List<InOutGroup<State>> groups = tx.groupStates(State.class, State::withoutOwner);
+          List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
           AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
-We start by using the ``groupStates`` method, which takes a type and a function (in functional programming a function
-that takes another function as an argument is called a *higher order function*). State grouping is a way of handling
-*fungibility* in a contract, which is explained next. The second line does what the code suggests: it searches for
+We start by using the ``groupStates`` method, which takes a type and a function. State grouping is a way of ensuring
+your contract can handle multiple unrelated states of the same type in the same transaction, which is needed for
+splitting/merging of assets, atomic swaps and so on. The second line does what the code suggests: it searches for
 a command object that inherits from the ``CommercialPaper.Commands`` supertype, and either returns it, or throws an
 exception if there's zero or more than one such command.
 
-Understanding fungibility
--------------------------
+Using state groups
+------------------
 
-We say states are *fungible* if they are treated identically to each other by the recipient, despite the fact that they
-aren't quite identical. Dollar bills are fungible because even though one may be worn/a bit dirty and another may
-be crisp and new, they are still both worth exactly $1. Likewise, ten $1 bills are almost exactly equivalent to
-one $10 bill. On the other hand, $10 and £10 are not fungible: if you tried to pay for something that cost £20 with
-$10+£10 notes your trade would not be accepted.
+The simplest way to write a smart contract would be to say that each transaction can have a single input state and a
+single output state of the kind govered by that contract. This would be easy for the developer, but would prevent many
+important use cases.
 
-So whilst our ledger could represent every monetary amount with a collection of states worth one penny, this would become
-extremely unwieldy. It's better to allow states to represent varying amounts and then define rules for merging them
-and splitting them. Similarly, we could also have considered modelling cash as a single contract that records the
-ownership of all holders of a given currency from a given issuer. Whilst this is possible, and is effectively how
-some other platforms work, this prototype favours a design that doesn't necessarily require state to be shared between
-multiple actors if they don't have a direct relationship with each other (as would implicitly be required if we had a
-single state representing multiple people's ownership). Keeping the states separated also has scalability benefits, as
-different parts of the global transaction graph can be updated in parallel.
+The next easiest way to write a contract would be to iterate over each input state and expect it to have an output
+state. Now you can build a single transaction that, for instance, moves two different cash states in different currencies
+simultaneously. But it gets complicated when you want to issue or exit one state at the same time as moving another.
+
+Things get harder still once you want to split and merge states. We say states are *fungible* if they are
+treated identically to each other by the recipient, despite the fact that they aren't quite identical. Dollar bills are
+fungible because even though one may be worn/a bit dirty and another may be crisp and new, they are still both worth
+exactly $1. Likewise, ten $1 bills are almost exactly equivalent to one $10 bill. On the other hand, $10 and £10 are not
+fungible: if you tried to pay for something that cost £20 with $10+£10 notes your trade would not be accepted.
 
 To make all this easier the contract API provides a notion of groups. A group is a set of input states and output states
-that should be checked for validity independently. It solves the following problem: because every contract sees every
-input and output state in a transaction, it would easy to accidentally write a contract that disallows useful
-combinations of states. For example, our cash contract might end up lazily assuming there's only one currency involved
-in a transaction, whereas in reality we would like the ability to model a currency trade in which two parties contribute
-inputs of different currencies, and both parties get outputs of the opposite currency.
+that should be checked for validity together.
 
 Consider the following simplified currency trade transaction:
 
@@ -304,11 +299,65 @@ given type (as the transaction may include other types of state, such as states 
 multi-sig state) and then it takes a function that maps a state to a grouping key. All states that share the same key are
 grouped together. In the case of the cash example above, the grouping key would be the currency.
 
-In our commercial paper contract, we don't want CP to be fungible: merging and splitting is (in our example) not allowed.
-So we just use a copy of the state minus the owner field as the grouping key. As a result, a single transaction can
-trade many different pieces of commercial paper in a single atomic step.
+In other kinds of contract, we don't want CP to be fungible: merging and splitting is (in our example) not allowed.
+So we just use a copy of the state minus the owner field as the grouping key.
 
-A group may have zero inputs or zero outputs: this can occur when issuing assets onto the ledger, or removing them.
+Here are some code examples:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      // Type of groups is List<InOutGroup<State, Pair<PartyReference, Currency>>>
+      val groups = tx.groupStates() { it: Cash.State -> Pair(it.deposit, it.amount.currency) }
+      for ((inputs, outputs, key) in groups) {
+          // Either inputs or outputs could be empty.
+          val (deposit, currency) = key
+
+          ...
+      }
+
+   .. sourcecode:: java
+
+      List<InOutGroup<State, Pair<PartyReference, Currency>>> groups = tx.groupStates(Cash.State.class, s -> Pair(s.deposit, s.amount.currency))
+      for (InOutGroup<State, Pair<PartyReference, Currency>> group : groups) {
+          List<State> inputs = group.getInputs();
+          List<State> outputs = group.getOutputs();
+          Pair<PartyReference, Currency> key = group.getKey();
+
+          ...
+      }
+
+The ``groupStates`` call uses the provided function to calculate a "grouping key". All states that have the same
+grouping key are placed in the same group. A grouping key can be anything that implements equals/hashCode, but it's
+always an aggregate of the fields that shouldn't change between input and output. In the above example we picked the
+fields we wanted and packed them into a ``Pair``. It returns a list of ``InOutGroup``s, which is just a holder for the
+inputs, outputs and the key that was used to define the group. In the Kotlin version we unpack these using destructuring
+to get convenient access to the inputs, the outputs, the deposit data and the currency. The Java version is more
+verbose, but equivalent.
+
+The rules can then be applied to the inputs and outputs as if it were a single transaction. A group may have zero
+inputs or zero outputs: this can occur when issuing assets onto the ledger, or removing them.
+
+In this example, we do it differently and use the state class itself as the aggregator. We just
+blank out fields that are allowed to change, making the grouping key be "everything that isn't that":
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      val groups = tx.groupStates() { it: State -> it.withoutOwner() }
+
+   .. sourcecode:: java
+
+      List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
+
+For large states with many fields that must remain constant and only one or two that are really mutable, it's often
+easier to do things this way than to specifically name each field that must stay the same. The ``withoutOwner`` function
+here simply returns a copy of the object but with the ``owner`` field set to ``NullPublicKey``, which is just a public key
+of all zeros. It's invalid and useless, but that's OK, because all we're doing is preventing the field from mattering
+in equals and hashCode.
+
 
 Checking the requirements
 -------------------------
