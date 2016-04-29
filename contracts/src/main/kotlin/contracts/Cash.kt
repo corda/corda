@@ -43,7 +43,7 @@ class Cash : Contract {
      * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
      * that is inconsistent with the legal contract
      */
-    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html");
+    override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
 
     /** A state representing a cash claim against some party */
     data class State(
