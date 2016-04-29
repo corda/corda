@@ -101,7 +101,8 @@ Supporting the messaging layer is a network map service, which is responsible fo
 Nodes have an internal component, the network map cache, which contains a copy of the network map. When a node starts up
 its cache fetches a copy of the full network map, and requests to be notified of changes. The node then registers itself
 with the network map service, and the service notifies subscribers that a new node has joined the network. Nodes do not
-automatically deregister themselves, so far (for example) nodes going offline briefly for maintenance
+automatically deregister themselves, so (for example) nodes going offline briefly for maintenance are retained in the
+network map, and messages for them will be queued, minimising disruption.
 
 Nodes submit signed changes to the map service, which then forwards them on to nodes which have requested to be notified
 of changes. This process achieves basic consensus of the overall network map, although currently it has no formal
