@@ -9,7 +9,7 @@ import core.WireTransaction
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.node.AbstractNode
-import core.node.services.linearHeadsOfType
+import core.node.subsystems.linearHeadsOfType
 import core.protocols.ProtocolLogic
 import core.serialization.SerializedBytes
 import core.utilities.ANSIProgressRenderer

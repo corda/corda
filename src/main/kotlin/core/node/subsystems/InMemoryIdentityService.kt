@@ -1,6 +1,7 @@
-package core.node.services
+package core.node.subsystems
 
 import core.Party
+import core.node.services.IdentityService
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe

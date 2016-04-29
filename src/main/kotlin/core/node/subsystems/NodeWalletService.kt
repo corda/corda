@@ -1,9 +1,12 @@
-package core.node.services
+package core.node.subsystems
 
 import com.codahale.metrics.Gauge
 import contracts.Cash
 import core.*
 import core.crypto.SecureHash
+import core.node.ServiceHub
+import core.node.subsystems.Wallet
+import core.node.subsystems.WalletService
 import core.utilities.loggerFor
 import core.utilities.trace
 import java.security.PublicKey

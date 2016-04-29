@@ -1,4 +1,4 @@
-package core.node.services
+package core.node.subsystems
 
 import com.google.common.net.HostAndPort
 import core.RunOnCallerThread
@@ -141,7 +141,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
             // This code runs for every inbound message.
             try {
                 if (!message.containsProperty(TOPIC_PROPERTY)) {
-                    log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
+                    log.warn("Received message without a ${TOPIC_PROPERTY} property, ignoring")
                     return@setMessageHandler
                 }
                 val topic = message.getStringProperty(TOPIC_PROPERTY)

@@ -11,6 +11,7 @@ import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
 import core.messaging.runOnNextMessage
+import core.node.subsystems.*
 import core.node.services.*
 import core.random63BitValue
 import core.serialization.deserialize

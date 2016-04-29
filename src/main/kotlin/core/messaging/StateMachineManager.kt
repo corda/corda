@@ -9,7 +9,7 @@ import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
 import core.crypto.SecureHash
 import core.crypto.sha256
-import core.node.services.ServiceHub
+import core.node.ServiceHub
 import core.protocols.ProtocolLogic
 import core.protocols.ProtocolStateMachine
 import core.serialization.THREAD_LOCAL_KRYO

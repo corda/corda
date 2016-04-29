@@ -8,6 +8,7 @@ import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
+import core.node.subsystems.ArtemisMessagingService
 import core.node.services.*
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter

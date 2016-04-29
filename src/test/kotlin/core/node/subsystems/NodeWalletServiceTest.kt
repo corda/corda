@@ -1,9 +1,9 @@
-package core.node
+package core.node.subsystems
 
 import contracts.Cash
 import core.*
-import core.node.services.NodeWalletService
-import core.node.services.ServiceHub
+import core.node.subsystems.NodeWalletService
+import core.node.ServiceHub
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import org.junit.After

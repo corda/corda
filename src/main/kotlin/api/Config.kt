@@ -1,7 +1,7 @@
 package api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import core.node.services.ServiceHub
+import core.node.ServiceHub
 import core.utilities.JsonSupport
 import javax.ws.rs.ext.ContextResolver
 import javax.ws.rs.ext.Provider

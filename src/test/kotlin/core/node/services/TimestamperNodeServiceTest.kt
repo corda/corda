@@ -1,8 +1,9 @@
-package core.node
+package core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
+import core.node.NodeInfo
 import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.serialize

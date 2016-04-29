@@ -11,7 +11,7 @@ import co.paralleluniverse.common.util.VisibleForTesting
 import core.Party
 import core.crypto.DummyPublicKey
 import core.messaging.SingleMessageRecipient
-import core.node.services.InMemoryNetworkMapCache
+import core.node.subsystems.InMemoryNetworkMapCache
 import core.node.NodeInfo
 
 /**

@@ -6,6 +6,11 @@ import core.*
 import core.crypto.SecureHash
 import core.node.NodeConfiguration
 import core.node.NodeInfo
+import core.node.ServiceHub
+import core.node.subsystems.NodeWalletService
+import core.node.subsystems.StorageService
+import core.node.subsystems.StorageServiceImpl
+import core.node.subsystems.Wallet
 import core.node.services.*
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork
