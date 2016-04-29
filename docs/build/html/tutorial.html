@@ -91,7 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-    <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
 </ul>
@@ -102,7 +102,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#states">States</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-verify-function">The verify function</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#understanding-fungibility">Understanding fungibility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-state-groups">Using state groups</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#checking-the-requirements">Checking the requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-test-your-contract">How to test your contract</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#adding-a-generation-api-to-your-contract">Adding a generation API to your contract</a></li>
@@ -116,6 +116,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
 
             
@@ -372,44 +373,38 @@ run two contracts one time each: Cash and CommercialPaper.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForVerification</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.</span>
-    <span class="k">val</span> <span class="py">groups</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">groupStates</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;()</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">withoutOwner</span><span class="p">()</span> <span class="p">}</span>
+    <span class="k">val</span> <span class="py">groups</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">groupStates</span><span class="p">()</span> <span class="p">{</span> <span class="n">it</span><span class="p">:</span> <span class="n">State</span> <span class="p">-&gt;</span> <span class="n">it</span><span class="p">.</span><span class="n">withoutOwner</span><span class="p">()</span> <span class="p">}</span>
     <span class="k">val</span> <span class="py">command</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">requireSingleCommand</span><span class="p">&lt;</span><span class="n">CommercialPaper</span><span class="p">.</span><span class="n">Commands</span><span class="p">&gt;()</span>
 </pre></div>
 </div>
 <div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Override</span>
 <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verify</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForVerification</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;&gt;</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">State</span><span class="o">::</span><span class="n">withoutOwner</span><span class="o">);</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;&gt;</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">State</span><span class="o">::</span><span class="n">withoutOwner</span><span class="o">);</span>
     <span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">Command</span><span class="o">&gt;</span> <span class="n">cmd</span> <span class="o">=</span> <span class="n">requireSingleCommand</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">(),</span> <span class="n">Commands</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
 </pre></div>
 </div>
 </div>
-<p>We start by using the <code class="docutils literal"><span class="pre">groupStates</span></code> method, which takes a type and a function (in functional programming a function
-that takes another function as an argument is called a <em>higher order function</em>). State grouping is a way of handling
-<em>fungibility</em> in a contract, which is explained next. The second line does what the code suggests: it searches for
+<p>We start by using the <code class="docutils literal"><span class="pre">groupStates</span></code> method, which takes a type and a function. State grouping is a way of ensuring
+your contract can handle multiple unrelated states of the same type in the same transaction, which is needed for
+splitting/merging of assets, atomic swaps and so on. The second line does what the code suggests: it searches for
 a command object that inherits from the <code class="docutils literal"><span class="pre">CommercialPaper.Commands</span></code> supertype, and either returns it, or throws an
 exception if there&#8217;s zero or more than one such command.</p>
 </div>
-<div class="section" id="understanding-fungibility">
-<h2>Understanding fungibility<a class="headerlink" href="#understanding-fungibility" title="Permalink to this headline">¶</a></h2>
-<p>We say states are <em>fungible</em> if they are treated identically to each other by the recipient, despite the fact that they
-aren&#8217;t quite identical. Dollar bills are fungible because even though one may be worn/a bit dirty and another may
-be crisp and new, they are still both worth exactly $1. Likewise, ten $1 bills are almost exactly equivalent to
-one $10 bill. On the other hand, $10 and £10 are not fungible: if you tried to pay for something that cost £20 with
-$10+£10 notes your trade would not be accepted.</p>
-<p>So whilst our ledger could represent every monetary amount with a collection of states worth one penny, this would become
-extremely unwieldy. It&#8217;s better to allow states to represent varying amounts and then define rules for merging them
-and splitting them. Similarly, we could also have considered modelling cash as a single contract that records the
-ownership of all holders of a given currency from a given issuer. Whilst this is possible, and is effectively how
-some other platforms work, this prototype favours a design that doesn&#8217;t necessarily require state to be shared between
-multiple actors if they don&#8217;t have a direct relationship with each other (as would implicitly be required if we had a
-single state representing multiple people&#8217;s ownership). Keeping the states separated also has scalability benefits, as
-different parts of the global transaction graph can be updated in parallel.</p>
+<div class="section" id="using-state-groups">
+<h2>Using state groups<a class="headerlink" href="#using-state-groups" title="Permalink to this headline">¶</a></h2>
+<p>The simplest way to write a smart contract would be to say that each transaction can have a single input state and a
+single output state of the kind govered by that contract. This would be easy for the developer, but would prevent many
+important use cases.</p>
+<p>The next easiest way to write a contract would be to iterate over each input state and expect it to have an output
+state. Now you can build a single transaction that, for instance, moves two different cash states in different currencies
+simultaneously. But it gets complicated when you want to issue or exit one state at the same time as moving another.</p>
+<p>Things get harder still once you want to split and merge states. We say states are <em>fungible</em> if they are
+treated identically to each other by the recipient, despite the fact that they aren&#8217;t quite identical. Dollar bills are
+fungible because even though one may be worn/a bit dirty and another may be crisp and new, they are still both worth
+exactly $1. Likewise, ten $1 bills are almost exactly equivalent to one $10 bill. On the other hand, $10 and £10 are not
+fungible: if you tried to pay for something that cost £20 with $10+£10 notes your trade would not be accepted.</p>
 <p>To make all this easier the contract API provides a notion of groups. A group is a set of input states and output states
-that should be checked for validity independently. It solves the following problem: because every contract sees every
-input and output state in a transaction, it would easy to accidentally write a contract that disallows useful
-combinations of states. For example, our cash contract might end up lazily assuming there&#8217;s only one currency involved
-in a transaction, whereas in reality we would like the ability to model a currency trade in which two parties contribute
-inputs of different currencies, and both parties get outputs of the opposite currency.</p>
+that should be checked for validity together.</p>
 <p>Consider the following simplified currency trade transaction:</p>
 <ul class="simple">
 <li><strong>Input</strong>:  $12,000 owned by Alice   (A)</li>
@@ -426,10 +421,55 @@ be merged together. So we have two groups: A and B.</p>
 given type (as the transaction may include other types of state, such as states representing bond ownership, or a
 multi-sig state) and then it takes a function that maps a state to a grouping key. All states that share the same key are
 grouped together. In the case of the cash example above, the grouping key would be the currency.</p>
-<p>In our commercial paper contract, we don&#8217;t want CP to be fungible: merging and splitting is (in our example) not allowed.
-So we just use a copy of the state minus the owner field as the grouping key. As a result, a single transaction can
-trade many different pieces of commercial paper in a single atomic step.</p>
-<p>A group may have zero inputs or zero outputs: this can occur when issuing assets onto the ledger, or removing them.</p>
+<p>In other kinds of contract, we don&#8217;t want CP to be fungible: merging and splitting is (in our example) not allowed.
+So we just use a copy of the state minus the owner field as the grouping key.</p>
+<p>Here are some code examples:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>// Type of groups is List&lt;InOutGroup&lt;State, Pair&lt;PartyReference, Currency&gt;&gt;&gt;
+val groups = tx.groupStates() { it: Cash.State -&gt; Pair(it.deposit, it.amount.currency) }
+for ((inputs, outputs, key) in groups) {
+    // Either inputs or outputs could be empty.
+    val (deposit, currency) = key
+
+    ...
+}
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">Pair</span><span class="o">&lt;</span><span class="n">PartyReference</span><span class="o">,</span> <span class="n">Currency</span><span class="o">&gt;&gt;&gt;</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">s</span> <span class="o">-&gt;</span> <span class="n">Pair</span><span class="o">(</span><span class="n">s</span><span class="o">.</span><span class="na">deposit</span><span class="o">,</span> <span class="n">s</span><span class="o">.</span><span class="na">amount</span><span class="o">.</span><span class="na">currency</span><span class="o">))</span>
+<span class="k">for</span> <span class="o">(</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">Pair</span><span class="o">&lt;</span><span class="n">PartyReference</span><span class="o">,</span> <span class="n">Currency</span><span class="o">&gt;&gt;</span> <span class="n">group</span> <span class="o">:</span> <span class="n">groups</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">inputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getInputs</span><span class="o">();</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">outputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getOutputs</span><span class="o">();</span>
+    <span class="n">Pair</span><span class="o">&lt;</span><span class="n">PartyReference</span><span class="o">,</span> <span class="n">Currency</span><span class="o">&gt;</span> <span class="n">key</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getKey</span><span class="o">();</span>
+
+    <span class="o">...</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">groupStates</span></code> call uses the provided function to calculate a &#8220;grouping key&#8221;. All states that have the same
+grouping key are placed in the same group. A grouping key can be anything that implements equals/hashCode, but it&#8217;s
+always an aggregate of the fields that shouldn&#8217;t change between input and output. In the above example we picked the
+fields we wanted and packed them into a <code class="docutils literal"><span class="pre">Pair</span></code>. It returns a list of <a href="#id1"><span class="problematic" id="id2">``</span></a>InOutGroup``s, which is just a holder for the
+inputs, outputs and the key that was used to define the group. In the Kotlin version we unpack these using destructuring
+to get convenient access to the inputs, the outputs, the deposit data and the currency. The Java version is more
+verbose, but equivalent.</p>
+<p>The rules can then be applied to the inputs and outputs as if it were a single transaction. A group may have zero
+inputs or zero outputs: this can occur when issuing assets onto the ledger, or removing them.</p>
+<p>In this example, we do it differently and use the state class itself as the aggregator. We just
+blank out fields that are allowed to change, making the grouping key be &#8220;everything that isn&#8217;t that&#8221;:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">groups</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">groupStates</span><span class="p">()</span> <span class="p">{</span> <span class="n">it</span><span class="p">:</span> <span class="n">State</span> <span class="p">-&gt;</span> <span class="n">it</span><span class="p">.</span><span class="n">withoutOwner</span><span class="p">()</span> <span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;&gt;</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">State</span><span class="o">::</span><span class="n">withoutOwner</span><span class="o">);</span>
+</pre></div>
+</div>
+</div>
+<p>For large states with many fields that must remain constant and only one or two that are really mutable, it&#8217;s often
+easier to do things this way than to specifically name each field that must stay the same. The <code class="docutils literal"><span class="pre">withoutOwner</span></code> function
+here simply returns a copy of the object but with the <code class="docutils literal"><span class="pre">owner</span></code> field set to <code class="docutils literal"><span class="pre">NullPublicKey</span></code>, which is just a public key
+of all zeros. It&#8217;s invalid and useless, but that&#8217;s OK, because all we&#8217;re doing is preventing the field from mattering
+in equals and hashCode.</p>
 </div>
 <div class="section" id="checking-the-requirements">
 <h2>Checking the requirements<a class="headerlink" href="#checking-the-requirements" title="Permalink to this headline">¶</a></h2>
