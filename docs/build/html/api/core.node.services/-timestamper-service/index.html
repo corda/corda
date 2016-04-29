@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<title>TimestamperService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">TimestamperService</a><br/>
+<br/>
+<h1>TimestamperService</h1>
+<code><span class="keyword">interface </span><span class="identifier">TimestamperService</span></code><br/>
+<p>Simple interface (for testing) to an abstract timestamping service. Note that this is not "timestamping" in the
+blockchain sense of a total ordering of transactions, but rather, a signature from a well known/trusted timestamping
+service over a transaction that indicates the timestamp in it is accurate. Such a signature may not always be
+necessary: if there are multiple parties involved in a transaction then they can cross-check the timestamp
+themselves.</p>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-type.html">Type</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Type</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="identity.html">identity</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../core/-party/index.html"><span class="identifier">Party</span></a></code><p>The name+pubkey that this timestamper will sign with.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="timestamp.html">timestamp</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">timestamp</span><span class="symbol">(</span><span class="identifier" id="core.node.services.TimestamperService$timestamp(core.serialization.SerializedBytes((core.WireTransaction)))/wtxBytes">wtxBytes</span><span class="symbol">:</span>&nbsp;<a href="../../core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../protocols/-timestamping-protocol/-client/index.html">Client</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TimestamperService</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

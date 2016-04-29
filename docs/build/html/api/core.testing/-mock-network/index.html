@@ -1,0 +1,124 @@
+<HTML>
+<HEAD>
+<title>MockNetwork - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.testing</a>&nbsp;/&nbsp;<a href=".">MockNetwork</a><br/>
+<br/>
+<h1>MockNetwork</h1>
+<code><span class="keyword">class </span><span class="identifier">MockNetwork</span></code><br/>
+<p>A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
+Components that do IO are either swapped out for mocks, or pointed to a <a href="#">Jimfs</a> in memory filesystem.</p>
+<p>Mock network nodes require manual pumping by default: they will not run asynchronous. This means that
+for message exchanges to take place (and associated handlers to run), you must call the <a href="run-network.html">runNetwork</a>
+method.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-default-factory/index.html">DefaultFactory</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">DefaultFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-factory/index.html"><span class="identifier">Factory</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-factory/index.html">Factory</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Factory</span></code><p>Allows customisation of how nodes are created.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-mock-node/index.html">MockNode</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">MockNode</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../core.node/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">MockNetwork</span><span class="symbol">(</span><span class="identifier" id="core.testing.MockNetwork$<init>(kotlin.Boolean, core.testing.MockNetwork.Factory)/threadPerNode">threadPerNode</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork$<init>(kotlin.Boolean, core.testing.MockNetwork.Factory)/defaultFactory">defaultFactory</span><span class="symbol">:</span>&nbsp;<a href="-factory/index.html"><span class="identifier">Factory</span></a>&nbsp;<span class="symbol">=</span>&nbsp;MockNetwork.DefaultFactory<span class="symbol">)</span></code><p>A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
+Components that do IO are either swapped out for mocks, or pointed to a <a href="#">Jimfs</a> in memory filesystem.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="filesystem.html">filesystem</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">filesystem</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="identities.html">identities</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">identities</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="../../core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="messaging-network.html">messagingNetwork</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">messagingNetwork</span><span class="symbol">: </span><a href="../-in-memory-messaging-network/index.html"><span class="identifier">InMemoryMessagingNetwork</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="nodes.html">nodes</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">nodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="-mock-node/index.html"><span class="identifier">MockNode</span></a><span class="symbol">&gt;</span></code><p>A read only view of the current set of executing nodes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="address-to-node.html">addressToNode</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">addressToNode</span><span class="symbol">(</span><span class="identifier" id="core.testing.MockNetwork$addressToNode(core.messaging.SingleMessageRecipient)/address">address</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-mock-node/index.html"><span class="identifier">MockNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="create-node.html">createNode</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createNode</span><span class="symbol">(</span><span class="identifier" id="core.testing.MockNetwork$createNode(core.node.NodeInfo, kotlin.Int, core.testing.MockNetwork.Factory, kotlin.Array((core.node.services.ServiceType)))/networkMapAddress">networkMapAddress</span><span class="symbol">:</span>&nbsp;<a href="../../core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork$createNode(core.node.NodeInfo, kotlin.Int, core.testing.MockNetwork.Factory, kotlin.Array((core.node.services.ServiceType)))/forcedID">forcedID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;-1<span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork$createNode(core.node.NodeInfo, kotlin.Int, core.testing.MockNetwork.Factory, kotlin.Array((core.node.services.ServiceType)))/nodeFactory">nodeFactory</span><span class="symbol">:</span>&nbsp;<a href="-factory/index.html"><span class="identifier">Factory</span></a>&nbsp;<span class="symbol">=</span>&nbsp;defaultFactory<span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="core.testing.MockNetwork$createNode(core.node.NodeInfo, kotlin.Int, core.testing.MockNetwork.Factory, kotlin.Array((core.node.services.ServiceType)))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<a href="../../core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-mock-node/index.html"><span class="identifier">MockNode</span></a></code><p>Returns a started node, optionally created by the passed factory method</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="create-two-nodes.html">createTwoNodes</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createTwoNodes</span><span class="symbol">(</span><span class="identifier" id="core.testing.MockNetwork$createTwoNodes(core.testing.MockNetwork.Factory)/nodeFactory">nodeFactory</span><span class="symbol">:</span>&nbsp;<a href="-factory/index.html"><span class="identifier">Factory</span></a>&nbsp;<span class="symbol">=</span>&nbsp;defaultFactory<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="-mock-node/index.html"><span class="identifier">MockNode</span></a><span class="symbol">,</span>&nbsp;<a href="-mock-node/index.html"><span class="identifier">MockNode</span></a><span class="symbol">&gt;</span></code><p>Sets up a two node network, in which the first node runs network map and timestamping services and the other
+doesnt.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="run-network.html">runNetwork</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">runNetwork</span><span class="symbol">(</span><span class="identifier" id="core.testing.MockNetwork$runNetwork(kotlin.Int)/rounds">rounds</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;-1<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Asks every node in order to process any queued up inbound messages. This may in turn result in nodes
+sending more messages to each other, thus, a typical usage is to call runNetwork with the <a href="run-network.html#core.testing.MockNetwork$runNetwork(kotlin.Int)/rounds">rounds</a>
+parameter set to -1 (the default) which simply runs as many rounds as necessary to result in network
+stability (no nodes sent any messages in the last round).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

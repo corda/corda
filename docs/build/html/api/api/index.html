@@ -1,0 +1,110 @@
+<HTML>
+<HEAD>
+<title>api - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">api</a><br/>
+<br/>
+<h2>Package api</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-a-p-i-server/index.html">APIServer</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">APIServer</span></code><p>Top level interface to external interaction with the distributed ledger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-a-p-i-server-impl/index.html">APIServerImpl</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">APIServerImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-a-p-i-server/index.html"><span class="identifier">APIServer</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-config/index.html">Config</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Config</span></code><p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
+and to organise serializers / deserializers for java.time.* classes as necessary</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-contract-class-ref/index.html">ContractClassRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ContractClassRef</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-def-ref.html"><span class="identifier">ContractDefRef</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-contract-def-ref.html">ContractDefRef</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ContractDefRef</span></code><p>Encapsulates the contract type.  e.g. Cash or CommercialPaper etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-contract-ledger-ref/index.html">ContractLedgerRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ContractLedgerRef</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-def-ref.html"><span class="identifier">ContractDefRef</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-interest-rate-swap-a-p-i/index.html">InterestRateSwapAPI</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InterestRateSwapAPI</span></code><p>This provides a simplified API, currently for demonstration use only.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-protocol-class-ref/index.html">ProtocolClassRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ProtocolClassRef</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-protocol-ref.html"><span class="identifier">ProtocolRef</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-protocol-instance-ref/index.html">ProtocolInstanceRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ProtocolInstanceRef</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-protocol-ref.html">ProtocolRef</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ProtocolRef</span></code><p>Encapsulates the protocol to be instantiated.  e.g. TwoPartyTradeProtocol.Buyer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-protocol-requiring-attention/index.html">ProtocolRequiringAttention</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ProtocolRequiringAttention</span></code><p>Thinking that Instant is OK for short lived protocol deadlines.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-response-filter/index.html">ResponseFilter</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ResponseFilter</span></code><p>This adds headers needed for cross site scripting on API clients</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-states-query/index.html">StatesQuery</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">StatesQuery</span></code><p>Extremely rudimentary query language which should most likely be replaced with a product</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-build-step/index.html">TransactionBuildStep</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionBuildStep</span></code><p>Encapsulate a generateXXX method call on a contract.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

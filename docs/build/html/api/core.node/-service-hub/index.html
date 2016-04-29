@@ -1,0 +1,92 @@
+<HTML>
+<HEAD>
+<title>ServiceHub - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node</a>&nbsp;/&nbsp;<a href=".">ServiceHub</a><br/>
+<br/>
+<h1>ServiceHub</h1>
+<code><span class="keyword">interface </span><span class="identifier">ServiceHub</span></code><br/>
+<p>A service hub simply vends references to the other services a node has. Some of those services may be missing or
+mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
+functionality and you dont want to hard-code which types in the interface.</p>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="clock.html">clock</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">clock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="identity-service.html">identityService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">identityService</span><span class="symbol">: </span><a href="../../core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="key-management-service.html">keyManagementService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">keyManagementService</span><span class="symbol">: </span><a href="../../core.node.subsystems/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="monitoring-service.html">monitoringService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">monitoringService</span><span class="symbol">: </span><a href="../../core.node.subsystems/-monitoring-service/index.html"><span class="identifier">MonitoringService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-map-cache.html">networkMapCache</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkMapCache</span><span class="symbol">: </span><a href="../../core.node.subsystems/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="network-service.html">networkService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">networkService</span><span class="symbol">: </span><a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="storage-service.html">storageService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">storageService</span><span class="symbol">: </span><a href="../../core.node.subsystems/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="wallet-service.html">walletService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">walletService</span><span class="symbol">: </span><a href="../../core.node.subsystems/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="record-transactions.html">recordTransactions</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="core.node.ServiceHub$recordTransactions(kotlin.collections.List((core.SignedTransaction)), kotlin.Boolean)/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../core/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="core.node.ServiceHub$recordTransactions(kotlin.collections.List((core.SignedTransaction)), kotlin.Boolean)/skipRecordingMap">skipRecordingMap</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a list of <a href="../../core/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the wallet for further processing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verify-transaction.html">verifyTransaction</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="core.node.ServiceHub$verifyTransaction(core.LedgerTransaction)/ltx">ltx</span><span class="symbol">:</span>&nbsp;<a href="../../core/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a <a href="../../core/-ledger-transaction/index.html">LedgerTransaction</a>, looks up all its dependencies in the local database, uses the identity service to map
+the <a href="../../core/-signed-transaction/index.html">SignedTransaction</a>s the DB gives back into <a href="../../core/-ledger-transaction/index.html">LedgerTransaction</a>s, and then runs the smart contracts for the
+transaction. If no exception is thrown, the transaction is valid.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

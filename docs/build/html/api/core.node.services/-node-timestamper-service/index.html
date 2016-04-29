@@ -1,0 +1,109 @@
+<HTML>
+<HEAD>
+<title>NodeTimestamperService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">NodeTimestamperService</a><br/>
+<br/>
+<h1>NodeTimestamperService</h1>
+<code><span class="keyword">class </span><span class="identifier">NodeTimestamperService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><br/>
+<p>This class implements the server side of the timestamping protocol, using the local clock. A future version might
+add features like checking against other NTP servers to make sure the clock hasnt drifted by too much.</p>
+<p>See the doc site to learn more about timestamping authorities (nodes) and the role they play in the data model.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">NodeTimestamperService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeTimestamperService$<init>(core.messaging.MessagingService, core.Party, java.security.KeyPair, java.time.Clock, java.time.Duration)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeTimestamperService$<init>(core.messaging.MessagingService, core.Party, java.security.KeyPair, java.time.Clock, java.time.Duration)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeTimestamperService$<init>(core.messaging.MessagingService, core.Party, java.security.KeyPair, java.time.Clock, java.time.Duration)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeTimestamperService$<init>(core.messaging.MessagingService, core.Party, java.security.KeyPair, java.time.Clock, java.time.Duration)/clock">clock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Clock.systemDefaultZone()<span class="symbol">, </span><span class="identifier" id="core.node.services.NodeTimestamperService$<init>(core.messaging.MessagingService, core.Party, java.security.KeyPair, java.time.Clock, java.time.Duration)/tolerance">tolerance</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a>&nbsp;<span class="symbol">=</span>&nbsp;30.seconds<span class="symbol">)</span></code><p>This class implements the server side of the timestamping protocol, using the local clock. A future version might
+add features like checking against other NTP servers to make sure the clock hasnt drifted by too much.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="clock.html">clock</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">clock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="identity.html">identity</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../core/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="signing-key.html">signingKey</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">signingKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="tolerance.html">tolerance</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">tolerance</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-node-service/net.html">net</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="process-request.html">processRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processRequest</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeTimestamperService$processRequest(protocols.TimestampingProtocol.Request)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../../protocols/-timestamping-protocol/-request/index.html"><span class="identifier">Request</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-node-service/add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are caught and passed to the provided consumer.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are propagated to the messaging layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-t-i-m-e-s-t-a-m-p-i-n-g_-p-r-o-t-o-c-o-l_-t-o-p-i-c.html">TIMESTAMPING_PROTOCOL_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">TIMESTAMPING_PROTOCOL_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,1501 @@
+<HTML>
+<HEAD>
+<title>alltypes - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<h3>All Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../core.utilities/-a-n-s-i-progress-renderer/index.html">core.utilities.ANSIProgressRenderer</a></td>
+<td>
+<p>Knows how to render a <a href="../core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
+command line tools, demos, tests etc. Just set the <a href="../core.utilities/-a-n-s-i-progress-renderer/progress-tracker.html">progressTracker</a> field and it will go ahead and start drawing
+if the terminal supports it. Otherwise it just prints out the name of the step whenever it changes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-a-p-i-server/index.html">api.APIServer</a></td>
+<td>
+<p>Top level interface to external interaction with the distributed ledger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-a-p-i-server-impl/index.html">api.APIServerImpl</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-abstract-node/index.html">core.node.AbstractNode</a></td>
+<td>
+<p>A base node implementation that can be customised either for production (with real implementations that do real
+I/O), or a mock implementation suitable for unit test environments.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-abstract-node-service/index.html">core.node.services.AbstractNodeService</a></td>
+<td>
+<p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-abstract-request-message/index.html">protocols.AbstractRequestMessage</a></td>
+<td>
+<p>Abstract superclass for request messages sent to services, which includes common
+fields such as replyTo and replyToTopic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-accepts-file-upload/index.html">core.node.AcceptsFileUpload</a></td>
+<td>
+<p>A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-accrual-adjustment/index.html">core.AccrualAdjustment</a></td>
+<td>
+<p>Simple enum for returning accurals adjusted or unadjusted.
+We dont actually do anything with this yet though, so its ignored for now.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-add-or-remove/index.html">core.utilities.AddOrRemove</a></td>
+<td>
+<p>Enum for when adding/removing something, for example adding or removing an entry in a directory.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-affinity-executor/index.html">core.utilities.AffinityExecutor</a></td>
+<td>
+<p>An extended executor interface that supports thread affinity assertions and short circuiting. This can be useful
+for ensuring code runs on the right thread, and also for unit testing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-all-possible-recipients.html">core.messaging.AllPossibleRecipients</a></td>
+<td>
+<p>A special base class for the set of all possible recipients, without having to identify who they all are.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-amount/index.html">core.Amount</a></td>
+<td>
+<p>Amount represents a positive quantity of currency, measured in pennies, which are the smallest representable units.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-artemis-messaging-service/index.html">core.node.subsystems.ArtemisMessagingService</a></td>
+<td>
+<p>This class implements the <a href="../core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
+with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
+as well.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-attachment/index.html">core.Attachment</a></td>
+<td>
+<p>An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
+contain public static data which can be referenced from transactions and utilised from contracts. Good examples
+of how attachments are meant to be used include:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.servlets/-attachment-download-servlet/index.html">core.node.servlets.AttachmentDownloadServlet</a></td>
+<td>
+<p>Allows the node administrator to either download full attachment zips, or individual files within those zips.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-attachment-storage/index.html">core.node.services.AttachmentStorage</a></td>
+<td>
+<p>An attachment store records potentially large binary objects, identified by their hash. Note that attachments are
+immutable and can never be erased once inserted</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-attachments-class-loader/index.html">core.node.AttachmentsClassLoader</a></td>
+<td>
+<p>A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
+need to provide JAR streams, and so could be fetched from a database, local disk, etc. Constructing an
+AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
+file paths.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-authenticated-object/index.html">core.AuthenticatedObject</a></td>
+<td>
+<p>Wraps an object that was signed by a public key, which may be a well known/recognised institutional key.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../demos.protocols/-auto-offer-protocol/index.html">demos.protocols.AutoOfferProtocol</a></td>
+<td>
+<p>This whole class is really part of a demo just to initiate the agreement of a deal with a simple
+API call from a single party without bi-directional access to the database of offers etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-brief-log-formatter/index.html">core.utilities.BriefLogFormatter</a></td>
+<td>
+<p>A Java logging formatter that writes more compact output than the default.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-business-calendar/index.html">core.BusinessCalendar</a></td>
+<td>
+<p>A business calendar performs date calculations that take into account national holidays and weekends. This is a
+typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
+no staff are around to handle problems.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/kotlin.-byte-array/index.html">kotlin.ByteArray</a> (extensions in package core.crypto)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/kotlin.-byte-array/index.html">kotlin.ByteArray</a> (extensions in package core.serialization)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-cash/index.html">contracts.Cash</a></td>
+<td>
+<p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
+(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
+the same transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-city-database/index.html">core.node.CityDatabase</a></td>
+<td>
+<p>A simple lookup table of city names to their coordinates. Lookups are case insensitive.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-command/index.html">core.Command</a></td>
+<td>
+<p>Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-command-data.html">core.CommandData</a></td>
+<td>
+<p>Marker interface for classes that represent commands</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-commercial-paper/index.html">contracts.CommercialPaper</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-config/index.html">api.Config</a></td>
+<td>
+<p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
+and to organise serializers / deserializers for java.time.* classes as necessary</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-configuration-exception/index.html">core.node.ConfigurationException</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-contract/index.html">core.Contract</a></td>
+<td>
+<p>Implemented by a program that implements business logic on the shared ledger. All participants run this code for
+every <a href="../core/-ledger-transaction/index.html">LedgerTransaction</a> they see on the network, for every input and output state. All contracts must accept the
+transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
+timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-contract-class-ref/index.html">api.ContractClassRef</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-contract-def-ref.html">api.ContractDefRef</a></td>
+<td>
+<p>Encapsulates the contract type.  e.g. Cash or CommercialPaper etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-contract-ledger-ref/index.html">api.ContractLedgerRef</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-contract-state/index.html">core.ContractState</a></td>
+<td>
+<p>A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
+file that the program can use to persist data across transactions. States are immutable: once created they are never
+updated, instead, any changes must generate a new successor state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-crowd-fund/index.html">contracts.CrowdFund</a></td>
+<td>
+<p>This is a basic crowd funding contract. It allows a party to create a funding opportunity, then for others to
+pledge during the funding period , and then for the party to either accept the funding (if the target has been reached)
+return the funds to the pledge-makers (if the target has not been reached).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.math/-cubic-spline-interpolator/index.html">core.math.CubicSplineInterpolator</a></td>
+<td>
+<p>Interpolates values between the given data points using a <a href="../core.math/-spline-function/index.html">SplineFunction</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.servlets/-data-upload-servlet/index.html">core.node.servlets.DataUploadServlet</a></td>
+<td>
+<p>Accepts binary streams, finds the right <a href="../core.node/-accepts-file-upload/index.html">AcceptsFileUpload</a> implementor and hands the stream off to it.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-data-vending-service/index.html">core.node.subsystems.DataVendingService</a></td>
+<td>
+<p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
+glue that sits between the network layer and the database layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-date-offset/index.html">core.DateOffset</a></td>
+<td>
+<p>Date offset that the fixing is done prior to the accrual start date.
+Currently not used in the calculation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-date-roll-convention/index.html">core.DateRollConvention</a></td>
+<td>
+<p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
+Depending on the accounting requirement, we can move forward until we get to a business day, or backwards
+There are some additional rules which are explained in the individual cases below</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-date-roll-direction/index.html">core.DateRollDirection</a></td>
+<td>
+<p>This is utilised in the <a href="../core/-date-roll-convention/index.html">DateRollConvention</a> class to determine which way we should initially step when
+finding a business day</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-day-count-basis-day/index.html">core.DayCountBasisDay</a></td>
+<td>
+<p>This forms the day part of the "Day Count Basis" used for interest calculation.
+Note that the first character cannot be a number (enum naming constraints), so we drop that
+in the toString lest some people get confused.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-day-count-basis-year/index.html">core.DayCountBasisYear</a></td>
+<td>
+<p>This forms the year part of the "Day Count Basis" used for interest calculation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-deal-state/index.html">contracts.DealState</a></td>
+<td>
+<p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
+implementation of general protocols that manipulate many agreement types.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../demos/-demo-clock/index.html">demos.DemoClock</a></td>
+<td>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/-digital-signature/index.html">core.crypto.DigitalSignature</a></td>
+<td>
+<p>A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
+signature. It isnt used currently, but experience from Bitcoin suggests such a feature is useful, especially when
+building partially signed transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/kotlin.-double/index.html">kotlin.Double</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-dummy-contract/index.html">contracts.DummyContract</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/-dummy-public-key/index.html">core.crypto.DummyPublicKey</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-dummy-timestamping-authority/index.html">core.node.services.DummyTimestampingAuthority</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-e2-e-test-key-management-service/index.html">core.node.subsystems.E2ETestKeyManagementService</a></td>
+<td>
+<p>A simple in-memory KMS that doesnt bother saving keys to disk. A real implementation would:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-emoji/index.html">core.utilities.Emoji</a></td>
+<td>
+<p>A simple wrapper class that contains icons and support for printing them only when were connected to a terminal.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-event/index.html">contracts.Event</a></td>
+<td>
+<p>Event superclass - everything happens on a date.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../demos.protocols/-exit-server-protocol/index.html">demos.protocols.ExitServerProtocol</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-expression/index.html">core.Expression</a></td>
+<td>
+<p>Represents a textual expression of e.g. a formula</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-expression-deserializer/index.html">core.ExpressionDeserializer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-expression-serializer/index.html">core.ExpressionSerializer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-fetch-attachments-protocol/index.html">protocols.FetchAttachmentsProtocol</a></td>
+<td>
+<p>Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
+attachments are saved to local storage automatically.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-fetch-data-protocol/index.html">protocols.FetchDataProtocol</a></td>
+<td>
+<p>An abstract protocol for fetching typed data from a remote peer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-fetch-transactions-protocol/index.html">protocols.FetchTransactionsProtocol</a></td>
+<td>
+<p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-fix/index.html">core.Fix</a></td>
+<td>
+<p>A <a href="../core/-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-fix-of/index.html">core.FixOf</a></td>
+<td>
+<p>A <a href="../core/-fix-of/index.html">FixOf</a> identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-fixable-deal-state/index.html">contracts.FixableDealState</a></td>
+<td>
+<p>Interface adding fixing specific methods</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-fixed-rate/index.html">contracts.FixedRate</a></td>
+<td>
+<p>A very basic subclass to represent a fixed rate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-fixed-rate-payment-event/index.html">contracts.FixedRatePaymentEvent</a></td>
+<td>
+<p>Basic class for the Fixed Rate Payments on the fixed leg - see <a href="../contracts/-rate-payment-event/index.html">RatePaymentEvent</a>
+Assumes that the rate is valid.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-floating-rate/index.html">contracts.FloatingRate</a></td>
+<td>
+<p>The parent class of the Floating rate classes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-floating-rate-payment-event/index.html">contracts.FloatingRatePaymentEvent</a></td>
+<td>
+<p>Basic class for the Floating Rate Payments on the floating leg - see <a href="../contracts/-rate-payment-event/index.html">RatePaymentEvent</a>
+If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-frequency/index.html">core.Frequency</a></td>
+<td>
+<p>Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
+that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-i-r-s-simulation/index.html">core.testing.IRSSimulation</a></td>
+<td>
+<p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-identity-service/index.html">core.node.services.IdentityService</a></td>
+<td>
+<p>An identity service maintains an bidirectional map of <a href="../core/-party/index.html">Party</a>s to their associated public keys and thus supports
+lookup of a party given its key. This is obviously very incomplete and does not reflect everything a real identity
+service would provide.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/-immutable-class-serializer/index.html">core.serialization.ImmutableClassSerializer</a></td>
+<td>
+<p>Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
+set via the constructor and the class is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-in-memory-identity-service/index.html">core.node.subsystems.InMemoryIdentityService</a></td>
+<td>
+<p>Simple identity service which caches parties and provides functionality for efficient lookup.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-in-memory-messaging-network/index.html">core.testing.InMemoryMessagingNetwork</a></td>
+<td>
+<p>An in-memory network allows you to manufacture <a href="../core.testing/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
+<a href="../core.testing/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> maintains a queue of messages it has received, and a background thread that dispatches
+messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
+case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
+testing).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-in-memory-network-map-cache/index.html">core.node.subsystems.InMemoryNetworkMapCache</a></td>
+<td>
+<p>Extremely simple in-memory cache of the network map.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-in-memory-network-map-service/index.html">core.node.services.InMemoryNetworkMapService</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-insufficient-balance-exception/index.html">contracts.InsufficientBalanceException</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/kotlin.-int/index.html">kotlin.Int</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/kotlin.-int/index.html">kotlin.Int</a> (extensions in package contracts)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-interest-rate-swap/index.html">contracts.InterestRateSwap</a></td>
+<td>
+<p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
+It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
+Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
+This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-interest-rate-swap-a-p-i/index.html">api.InterestRateSwapAPI</a></td>
+<td>
+<p>This provides a simplified API, currently for demonstration use only.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.math/-interpolator/index.html">core.math.Interpolator</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.math/-interpolator-factory/index.html">core.math.InterpolatorFactory</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package contracts)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-json-support/index.html">core.utilities.JsonSupport</a></td>
+<td>
+<p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
+the java.time API, some core types, and Kotlin data classes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-key-management-service/index.html">core.node.subsystems.KeyManagementService</a></td>
+<td>
+<p>The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
+call out to a hardware security module that enforces various auditing and frequency-of-use requirements.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/java.security.-key-pair/index.html">java.security.KeyPair</a> (extensions in package core.crypto)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-ledger-transaction/index.html">core.LedgerTransaction</a></td>
+<td>
+<p>A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
+It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
+with the commands from the wire, and verified/looked up.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.math/-linear-interpolator/index.html">core.math.LinearInterpolator</a></td>
+<td>
+<p>Interpolates values between the given data points using straight lines</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-linear-state/index.html">core.LinearState</a></td>
+<td>
+<p>A state that evolves by superseding itself, all of which share the common "thread"</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/kotlin.collections.-list/index.html">kotlin.collections.List</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/java.time.-local-date/index.html">java.time.LocalDate</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/kotlin.-long/index.html">kotlin.Long</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-message/index.html">core.messaging.Message</a></td>
+<td>
+<p>A message is defined, at this level, to be a (topic, timestamp, byte arrays) triple, where the topic is a string in
+Java-style reverse dns form, with "platform." being a prefix reserved by the platform for its own use. Vendor
+specific messages can be defined, but use your domain name as the prefix e.g. "uk.co.bigbank.messages.SomeMessage".</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-message-handler-registration.html">core.messaging.MessageHandlerRegistration</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-message-recipient-group.html">core.messaging.MessageRecipientGroup</a></td>
+<td>
+<p>A base class for a set of recipients specifically identified by the sender.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-message-recipients.html">core.messaging.MessageRecipients</a></td>
+<td>
+<p>The interface for a group of message recipients (which may contain only one recipient)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-messaging-service/index.html">core.messaging.MessagingService</a></td>
+<td>
+<p>A <a href="../core.messaging/-messaging-service/index.html">MessagingService</a> sits at the boundary between a message routing / networking layer and the core platform code.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-messaging-service-builder/index.html">core.messaging.MessagingServiceBuilder</a></td>
+<td>
+<p>This class lets you start up a <a href="../core.messaging/-messaging-service/index.html">MessagingService</a>. Its purpose is to stop you from getting access to the methods
+on the messaging service interface until you have successfully started up the system. One of these objects should
+be the only way to obtain a reference to a <a href="../core.messaging/-messaging-service/index.html">MessagingService</a>. Startup may be a slow process: some implementations
+may let you cast the returned future to an object that lets you get status info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/-missing-attachments-exception/index.html">core.serialization.MissingAttachmentsException</a></td>
+<td>
+<p>Thrown during deserialisation to indicate that an attachment needed to construct the <a href="../core/-wire-transaction/index.html">WireTransaction</a> is not found</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-mock-identity-service/index.html">core.testing.MockIdentityService</a></td>
+<td>
+<p>Scaffolding: a dummy identity service that just expects to have identities loaded off disk or found elsewhere.
+This class allows the provided list of identities to be mutated after construction, so it takes the list lock
+when doing lookups and recalculates the mapping each time. The ability to change the list is used by the
+MockNetwork code.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-mock-network/index.html">core.testing.MockNetwork</a></td>
+<td>
+<p>A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
+Components that do IO are either swapped out for mocks, or pointed to a <a href="#">Jimfs</a> in memory filesystem.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-mock-network-map-cache/index.html">core.testing.MockNetworkMapCache</a></td>
+<td>
+<p>Network map cache with no backing map service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-monitoring-service/index.html">core.node.subsystems.MonitoringService</a></td>
+<td>
+<p>Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
+This is not an interface because it is too lightweight to bother mocking out.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-named-by-hash/index.html">core.NamedByHash</a></td>
+<td>
+<p>Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-network-cache-error/index.html">core.node.subsystems.NetworkCacheError</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-network-map-cache/index.html">core.node.subsystems.NetworkMapCache</a></td>
+<td>
+<p>A network map contains lists of nodes on the network along with information about their identity keys, services
+they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
+from an authoritative service, and adds easy lookup of the data stored within it. Generally it would be initialised
+with a specified network map service, which it fetches data from and then subscribes to updates of.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-network-map-service/index.html">core.node.services.NetworkMapService</a></td>
+<td>
+<p>A network map contains lists of nodes on the network along with information about their identity keys, services
+they provide and host names or IP addresses where they can be connected to. This information is cached locally within
+nodes, by the <a href="../core.node.subsystems/-network-map-cache/index.html">NetworkMapCache</a>. Currently very basic consensus controls are applied, using signed changes which
+replace each other based on a serial number present in the change.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-node/index.html">core.node.Node</a></td>
+<td>
+<p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../core.node/-service-hub/index.html">ServiceHub</a>,
+loads important data off disk and starts listening for connections.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-node-attachment-service/index.html">core.node.services.NodeAttachmentService</a></td>
+<td>
+<p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-node-configuration/index.html">core.node.NodeConfiguration</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-node-configuration-from-config/index.html">core.node.NodeConfigurationFromConfig</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-node-info/index.html">core.node.NodeInfo</a></td>
+<td>
+<p>Info about a network node that acts on behalf of some form of contract party.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-node-interest-rates/index.html">core.node.services.NodeInterestRates</a></td>
+<td>
+<p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
+rate fix (e.g. LIBOR, EURIBOR ...).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-node-map-error/index.html">core.node.services.NodeMapError</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-node-registration/index.html">core.node.services.NodeRegistration</a></td>
+<td>
+<p>A node registration state in the network map.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-node-timestamper-service/index.html">core.node.services.NodeTimestamperService</a></td>
+<td>
+<p>This class implements the server side of the timestamping protocol, using the local clock. A future version might
+add features like checking against other NTP servers to make sure the clock hasnt drifted by too much.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-node-wallet-service/index.html">core.node.subsystems.NodeWalletService</a></td>
+<td>
+<p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
+states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/-null-public-key/index.html">core.crypto.NullPublicKey</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/-opaque-bytes/index.html">core.serialization.OpaqueBytes</a></td>
+<td>
+<p>A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect.
+In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
+functionality to Java, but it wont arrive for a few years yet</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-ownable-state/index.html">core.OwnableState</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-party/index.html">core.Party</a></td>
+<td>
+<p>A <a href="../core/-party/index.html">Party</a> is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-party-reference/index.html">core.PartyReference</a></td>
+<td>
+<p>Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
+ledger. The reference is intended to be encrypted so its meaningless to anyone other than the party.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/java.nio.file.-path/index.html">java.nio.file.Path</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-payment-event/index.html">contracts.PaymentEvent</a></td>
+<td>
+<p>Top level PaymentEvent class - represents an obligation to pay an amount on a given date, which may be either in the past or the future.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-payment-rule/index.html">core.PaymentRule</a></td>
+<td>
+<p>Whether the payment should be made before the due date, or after it.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-percentage-ratio-unit/index.html">contracts.PercentageRatioUnit</a></td>
+<td>
+<p>A class to reprecent a percentage in an unambiguous way.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-physical-location/index.html">core.node.PhysicalLocation</a></td>
+<td>
+<p>A labelled <a href="../core.node/-world-coordinate/index.html">WorldCoordinate</a>, where the label is human meaningful. For example, the name of the nearest city.
+Labels should not refer to non-landmarks, for example, they should not contain the names of organisations.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.math/-polynomial/index.html">core.math.Polynomial</a></td>
+<td>
+<p>Represents a polynomial function of arbitrary degree</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/java.security.-private-key/index.html">java.security.PrivateKey</a> (extensions in package core.crypto)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-progress-tracker/index.html">core.utilities.ProgressTracker</a></td>
+<td>
+<p>A progress tracker helps surface information about the progress of an operation to a user interface or API of some
+kind. It lets you define a set of <emph>steps</emph> that represent an operation. A step is represented by an object (typically
+a singleton).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-protocol-class-ref/index.html">api.ProtocolClassRef</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-protocol-instance-ref/index.html">api.ProtocolInstanceRef</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.protocols/-protocol-logic/index.html">core.protocols.ProtocolLogic</a></td>
+<td>
+<p>A sub-class of <a href="../core.protocols/-protocol-logic/index.html">ProtocolLogic</a> implements a protocol flow using direct, straight line blocking code. Thus you
+can write complex protocol logic in an ordinary fashion, without having to think about callbacks, restarting after
+a node crash, how many instances of your protocol there are running and so on.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-protocol-ref.html">api.ProtocolRef</a></td>
+<td>
+<p>Encapsulates the protocol to be instantiated.  e.g. TwoPartyTradeProtocol.Buyer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-protocol-requiring-attention/index.html">api.ProtocolRequiringAttention</a></td>
+<td>
+<p>Thinking that Instant is OK for short lived protocol deadlines.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.protocols/-protocol-state-machine/index.html">core.protocols.ProtocolStateMachine</a></td>
+<td>
+<p>A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a <a href="../core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance.
+For any given flow there is only one PSM, even if that protocol invokes subprotocols.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/java.security.-public-key/index.html">java.security.PublicKey</a> (extensions in package core.crypto)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-rate/index.html">contracts.Rate</a></td>
+<td>
+<p>Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-rate-payment-event/index.html">contracts.RatePaymentEvent</a></td>
+<td>
+<p>A <a href="../contracts/-rate-payment-event/index.html">RatePaymentEvent</a> represents a dated obligation of payment.
+It is a specialisation / modification of a basic cash flow event (to be written) that has some additional assistance
+functions for interest rate swap legs of the fixed and floating nature.
+For the fixed leg, the rate is already known at creation and therefore the flows can be pre-determined.
+For the floating leg, the rate refers to a reference rate which is to be "fixed" at a point in the future.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-rates-fix-protocol/index.html">protocols.RatesFixProtocol</a></td>
+<td>
+<p>This protocol queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the
+fix in the transaction and then proceeds to get the oracle to sign it. Although the <a href="../protocols/-rates-fix-protocol/call.html">call</a> method combines the query
+and signing step, you can run the steps individually by constructing this object and then using the public methods
+for each step.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-ratio-unit/index.html">contracts.RatioUnit</a></td>
+<td>
+<p>A utility class to prevent the various mixups between percentages, decimals, bips etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-recording-map/index.html">core.utilities.RecordingMap</a></td>
+<td>
+<p>A RecordingMap wraps a regular Map&lt;K, V&gt; and records the sequence of gets and puts to it. This is useful in
+white box unit tests to ensure that code is accessing a data store as much as you expect.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-reference-rate/index.html">contracts.ReferenceRate</a></td>
+<td>
+<p>So a reference rate is a rate that takes its value from a source at a given date
+e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value date in the getAsOf(..) method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-regulator-service/index.html">core.node.services.RegulatorService</a></td>
+<td>
+<p>Placeholder interface for regulator services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-requirements/index.html">core.Requirements</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-resolve-transactions-protocol/index.html">protocols.ResolveTransactionsProtocol</a></td>
+<td>
+<p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
+their dependencies, and verifies them together using a single <a href="../core/-transaction-group/index.html">TransactionGroup</a>. If no exception is thrown, then
+all the transactions have been successfully verified and inserted into the local database.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-response-filter/index.html">api.ResponseFilter</a></td>
+<td>
+<p>This adds headers needed for cross site scripting on API clients</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/-secure-hash/index.html">core.crypto.SecureHash</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/-serialized-bytes/index.html">core.serialization.SerializedBytes</a></td>
+<td>
+<p>A type safe wrapper around a byte array that contains a serialised object. You can call <a href="../core.serialization/kotlin.-byte-array/deserialize.html">SerializedBytes.deserialize</a>
+to get the original object back.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/-serialized-bytes-serializer/index.html">core.serialization.SerializedBytesSerializer</a></td>
+<td>
+<p>A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring <a href="../core.serialization/-serialized-bytes/index.html">SerializedBytes</a> is a pure
+type safety hack.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-service-hub/index.html">core.node.ServiceHub</a></td>
+<td>
+<p>A service hub simply vends references to the other services a node has. Some of those services may be missing or
+mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
+functionality and you dont want to hard-code which types in the interface.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-service-type/index.html">core.node.services.ServiceType</a></td>
+<td>
+<p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
+map advertisements. Services that are purely local and are not providing functionality to other parts of the network
+dont need a declared service type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.crypto/-signed-data/index.html">core.crypto.SignedData</a></td>
+<td>
+<p>A serialized piece of data and its signature. Enforces signature validity in order to deserialize the data
+contained within.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-signed-transaction/index.html">core.SignedTransaction</a></td>
+<td>
+<p>Container for a <a href="../core/-wire-transaction/index.html">WireTransaction</a> and attached signatures.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-simulation/index.html">core.testing.Simulation</a></td>
+<td>
+<p>Base class for network simulations that are based on the unit test / mock environment.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-single-message-recipient.html">core.messaging.SingleMessageRecipient</a></td>
+<td>
+<p>A base class for the case of point-to-point messages</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.math/-spline-function/index.html">core.math.SplineFunction</a></td>
+<td>
+<p>A <emph>spline</emph> is function piecewise-defined by polynomial functions.
+Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-stack-snapshot/index.html">core.messaging.StackSnapshot</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-state-and-ref/index.html">core.StateAndRef</a></td>
+<td>
+<p>A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-state-machine-manager/index.html">core.messaging.StateMachineManager</a></td>
+<td>
+<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
+Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-state-ref/index.html">core.StateRef</a></td>
+<td>
+<p>A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
+transaction defined the state and where in that transaction it was.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-states-query/index.html">api.StatesQuery</a></td>
+<td>
+<p>Extremely rudimentary query language which should most likely be replaced with a product</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-storage-service/index.html">core.node.subsystems.StorageService</a></td>
+<td>
+<p>A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
+transactions, serialised protocol state machines and so on. Again, this isnt intended to imply lack of SQL or
+anything like that, this interface is only big enough to support the prototyping work.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-storage-service-impl/index.html">core.node.subsystems.StorageServiceImpl</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/kotlin.-string/index.html">kotlin.String</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/kotlin.-string/index.html">kotlin.String</a> (extensions in package contracts)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/java.time.temporal.-temporal/index.html">java.time.temporal.Temporal</a> (extensions in package core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-tenor/index.html">core.Tenor</a></td>
+<td>
+<p>Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-thread-box/index.html">core.ThreadBox</a></td>
+<td>
+<p>A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
+Simply define a private class to hold the data that must be grouped under the same lock, and then pass the only
+instance to the ThreadBox constructor. You can now use the <a href="../core/-thread-box/locked.html">locked</a> method with a lambda to take the lock in a
+way that ensures itll be released if theres an exception.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-timestamp-command/index.html">core.TimestampCommand</a></td>
+<td>
+<p>If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
+public keys are identified in the containing <a href="../core/-command/index.html">Command</a> object. The true time must be between (after, before)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-timestamper-service/index.html">core.node.services.TimestamperService</a></td>
+<td>
+<p>Simple interface (for testing) to an abstract timestamping service. Note that this is not "timestamping" in the
+blockchain sense of a total ordering of transactions, but rather, a signature from a well known/trusted timestamping
+service over a transaction that indicates the timestamp in it is accurate. Such a signature may not always be
+necessary: if there are multiple parties involved in a transaction then they can cross-check the timestamp
+themselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-timestamping-error/index.html">core.node.services.TimestampingError</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-timestamping-protocol/index.html">protocols.TimestampingProtocol</a></td>
+<td>
+<p>The TimestampingProtocol class is the client code that talks to a <a href="../core.node.services/-node-timestamper-service/index.html">NodeTimestamperService</a> on some remote node. It is a
+<a href="../core.protocols/-protocol-logic/index.html">ProtocolLogic</a>, meaning it can either be a sub-protocol of some other protocol, or be driven independently.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.messaging/-topic-string-validator/index.html">core.messaging.TopicStringValidator</a></td>
+<td>
+<p>A singleton thats useful for validating topic strings</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.testing/-trade-simulation/index.html">core.testing.TradeSimulation</a></td>
+<td>
+<p>Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
+then B and C trade with each other, then C and A etc).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../demos/-trader-demo-protocol-buyer/index.html">demos.TraderDemoProtocolBuyer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../demos/-trader-demo-protocol-seller/index.html">demos.TraderDemoProtocolSeller</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../api/-transaction-build-step/index.html">api.TransactionBuildStep</a></td>
+<td>
+<p>Encapsulate a generateXXX method call on a contract.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-builder/index.html">core.TransactionBuilder</a></td>
+<td>
+<p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
+intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
+Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
+multiple parties.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-conflict-exception/index.html">core.TransactionConflictException</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-for-verification/index.html">core.TransactionForVerification</a></td>
+<td>
+<p>A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-graph-search/index.html">core.TransactionGraphSearch</a></td>
+<td>
+<p>Given a map of transaction id to <a href="../core/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
+the starting point down in order to find transactions that match the given query criteria.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-group/index.html">core.TransactionGroup</a></td>
+<td>
+<p>A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
+verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
+this subgraph does not contain conflicts and is accepted by the involved contracts.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-resolution-exception/index.html">core.TransactionResolutionException</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transaction-verification-exception/index.html">core.TransactionVerificationException</a></td>
+<td>
+<p>Thrown if a verification fails due to a contract rejection.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-transient-property/index.html">core.TransientProperty</a></td>
+<td>
+<p>A simple wrapper that enables the use of Kotlins "val x by TransientProperty { ... }" syntax. Such a property
+will not be serialized to disk, and if its missing (or the first time its accessed), the initializer will be
+used to set it up. Note that the initializer will be called with the TransientProperty object locked.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-two-party-deal-protocol/index.html">protocols.TwoPartyDealProtocol</a></td>
+<td>
+<p>Classes for manipulating a two party deal or agreement.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../protocols/-two-party-trade-protocol/index.html">protocols.TwoPartyTradeProtocol</a></td>
+<td>
+<p>This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
+and seller) and the following steps:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-type-only-command-data/index.html">core.TypeOnlyCommandData</a></td>
+<td>
+<p>Commands that inherit from this are intended to have no data items: its only their presence that matters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../contracts/-unknown-type/index.html">contracts.UnknownType</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.utilities/-untrustworthy-data/index.html">core.utilities.UntrustworthyData</a></td>
+<td>
+<p>A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
+a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
+first. The wrapper helps you to avoid forgetting this vital step. Things you might want to check are:</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../demos.protocols/-update-business-day-protocol/index.html">demos.protocols.UpdateBusinessDayProtocol</a></td>
+<td>
+<p>This is a very temporary, demo-oriented way of initiating processing of temporal events and is not
+intended as the way things will necessarily be done longer term</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-wallet/index.html">core.node.subsystems.Wallet</a></td>
+<td>
+<p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
+change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
+about new transactions from our peers and generate new transactions that consume states ourselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-wallet-service/index.html">core.node.subsystems.WalletService</a></td>
+<td>
+<p>A <a href="../core.node.subsystems/-wallet-service/index.html">WalletService</a> is responsible for securely and safely persisting the current state of a wallet to storage. The
+wallet service vends immutable snapshots of the current wallet for working with: if you build a transaction based
+on a wallet that isnt current, be aware that it may end up being invalid if the states that were used have been
+consumed by someone else first</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.services/-wire-node-registration/index.html">core.node.services.WireNodeRegistration</a></td>
+<td>
+<p>A node registration and its signature as a pair.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core/-wire-transaction/index.html">core.WireTransaction</a></td>
+<td>
+<p>Transaction ready for serialisation, without any signatures attached.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.serialization/-wire-transaction-serializer/index.html">core.serialization.WireTransactionSerializer</a></td>
+<td>
+<p>A serialisation engine that knows how to deserialise code inside a sandbox</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node/-world-coordinate/index.html">core.node.WorldCoordinate</a></td>
+<td>
+<p>A latitude/longitude pair.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

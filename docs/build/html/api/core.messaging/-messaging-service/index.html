@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+<title>MessagingService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.messaging</a>&nbsp;/&nbsp;<a href=".">MessagingService</a><br/>
+<br/>
+<h1>MessagingService</h1>
+<code><span class="keyword">interface </span><span class="identifier">MessagingService</span></code><br/>
+<p>A MessagingService sits at the boundary between a message routing / networking layer and the core platform code.</p>
+<p>A messaging system must provide the ability to send 1:many messages, potentially to an abstract "group", the
+membership of which is defined elsewhere. Messages are atomic and the system guarantees that a sent message
+<emph>eventually</emph> will arrive in the exact form it was sent, however, messages can be arbitrarily re-ordered or delayed.</p>
+<p>Example implementations might be a custom P2P layer, Akka, Apache Kafka, etc. It is assumed that the message layer
+is <emph>reliable</emph> and as such messages may be stored to disk once queued.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="my-address.html">myAddress</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myAddress</span><span class="symbol">: </span><a href="../-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code><p>Returns an address that refers to this node.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.messaging.MessagingService$addMessageHandler(kotlin.String, java.util.concurrent.Executor, kotlin.Function2((core.messaging.Message, core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span>&nbsp;<span class="symbol">=</span>&nbsp;""<span class="symbol">, </span><span class="identifier" id="core.messaging.MessagingService$addMessageHandler(kotlin.String, java.util.concurrent.Executor, kotlin.Function2((core.messaging.Message, core.messaging.MessageHandlerRegistration, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="core.messaging.MessagingService$addMessageHandler(kotlin.String, java.util.concurrent.Executor, kotlin.Function2((core.messaging.Message, core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic matches the given string, on the given
+executor. The topic can be the empty string to match all messages.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="create-message.html">createMessage</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">createMessage</span><span class="symbol">(</span><span class="identifier" id="core.messaging.MessagingService$createMessage(kotlin.String, kotlin.ByteArray)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.messaging.MessagingService$createMessage(kotlin.String, kotlin.ByteArray)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-message/index.html"><span class="identifier">Message</span></a></code><p>Returns an initialised <a href="../-message/index.html">Message</a> with the current time, etc, already filled in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="remove-message-handler.html">removeMessageHandler</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">removeMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.messaging.MessagingService$removeMessageHandler(core.messaging.MessageHandlerRegistration)/registration">registration</span><span class="symbol">:</span>&nbsp;<a href="../-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Removes a handler given the object returned from <a href="add-message-handler.html">addMessageHandler</a>. The callback will no longer be invoked once
+this method has returned, although executions that are currently in flight will not be interrupted.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="send.html">send</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="core.messaging.MessagingService$send(core.messaging.Message, core.messaging.MessageRecipients)/message">message</span><span class="symbol">:</span>&nbsp;<a href="../-message/index.html"><span class="identifier">Message</span></a><span class="symbol">, </span><span class="identifier" id="core.messaging.MessagingService$send(core.messaging.Message, core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Sends a message to the given receiver. The details of how receivers are identified is up to the messaging
+implementation: the type system provides an opaque high level view, with more fine grained control being
+available via type casting. Once this function returns the message is queued for delivery but not necessarily
+delivered: if the recipients are offline then the message could be queued hours or days later.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="stop.html">stop</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../run-on-next-message.html">runOnNextMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">MessagingService</span><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="core.messaging$runOnNextMessage(core.messaging.MessagingService, kotlin.String, java.util.concurrent.Executor, kotlin.Function1((core.messaging.Message, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span>&nbsp;<span class="symbol">=</span>&nbsp;""<span class="symbol">, </span><span class="identifier" id="core.messaging$runOnNextMessage(core.messaging.MessagingService, kotlin.String, java.util.concurrent.Executor, kotlin.Function1((core.messaging.Message, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="core.messaging$runOnNextMessage(core.messaging.MessagingService, kotlin.String, java.util.concurrent.Executor, kotlin.Function1((core.messaging.Message, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../-message/index.html"><span class="identifier">Message</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic that runs the given callback with the message and then removes itself. This
+is useful for one-shot handlers that arent supposed to stick around permanently. Note that this callback doesnt
+take the registration object, unlike the callback to <a href="add-message-handler.html">MessagingService.addMessageHandler</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">MessagingService</span><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="core.messaging$send(core.messaging.MessagingService, kotlin.String, core.messaging.MessageRecipients, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.messaging$send(core.messaging.MessagingService, kotlin.String, core.messaging.MessageRecipients, kotlin.Any)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="core.messaging$send(core.messaging.MessagingService, kotlin.String, core.messaging.MessageRecipients, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../core.node.subsystems/-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MessagingService</span></code><p>This class implements the MessagingService API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
+with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
+as well.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../core.testing/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a></td>
+<td>
+<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InMemoryMessaging</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MessagingService</span></code><p>An <a href="../../core.testing/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> provides a MessagingService that isnt backed by any kind of network or disk storage
+system, but just uses regular queues on the heap instead. It is intended for unit testing and developer convenience
+when all entities on the network are being simulated in-process.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

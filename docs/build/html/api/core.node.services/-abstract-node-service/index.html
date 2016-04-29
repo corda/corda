@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<title>AbstractNodeService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">AbstractNodeService</a><br/>
+<br/>
+<h1>AbstractNodeService</h1>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNodeService</span></code><br/>
+<p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">AbstractNodeService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$<init>(core.messaging.MessagingService)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">)</span></code><p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="net.html">net</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are caught and passed to the provided consumer.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are propagated to the messaging layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../core.node.subsystems/-data-vending-service/index.html">DataVendingService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DataVendingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
+glue that sits between the network layer and the database layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-in-memory-network-map-service/index.html">InMemoryNetworkMapService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-node-timestamper-service/index.html">NodeTimestamperService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeTimestamperService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>This class implements the server side of the timestamping protocol, using the local clock. A future version might
+add features like checking against other NTP servers to make sure the clock hasnt drifted by too much.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-node-interest-rates/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code><p>The Service that wraps <a href="../-node-interest-rates/-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

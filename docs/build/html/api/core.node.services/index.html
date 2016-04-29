@@ -1,0 +1,143 @@
+<HTML>
+<HEAD>
+<title>core.node.services - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">core.node.services</a><br/>
+<br/>
+<h2>Package core.node.services</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-abstract-node-service/index.html">AbstractNodeService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNodeService</span></code><p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-attachment-storage/index.html">AttachmentStorage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">AttachmentStorage</span></code><p>An attachment store records potentially large binary objects, identified by their hash. Note that attachments are
+immutable and can never be erased once inserted</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-dummy-timestamping-authority/index.html">DummyTimestampingAuthority</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">DummyTimestampingAuthority</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-identity-service/index.html">IdentityService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">IdentityService</span></code><p>An identity service maintains an bidirectional map of <a href="../core/-party/index.html">Party</a>s to their associated public keys and thus supports
+lookup of a party given its key. This is obviously very incomplete and does not reflect everything a real identity
+service would provide.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-in-memory-network-map-service/index.html">InMemoryNetworkMapService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><a href="-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-network-map-service/index.html">NetworkMapService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NetworkMapService</span></code><p>A network map contains lists of nodes on the network along with information about their identity keys, services
+they provide and host names or IP addresses where they can be connected to. This information is cached locally within
+nodes, by the <a href="../core.node.subsystems/-network-map-cache/index.html">NetworkMapCache</a>. Currently very basic consensus controls are applied, using signed changes which
+replace each other based on a serial number present in the change.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-attachment-service/index.html">NodeAttachmentService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><a href="../core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></code><p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-interest-rates/index.html">NodeInterestRates</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NodeInterestRates</span></code><p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
+rate fix (e.g. LIBOR, EURIBOR ...).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-registration/index.html">NodeRegistration</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeRegistration</span></code><p>A node registration state in the network map.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-timestamper-service/index.html">NodeTimestamperService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeTimestamperService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><p>This class implements the server side of the timestamping protocol, using the local clock. A future version might
+add features like checking against other NTP servers to make sure the clock hasnt drifted by too much.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-regulator-service/index.html">RegulatorService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">RegulatorService</span></code><p>Placeholder interface for regulator services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-type/index.html">ServiceType</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ServiceType</span></code><p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
+map advertisements. Services that are purely local and are not providing functionality to other parts of the network
+dont need a declared service type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-timestamper-service/index.html">TimestamperService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">TimestamperService</span></code><p>Simple interface (for testing) to an abstract timestamping service. Note that this is not "timestamping" in the
+blockchain sense of a total ordering of transactions, but rather, a signature from a well known/trusted timestamping
+service over a transaction that indicates the timestamp in it is accurate. Such a signature may not always be
+necessary: if there are multiple parties involved in a transaction then they can cross-check the timestamp
+themselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-wire-node-registration/index.html">WireNodeRegistration</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">WireNodeRegistration</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../core.crypto/-signed-data/index.html"><span class="identifier">SignedData</span></a><span class="symbol">&lt;</span><a href="-node-registration/index.html"><span class="identifier">NodeRegistration</span></a><span class="symbol">&gt;</span></code><p>A node registration and its signature as a pair.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-node-map-error/index.html">NodeMapError</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">NodeMapError</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-timestamping-error/index.html">TimestampingError</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TimestampingError</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

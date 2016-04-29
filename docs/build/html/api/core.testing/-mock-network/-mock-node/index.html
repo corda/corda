@@ -1,0 +1,279 @@
+<HTML>
+<HEAD>
+<title>MockNetwork.MockNode - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">core.testing</a>&nbsp;/&nbsp;<a href="../index.html">MockNetwork</a>&nbsp;/&nbsp;<a href=".">MockNode</a><br/>
+<br/>
+<h1>MockNode</h1>
+<code><span class="keyword">class </span><span class="identifier">MockNode</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../core.node/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></code><br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">MockNode</span><span class="symbol">(</span><span class="identifier" id="core.testing.MockNetwork.MockNode$<init>(java.nio.file.Path, core.node.NodeConfiguration, core.testing.MockNetwork, core.node.NodeInfo, kotlin.collections.Set((core.node.services.ServiceType)), kotlin.Int)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork.MockNode$<init>(java.nio.file.Path, core.node.NodeConfiguration, core.testing.MockNetwork, core.node.NodeInfo, kotlin.collections.Set((core.node.services.ServiceType)), kotlin.Int)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../../core.node/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork.MockNode$<init>(java.nio.file.Path, core.node.NodeConfiguration, core.testing.MockNetwork, core.node.NodeInfo, kotlin.collections.Set((core.node.services.ServiceType)), kotlin.Int)/mockNet">mockNet</span><span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">MockNetwork</span></a><span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork.MockNode$<init>(java.nio.file.Path, core.node.NodeConfiguration, core.testing.MockNetwork, core.node.NodeInfo, kotlin.collections.Set((core.node.services.ServiceType)), kotlin.Int)/networkMapAddr">networkMapAddr</span><span class="symbol">:</span>&nbsp;<a href="../../../core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork.MockNode$<init>(java.nio.file.Path, core.node.NodeConfiguration, core.testing.MockNetwork, core.node.NodeInfo, kotlin.collections.Set((core.node.services.ServiceType)), kotlin.Int)/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="core.testing.MockNetwork.MockNode$<init>(java.nio.file.Path, core.node.NodeConfiguration, core.testing.MockNetwork, core.node.NodeInfo, kotlin.collections.Set((core.node.services.ServiceType)), kotlin.Int)/id">id</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="id.html">id</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">id</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="log.html">log</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="mock-net.html">mockNet</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">mockNet</span><span class="symbol">: </span><a href="../index.html"><span class="identifier">MockNetwork</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="place.html">place</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">place</span><span class="symbol">: </span><a href="../../../core.node/-physical-location/index.html"><span class="identifier">PhysicalLocation</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="server-thread.html">serverThread</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">serverThread</span><span class="symbol">: </span><a href="../../../core.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/_services-that-accept-uploads.html">_servicesThatAcceptUploads</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">_servicesThatAcceptUploads</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="../../../core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/advertised-services.html">advertisedServices</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">advertisedServices</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/api.html">api</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">api</span><span class="symbol">: </span><a href="../../../api/-a-p-i-server/index.html"><span class="identifier">APIServer</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/configuration.html">configuration</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="../../../core.node/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/dir.html">dir</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dir</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/identity.html">identity</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../../core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/in-node-network-map-service.html">inNodeNetworkMapService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeNetworkMapService</span><span class="symbol">: </span><a href="../../../core.node.services/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/in-node-timestamping-service.html">inNodeTimestampingService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeTimestampingService</span><span class="symbol">: </span><a href="../../../core.node.services/-node-timestamper-service/index.html"><span class="identifier">NodeTimestamperService</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/info.html">info</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">info</span><span class="symbol">: </span><a href="../../../core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/initial-network-map-address.html">initialNetworkMapAddress</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">initialNetworkMapAddress</span><span class="symbol">: </span><a href="../../../core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/interest-rates-service.html">interestRatesService</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">interestRatesService</span><span class="symbol">: </span><a href="../../../core.node.services/-node-interest-rates/-service/index.html"><span class="identifier">Service</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/key-management.html">keyManagement</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">keyManagement</span><span class="symbol">: </span><a href="../../../core.node.subsystems/-e2-e-test-key-management-service/index.html"><span class="identifier">E2ETestKeyManagementService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/net.html">net</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/network-map-seq.html">networkMapSeq</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">networkMapSeq</span><span class="symbol">: </span><span class="identifier">Long</span></code><p>Sequence number of changes sent to the network map service, when registering/de-registering this node</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/network-map-service-call-timeout.html">networkMapServiceCallTimeout</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkMapServiceCallTimeout</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/platform-clock.html">platformClock</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">platformClock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/services.html">services</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../../../core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/services-that-accept-uploads.html">servicesThatAcceptUploads</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">servicesThatAcceptUploads</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../core.node/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/smm.html">smm</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">smm</span><span class="symbol">: </span><a href="../../../core.messaging/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/storage.html">storage</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="../../../core.node.subsystems/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/wallet.html">wallet</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">wallet</span><span class="symbol">: </span><a href="../../../core.node.subsystems/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="find-my-location.html">findMyLocation</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">findMyLocation</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.node/-physical-location/index.html"><span class="identifier">PhysicalLocation</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="make-identity-service.html">makeIdentityService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeIdentityService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../-mock-identity-service/index.html"><span class="identifier">MockIdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="make-messaging-service.html">makeMessagingService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">MockNode</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="start-messaging-service.html">startMessagingService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">startMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/construct-storage-service.html">constructStorageService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">constructStorageService</span><span class="symbol">(</span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, java.security.KeyPair, core.Party)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="../../../core.node.services/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a><span class="symbol">, </span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, java.security.KeyPair, core.Party)/keypair">keypair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="core.node.AbstractNode$constructStorageService(core.node.services.NodeAttachmentService, java.security.KeyPair, core.Party)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.node.subsystems/-storage-service-impl/index.html"><span class="identifier">StorageServiceImpl</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/initialise-storage-service.html">initialiseStorageService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="core.node.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.node.subsystems/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/make-interest-rates-oracle-service.html">makeInterestRatesOracleService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeInterestRatesOracleService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/make-network-map-service.html">makeNetworkMapService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNetworkMapService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/make-timestamping-service.html">makeTimestampingService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeTimestampingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../core.node/-abstract-node/stop.html">stop</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../-simulation/-simulated-node/index.html">SimulatedNode</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">SimulatedNode</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MockNode</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,130 @@
+<HTML>
+<HEAD>
+<title>InMemoryNetworkMapService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node.services</a>&nbsp;/&nbsp;<a href=".">InMemoryNetworkMapService</a><br/>
+<br/>
+<h1>InMemoryNetworkMapService</h1>
+<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><a href="../-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">InMemoryNetworkMapService</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$<init>(core.messaging.MessagingService, core.node.services.NodeRegistration, core.node.subsystems.NetworkMapCache)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$<init>(core.messaging.MessagingService, core.node.services.NodeRegistration, core.node.subsystems.NetworkMapCache)/home">home</span><span class="symbol">:</span>&nbsp;<a href="../-node-registration/index.html"><span class="identifier">NodeRegistration</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$<init>(core.messaging.MessagingService, core.node.services.NodeRegistration, core.node.subsystems.NetworkMapCache)/cache">cache</span><span class="symbol">:</span>&nbsp;<a href="../../core.node.subsystems/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="cache.html">cache</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">cache</span><span class="symbol">: </span><a href="../../core.node.subsystems/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="max-size-registration-request-bytes.html">maxSizeRegistrationRequestBytes</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxSizeRegistrationRequestBytes</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
+10 times overhead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="max-unacknowledged-updates.html">maxUnacknowledgedUpdates</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">maxUnacknowledgedUpdates</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>Maximum number of unacknowledged updates to send to a node before automatically unregistering them for updates</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="nodes.html">nodes</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">nodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-node-service/net.html">net</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-unacknowledged-count.html">getUnacknowledgedCount</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getUnacknowledgedCount</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$getUnacknowledgedCount(core.messaging.SingleMessageRecipient)/subscriber">subscriber</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="notify-subscribers.html">notifySubscribers</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">notifySubscribers</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$notifySubscribers(core.node.services.WireNodeRegistration)/wireReg">wireReg</span><span class="symbol">:</span>&nbsp;<a href="../-wire-node-registration/index.html"><span class="identifier">WireNodeRegistration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-acknowledge.html">processAcknowledge</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processAcknowledge</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$processAcknowledge(core.node.services.NetworkMapService.UpdateAcknowledge)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-update-acknowledge/index.html"><span class="identifier">UpdateAcknowledge</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-fetch-all-request.html">processFetchAllRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processFetchAllRequest</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$processFetchAllRequest(core.node.services.NetworkMapService.FetchMapRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-fetch-map-request/index.html"><span class="identifier">FetchMapRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-fetch-map-response/index.html"><span class="identifier">FetchMapResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-query-request.html">processQueryRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processQueryRequest</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$processQueryRequest(core.node.services.NetworkMapService.QueryIdentityRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-query-identity-request/index.html"><span class="identifier">QueryIdentityRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-query-identity-response/index.html"><span class="identifier">QueryIdentityResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-registration-change-request.html">processRegistrationChangeRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processRegistrationChangeRequest</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$processRegistrationChangeRequest(core.node.services.NetworkMapService.RegistrationRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-registration-request/index.html"><span class="identifier">RegistrationRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-registration-response/index.html"><span class="identifier">RegistrationResponse</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="process-subscription-request.html">processSubscriptionRequest</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">processSubscriptionRequest</span><span class="symbol">(</span><span class="identifier" id="core.node.services.InMemoryNetworkMapService$processSubscriptionRequest(core.node.services.NetworkMapService.SubscribeRequest)/req">req</span><span class="symbol">:</span>&nbsp;<a href="../-network-map-service/-subscribe-request/index.html"><span class="identifier">SubscribeRequest</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-network-map-service/-subscribe-response/index.html"><span class="identifier">SubscribeResponse</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-node-service/add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are caught and passed to the provided consumer.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.node.services.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((core.node.services.AbstractNodeService.addMessageHandler.Q, core.node.services.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+common boilerplate code. Exceptions are propagated to the messaging layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

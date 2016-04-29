@@ -1,0 +1,34 @@
+<HTML>
+<HEAD>
+<title>InMemoryNetworkMapCache.addMapService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.node.subsystems</a>&nbsp;/&nbsp;<a href="index.html">InMemoryNetworkMapCache</a>&nbsp;/&nbsp;<a href=".">addMapService</a><br/>
+<br/>
+<h1>addMapService</h1>
+<a name="core.node.subsystems.InMemoryNetworkMapCache$addMapService(core.messaging.StateMachineManager, core.messaging.MessagingService, core.node.NodeInfo, kotlin.Boolean, kotlin.Int)"></a>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">addMapService</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.InMemoryNetworkMapCache$addMapService(core.messaging.StateMachineManager, core.messaging.MessagingService, core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/smm">smm</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a><span class="symbol">, </span><span class="identifier" id="core.node.subsystems.InMemoryNetworkMapCache$addMapService(core.messaging.StateMachineManager, core.messaging.MessagingService, core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="core.node.subsystems.InMemoryNetworkMapCache$addMapService(core.messaging.StateMachineManager, core.messaging.MessagingService, core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/service">service</span><span class="symbol">:</span>&nbsp;<a href="../../core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="core.node.subsystems.InMemoryNetworkMapCache$addMapService(core.messaging.StateMachineManager, core.messaging.MessagingService, core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/subscribe">subscribe</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="core.node.subsystems.InMemoryNetworkMapCache$addMapService(core.messaging.StateMachineManager, core.messaging.MessagingService, core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/ifChangedSinceVer">ifChangedSinceVer</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><br/>
+Overrides <a href="../-network-map-cache/add-map-service.html">NetworkMapCache.addMapService</a><br/>
+<p>Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
+updates.</p>
+<h3>Parameters</h3>
+<a name="smm"></a>
+<code>smm</code> - state machine manager to use when requesting<br/>
+<br/>
+<a name="net"></a>
+<code>net</code> - the network messaging service<br/>
+<br/>
+<a name="service"></a>
+<code>service</code> - the network map service to fetch current state from.<br/>
+<br/>
+<a name="subscribe"></a>
+<code>subscribe</code> - if the cache should subscribe to updates<br/>
+<br/>
+<a name="ifChangedSinceVer"></a>
+<code>ifChangedSinceVer</code> - an optional version number to limit updating the map based on. If the latest map
+version is less than or equal to the given version, no update is fetched.<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

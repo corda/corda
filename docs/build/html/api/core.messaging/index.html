@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+<title>core.messaging - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">core.messaging</a><br/>
+<br/>
+<h2>Package core.messaging</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-all-possible-recipients.html">AllPossibleRecipients</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">AllPossibleRecipients</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code><p>A special base class for the set of all possible recipients, without having to identify who they all are.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-message/index.html">Message</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Message</span></code><p>A message is defined, at this level, to be a (topic, timestamp, byte arrays) triple, where the topic is a string in
+Java-style reverse dns form, with "platform." being a prefix reserved by the platform for its own use. Vendor
+specific messages can be defined, but use your domain name as the prefix e.g. "uk.co.bigbank.messages.SomeMessage".</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-message-handler-registration.html">MessageHandlerRegistration</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessageHandlerRegistration</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-message-recipient-group.html">MessageRecipientGroup</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessageRecipientGroup</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code><p>A base class for a set of recipients specifically identified by the sender.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-message-recipients.html">MessageRecipients</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessageRecipients</span></code><p>The interface for a group of message recipients (which may contain only one recipient)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-messaging-service/index.html">MessagingService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessagingService</span></code><p>A <a href="-messaging-service/index.html">MessagingService</a> sits at the boundary between a message routing / networking layer and the core platform code.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-messaging-service-builder/index.html">MessagingServiceBuilder</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MessagingServiceBuilder</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">&gt;</span></code><p>This class lets you start up a <a href="-messaging-service/index.html">MessagingService</a>. Its purpose is to stop you from getting access to the methods
+on the messaging service interface until you have successfully started up the system. One of these objects should
+be the only way to obtain a reference to a <a href="-messaging-service/index.html">MessagingService</a>. Startup may be a slow process: some implementations
+may let you cast the returned future to an object that lets you get status info.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-single-message-recipient.html">SingleMessageRecipient</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SingleMessageRecipient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code><p>A base class for the case of point-to-point messages</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-state-machine-manager/index.html">StateMachineManager</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">StateMachineManager</span></code><p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
+Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-topic-string-validator/index.html">TopicStringValidator</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">TopicStringValidator</span></code><p>A singleton thats useful for validating topic strings</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-stack-snapshot/index.html">StackSnapshot</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">StackSnapshot</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Throwable</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="run-on-next-message.html">runOnNextMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="core.messaging$runOnNextMessage(core.messaging.MessagingService, kotlin.String, java.util.concurrent.Executor, kotlin.Function1((core.messaging.Message, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span>&nbsp;<span class="symbol">=</span>&nbsp;""<span class="symbol">, </span><span class="identifier" id="core.messaging$runOnNextMessage(core.messaging.MessagingService, kotlin.String, java.util.concurrent.Executor, kotlin.Function1((core.messaging.Message, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="core.messaging$runOnNextMessage(core.messaging.MessagingService, kotlin.String, java.util.concurrent.Executor, kotlin.Function1((core.messaging.Message, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="-message/index.html"><span class="identifier">Message</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic that runs the given callback with the message and then removes itself. This
+is useful for one-shot handlers that arent supposed to stick around permanently. Note that this callback doesnt
+take the registration object, unlike the callback to <a href="-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="core.messaging$send(core.messaging.MessagingService, kotlin.String, core.messaging.MessageRecipients, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="core.messaging$send(core.messaging.MessagingService, kotlin.String, core.messaging.MessageRecipients, kotlin.Any)/to">to</span><span class="symbol">:</span>&nbsp;<a href="-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="core.messaging$send(core.messaging.MessagingService, kotlin.String, core.messaging.MessageRecipients, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

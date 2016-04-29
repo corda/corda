@@ -1,0 +1,192 @@
+<HTML>
+<HEAD>
+<title>IRSSimulation - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">core.testing</a>&nbsp;/&nbsp;<a href=".">IRSSimulation</a><br/>
+<br/>
+<h1>IRSSimulation</h1>
+<code><span class="keyword">class </span><span class="identifier">IRSSimulation</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-simulation/index.html"><span class="identifier">Simulation</span></a></code><br/>
+<p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">IRSSimulation</span><span class="symbol">(</span><span class="identifier" id="core.testing.IRSSimulation$<init>(kotlin.Boolean, core.testing.InMemoryMessagingNetwork.LatencyCalculator)/runAsync">runAsync</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="core.testing.IRSSimulation$<init>(kotlin.Boolean, core.testing.InMemoryMessagingNetwork.LatencyCalculator)/latencyInjector">latencyInjector</span><span class="symbol">:</span>&nbsp;<a href="../-in-memory-messaging-network/-latency-calculator/index.html"><span class="identifier">LatencyCalculator</span></a><span class="symbol">?</span><span class="symbol">)</span></code><p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="om.html">om</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">om</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-simulation/all-protocol-steps.html">allProtocolSteps</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">allProtocolSteps</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">,</span>&nbsp;<a href="../../core.utilities/-progress-tracker/-change/index.html"><span class="identifier">Change</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/bank-factory.html">bankFactory</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bankFactory</span><span class="symbol">: </span><a href="../-simulation/-bank-factory/index.html"><span class="identifier">BankFactory</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/bank-locations.html">bankLocations</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bankLocations</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/banks.html">banks</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">banks</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/current-day.html">currentDay</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">currentDay</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></code><p>The current simulated date. By default this never changes. If you want it to change, you should do so from
+within your overridden <a href="../-simulation/iterate.html">iterate</a> call. Changes in the current day surface in the <a href="../-simulation/date-changes.html">dateChanges</a> observable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/date-changes.html">dateChanges</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dateChanges</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/done-steps.html">doneSteps</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">doneSteps</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/extra-node-labels.html">extraNodeLabels</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">extraNodeLabels</span><span class="symbol">: </span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">String</span><span class="symbol">&gt;</span></code><p>A place for simulations to stash human meaningful text about what the node is "thinking", which might appear
+in the UI somewhere.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/latency-injector.html">latencyInjector</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">latencyInjector</span><span class="symbol">: </span><a href="../-in-memory-messaging-network/-latency-calculator/index.html"><span class="identifier">LatencyCalculator</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network.html">network</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">network</span><span class="symbol">: </span><a href="../-mock-network/index.html"><span class="identifier">MockNetwork</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network-map.html">networkMap</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkMap</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/rates-oracle.html">ratesOracle</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ratesOracle</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/regulators.html">regulators</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">regulators</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/run-async.html">runAsync</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">runAsync</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/service-providers.html">serviceProviders</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serviceProviders</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/timestamper.html">timestamper</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">timestamper</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="iterate.html">iterate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">iterate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Iterates the simulation by one step.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-simulation/link-consensus.html">linkConsensus</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">linkConsensus</span><span class="symbol">(</span><span class="identifier" id="core.testing.Simulation$linkConsensus(kotlin.collections.Collection((core.testing.Simulation.SimulatedNode)), core.protocols.ProtocolLogic((kotlin.Any)))/nodes">nodes</span><span class="symbol">:</span>&nbsp;<span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="core.testing.Simulation$linkConsensus(kotlin.collections.Collection((core.testing.Simulation.SimulatedNode)), core.protocols.ProtocolLogic((kotlin.Any)))/protocol">protocol</span><span class="symbol">:</span>&nbsp;<a href="../../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/link-protocol-progress.html">linkProtocolProgress</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">linkProtocolProgress</span><span class="symbol">(</span><span class="identifier" id="core.testing.Simulation$linkProtocolProgress(core.testing.Simulation.SimulatedNode, core.protocols.ProtocolLogic((kotlin.Any)))/node">node</span><span class="symbol">:</span>&nbsp;<a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">, </span><span class="identifier" id="core.testing.Simulation$linkProtocolProgress(core.testing.Simulation.SimulatedNode, core.protocols.ProtocolLogic((kotlin.Any)))/protocol">protocol</span><span class="symbol">:</span>&nbsp;<a href="../../core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/start-trading-circle.html">startTradingCircle</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">startTradingCircle</span><span class="symbol">(</span><span class="identifier" id="core.testing.Simulation$startTradingCircle(kotlin.Function2((kotlin.Int, kotlin.Int, (()))))/tradeBetween">tradeBetween</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Int</span><span class="symbol">,</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
+each time the returned future completes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/stop.html">stop</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
