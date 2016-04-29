@@ -1,8 +1,5 @@
-package com.r3corda.contracts
+package com.r3corda.contracts.cash
 
-import com.r3corda.contracts.cash.CashIssuanceDefinition
-import com.r3corda.contracts.cash.CommonCashState
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -277,4 +274,3 @@ fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map
 
 /** Sums the cash states in the list, returning zero of the given currency if there are none. */
 fun Iterable<ContractState>.sumCashOrZero(currency: Currency) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
-

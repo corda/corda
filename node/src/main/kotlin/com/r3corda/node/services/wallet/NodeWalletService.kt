@@ -1,7 +1,7 @@
 package com.r3corda.node.services.wallet
 
 import com.codahale.metrics.Gauge
-import com.r3corda.contracts.Cash
+import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party

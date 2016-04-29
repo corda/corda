@@ -1,10 +1,6 @@
-import com.r3corda.contracts.Cash
+package com.r3corda.contracts.cash
+
 import com.r3corda.contracts.DummyContract
-import com.r3corda.contracts.InsufficientBalanceException
-import com.r3corda.contracts.sumCash
-import com.r3corda.contracts.sumCashBy
-import com.r3corda.contracts.sumCashOrNull
-import com.r3corda.contracts.sumCashOrZero
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.core.contracts.*
@@ -45,7 +41,7 @@ class CashTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "required com.r3corda.contracts.Cash.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.cash.Cash.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -301,7 +297,7 @@ class CashTests {
 
             tweak {
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS) }
-                this `fails requirement` "required com.r3corda.contracts.Cash.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.cash.Cash.Commands.Move command"
 
                 tweak {
                     arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }

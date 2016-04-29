@@ -1,7 +1,7 @@
 package com.r3corda.node.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.contracts.Cash
+import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.CommercialPaper
 import com.r3corda.contracts.testing.CASH
 import com.r3corda.contracts.testing.`issued by`
