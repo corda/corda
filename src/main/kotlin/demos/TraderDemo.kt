@@ -29,6 +29,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
+import java.util.*
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
@@ -70,7 +71,7 @@ fun main(args: Array<String>) {
 
     val config = loadConfigFile(configFile)
 
-    var advertisedServices: Set<ServiceType> = emptySet()
+    val advertisedServices: Set<ServiceType>
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
@@ -83,8 +84,13 @@ fun main(args: Array<String>) {
         val addr = HostAndPort.fromString(options.valueOf(networkMapNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(networkMapIdentityFile))
         val party = Files.readAllBytes(path).deserialize<Party>()
+        advertisedServices = emptySet()
         NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, setOf(NetworkMapService.Type))
-    } else null
+    } else {
+        // We must be the network map service
+        advertisedServices = setOf(NetworkMapService.Type, TimestamperService.Type)
+        null
+    }
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId, advertisedServices).start() }
 
