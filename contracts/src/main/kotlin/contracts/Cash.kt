@@ -93,28 +93,7 @@ class Cash : Contract {
                 "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0L }
             }
 
-            val issueCommand = tx.commands.select<Commands.Issue>().singleOrNull()
-            if (issueCommand != null && outputs.isNotEmpty()) {
-                // If we have an issue command, perform special processing: the group is allowed to have no inputs,
-                // and the output states must have a deposit reference owned by the signer.
-                //
-                // Whilst the transaction *may* have no inputs, it can have them, and in this case the outputs must
-                // sum to more than the inputs. An issuance of zero size is not allowed.
-                //
-                // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
-                // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
-                // as-yet-unwritten identity service. See ADP-22 for discussion.
-
-                // The grouping ensures that all outputs have the same deposit reference and currency.
-                val inputAmount = inputs.sumCashOrZero(currency)
-                val outputAmount = outputs.sumCash()
-                requireThat {
-                    "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-                    "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
-                    "output values sum to more than the inputs" by (outputAmount > inputAmount)
-                }
-                continue
-            }
+            if (verifyIssueCommands(inputs, outputs, tx, currency, issuer)) continue
 
             val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
             val outputAmount = outputs.sumCashOrZero(currency)
@@ -130,15 +109,35 @@ class Cash : Contract {
                         (inputAmount == outputAmount + amountExitingLedger)
             }
 
-            // Now check the digital signatures on the move command. Every input has an owning public key, and we must
-            // see a signature from each of those keys. The actual signatures have been verified against the transaction
-            // data by the platform before execution.
-            val owningPubKeys = inputs.map { it.owner }.toSet()
-            val keysThatSigned = tx.commands.requireSingleCommand<Commands.Move>().signers.toSet()
-            requireThat {
-                "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
-            }
+            verifyMoveCommands<Commands.Move>(inputs, tx)
         }
+    }
+
+    private fun verifyIssueCommands(inputs: List<State>, outputs: List<State>, tx: TransactionForVerification, currency: Currency, issuer: Party): Boolean {
+        val issueCommand = tx.commands.select<Commands.Issue>().singleOrNull()
+        if (issueCommand == null || outputs.isEmpty()) {
+            return false
+        }
+
+        // If we have an issue command, perform special processing: the group is allowed to have no inputs,
+        // and the output states must have a deposit reference owned by the signer.
+        //
+        // Whilst the transaction *may* have no inputs, it can have them, and in this case the outputs must
+        // sum to more than the inputs. An issuance of zero size is not allowed.
+        //
+        // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
+        // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
+        // as-yet-unwritten identity service. See ADP-22 for discussion.
+
+        // The grouping ensures that all outputs have the same deposit reference and currency.
+        val inputAmount = inputs.sumCashOrZero(currency)
+        val outputAmount = outputs.sumCash()
+        requireThat {
+            "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
+            "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
+            "output values sum to more than the inputs" by (outputAmount > inputAmount)
+        }
+        return true
     }
 
     /**
