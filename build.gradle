@@ -13,8 +13,7 @@ allprojects {
 
 buildscript {
     ext.kotlin_version = '1.0.1'
-    // TODO: Reset to 0.7.5 when released. We need the snapshot for a TLS serialization related fix.
-    ext.quasar_version = '0.7.5-SNAPSHOT'
+    ext.quasar_version = '0.7.5'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
     ext.jetty_version = '9.1.1.v20140108'
