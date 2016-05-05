@@ -143,6 +143,26 @@ class CashTests {
             arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             this `fails requirement` "output values sum to more than the inputs"
         }
+
+        // Can't have any other commands if we have an issue command (because the issue command overrules them)
+        transaction {
+            input { inState }
+            output { inState.copy(amount = inState.amount * 2) }
+            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            tweak {
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+                this `fails requirement` "there is only a single issue command"
+            }
+            tweak {
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                this `fails requirement` "there is only a single issue command"
+            }
+            tweak {
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
+                this `fails requirement` "there is only a single issue command"
+            }
+            this.accepts()
+        }
     }
 
     @Test
