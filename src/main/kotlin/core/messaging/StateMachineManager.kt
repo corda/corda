@@ -127,7 +127,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
                 if (!awaitingObjectOfType.isInstance(obj))
                     throw ClassCastException("Received message of unexpected type: ${obj.javaClass.name} vs ${awaitingObjectOfType.name}")
                 logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
-                iterateStateMachine(psm, serviceHub.networkService, logger, obj, checkpointKey) {
+                iterateStateMachine(psm, logger, obj, checkpointKey) {
                     try {
                         Fiber.unparkDeserialized(it, scheduler)
                     } catch(e: Throwable) {
@@ -167,7 +167,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
             // Need to add before iterating in case of immediate completion
             stateMachines.add(logic)
             executor.executeASAP {
-                iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
+                iterateStateMachine(fiber, logger, null, null) {
                     it.start()
                 }
                 totalStartedProtocols.inc()
@@ -190,24 +190,27 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         return key
     }
 
-    private fun iterateStateMachine(psm: ProtocolStateMachine<*>, net: MessagingService, logger: Logger,
-                                    obj: Any?, prevCheckpointKey: SecureHash?, resumeFunc: (ProtocolStateMachine<*>) -> Unit) {
+    private fun iterateStateMachine(psm: ProtocolStateMachine<*>,
+                                    logger: Logger,
+                                    obj: Any?,
+                                    prevCheckpointKey: SecureHash?,
+                                    resumeFunc: (ProtocolStateMachine<*>) -> Unit) {
         executor.checkOnThread()
         val onSuspend = fun(request: FiberRequest, serFiber: ByteArray) {
             // We have a request to do something: send, receive, or send-and-receive.
             if (request is FiberRequest.ExpectingResponse<*>) {
                 // Prepare a listener on the network that runs in the background thread when we received a message.
-                checkpointAndSetupMessageHandler(logger, net, psm, request, prevCheckpointKey, serFiber)
+                checkpointAndSetupMessageHandler(logger, psm, request, prevCheckpointKey, serFiber)
             }
             // If an object to send was provided (not null), send it now.
             request.obj?.let {
                 val topic = "${request.topic}.${request.sessionIDForSend}"
                 logger.trace { "-> ${request.destination}/$topic : message of type ${it.javaClass.name}" }
-                net.send(net.createMessage(topic, it.serialize().bits), request.destination!!)
+                serviceHub.networkService.send(topic, it, request.destination!!)
             }
             if (request is FiberRequest.NotExpectingResponse) {
                 // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-                iterateStateMachine(psm, net, logger, null, prevCheckpointKey) {
+                iterateStateMachine(psm, logger, null, prevCheckpointKey) {
                     try {
                         Fiber.unpark(it, QUASAR_UNBLOCKER)
                     } catch(e: Throwable) {
@@ -230,8 +233,10 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         }
     }
 
-    private fun checkpointAndSetupMessageHandler(logger: Logger, net: MessagingService, psm: ProtocolStateMachine<*>,
-                                                 request: FiberRequest.ExpectingResponse<*>, prevCheckpointKey: SecureHash?,
+    private fun checkpointAndSetupMessageHandler(logger: Logger,
+                                                 psm: ProtocolStateMachine<*>,
+                                                 request: FiberRequest.ExpectingResponse<*>,
+                                                 prevCheckpointKey: SecureHash?,
                                                  serialisedFiber: ByteArray) {
         executor.checkOnThread()
         val topic = "${request.topic}.${request.sessionIDForReceive}"
@@ -241,7 +246,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         val newCheckpointKey = curPersistedBytes.sha256()
         logger.trace { "Waiting for message of type ${request.responseType.name} on $topic" }
         val consumed = AtomicBoolean()
-        net.runOnNextMessage(topic, executor) { netMsg ->
+        serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
             // Some assertions to ensure we don't execute on the wrong thread or get executed more than once.
             executor.checkOnThread()
             check(netMsg.topic == topic) { "Topic mismatch: ${netMsg.topic} vs $topic" }
@@ -256,7 +261,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
             val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
             if (!request.responseType.isInstance(obj))
                 throw IllegalStateException("Expected message of type ${request.responseType.name} but got ${obj.javaClass.name}", request.stackTraceInCaseOfProblems)
-            iterateStateMachine(psm, net, logger, obj, newCheckpointKey) {
+            iterateStateMachine(psm, logger, obj, newCheckpointKey) {
                 try {
                     Fiber.unpark(it, QUASAR_UNBLOCKER)
                 } catch(e: Throwable) {

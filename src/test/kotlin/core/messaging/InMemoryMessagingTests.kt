@@ -90,7 +90,7 @@ class InMemoryMessagingTests {
         val node1 = network.createNode()
         var node2 = network.createNode()
 
-        node1.net.send("test.topic", node2.info.address, "hello!")
+        node1.net.send("test.topic", "hello!", node2.info.address)
         network.runNetwork(rounds = 1)   // No handler registered, so the message goes into a holding area.
         var runCount = 0
         node2.net.addMessageHandler("test.topic") { msg, registration ->
@@ -103,8 +103,8 @@ class InMemoryMessagingTests {
         // Shut node2 down for a while. Node 1 keeps sending it messages though.
         node2.stop()
 
-        node1.net.send("test.topic", node2.info.address, "are you there?")
-        node1.net.send("test.topic", node2.info.address, "wake up!")
+        node1.net.send("test.topic", "are you there?", node2.info.address)
+        node1.net.send("test.topic", "wake up!", node2.info.address)
 
         // Now re-create node2 with the same address as last time, and re-register a message handler.
         // Check that the messages that were sent whilst it was gone are still there, waiting for it.

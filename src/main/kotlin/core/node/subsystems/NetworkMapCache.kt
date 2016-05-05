@@ -9,8 +9,11 @@ import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
 import core.messaging.runOnNextMessage
+import core.messaging.send
 import core.node.NodeInfo
 import core.node.services.*
+import core.node.services.NetworkMapService.Companion.FETCH_PROTOCOL_TOPIC
+import core.node.services.NetworkMapService.Companion.SUBSCRIPTION_PROTOCOL_TOPIC
 import core.random63BitValue
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -152,13 +155,13 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
         val future = SettableFuture.create<Unit>()
-        net.runOnNextMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC + "." + sessionID, MoreExecutors.directExecutor()) { message ->
+        net.runOnNextMessage("$FETCH_PROTOCOL_TOPIC.$sessionID", MoreExecutors.directExecutor()) { message ->
             val resp = message.data.deserialize<NetworkMapService.FetchMapResponse>()
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             resp.nodes?.forEach { processRegistration(it) }
             future.set(Unit)
         }
-        net.send(net.createMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC + ".0", req.serialize().bits), service.address)
+        net.send("$FETCH_PROTOCOL_TOPIC.0", req, service.address)
 
         return future
     }
@@ -184,7 +187,7 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
         val future = SettableFuture.create<Unit>()
-        net.runOnNextMessage(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC + "." + sessionID, MoreExecutors.directExecutor()) { message ->
+        net.runOnNextMessage("$SUBSCRIPTION_PROTOCOL_TOPIC.$sessionID", MoreExecutors.directExecutor()) { message ->
             val resp = message.data.deserialize<NetworkMapService.SubscribeResponse>()
             if (resp.confirmed) {
                 future.set(Unit)
@@ -192,7 +195,7 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
                 future.setException(NetworkCacheError.DeregistrationFailed())
             }
         }
-        net.send(net.createMessage(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC + ".0", req.serialize().bits), service.address)
+        net.send("$SUBSCRIPTION_PROTOCOL_TOPIC.0", req, service.address)
 
         return future
     }
