@@ -31,6 +31,7 @@
 
   
     <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
+        <link rel="next" title="Building the documentation" href="building-the-docs.html"/>
         <link rel="prev" title="Using the visualiser" href="visualiser.html"/> 
 
   
@@ -90,7 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-    <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
 </ul>
@@ -104,12 +105,16 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Code style guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#general-style">1. General style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#general-style">1. General style</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#line-length-and-spacing">1.1 Line Length and Spacing</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#comments">2. Comments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#threading">3. Threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#assertions-and-errors">4. Assertions and errors</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
 
             
@@ -168,18 +173,12 @@ when interpreting them.</p>
 <div class="section" id="general-style">
 <h2>1. General style<a class="headerlink" href="#general-style" title="Permalink to this headline">¶</a></h2>
 <p>We use the standard Java coding style from Sun, adapted for Kotlin in ways that should be fairly intuitive.</p>
-<p>We aim for line widths of no more than 120 characters. That is wide enough to avoid lots of pointless wrapping but
-narrow enough that with a widescreen monitor and a 12 point fixed width font (like Menlo) you can fit two files
-next to each other. This is not a rigidly enforced rule and if wrapping a line would be excessively awkward, let it
-overflow. Overflow of a few characters here and there isn&#8217;t a big deal: the goal is general convenience.</p>
-<p>Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.</p>
-<p>Each file has a copyright notice at the top. Copy it from the existing files if you create a new one. We do not mark
-classes with &#64;author Javadoc annotations.</p>
+<p>Files no longer have copyright notices at the top, and license is now specified in the global README.md file.
+We do not mark classes with &#64;author Javadoc annotations.</p>
 <p>In Kotlin code, KDoc is used rather than JavaDoc. It&#8217;s very similar except it uses Markdown for formatting instead
 of HTML tags.</p>
 <p>We target Java 8 and use the latest Java APIs whenever convenient. We use <code class="docutils literal"><span class="pre">java.time.Instant</span></code> to represent timestamps
 and <code class="docutils literal"><span class="pre">java.nio.file.Path</span></code> to represent file paths.</p>
-<p>We use spaces and not tabs.</p>
 <p>Never apply any design pattern religiously. There are no silver bullets in programming and if something is fashionable,
 that doesn&#8217;t mean it&#8217;s always better. In particular:</p>
 <ul class="simple">
@@ -193,6 +192,17 @@ slow but without hotspots.</li>
 <li>The tradeoffs between various thread safety techniques are complex, subtle, and no technique is always superior to
 the others. Our code uses a mix of locks, worker threads and messaging depending on the situation.</li>
 </ul>
+<div class="section" id="line-length-and-spacing">
+<h3>1.1 Line Length and Spacing<a class="headerlink" href="#line-length-and-spacing" title="Permalink to this headline">¶</a></h3>
+<p>We aim for line widths of no more than 120 characters. That is wide enough to avoid lots of pointless wrapping but
+narrow enough that with a widescreen monitor and a 12 point fixed width font (like Menlo) you can fit two files
+next to each other. This is not a rigidly enforced rule and if wrapping a line would be excessively awkward, let it
+overflow. Overflow of a few characters here and there isn&#8217;t a big deal: the goal is general convenience.</p>
+<p>Where the number of parameters in a function, class, etc. causes an overflow past the end of the first line, they should
+be structured one parameter per line.</p>
+<p>Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.</p>
+<p>We use spaces and not tabs.</p>
+</div>
 </div>
 <div class="section" id="comments">
 <h2>2. Comments<a class="headerlink" href="#comments" title="Permalink to this headline">¶</a></h2>
@@ -238,7 +248,13 @@ is not always right.</li>
 </pre></div>
 </div>
 <p>We use C-style (<code class="docutils literal"><span class="pre">/**</span> <span class="pre">*/</span></code>) comments for API docs and we use C++ style comments (<code class="docutils literal"><span class="pre">//</span></code>) for explanations that are
-only intended to be viewed by people who read the code.</p>
+only intended to be viewed by people who read the code.
+When writing multi-line TODO comments, indent the body text past the TODO line, for example:</p>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="c1">// TODO: Something something</span>
+<span class="c1">//       More stuff to do</span>
+<span class="c1">//       Etc. etc.</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="threading">
 <h2>3. Threading<a class="headerlink" href="#threading" title="Permalink to this headline">¶</a></h2>
@@ -271,6 +287,10 @@ an immutable object with arbitrary fields adjusted in the clone. But if you can&
 reason, for instance, you are working in Java or because you need an inheritance heirarchy, then consider that making
 a class fully immutable may result in very awkward code if there&#8217;s ever a need to make complex changes to it. If in
 doubt, ask. Remember, never apply any design pattern religiously.</p>
+<p>We have an extension to the <code class="docutils literal"><span class="pre">Executor</span></code> interface called <code class="docutils literal"><span class="pre">AffinityExecutor</span></code>. It is useful when the thread safety
+of a piece of code is based on expecting to be called from a single thread only (or potentially, a single thread pool).
+<code class="docutils literal"><span class="pre">AffinityExecutor</span></code> has additional methods that allow for thread assertions. These can be useful to ensure code is not
+accidentally being used in a multi-threaded way when it didn&#8217;t expect that.</p>
 </div>
 <div class="section" id="assertions-and-errors">
 <h2>4. Assertions and errors<a class="headerlink" href="#assertions-and-errors" title="Permalink to this headline">¶</a></h2>
@@ -299,6 +319,8 @@ really necessary. In other words, don&#8217;t do this:</p>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="building-the-docs.html" class="btn btn-neutral float-right" title="Building the documentation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="visualiser.html" class="btn btn-neutral" title="Using the visualiser" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
