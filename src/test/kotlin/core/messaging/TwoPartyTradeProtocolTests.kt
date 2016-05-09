@@ -7,16 +7,18 @@ import core.crypto.SecureHash
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.ServiceHub
+import core.node.services.NodeAttachmentService
+import core.node.services.ServiceType
+import core.node.storage.CheckpointStorage
 import core.node.subsystems.NodeWalletService
-import core.node.subsystems.StorageService
 import core.node.subsystems.StorageServiceImpl
 import core.node.subsystems.Wallet
-import core.node.services.*
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork
 import core.testutils.*
 import core.utilities.BriefLogFormatter
 import core.utilities.RecordingMap
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,7 +28,6 @@ import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -94,11 +95,14 @@ class TwoPartyTradeProtocolTests {
 
             aliceNode.stop()
             bobNode.stop()
+
+            assertThat(aliceNode.storage.checkpointStorage.checkpoints).isEmpty()
+            assertThat(bobNode.storage.checkpointStorage.checkpoints).isEmpty()
         }
     }
 
     @Test
-    fun shutdownAndRestore() {
+    fun `shutdown and restore`() {
         transactionGroupFor<ContractState> {
             var (aliceNode, bobNode) = net.createTwoNodes()
             val aliceAddr = aliceNode.net.myAddress
@@ -149,9 +153,7 @@ class TwoPartyTradeProtocolTests {
             pumpBob()
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            // Save the state machine to "disk" (i.e. a variable, here)
-            val savedCheckpoints = HashMap(bobNode.storage.stateMachines)
-            assertEquals(1, savedCheckpoints.size)
+            assertThat(bobNode.storage.checkpointStorage.checkpoints).hasSize(1)
 
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
             bobNode.stop()
@@ -165,14 +167,7 @@ class TwoPartyTradeProtocolTests {
             bobNode = net.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
                 override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                                     advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
-                    return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id) {
-                        override fun initialiseStorageService(dir: Path): StorageService {
-                            val ss = super.initialiseStorageService(dir)
-                            val smMap = ss.stateMachines
-                            smMap.putAll(savedCheckpoints)
-                            return ss
-                        }
-                    }
+                    return MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id)
                 }
             })
 
@@ -185,8 +180,7 @@ class TwoPartyTradeProtocolTests {
             // Bob is now finished and has the same transaction as Alice.
             assertEquals(bobFuture.get(), aliceFuture.get())
 
-
-            assertTrue(bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).isEmpty())
+            assertThat(bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java)).isEmpty()
         }
     }
 
@@ -200,9 +194,9 @@ class TwoPartyTradeProtocolTests {
                                 advertisedServices: Set<ServiceType>, id: Int): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id) {
                     // That constructs the storage service object in a customised way ...
-                    override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
+                    override fun constructStorageService(attachments: NodeAttachmentService, checkpointStorage: CheckpointStorage, keypair: KeyPair, identity: Party): StorageServiceImpl {
                         // To use RecordingMaps instead of ordinary HashMaps.
-                        return StorageServiceImpl(attachments, keypair, identity, { tableName -> name })
+                        return StorageServiceImpl(attachments, checkpointStorage, keypair, identity, { tableName -> name })
                     }
                 }
             }

@@ -7,21 +7,22 @@ import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.io.Input
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
-import core.crypto.SecureHash
-import core.crypto.sha256
 import core.node.ServiceHub
+import core.node.storage.Checkpoint
 import core.protocols.ProtocolLogic
 import core.protocols.ProtocolStateMachine
+import core.serialization.SerializedBytes
 import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
-import core.serialization.serialize
+import core.then
 import core.utilities.AffinityExecutor
 import core.utilities.ProgressTracker
 import core.utilities.trace
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
+import java.util.Collections.synchronizedMap
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.concurrent.ThreadSafe
 
@@ -58,10 +59,10 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
 
     // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
     // them across node restarts.
-    private val checkpointsMap = serviceHub.storageService.stateMachines
+    private val checkpointStorage = serviceHub.storageService.checkpointStorage
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
-    private val stateMachines = Collections.synchronizedList(ArrayList<ProtocolLogic<*>>())
+    private val stateMachines = synchronizedMap(HashMap<ProtocolStateMachine<*>, Checkpoint>())
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -78,7 +79,10 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
     fun <T> findStateMachines(klass: Class<out ProtocolLogic<T>>): List<Pair<ProtocolLogic<T>, ListenableFuture<T>>> {
         synchronized(stateMachines) {
             @Suppress("UNCHECKED_CAST")
-            return stateMachines.filterIsInstance(klass).map { it to (it.psm as ProtocolStateMachine<T>).resultFuture }
+            return stateMachines.keys
+                    .map { it.logic }
+                    .filterIsInstance(klass)
+                    .map { it to (it.psm as ProtocolStateMachine<T>).resultFuture }
         }
     }
 
@@ -89,13 +93,6 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         field.get(null)
     }
 
-    // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
-    private class Checkpoint(
-            val serialisedFiber: ByteArray,
-            val awaitingTopic: String,
-            val awaitingObjectOfType: String   // java class name
-    )
-
     init {
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
             (fiber as ProtocolStateMachine<*>).logger.error("Caught exception from protocol", throwable)
@@ -105,16 +102,15 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
 
     /** Reads the database map and resurrects any serialised state machines. */
     private fun restoreCheckpoints() {
-        for (bytes in checkpointsMap.values) {
-            val checkpoint = bytes.deserialize<Checkpoint>()
-            val checkpointKey = SecureHash.sha256(bytes)
-
+        for (checkpoint in checkpointStorage.checkpoints) {
             // Grab the Kryo engine configured by Quasar for its own stuff, and then do our own configuration on top
             // so we can deserialised the nested stream that holds the fiber.
             val psm = deserializeFiber(checkpoint.serialisedFiber)
-            stateMachines.add(psm.logic)
+            initFiber(psm, checkpoint)
             val awaitingObjectOfType = Class.forName(checkpoint.awaitingObjectOfType)
             val topic = checkpoint.awaitingTopic
+
+            psm.logger.info("restored ${psm.logic} - was previously awaiting on topic $topic")
 
             // And now re-wire the deserialised continuation back up to the network service.
             serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
@@ -123,7 +119,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
                 if (!awaitingObjectOfType.isInstance(obj))
                     throw ClassCastException("Received message of unexpected type: ${obj.javaClass.name} vs ${awaitingObjectOfType.name}")
                 psm.logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
-                iterateStateMachine(psm, obj, checkpointKey) {
+                iterateStateMachine(psm, obj) {
                     try {
                         Fiber.unparkDeserialized(it, scheduler)
                     } catch(e: Throwable) {
@@ -132,6 +128,12 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
                 }
             }
         }
+    }
+
+    private fun deserializeFiber(serialisedFiber: SerializedBytes<ProtocolStateMachine<*>>): ProtocolStateMachine<*> {
+        val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
+        val kryo = createKryo(deserializer.kryo)
+        return serialisedFiber.deserialize(kryo)
     }
 
     private fun logError(e: Throwable, obj: Any, topic: String, psm: ProtocolStateMachine<*>) {
@@ -144,11 +146,16 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         }
     }
 
-    private fun deserializeFiber(bits: ByteArray): ProtocolStateMachine<*> {
-        val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        val kryo = createKryo(deserializer.kryo)
-        val psm = kryo.readClassAndObject(Input(bits)) as ProtocolStateMachine<*>
-        return psm
+    private fun initFiber(psm: ProtocolStateMachine<*>, checkpoint: Checkpoint?) {
+        stateMachines[psm] = checkpoint
+        psm.resultFuture.then(executor) {
+            psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
+            val finalCheckpoint = stateMachines.remove(psm)
+            if (finalCheckpoint != null) {
+                checkpointStorage.removeCheckpoint(finalCheckpoint)
+            }
+            totalFinishedProtocols.inc()
+        }
     }
 
     /**
@@ -160,9 +167,9 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         try {
             val fiber = ProtocolStateMachine(logic, scheduler, loggerName)
             // Need to add before iterating in case of immediate completion
-            stateMachines.add(logic)
+            initFiber(fiber, null)
             executor.executeASAP {
-                iterateStateMachine(fiber, null, null) {
+                iterateStateMachine(fiber, null) {
                     it.start()
                 }
                 totalStartedProtocols.inc()
@@ -174,27 +181,26 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         }
     }
 
-    private fun persistCheckpoint(prevCheckpointKey: SecureHash?, new: ByteArray): SecureHash {
+    private fun replaceCheckpoint(psm: ProtocolStateMachine<*>, newCheckpoint: Checkpoint) {
         // It's OK for this to be unsynchronised, as the prev/new byte arrays are specific to a continuation instance,
         // and the underlying map provided by the database layer is expected to be thread safe.
-        if (prevCheckpointKey != null)
-            checkpointsMap.remove(prevCheckpointKey)
-        val key = SecureHash.sha256(new)
-        checkpointsMap[key] = new
+        val previousCheckpoint = stateMachines.put(psm, newCheckpoint)
+        if (previousCheckpoint != null) {
+            checkpointStorage.removeCheckpoint(previousCheckpoint)
+        }
+        checkpointStorage.addCheckpoint(newCheckpoint)
         checkpointingMeter.mark()
-        return key
     }
 
     private fun iterateStateMachine(psm: ProtocolStateMachine<*>,
                                     obj: Any?,
-                                    prevCheckpointKey: SecureHash?,
                                     resumeFunc: (ProtocolStateMachine<*>) -> Unit) {
         executor.checkOnThread()
-        val onSuspend = fun(request: FiberRequest, serFiber: ByteArray) {
+        val onSuspend = fun(request: FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachine<*>>) {
             // We have a request to do something: send, receive, or send-and-receive.
             if (request is FiberRequest.ExpectingResponse<*>) {
                 // Prepare a listener on the network that runs in the background thread when we received a message.
-                checkpointAndSetupMessageHandler(psm, request, prevCheckpointKey, serFiber)
+                checkpointAndSetupMessageHandler(psm, request, serialisedFiber)
             }
             // If an object to send was provided (not null), send it now.
             request.obj?.let {
@@ -204,7 +210,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
             }
             if (request is FiberRequest.NotExpectingResponse) {
                 // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-                iterateStateMachine(psm, null, prevCheckpointKey) {
+                iterateStateMachine(psm, null) {
                     try {
                         Fiber.unpark(it, QUASAR_UNBLOCKER)
                     } catch(e: Throwable) {
@@ -217,26 +223,15 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         psm.prepareForResumeWith(serviceHub, obj, onSuspend)
 
         resumeFunc(psm)
-
-        // We're back! Check if the fiber is finished and if so, clean up.
-        if (psm.isTerminated) {
-            psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
-            stateMachines.remove(psm.logic)
-            checkpointsMap.remove(prevCheckpointKey)
-            totalFinishedProtocols.inc()
-        }
     }
 
     private fun checkpointAndSetupMessageHandler(psm: ProtocolStateMachine<*>,
                                                  request: FiberRequest.ExpectingResponse<*>,
-                                                 prevCheckpointKey: SecureHash?,
-                                                 serialisedFiber: ByteArray) {
+                                                 serialisedFiber: SerializedBytes<ProtocolStateMachine<*>>) {
         executor.checkOnThread()
         val topic = "${request.topic}.${request.sessionIDForReceive}"
-        val checkpoint = Checkpoint(serialisedFiber, topic, request.responseType.name)
-        val curPersistedBytes = checkpoint.serialize().bits
-        persistCheckpoint(prevCheckpointKey, curPersistedBytes)
-        val newCheckpointKey = curPersistedBytes.sha256()
+        val newCheckpoint = Checkpoint(serialisedFiber, topic, request.responseType.name)
+        replaceCheckpoint(psm, newCheckpoint)
         psm.logger.trace { "Waiting for message of type ${request.responseType.name} on $topic" }
         val consumed = AtomicBoolean()
         serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
@@ -254,7 +249,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
             val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
             if (!request.responseType.isInstance(obj))
                 throw IllegalStateException("Expected message of type ${request.responseType.name} but got ${obj.javaClass.name}", request.stackTraceInCaseOfProblems)
-            iterateStateMachine(psm, obj, newCheckpointKey) {
+            iterateStateMachine(psm, obj) {
                 try {
                     Fiber.unpark(it, QUASAR_UNBLOCKER)
                 } catch(e: Throwable) {

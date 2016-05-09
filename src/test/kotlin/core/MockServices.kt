@@ -4,8 +4,10 @@ import com.codahale.metrics.MetricRegistry
 import core.crypto.*
 import core.messaging.MessagingService
 import core.node.ServiceHub
-import core.node.subsystems.*
 import core.node.services.*
+import core.node.storage.Checkpoint
+import core.node.storage.CheckpointStorage
+import core.node.subsystems.*
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.testing.MockNetworkMapCache
@@ -22,6 +24,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.ZoneId
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 
@@ -89,8 +92,25 @@ class MockAttachmentStorage : AttachmentStorage {
     }
 }
 
+
+class MockCheckpointStorage : CheckpointStorage {
+
+    private val _checkpoints = ConcurrentLinkedQueue<Checkpoint>()
+    override val checkpoints: Iterable<Checkpoint>
+        get() = _checkpoints.toList()
+
+    override fun addCheckpoint(checkpoint: Checkpoint) {
+        _checkpoints.add(checkpoint)
+    }
+
+    override fun removeCheckpoint(checkpoint: Checkpoint) {
+        require(_checkpoints.remove(checkpoint))
+    }
+}
+
+
 @ThreadSafe
-class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), generateKeyPair())
+class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), MockCheckpointStorage(), generateKeyPair())
 
 class MockServices(
         customWallet: WalletService? = null,

@@ -4,15 +4,16 @@ import core.Party
 import core.SignedTransaction
 import core.crypto.SecureHash
 import core.node.services.AttachmentStorage
-import core.node.subsystems.StorageService
+import core.node.storage.CheckpointStorage
 import core.utilities.RecordingMap
 import org.slf4j.LoggerFactory
 import java.security.KeyPair
 import java.util.*
 
-open class StorageServiceImpl(attachments: AttachmentStorage,
-                              keypair: KeyPair,
-                              identity: Party = Party("Unit test party", keypair.public),
+open class StorageServiceImpl(override val attachments: AttachmentStorage,
+                              override val checkpointStorage: CheckpointStorage,
+                              override val myLegalIdentityKey: KeyPair,
+                              override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
                               // This parameter is for unit tests that want to observe operation details.
                               val recordingAs: (String) -> String = { tableName -> "" })
 : StorageService {
@@ -36,10 +37,5 @@ open class StorageServiceImpl(attachments: AttachmentStorage,
 
     override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
         get() = getMapOriginal("validated-transactions")
-    override val stateMachines: MutableMap<SecureHash, ByteArray>
-        get() = getMapOriginal("state-machines")
 
-    override val attachments: AttachmentStorage = attachments
-    override val myLegalIdentity = identity
-    override val myLegalIdentityKey = keypair
 }

@@ -4,17 +4,17 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
-import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import core.messaging.MessageRecipients
 import core.messaging.StateMachineManager
 import core.node.ServiceHub
+import core.serialization.SerializedBytes
 import core.serialization.createKryo
+import core.serialization.serialize
 import core.utilities.UntrustworthyData
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.ByteArrayOutputStream
 
 /**
  * A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a [ProtocolLogic] instance.
@@ -27,7 +27,7 @@ import java.io.ByteArrayOutputStream
 class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, val loggerName: String) : Fiber<R>("protocol", scheduler) {
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient private var suspendFunc: ((result: StateMachineManager.FiberRequest, serFiber: ByteArray) -> Unit)? = null
+    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachine<*>>) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
     @Transient lateinit var serviceHub: ServiceHub
 
@@ -54,9 +54,10 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberSched
         logic.psm = this
     }
 
-    fun prepareForResumeWith(serviceHub: ServiceHub, withObject: Any?,
-                             suspendFunc: (StateMachineManager.FiberRequest, ByteArray) -> Unit) {
-        this.suspendFunc = suspendFunc
+    fun prepareForResumeWith(serviceHub: ServiceHub,
+                             withObject: Any?,
+                             suspendAction: (StateMachineManager.FiberRequest, SerializedBytes<ProtocolStateMachine<*>>) -> Unit) {
+        this.suspendAction = suspendAction
         this.resumeWithObject = withObject
         this.serviceHub = serviceHub
     }
@@ -76,16 +77,7 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberSched
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     private fun <T : Any> suspendAndExpectReceive(with: StateMachineManager.FiberRequest): UntrustworthyData<T> {
-        parkAndSerialize { fiber, serializer ->
-            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
-            val deserializer = getFiberSerializer(false) as KryoSerializer
-            val kryo = createKryo(deserializer.kryo)
-            val stream = ByteArrayOutputStream()
-            Output(stream).use {
-                kryo.writeClassAndObject(it, this)
-            }
-            suspendFunc!!(with, stream.toByteArray())
-        }
+        suspend(with)
         val tmp = resumeWithObject ?: throw IllegalStateException("Expected to receive something")
         resumeWithObject = null
         return UntrustworthyData(tmp as T)
@@ -107,6 +99,17 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberSched
     @Suspendable
     fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
         val result = StateMachineManager.FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
-        parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
+        suspend(result)
     }
+
+    @Suspendable
+    private fun suspend(with: StateMachineManager.FiberRequest) {
+        parkAndSerialize { fiber, serializer ->
+            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
+            val deserializer = getFiberSerializer(false) as KryoSerializer
+            val kryo = createKryo(deserializer.kryo)
+            suspendAction!!(with, this.serialize(kryo))
+        }
+    }
+
 }

@@ -11,8 +11,10 @@ import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
 import core.messaging.runOnNextMessage
-import core.node.subsystems.*
 import core.node.services.*
+import core.node.storage.CheckpointStorage
+import core.node.storage.PerFileCheckpointStorage
+import core.node.subsystems.*
 import core.random63BitValue
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -200,13 +202,14 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected open fun initialiseStorageService(dir: Path): StorageService {
         val attachments = makeAttachmentStorage(dir)
+        val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return constructStorageService(attachments, keypair, identity)
+        return constructStorageService(attachments, checkpointStorage, keypair, identity)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party) =
-            StorageServiceImpl(attachments, keypair, identity)
+    protected open fun constructStorageService(attachments: NodeAttachmentService, checkpointStorage: CheckpointStorage, keypair: KeyPair, identity: Party) =
+            StorageServiceImpl(attachments, checkpointStorage, keypair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that

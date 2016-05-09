@@ -4,14 +4,11 @@ import com.codahale.metrics.MetricRegistry
 import contracts.Cash
 import core.*
 import core.crypto.SecureHash
-import core.messaging.MessagingService
-import core.node.subsystems.NetworkMapCache
 import core.node.services.AttachmentStorage
-import core.utilities.RecordingMap
+import core.node.storage.CheckpointStorage
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.time.Clock
 import java.util.*
 
 /**
@@ -132,7 +129,7 @@ interface StorageService {
      */
     val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
 
-    val stateMachines: MutableMap<SecureHash, ByteArray>
+    val checkpointStorage: CheckpointStorage
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
