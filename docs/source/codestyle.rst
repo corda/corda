@@ -15,23 +15,14 @@ when interpreting them.
 
 We use the standard Java coding style from Sun, adapted for Kotlin in ways that should be fairly intuitive.
 
-We aim for line widths of no more than 120 characters. That is wide enough to avoid lots of pointless wrapping but
-narrow enough that with a widescreen monitor and a 12 point fixed width font (like Menlo) you can fit two files
-next to each other. This is not a rigidly enforced rule and if wrapping a line would be excessively awkward, let it
-overflow. Overflow of a few characters here and there isn't a big deal: the goal is general convenience.
-
-Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.
-
-Each file has a copyright notice at the top. Copy it from the existing files if you create a new one. We do not mark
-classes with @author Javadoc annotations.
+Files no longer have copyright notices at the top, and license is now specified in the global README.md file.
+We do not mark classes with @author Javadoc annotations.
 
 In Kotlin code, KDoc is used rather than JavaDoc. It's very similar except it uses Markdown for formatting instead
 of HTML tags.
 
 We target Java 8 and use the latest Java APIs whenever convenient. We use ``java.time.Instant`` to represent timestamps
 and ``java.nio.file.Path`` to represent file paths.
-
-We use spaces and not tabs.
 
 Never apply any design pattern religiously. There are no silver bullets in programming and if something is fashionable,
 that doesn't mean it's always better. In particular:
@@ -45,6 +36,21 @@ that doesn't mean it's always better. In particular:
   slow but without hotspots.
 * The tradeoffs between various thread safety techniques are complex, subtle, and no technique is always superior to
   the others. Our code uses a mix of locks, worker threads and messaging depending on the situation.
+
+1.1 Line Length and Spacing
+---------------------------
+
+We aim for line widths of no more than 120 characters. That is wide enough to avoid lots of pointless wrapping but
+narrow enough that with a widescreen monitor and a 12 point fixed width font (like Menlo) you can fit two files
+next to each other. This is not a rigidly enforced rule and if wrapping a line would be excessively awkward, let it
+overflow. Overflow of a few characters here and there isn't a big deal: the goal is general convenience.
+
+Where the number of parameters in a function, class, etc. causes an overflow past the end of the first line, they should
+be structured one parameter per line.
+
+Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.
+
+We use spaces and not tabs.
 
 2. Comments
 ###########
@@ -98,6 +104,13 @@ Good JavaDocs look like this:
 
 We use C-style (``/** */``) comments for API docs and we use C++ style comments (``//``) for explanations that are
 only intended to be viewed by people who read the code.
+When writing multi-line TODO comments, indent the body text past the TODO line, for example:
+
+.. sourcecode:: java
+
+   // TODO: Something something
+   //       More stuff to do
+   //       Etc. etc.
 
 3. Threading
 ############
