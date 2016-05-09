@@ -38,7 +38,7 @@ class CommercialPaper : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
     data class State(
-            val issuance: PartyReference,
+            val issuance: PartyAndReference,
             override val owner: PublicKey,
             val faceValue: Amount,
             val maturityDate: Instant
@@ -52,7 +52,7 @@ class CommercialPaper : Contract {
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
         override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
 
-        override fun withIssuance(newIssuance: PartyReference): ICommercialPaperState = copy(issuance = newIssuance)
+        override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
     }
@@ -129,7 +129,7 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
+    fun generateIssue(issuance: PartyAndReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
         return TransactionBuilder().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }

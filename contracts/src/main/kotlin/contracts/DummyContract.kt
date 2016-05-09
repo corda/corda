@@ -23,7 +23,7 @@ class DummyContract : Contract {
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("")
 
-    fun generateInitial(owner: PartyReference, magicNumber: Int) : TransactionBuilder {
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int) : TransactionBuilder {
         val state = State(magicNumber)
         return TransactionBuilder().withItems( state, Command(Commands.Create(), owner.party.owningKey) )
     }

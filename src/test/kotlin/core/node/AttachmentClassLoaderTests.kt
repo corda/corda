@@ -19,7 +19,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 interface DummyContractBackdoor {
-    fun generateInitial(owner: PartyReference, magicNumber: Int): TransactionBuilder
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int): TransactionBuilder
     fun inspectState(state: ContractState): Int
 }
 
