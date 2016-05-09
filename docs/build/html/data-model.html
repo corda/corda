@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Data model &mdash; R3 Prototyping latest documentation</title>
+  <title>Data model &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="R3 Prototyping latest documentation" href="index.html"/>
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Networking and messaging" href="messaging.html"/>
         <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
 
@@ -51,7 +51,7 @@
 
 
           
-            <a href="index.html" class="icon icon-home"> R3 Prototyping
+            <a href="index.html" class="icon icon-home"> R3 Corda
           
 
           
@@ -90,19 +90,23 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Data model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#description">Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#comparison-with-bitcoin">Comparison with Bitcoin</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#comparison-with-ethereum">Comparison with Ethereum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#rationale-for-and-tradeoffs-in-adopting-a-utxo-style-model">Rationale for and tradeoffs in adopting a UTXO-style model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#rationale">Rationale</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pros">Pros</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cons">Cons</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-    <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 </ul>
@@ -110,6 +114,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
 
             
@@ -123,7 +128,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">R3 Prototyping</a>
+        <a href="index.html">R3 Corda</a>
       </nav>
 
 
@@ -156,11 +161,11 @@
             
   <div class="section" id="data-model">
 <h1>Data model<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="description">
-<h2>Description<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h2>
 <p>This article covers the data model: how <em>states</em>, <em>transactions</em> and <em>code contracts</em> interact with each other and
 how they are represented in the code. It doesn&#8217;t attempt to give detailed design rationales or information on future
 design elements: please refer to the R3 wiki for background information.</p>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
 <p>We begin with the idea of a global ledger. In our model, although the ledger is shared, it is not always the case that
 transactions and ledger entries are globally visible. In cases where a set of transactions stays within a small subgroup of
 users it should be possible to keep the relevant data purely within that group.</p>
@@ -170,15 +175,19 @@ are created and destroyed by digitally signed <strong>transactions</strong>. Eac
 consume/destroy, these are called <strong>inputs</strong>, and contains a set of new states that it will create, these are called
 <strong>outputs</strong>.</p>
 <p>States contain arbitrary data, but they always contain at minimum a hash of the bytecode of a
-<strong>code contract</strong>, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
-contracts (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic. Contracts
-define a <strong>verify function</strong>, which is a pure function given the entire transaction as input.</p>
-<p>To be considered valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the
-input and output states. Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
+<strong>contract code</strong> file, which is a program expressed in JVM byte code that runs sandboxed inside a Java virtual machine.
+Contract code (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic.</p>
+<p>Contracts define a <strong>verify function</strong>, which is a pure function given the entire transaction as input. To be considered
+valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the
+input and output states.</p>
+<p>Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
 arguments to the verify function. Each command has a list of <strong>public keys</strong> associated with it. The platform ensures
-that the transaction is signed by every key listed in the commands before the contracts start to execute. Public keys
-may be random/identityless for privacy, or linked to a well known legal identity via a <em>public key infrastructure</em> (PKI).</p>
+that the transaction is signed by every key listed in the commands before the contracts start to execute. Thus, a verify
+function can trust that all listed keys have signed the transaction but is responsible for verifying that any keys required
+for the transaction to be valid from the verify function&#8217;s perspective are included in the list. Public keys
+may be random/identityless for privacy, or linked to a well known legal identity, for example via a
+<em>public key infrastructure</em> (PKI).</p>
 <p>Commands are always embedded inside a transaction. Sometimes, there&#8217;s a larger piece of data that can be reused across
 many different transactions. For this use case, we have <strong>attachments</strong>. Every transaction can refer to zero or more
 attachments by hash. Attachments are always ZIP/JAR files, which may contain arbitrary content. Contract code can then
@@ -196,8 +205,8 @@ A TSA signs a transaction if a pre-defined timestamping command in it defines a 
 attachment if the fact it&#8217;s creating is relatively static and may be referred to over and over again.</p>
 <p>As the same terminology often crops up in different distributed ledger designs, let&#8217;s compare this to other
 distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
-differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/">the R3 wiki</a>, but to summarise, the driving
-factors are:</p>
+differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/display/AWG/Platform+Stream%3A+Corda">the R3 wiki</a>,
+but to summarise, the driving factors are:</p>
 <ul class="simple">
 <li>Improved contract flexibility vs Bitcoin</li>
 <li>Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)</li>
@@ -261,6 +270,125 @@ stateless i.e. it may not interact with any other part of the system whilst exec
 platform considers non-financial applications to be out of scope.</li>
 </ul>
 </div>
+<div class="section" id="rationale-for-and-tradeoffs-in-adopting-a-utxo-style-model">
+<h2>Rationale for and tradeoffs in adopting a UTXO-style model<a class="headerlink" href="#rationale-for-and-tradeoffs-in-adopting-a-utxo-style-model" title="Permalink to this headline">¶</a></h2>
+<p>As discussed above, Corda uses the so-called &#8220;UTXO set&#8221; model (unspent transaction output). In this model, the database
+does not track accounts or balances. Instead all database entries are immutable. An entry is either spent or not spent
+but it cannot be changed. In Bitcoin, spentness is implemented simply as deletion – the inputs of an accepted transaction
+are deleted and the outputs created.</p>
+<p>This approach has some advantages and some disadvantages, which is why some platforms like Ethereum have tried
+(or are trying) to abstract this choice away and support a more traditional account-like model.  We have explicitly
+chosen <em>not</em> to do this and our decision to adopt a UTXO-style model is a deliberate one.  In the section below,
+the rationale for this decision and its pros and cons of this choice are outlined.</p>
+</div>
+<div class="section" id="rationale">
+<h2>Rationale<a class="headerlink" href="#rationale" title="Permalink to this headline">¶</a></h2>
+<p>Corda, in common with other blockchain-like platforms, is designed to bring parties to shared sets of data into
+consensus as to the existence, content and allowable evolutions of those data sets. However, Corda is designed with the
+explicit aim of avoiding, to the extent possible, the scalability and privacy implications that arise from those platforms&#8217;
+decisions to adopt a global broadcast model.</p>
+<p>Whilst the privacy implications of a global consensus model are easy to understand, the scalability implications are
+perhaps more subtle, yet serious. In a consensus system, it is critical that all processors of a transaction reach
+precisely the same conclusion as to its effects.  In situations where two transactions may act on the same data set,
+it means that the two transactions must be processed in the same <em>order</em> by all nodes. If this were not the case then it
+would be possible to devise situations where nodes processed transactions in different orders and reached different
+conclusions as to the state of the system.  It is for this reason that systems like Ethereum effectively run
+single-threaded, meaning the speed of the system is limited by the single-threaded performance of the slowest
+machine on the network.</p>
+<p>In Corda, we assume the data being processed represents financial agreements between identifiable parties and that these
+institutions will adopt the system only if a significant number of such agreements can be managed by the platform.
+As such, the system has to be able to support parallelisation of execution to the greatest extent possible,
+whilst ensuring correct transaction ordering when two transactions seek to act on the same piece of shared state.</p>
+<p>To achieve this, we must minimise the number of parties who need to receive and process copies of any given
+transaction and we must minimise the extent to which two transactions seek to mutate (or supersede) any given piece
+of shared state.</p>
+<p>A key design decision, therefore, is what should be the most atomic unit of shared data in the system.  This decision
+also has profound privacy implications: the more coarsely defined the shared data units, the larger the set of
+actors who will likely have a stake in its accuracy and who must process and observe any update to it.</p>
+<p>This becomes most obvious when we consider two models for representing cash balances and payments.</p>
+<p>A simple account model for cash would define a data structure that maintained a balance at a particular bank for each
+&#8220;account holder&#8221;. Every holder of a balance would need a copy of this structure and would thus need to process and
+validate every payment transaction, learning about everybody else&#8217;s payments and balances in the process.
+All payments across that set of accounts would have to be single-threaded across the platform, limiting maximum
+throughput.</p>
+<p>A more sophisticated example might create a data structure per account holder.
+But, even here, I would leak my account balance to anybody to whom I ever made
+a payment and I could only ever make one payment at a time, for the same reasons above.</p>
+<p>A UTXO model would define a data structure that represented an <em>instance</em> of a claim against the bank. An account
+holder could hold <em>many</em> such instances, the aggregate of which would reveal their balance at that institution.  However,
+the account holder now only needs to reveal to their payee those instances consumed in making a payment to that payee.
+This also means the payer could make several payments in parallel.   A downside is that the model is harder to understand.
+However, we consider the privacy and scalability advantages to overwhelm the modest additional cognitive load this places
+on those attempting to learn the system.</p>
+<p>In what follows, further advantages and disadvantages of this design decision are explored.</p>
+</div>
+<div class="section" id="pros">
+<h2>Pros<a class="headerlink" href="#pros" title="Permalink to this headline">¶</a></h2>
+<p>The UTXO model has these advantages:</p>
+<ul class="simple">
+<li>Immutable ledger entries gives the usual advantages that a more functional approach brings: it&#8217;s easy to do analysis
+on a static snapshot of the data and reason about the contents.</li>
+<li>Because there are no accounts, it&#8217;s very easy to apply transactions in parallel even for high traffic legal entities
+assuming sufficiently granular entries.</li>
+<li>Transaction ordering becomes trivial: it is impossible to mis-order transactions due to the reliance on hash functions
+to identify previous states. There is no need for sequence numbers or other things that are hard to provide in a
+fully distributed system.</li>
+<li>Conflict resolution boils down to the double spending problem, which places extremely minimal demands on consensus
+algorithms (as the variable you&#8217;re trying to reach consensus on is a set of booleans).</li>
+</ul>
+</div>
+<div class="section" id="cons">
+<h2>Cons<a class="headerlink" href="#cons" title="Permalink to this headline">¶</a></h2>
+<p>It also comes with some pretty serious complexities that in practice must be abstracted from developers:</p>
+<ul class="simple">
+<li>Representing numeric amounts using immutable entries is unnatural. For instance, if you receive $1000 and wish
+to send someone $100, you have to consume the $1000 output and then create two more: a $100 for the recipient and
+$900 back to yourself as change. The fact that this happens can leak private information to an observer.</li>
+<li>Because users do need to think in terms of balances and statements, you have to layer this on top of the
+underlying ledger: you can&#8217;t just read someone&#8217;s balance out of the system. Hence, the &#8220;wallet&#8221; / position manager.
+Experience from those who have developed wallets for Bitcoin and other systems is that they can be complex pieces of code,
+although the bulk of wallets&#8217; complexity in public systems is handling the lack of finality (and key management).</li>
+<li>Whilst transactions can be applied in parallel, it is much harder to create them in parallel due to the need to
+strictly enforce a total ordering.</li>
+</ul>
+<p>With respect to parallel creation, if the user is single threaded this is fine, but in a more complex situation
+where you might want to be preparing multiple transactions in flight this can prove a limitation – in
+the worst case where you have a single output that represents all your value, this forces you to serialise
+the creation of every transaction. If transactions can be created and signed very fast that&#8217;s not a concern.
+If there&#8217;s only a single user, that&#8217;s not a concern.</p>
+<p>Both cases are typically true in the Bitcoin world, so users don&#8217;t suffer from this much. In the context of a
+complex business with a large pool of shared funds, in which creation of transactions may be very slow due to the
+need to get different humans to approve a tx using a signing device, this could quickly lead to frustrating
+conflicts where someone approves a transaction and then discovers that it has become a double spend and
+they must sign again. In the absolute worst case you could get a form of human livelock.</p>
+<p>The tricky part about solving these problems is that the simplest way to express a payment request
+(&#8220;send me $1000 to public key X&#8221;) inherently results in you receiving a single output, which then can
+prove insufficiently granular to be convenient. In the Bitcoin space Mike Hearn and Gavin Andresen designed &#8220;BIP 70&#8221;
+to solve this: it&#8217;s a simple binary format for requesting a payment and specifying exactly how you&#8217;d like to get paid,
+including things like the shape of the transaction. It may seem that it&#8217;s an over complex approach: could you not
+just immediately respend the big output back to yourself in order to split it? And yes, you could, until you hit
+scenarios like &#8220;the machine requesting the payment doesn&#8217;t have the keys needed to spend it&#8221;,
+which turn out to be very common. So it&#8217;s really more effective for a recipient to be able to say to the
+sender, &#8220;here&#8217;s the kind of transaction I want you to send me&#8221;.  The <a class="reference internal" href="protocol-state-machines.html"><span class="doc">protocol framework</span></a>
+may provide a vehicle to make such negotiations simpler.</p>
+<p>A further challenge is privacy. Whilst our goal of not sending transactions to nodes that don&#8217;t &#8220;need to know&#8221;
+helps, to verify a transaction you still need to verify all its dependencies and that can result in you receiving
+lots of transactions that involve random third parties. The problems start when you have received lots of separate
+payments and been careful not to make them linkable to your identity, but then you need to combine them all in a
+single transaction to make a payment.</p>
+<p>Mike Hearn wrote an article about this problem and techniques to minimise it in
+<a class="reference external" href="https://medium.com/&#64;octskyward/merge-avoidance-7f95a386692f">this article</a> from 2013. This article
+coined the term &#8220;merge avoidance&#8221;, which has never been implemented in the Bitcoin space,
+although not due to lack of practicality.</p>
+<p>A piece of future work for the wallet implementation will be to implement automated &#8220;grooming&#8221; of the wallet
+to &#8220;reshape&#8221; outputs to useful/standardised sizes, for example, and to send outputs of complex transactions
+back to their issuers for reissuance to &#8220;sever&#8221; long privacy-breaching chains.</p>
+<p>Finally, it should be noted that some of the issues described here are not really &#8220;cons&#8221; of
+the UTXO model; they&#8217;re just fundamental.
+If you used many different anonymous accounts to preserve some privacy and then needed to
+spend the contents of them all simultaneously, you&#8217;d hit the same problem, so it&#8217;s not
+something that can be trivially fixed with data model changes.</p>
+</div>
 </div>
 
 
@@ -282,7 +410,7 @@ platform considers non-financial applications to be out of scope.</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2015, R3 CEV.
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
 
     </p>
   </div>
