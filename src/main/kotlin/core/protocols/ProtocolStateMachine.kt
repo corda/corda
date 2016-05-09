@@ -13,6 +13,7 @@ import core.node.ServiceHub
 import core.serialization.createKryo
 import core.utilities.UntrustworthyData
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 
 /**
@@ -23,27 +24,23 @@ import java.io.ByteArrayOutputStream
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler) : Fiber<R>("protocol", scheduler) {
+class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, val loggerName: String) : Fiber<R>("protocol", scheduler) {
+
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient private var suspendFunc: ((result: StateMachineManager.FiberRequest, serFiber: ByteArray) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
     @Transient lateinit var serviceHub: ServiceHub
-    @Transient lateinit var logger: Logger
 
-    init {
-        logic.psm = this
-    }
-
-    fun prepareForResumeWith(serviceHub: ServiceHub, withObject: Any?, logger: Logger,
-                             suspendFunc: (StateMachineManager.FiberRequest, ByteArray) -> Unit) {
-        this.suspendFunc = suspendFunc
-        this.logger = logger
-        this.resumeWithObject = withObject
-        this.serviceHub = serviceHub
+    @Transient private var _logger: Logger? = null
+    val logger: Logger get() {
+        return _logger ?: run {
+            val l = LoggerFactory.getLogger(loggerName)
+            _logger = l
+            return l
+        }
     }
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
-
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R> get() {
         return _resultFuture ?: run {
@@ -51,6 +48,17 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberSched
             _resultFuture = f
             return f
         }
+    }
+
+    init {
+        logic.psm = this
+    }
+
+    fun prepareForResumeWith(serviceHub: ServiceHub, withObject: Any?,
+                             suspendFunc: (StateMachineManager.FiberRequest, ByteArray) -> Unit) {
+        this.suspendFunc = suspendFunc
+        this.resumeWithObject = withObject
+        this.serviceHub = serviceHub
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
