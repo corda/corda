@@ -23,7 +23,7 @@ public class JavaCommercialPaper implements Contract {
     public static Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
     public static class State implements ContractState, ICommercialPaperState {
-        private PartyReference issuance;
+        private PartyAndReference issuance;
         private PublicKey owner;
         private Amount faceValue;
         private Instant maturityDate;
@@ -31,7 +31,7 @@ public class JavaCommercialPaper implements Contract {
         public State() {
         }  // For serialization
 
-        public State(PartyReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate) {
+        public State(PartyAndReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
             this.faceValue = faceValue;
@@ -46,7 +46,7 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
-        public ICommercialPaperState withIssuance(PartyReference newIssuance) {
+        public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
             return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
         }
 
@@ -58,7 +58,7 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, this.owner, this.faceValue, newMaturityDate);
         }
 
-        public PartyReference getIssuance() {
+        public PartyAndReference getIssuance() {
             return issuance;
         }
 
@@ -215,7 +215,7 @@ public class JavaCommercialPaper implements Contract {
         return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
-    public TransactionBuilder generateIssue(@NotNull PartyReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
+    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         return new TransactionBuilder().withItems(state, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }

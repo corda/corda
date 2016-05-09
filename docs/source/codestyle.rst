@@ -52,6 +52,14 @@ Code is vertically dense, blank lines in methods are used sparingly. This is so 
 
 We use spaces and not tabs.
 
+1.2 Naming
+----------
+
+Naming generally follows Java standard style (pascal case for class names, camel case for methods, properties and
+variables). Where a class name describes a tuple, "And" should be included in order to clearly indicate the elements are
+individual parts, for example ``PartyAndReference``, not ``PartyReference`` (which sounds like a reference to a
+``Party``).
+
 2. Comments
 ###########
 
@@ -177,4 +185,3 @@ instead do this
 The latter is easier to catch and handle if later necessary, and the type name should explain what went wrong.
 
 Note that Kotlin does not require exception types to be declared in method prototypes like Java does.
-

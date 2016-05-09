@@ -48,7 +48,7 @@ class Cash : Contract {
     /** A state representing a cash claim against some party */
     data class State(
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
-            val deposit: PartyReference,
+            val deposit: PartyAndReference,
 
             val amount: Amount,
 
@@ -147,7 +147,7 @@ class Cash : Contract {
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyReference, owner: PublicKey) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyAndReference, owner: PublicKey) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
         tx.addOutputState(Cash.State(at, amount, owner))

@@ -136,7 +136,7 @@ class CrowdFund : Contract {
      * Returns a transaction that registers a crowd-funding campaing, owned by the issuing institution's key. Does not update
      * an existing transaction because it's not possible to register multiple campaigns in a single transaction
      */
-    fun generateRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
+    fun generateRegister(owner: PartyAndReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
         val state = State(campaign)
         return TransactionBuilder().withItems(state, Command(Commands.Register(), owner.party.owningKey))

@@ -107,6 +107,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Code style guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#general-style">1. General style</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#line-length-and-spacing">1.1 Line Length and Spacing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#naming">1.2 Naming</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#comments">2. Comments</a></li>
@@ -202,6 +203,13 @@ overflow. Overflow of a few characters here and there isn&#8217;t a big deal: th
 be structured one parameter per line.</p>
 <p>Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.</p>
 <p>We use spaces and not tabs.</p>
+</div>
+<div class="section" id="naming">
+<h3>1.2 Naming<a class="headerlink" href="#naming" title="Permalink to this headline">¶</a></h3>
+<p>Naming generally follows Java standard style (pascal case for class names, camel case for methods, properties and
+variables). Where a class name describes a tuple, &#8220;And&#8221; should be included in order to clearly indicate the elements are
+individual parts, for example <code class="docutils literal"><span class="pre">PartyAndReference</span></code>, not <code class="docutils literal"><span class="pre">PartyReference</span></code> (which sounds like a reference to a
+<code class="docutils literal"><span class="pre">Party</span></code>).</p>
 </div>
 </div>
 <div class="section" id="comments">

@@ -73,7 +73,7 @@ inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterSt
 data class Party(val name: String, val owningKey: PublicKey) {
     override fun toString() = name
 
-    fun ref(bytes: OpaqueBytes) = PartyReference(this, bytes)
+    fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 }
 
@@ -81,7 +81,7 @@ data class Party(val name: String, val owningKey: PublicKey) {
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
-data class PartyReference(val party: Party, val reference: OpaqueBytes) {
+data class PartyAndReference(val party: Party, val reference: OpaqueBytes) {
     override fun toString() = "${party.name}$reference"
 }
 

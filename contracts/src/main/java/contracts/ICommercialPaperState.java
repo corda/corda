@@ -13,7 +13,7 @@ import java.time.*;
 public interface ICommercialPaperState extends ContractState {
     ICommercialPaperState withOwner(PublicKey newOwner);
 
-    ICommercialPaperState withIssuance(PartyReference newIssuance);
+    ICommercialPaperState withIssuance(PartyAndReference newIssuance);
 
     ICommercialPaperState withFaceValue(Amount newFaceValue);
 
