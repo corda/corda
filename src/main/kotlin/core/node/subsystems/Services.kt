@@ -113,6 +113,8 @@ interface KeyManagementService {
 
     fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key")
 
+    fun toKeyPair(publicKey: PublicKey) = KeyPair(publicKey, toPrivate(publicKey))
+
     /** Generates a new random key and adds it to the exposed map. */
     fun freshKey(): KeyPair
 }

@@ -19,15 +19,24 @@ open class UnknownType() {
         return (other is UnknownType)
     }
 
-    override fun hashCode(): Int {
-        return 1
-    }
+    override fun hashCode() = 1
 }
 
 /**
  * Event superclass - everything happens on a date.
  */
-open class Event(val date: LocalDate)
+open class Event(val date: LocalDate) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Event) return false
+
+        if (date != other.date) return false
+
+        return true
+    }
+
+    override fun hashCode() = Objects.hash(date)
+}
 
 /**
  * Top level PaymentEvent class - represents an obligation to pay an amount on a given date, which may be either in the past or the future.
@@ -58,14 +67,30 @@ abstract class RatePaymentEvent(date: LocalDate,
 
     abstract val flow: Amount
 
-    val days: Int get() =
-        calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
+    val days: Int get() = calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
 
-    val dayCountFactor: BigDecimal get() =
-        // TODO : Fix below (use daycount convention for division)
-        (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)
+    // TODO : Fix below (use daycount convention for division, not hardcoded 360 etc)
+    val dayCountFactor: BigDecimal get() = (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)
 
-    open fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.currency},${notional},$rate,$flow"
+    open fun asCSV() = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.currency},${notional},$rate,$flow"
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RatePaymentEvent) return false
+
+        if (accrualStartDate != other.accrualStartDate) return false
+        if (accrualEndDate != other.accrualEndDate) return false
+        if (dayCountBasisDay != other.dayCountBasisDay) return false
+        if (dayCountBasisYear != other.dayCountBasisYear) return false
+        if (notional != other.notional) return false
+        if (rate != other.rate) return false
+        // if (flow != other.flow) return false // Flow is derived
+
+        return super.equals(other)
+    }
+
+    override fun hashCode() = super.hashCode() + 31 * Objects.hash(accrualStartDate, accrualEndDate, dayCountBasisDay,
+            dayCountBasisYear, notional, rate)
 }
 
 /**
@@ -114,9 +139,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
         return Amount(dayCountFactor.times(BigDecimal(notional.pennies)).times(v).toLong(), notional.currency)
     }
 
-    override fun toString(): String {
-        return "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
-    }
+    override fun toString(): String = "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
 
     override fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.currency},${notional},$fixingDate,$rate,$flow"
 
@@ -126,6 +149,26 @@ class FloatingRatePaymentEvent(date: LocalDate,
     fun withNewRate(newRate: Rate): FloatingRatePaymentEvent =
             FloatingRatePaymentEvent(date, accrualStartDate, accrualEndDate, dayCountBasisDay,
                     dayCountBasisYear, fixingDate, notional, newRate)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other?.javaClass != javaClass) return false
+        other as FloatingRatePaymentEvent
+        if (fixingDate != other.fixingDate) return false
+        return super.equals(other)
+    }
+
+    override fun hashCode() = super.hashCode() + 31 * Objects.hash(fixingDate)
+
+    // Can't autogenerate as not a data class :-(
+    fun copy(date: LocalDate = this.date,
+             accrualStartDate: LocalDate = this.accrualStartDate,
+             accrualEndDate: LocalDate = this.accrualEndDate,
+             dayCountBasisDay: DayCountBasisDay = this.dayCountBasisDay,
+             dayCountBasisYear: DayCountBasisYear = this.dayCountBasisYear,
+             fixingDate: LocalDate = this.fixingDate,
+             notional: Amount = this.notional,
+             rate: Rate = this.rate) = FloatingRatePaymentEvent(date, accrualStartDate, accrualEndDate, dayCountBasisDay, dayCountBasisYear, fixingDate, notional, rate)
 }
 
 
@@ -191,18 +234,13 @@ class InterestRateSwap() : Contract {
         /**
          * Returns a copy after modifying (applying) the fixing for that date.
          */
-        fun applyFixing(date: LocalDate, newRate: Rate): Calculation {
+        fun applyFixing(date: LocalDate, newRate: FixedRate): Calculation {
             val paymentEvent = getFixing(date)
             val newFloatingLPS = floatingLegPaymentSchedule + (paymentEvent.date to paymentEvent.withNewRate(newRate))
             return Calculation(expression = expression,
                     floatingLegPaymentSchedule = newFloatingLPS,
                     fixedLegPaymentSchedule = fixedLegPaymentSchedule)
         }
-
-        fun exportSchedule() {
-
-        }
-
     }
 
     abstract class CommonLeg(
@@ -212,13 +250,13 @@ class InterestRateSwap() : Contract {
             val effectiveDateAdjustment: DateRollConvention?,
             val terminationDate: LocalDate,
             val terminationDateAdjustment: DateRollConvention?,
-            var dayCountBasisDay: DayCountBasisDay,
-            var dayCountBasisYear: DayCountBasisYear,
-            var dayInMonth: Int,
-            var paymentRule: PaymentRule,
-            var paymentDelay: Int,
-            var paymentCalendar: BusinessCalendar,
-            var interestPeriodAdjustment: AccrualAdjustment
+            val dayCountBasisDay: DayCountBasisDay,
+            val dayCountBasisYear: DayCountBasisYear,
+            val dayInMonth: Int,
+            val paymentRule: PaymentRule,
+            val paymentDelay: Int,
+            val paymentCalendar: BusinessCalendar,
+            val interestPeriodAdjustment: AccrualAdjustment
     ) {
         override fun toString(): String {
             return "Notional=$notional,PaymentFrequency=$paymentFrequency,EffectiveDate=$effectiveDate,EffectiveDateAdjustment:$effectiveDateAdjustment,TerminatationDate=$terminationDate," +
@@ -249,24 +287,9 @@ class InterestRateSwap() : Contract {
             return true
         }
 
-        override fun hashCode(): Int {
-            var result = notional.hashCode()
-            result += 31 * result + paymentFrequency.hashCode()
-            result += 31 * result + effectiveDate.hashCode()
-            result += 31 * result + (effectiveDateAdjustment?.hashCode() ?: 0)
-            result += 31 * result + terminationDate.hashCode()
-            result += 31 * result + (terminationDateAdjustment?.hashCode() ?: 0)
-            result += 31 * result + dayCountBasisDay.hashCode()
-            result += 31 * result + dayCountBasisYear.hashCode()
-            result += 31 * result + dayInMonth
-            result += 31 * result + paymentRule.hashCode()
-            result += 31 * result + paymentDelay
-            result += 31 * result + paymentCalendar.hashCode()
-            result += 31 * result + interestPeriodAdjustment.hashCode()
-            return result
-        }
-
-
+        override fun hashCode() = super.hashCode() + 31 * Objects.hash(notional, paymentFrequency, effectiveDate,
+                effectiveDateAdjustment, terminationDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
+                dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment)
     }
 
     open class FixedLeg(
@@ -306,13 +329,27 @@ class InterestRateSwap() : Contract {
             return true
         }
 
-        override fun hashCode(): Int {
-            var result = super.hashCode()
-            result += 31 * result + fixedRatePayer.hashCode()
-            result += 31 * result + fixedRate.hashCode()
-            result += 31 * result + rollConvention.hashCode()
-            return result
-        }
+        override fun hashCode() = super.hashCode() + 31 * Objects.hash(fixedRatePayer, fixedRate, rollConvention)
+
+        // Can't autogenerate as not a data class :-(
+        fun copy(fixedRatePayer: Party = this.fixedRatePayer,
+                 notional: Amount = this.notional,
+                 paymentFrequency: Frequency = this.paymentFrequency,
+                 effectiveDate: LocalDate = this.effectiveDate,
+                 effectiveDateAdjustment: DateRollConvention? = this.effectiveDateAdjustment,
+                 terminationDate: LocalDate = this.terminationDate,
+                 terminationDateAdjustment: DateRollConvention? = this.terminationDateAdjustment,
+                 dayCountBasisDay: DayCountBasisDay = this.dayCountBasisDay,
+                 dayCountBasisYear: DayCountBasisYear = this.dayCountBasisYear,
+                 dayInMonth: Int = this.dayInMonth,
+                 paymentRule: PaymentRule = this.paymentRule,
+                 paymentDelay: Int = this.paymentDelay,
+                 paymentCalendar: BusinessCalendar = this.paymentCalendar,
+                 interestPeriodAdjustment: AccrualAdjustment = this.interestPeriodAdjustment,
+                 fixedRate: FixedRate = this.fixedRate) = FixedLeg(
+                fixedRatePayer, notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate,
+                terminationDateAdjustment, dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay,
+                paymentCalendar, interestPeriodAdjustment, fixedRate, rollConvention)
 
     }
 
@@ -370,62 +407,168 @@ class InterestRateSwap() : Contract {
             return true
         }
 
-        override fun hashCode(): Int {
-            var result = super.hashCode()
-            result += 31 * result + floatingRatePayer.hashCode()
-            result += 31 * result + rollConvention.hashCode()
-            result += 31 * result + fixingRollConvention.hashCode()
-            result += 31 * result + resetDayInMonth
-            result += 31 * result + fixingPeriod.hashCode()
-            result += 31 * result + resetRule.hashCode()
-            result += 31 * result + fixingsPerPayment.hashCode()
-            result += 31 * result + fixingCalendar.hashCode()
-            result += 31 * result + index.hashCode()
-            result += 31 * result + indexSource.hashCode()
-            result += 31 * result + indexTenor.hashCode()
-            return result
+        override fun hashCode() = super.hashCode() + 31 * Objects.hash(floatingRatePayer, rollConvention,
+                fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment, fixingCalendar,
+                index, indexSource, indexTenor)
+
+
+        fun copy(floatingRatePayer: Party = this.floatingRatePayer,
+                 notional: Amount = this.notional,
+                 paymentFrequency: Frequency = this.paymentFrequency,
+                 effectiveDate: LocalDate = this.effectiveDate,
+                 effectiveDateAdjustment: DateRollConvention? = this.effectiveDateAdjustment,
+                 terminationDate: LocalDate = this.terminationDate,
+                 terminationDateAdjustment: DateRollConvention? = this.terminationDateAdjustment,
+                 dayCountBasisDay: DayCountBasisDay = this.dayCountBasisDay,
+                 dayCountBasisYear: DayCountBasisYear = this.dayCountBasisYear,
+                 dayInMonth: Int = this.dayInMonth,
+                 paymentRule: PaymentRule = this.paymentRule,
+                 paymentDelay: Int = this.paymentDelay,
+                 paymentCalendar: BusinessCalendar = this.paymentCalendar,
+                 interestPeriodAdjustment: AccrualAdjustment = this.interestPeriodAdjustment,
+                 rollConvention: DateRollConvention = this.rollConvention,
+                 fixingRollConvention: DateRollConvention = this.fixingRollConvention,
+                 resetDayInMonth: Int = this.resetDayInMonth,
+                 fixingPeriod: DateOffset = this.fixingPeriod,
+                 resetRule: PaymentRule = this.resetRule,
+                 fixingsPerPayment: Frequency = this.fixingsPerPayment,
+                 fixingCalendar: BusinessCalendar = this.fixingCalendar,
+                 index: String = this.index,
+                 indexSource: String = this.indexSource,
+                 indexTenor: Tenor = this.indexTenor
+        ) = FloatingLeg(floatingRatePayer, notional, paymentFrequency, effectiveDate, effectiveDateAdjustment,
+                terminationDate, terminationDateAdjustment, dayCountBasisDay, dayCountBasisYear, dayInMonth,
+                paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment, rollConvention,
+                fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment,
+                fixingCalendar, index, indexSource, indexTenor)
+    }
+
+    // These functions may make more sense to use for basket types, but for now let's leave them here
+    fun checkLegDates(legs: Array<CommonLeg>) {
+        requireThat {
+            "Effective date is before termination date" by legs.all { it.effectiveDate < it.terminationDate }
+            "Effective dates are in alignment" by legs.all { it.effectiveDate == legs[0].effectiveDate }
+            "Termination dates are in alignment" by legs.all { it.terminationDate == legs[0].terminationDate }
+        }
+    }
+
+    fun checkLegAmounts(legs: Array<CommonLeg>) {
+        requireThat {
+            "The notional is non zero" by legs.any { it.notional.pennies > (0).toLong() }
+            "The notional for all legs must be the same" by legs.all { it.notional == legs[0].notional }
+        }
+        for (leg: CommonLeg in legs) {
+            if (leg is FixedLeg) {
+                requireThat {
+                    // TODO: Confirm: would someone really enter a swap with a negative fixed rate?
+                    "Fixed leg rate must be positive" by leg.fixedRate.isPositive()
+                }
+            }
         }
 
     }
 
+    // TODO: After business rules discussion, add further checks to the schedules and rates
+    fun checkSchedules(@Suppress("UNUSED_PARAMETER") legs: Array<CommonLeg>): Boolean = true
+
+    fun checkRates(@Suppress("UNUSED_PARAMETER") legs: Array<CommonLeg>): Boolean = true
+
     /**
-     * verify() with a few examples of what needs to be checked. TODO: Lots more to add.
+     * Compares two schedules of Floating Leg Payments, returns the difference (i.e. omissions in either leg or changes to the values).
+     */
+    fun getFloatingLegPaymentsDifferences(payments1: Map<LocalDate, Event>, payments2: Map<LocalDate, Event>): List<Pair<LocalDate, Pair<FloatingRatePaymentEvent, FloatingRatePaymentEvent>>> {
+        val diff1 = payments1.filter { payments1[it.key] != payments2[it.key] }
+        val diff2 = payments2.filter { payments1[it.key] != payments2[it.key] }
+        val ret = (diff1.keys + diff2.keys).map { it to Pair(diff1.get(it) as FloatingRatePaymentEvent, diff2.get(it) as FloatingRatePaymentEvent) }
+        return ret
+    }
+
+    /**
+     * verify() with some examples of what needs to be checked.
      */
     override fun verify(tx: TransactionForVerification) {
+
+        // Group by Trade ID for in / out states
+        val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
+
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
         val time = tx.commands.getTimestampByName("Mock Company 0", "Timestamping Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
-        val irs = tx.outStates.filterIsInstance<InterestRateSwap.State>().single()
-        when (command.value) {
-            is Commands.Agree -> {
-                requireThat {
-                    "There are no in states for an agreement" by tx.inStates.isEmpty()
-                    "The fixed rate is non zero" by (irs.fixedLeg.fixedRate != FixedRate(PercentageRatioUnit("0.0")))
-                    "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
-                    "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
-                    // "There are fixes in the schedule" by (irs.calculation.floatingLegPaymentSchedule!!.size > 0)
-                    // TODO: shortlist of other tests
-                }
-            }
-            is Commands.Fix -> {
-                requireThat {
-                    // TODO: see previous block
-                    // "There is a fixing supplied" by false // TODO
-                    //  "The fixing has been signed by an appropriate oracle" by false // TODO
-                    // "The fixing has arrived at the right time" by false
-                    // "The net payment has been calculated" by false // TODO : Not sure if this is the right place
+        for ((inputs, outputs, key) in groups) {
+            when (command.value) {
+                is Commands.Agree -> {
+                    val irs = outputs.filterIsInstance<InterestRateSwap.State>().single()
+                    requireThat {
+                        "There are no in states for an agreement" by inputs.isEmpty()
+                        "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
+                        "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
+                        "All notionals must be non zero" by ( irs.fixedLeg.notional.pennies > 0 && irs.floatingLeg.notional.pennies > 0)
+                        "The fixed leg rate must be positive" by ( irs.fixedLeg.fixedRate.isPositive() )
+                        "The currency of the notionals must be the same" by (irs.fixedLeg.notional.currency == irs.floatingLeg.notional.currency)
+                        "All leg notionals must be the same" by (irs.fixedLeg.notional == irs.floatingLeg.notional)
 
+                        "The effective date is before the termination date for the fixed leg" by (irs.fixedLeg.effectiveDate < irs.fixedLeg.terminationDate)
+                        "The effective date is before the termination date for the floating leg" by (irs.floatingLeg.effectiveDate < irs.floatingLeg.terminationDate)
+                        "The effective dates are aligned" by (irs.floatingLeg.effectiveDate == irs.fixedLeg.effectiveDate)
+                        "The termination dates are aligned" by (irs.floatingLeg.terminationDate == irs.fixedLeg.terminationDate)
+                        "The rates are valid" by checkRates(arrayOf(irs.fixedLeg, irs.floatingLeg))
+                        "The schedules are valid" by checkSchedules(arrayOf(irs.fixedLeg, irs.floatingLeg))
+
+
+                        // TODO: further tests
+                    }
+                    checkLegAmounts(arrayOf(irs.fixedLeg, irs.floatingLeg))
+                    checkLegDates(arrayOf(irs.fixedLeg, irs.floatingLeg))
                 }
-            }
-            is Commands.Pay -> {
-                requireThat {
-                    // TODO: see previous block
-                    //"A counterparty must be making a payment" by false // TODO
-                    // "The right counterparty must be receiving the payment" by false // TODO
+                is Commands.Fix -> {
+                    val irs = outputs.filterIsInstance<InterestRateSwap.State>().single()
+                    val prevIrs = inputs.filterIsInstance<InterestRateSwap.State>().single()
+                    val paymentDifferences = getFloatingLegPaymentsDifferences(prevIrs.calculation.floatingLegPaymentSchedule, irs.calculation.floatingLegPaymentSchedule)
+
+                    // Having both of these tests are "redundant" as far as verify() goes, however, by performing both
+                    // we can relay more information back to the user in the case of failure.
+                    requireThat {
+                        "There is at least one difference in the IRS floating leg payment schedules" by !paymentDifferences.isEmpty()
+                        "There is only one change in the IRS floating leg payment schedule" by (paymentDifferences.size == 1)
+                    }
+
+                    val changedRates = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
+                    val (oldFloatingRatePaymentEvent, newFixedRatePaymentEvent) = changedRates
+                    val fixCommand = tx.commands.requireSingleCommand<Fix>()
+                    val fixValue = fixCommand.value
+                    // Need to check that everything is the same apart from the new fixed rate entry.
+                    requireThat {
+                        "The fixed leg parties are constant" by ( irs.fixedLeg.fixedRatePayer == prevIrs.fixedLeg.fixedRatePayer) // Although superseded by the below test, this is included for a regression issue
+                        "The fixed leg is constant" by (irs.fixedLeg == prevIrs.fixedLeg)
+                        "The floating leg is constant" by (irs.floatingLeg == prevIrs.floatingLeg)
+                        "The common values are constant" by (irs.common == prevIrs.common)
+                        "The fixed leg payment schedule is constant" by (irs.calculation.fixedLegPaymentSchedule == prevIrs.calculation.fixedLegPaymentSchedule)
+                        "The expression is unchanged" by (irs.calculation.expression == prevIrs.calculation.expression)
+                        "There is only one changed payment in the floating leg" by (paymentDifferences.size == 1)
+                        "There changed payment is a floating payment" by (oldFloatingRatePaymentEvent.rate is ReferenceRate)
+                        "The new payment is a fixed payment" by (newFixedRatePaymentEvent.rate is FixedRate)
+                        "The changed payments dates are aligned" by ( oldFloatingRatePaymentEvent.date == newFixedRatePaymentEvent.date)
+                        "The new payment has the correct rate" by (newFixedRatePaymentEvent.rate.ratioUnit!!.value == fixValue.value)
+                        "The fixing is for the next required date" by (prevIrs.calculation.nextFixingDate() == fixValue.of.forDay)
+                        "The fix payment has the same currency as the notional" by (newFixedRatePaymentEvent.flow.currency == irs.floatingLeg.notional.currency)
+                        // "The fixing is not in the future " by (fixCommand) // The oracle should not have signed this .
+                    }
                 }
+                is Commands.Pay -> {
+                    requireThat {
+                        "Payments not supported / verifiable yet" by false
+                    }
+                }
+                is Commands.Mature -> {
+                    val irs = inputs.filterIsInstance<InterestRateSwap.State>().single()
+                    requireThat {
+                        "No more fixings to be applied" by (irs.calculation.nextFixingDate() == null)
+                    }
+                }
+
+                else -> throw IllegalArgumentException("Unrecognised verifiable command: ${command.value}")
             }
-            else -> throw IllegalArgumentException("Unrecognised verifiable command: ${command.value}")
         }
     }
 
@@ -510,6 +653,7 @@ class InterestRateSwap() : Contract {
          * Just makes printing it out a bit better for those who don't have 80000 column wide monitors.
          */
         fun prettyPrint(): String = toString().replace(",", "\n")
+
     }
 
     /**
@@ -580,7 +724,7 @@ class InterestRateSwap() : Contract {
     // TODO: Replace with rates oracle
     fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Pair<LocalDate, Rate>) {
         tx.addInputState(irs.ref)
-        tx.addOutputState(irs.state.copy(calculation = irs.state.calculation.applyFixing(fixing.first, fixing.second)))
+        tx.addOutputState(irs.state.copy(calculation = irs.state.calculation.applyFixing(fixing.first, FixedRate(fixing.second))))
         tx.addCommand(Commands.Fix(), listOf(irs.state.floatingLeg.floatingRatePayer.owningKey, irs.state.fixedLeg.fixedRatePayer.owningKey))
     }
 }

@@ -24,17 +24,14 @@ open class RatioUnit(value: BigDecimal) { // TODO: Discuss this type
         return true
     }
 
-    override fun hashCode(): Int {
-        return value.hashCode()
-    }
-
+    override fun hashCode() = value.hashCode()
 }
 
 /**
  * A class to reprecent a percentage in an unambiguous way.
  */
 open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecimal(percentageAsString).divide(BigDecimal("100"))) {
-    override fun toString(): String = value.times(BigDecimal(100)).toString() + "%"
+    override fun toString() = value.times(BigDecimal(100)).toString() + "%"
 }
 
 /**
@@ -111,16 +108,23 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
      * that have not yet happened.  Yet-to-be fixed floating rates need to be equal such that schedules can be tested
      * for equality.
      */
-    override fun hashCode(): Int {
-        return ratioUnit?.hashCode() ?: 0
-    }
+    override fun hashCode() = ratioUnit?.hashCode() ?: 0
 }
 
 /**
  * A very basic subclass to represent a fixed rate.
  */
 class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
+
+    constructor(otherRate: Rate) : this(ratioUnit = otherRate.ratioUnit!!)
+
     override fun toString(): String = "$ratioUnit"
+
+    fun isPositive(): Boolean = ratioUnit!!.value > BigDecimal("0.0")
+
+    override fun equals(other: Any?) = other?.javaClass == javaClass && super.equals(other)
+
+    override fun hashCode() = super.hashCode()
 }
 
 /**

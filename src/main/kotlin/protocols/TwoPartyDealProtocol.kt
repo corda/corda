@@ -367,10 +367,9 @@ object TwoPartyDealProtocol {
             val deal: T = dealToFix.state
             val myOldParty = deal.parties.single { it.name == myName }
             val theirOldParty = deal.parties.single { it.name != myName }
-            val myNewKey = serviceHub.keyManagementService.freshKey().public
 
             @Suppress("UNCHECKED_CAST")
-            val newDeal = deal.withPublicKey(myOldParty, myNewKey).withPublicKey(theirOldParty, handshake.publicKey) as T
+            val newDeal = deal
             val oldRef = dealToFix.ref
 
             val ptx = TransactionBuilder()
@@ -386,7 +385,7 @@ object TwoPartyDealProtocol {
             }
             subProtocol(addFixing)
 
-            return Pair(ptx, arrayListOf(myNewKey))
+            return Pair(ptx, arrayListOf(myOldParty.owningKey))
         }
     }
 
