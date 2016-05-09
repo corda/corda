@@ -93,32 +93,35 @@ class Cash : Contract {
                 "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0L }
             }
 
-            if (verifyIssueCommands(inputs, outputs, tx, currency, issuer)) continue
+            val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
+            if (issueCommand != null) {
+                verifyIssueCommand(inputs, outputs, tx, issueCommand, currency, issuer)
+            } else {
+                val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
+                val outputAmount = outputs.sumCashOrZero(currency)
 
-            val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
-            val outputAmount = outputs.sumCashOrZero(currency)
+                // If we want to remove cash from the ledger, that must be signed for by the issuer.
+                // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
+                val exitCommand = tx.commands.select<Commands.Exit>(party = issuer).singleOrNull()
+                val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, currency)
 
-            // If we want to remove cash from the ledger, that must be signed for by the issuer.
-            // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
-            val exitCommand = tx.commands.select<Commands.Exit>(party = issuer).singleOrNull()
-            val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, currency)
+                requireThat {
+                    "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0L }
+                    "for deposit ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
+                            (inputAmount == outputAmount + amountExitingLedger)
+                }
 
-            requireThat {
-                "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0L }
-                "for deposit ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
-                        (inputAmount == outputAmount + amountExitingLedger)
+                verifyMoveCommands<Commands.Move>(inputs, tx)
             }
-
-            verifyMoveCommands<Commands.Move>(inputs, tx)
         }
     }
 
-    private fun verifyIssueCommands(inputs: List<State>, outputs: List<State>, tx: TransactionForVerification, currency: Currency, issuer: Party): Boolean {
-        val issueCommand = tx.commands.select<Commands.Issue>().singleOrNull()
-        if (issueCommand == null || outputs.isEmpty()) {
-            return false
-        }
-
+    private fun verifyIssueCommand(inputs: List<State>,
+                                   outputs: List<State>,
+                                   tx: TransactionForVerification,
+                                   issueCommand: AuthenticatedObject<Commands.Issue>,
+                                   currency: Currency,
+                                   issuer: Party) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
         // and the output states must have a deposit reference owned by the signer.
         //
@@ -132,12 +135,13 @@ class Cash : Contract {
         // The grouping ensures that all outputs have the same deposit reference and currency.
         val inputAmount = inputs.sumCashOrZero(currency)
         val outputAmount = outputs.sumCash()
+        val cashCommands = tx.commands.select<Cash.Commands>()
         requireThat {
             "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
             "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
             "output values sum to more than the inputs" by (outputAmount > inputAmount)
+            "there is only a single issue command" by (cashCommands.count() == 1)
         }
-        return true
     }
 
     /**
