@@ -15,6 +15,7 @@ import core.utilities.ANSIProgressRenderer
 import core.utilities.ProgressTracker
 import demos.DemoClock
 import protocols.TwoPartyDealProtocol
+import java.security.KeyPair
 import java.time.LocalDate
 
 /**
@@ -98,7 +99,13 @@ object UpdateBusinessDayProtocol {
             progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Primary.tracker()
             progressTracker.currentStep = FIXING
 
-            val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.timestampingNodes[0], dealStateAndRef, serviceHub.keyManagementService.freshKey(), sessionID, progressTracker.childrenFor[FIXING]!!)
+            val myName = serviceHub.storageService.myLegalIdentity.name
+            val deal: InterestRateSwap.State = dealStateAndRef.state
+            val myOldParty = deal.parties.single { it.name == myName }
+            val keyPair = serviceHub.keyManagementService.toKeyPair(myOldParty.owningKey)
+            val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.timestampingNodes[0], dealStateAndRef,
+                    keyPair,
+                    sessionID, progressTracker.childrenFor[FIXING]!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }

@@ -157,16 +157,16 @@ open class TransactionForTest : AbstractTransactionForTest() {
     private val inStates = arrayListOf<ContractState>()
     fun input(s: () -> ContractState) = inStates.add(s())
 
-    protected fun run(time: Instant) {
+    protected fun runCommandsAndVerify(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
         val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.randomSHA256())
         tx.verify()
     }
 
-    fun accepts(time: Instant = TEST_TX_TIME) = run(time)
+    fun accepts(time: Instant = TEST_TX_TIME) = runCommandsAndVerify(time)
     fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME) {
         val r = try {
-            run(time)
+            runCommandsAndVerify(time)
             false
         } catch (e: Exception) {
             val m = e.message
@@ -179,7 +179,9 @@ open class TransactionForTest : AbstractTransactionForTest() {
         if (!r) throw AssertionError("Expected exception but didn't get one")
     }
 
-    // which is uglier?? :)
+    /**
+     * Used to confirm that the test, when (implicitly) run against the .verify() method, fails with the text of the message
+     */
     infix fun `fails requirement`(msg: String) = rejects(msg)
 
     fun fails_requirement(msg: String) = this.`fails requirement`(msg)
