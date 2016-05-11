@@ -126,9 +126,9 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         }
     }
 
-    override fun iterate() {
+    override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
         if (executeOnNextIteration.isNotEmpty())
             executeOnNextIteration.removeAt(0)()
-        super.iterate()
+        return super.iterate()
     }
 }

@@ -175,18 +175,22 @@ abstract class Simulation(val runAsync: Boolean,
      * will carry on from where this one stopped. In an environment where you want to take actions between anything
      * interesting happening, or control the precise speed at which things operate (beyond the latency injector), this
      * is a useful way to do things.
+     *
+     * @return the message that was processed, or null if no node accepted a message in this round.
      */
-    open fun iterate() {
+    open fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
         // Keep going until one of the nodes has something to do, or we have checked every node.
         val endpoints = network.messagingNetwork.endpoints
         var countDown = endpoints.size
         while (countDown > 0) {
             val handledMessage = endpoints[pumpCursor].pump(false)
-            if (handledMessage) break
+            if (handledMessage != null)
+                return handledMessage
             // If this node had nothing to do, advance the cursor with wraparound and try again.
             pumpCursor = (pumpCursor + 1) % endpoints.size
             countDown--
         }
+        return null
     }
 
     protected fun linkProtocolProgress(node: SimulatedNode, protocol: ProtocolLogic<*>) {
