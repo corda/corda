@@ -68,9 +68,9 @@ abstract class Simulation(val runAsync: Boolean,
                             networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             require(advertisedServices.contains(NetworkMapService.Type))
             val cfg = object : NodeConfiguration {
-                override val myLegalName: String = "Network Map Service Provider"
+                override val myLegalName: String = "Network coordination center"
                 override val exportJMXto: String = ""
-                override val nearestCity: String = "Madrid"
+                override val nearestCity: String = "Amsterdam"
             }
 
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
@@ -136,7 +136,9 @@ abstract class Simulation(val runAsync: Boolean,
             = network.createNode(null, nodeFactory = NotaryNodeFactory, advertisedServices = NotaryService.Type) as SimulatedNode
     val ratesOracle: SimulatedNode
             = network.createNode(null, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
-    val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle)
+
+    // All nodes must be in one of these two lists for the purposes of the visualiser tool.
+    val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
     val banks: List<SimulatedNode> = bankFactory.createAll()
 
     init {
