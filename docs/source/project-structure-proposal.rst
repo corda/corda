@@ -1,0 +1,109 @@
+Proposed module structure
+=========================
+
+``:r3prototyping`` - gradle top level module. No actual code, just resources for this project to make distributable artefacts, plus drives build of code modules.
+
+.. code-block:: none
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--docs - docs for developers
+	|--scripts - scripts to start/stop nodes, run demos, etc
+	|--tools - utilities such as tools to create keys, etc
+	|--libs - external libs not available on maven, or signed specific versions
+	|--contracts - fully signed and versioned contract jars for approved contracts that other contracts might reference.
+
+``:utilities`` - gradle module for language helpers, pure algorithms, etc
+
+.. code-block:: none
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--crypto - helpers for crypto
+	|--math - helpers for calculations e.g. financial rounding
+	|--utilities - stuff
+
+``:client-api`` - gradle module for a jar that can be embedded inside JVM compatible clients. Depends only on :core
+
+.. code-block:: none
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--api - standard rpc services exposed on a node for supporting bank side interactions and node management
+	|--transport - support for concrete transport layers
+	|	|--jaxrs - e.g. annotated api interface for rest-json
+	|	|--mq - e.g. wrapper for using messaging to communicate to the node
+	|--serialization - abstraction/helpers for client side serialisation via JSON (e.g. pre-configured jackson mapper), Kryo, etc (doesn't have to line up with node to node communication formats)
+
+``:contract-api`` - Gradle module to make minimum jar library required to write a contract jar, but should not contain business logic. Depends only on :core
+
+.. code-block:: none
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--financetypes - basic finance types and helpers
+	|--protocol
+	|	|--api - node services available internally only to contracts.
+	|	|--core - protocol support and implementation functions e.g. our TwoPartyDealProtocol
+	|--contract - base/abstract types for smart contracts e.g ContractState, Transaction, Command
+	|--extensionsapi - marker interfaces/annotations for contracts to extend a node's public network interface and allow clients to interact with a contract e.g. register a servlet
+	|--utilities - helpers/builders without any business logic
+	|--test - hooks to allow testability of contracts
+	|--serialization - helpers for state object storage and transport by nodes
+	
+``:base-contract`` - Gradle module for important financial concepts modelled as smart contracts. R3 mjaintained reference implementations. Depends upon :core and :contract-api.
+
+.. code-block:: none
+
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--validators - helpers for standard business validations e.g. must be positive, net cash must be equal, etc
+	|--utilities - some common code for business day calculations and holiday oracle
+	|--cash
+	|	|--states
+	|	|--contract
+	|	|--protocol
+	|--irs
+	|	|--states
+	|	|--contract
+	|	|--protocol
+	|--dvp
+	|	|--states
+	|	|--contract
+	|	|--protocol
+	
+``:demos`` - Gradle module for external developers to play with and modify. Depends upon :core, :contract-api and :contract-core for complicated contracts
+
+.. code-block:: none
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--minimum - hello world of smart contracts
+	|	|--states
+	|	|--contract
+	|	|--protocol
+	|--demo1 - something for an external developer to start working on
+	|	|--states
+	|	|--contract
+	|	|--protocol
+	|--webapp - some simple web content that calls against JAX-RS to exercise the demo contracts. Content registered via the extensions-api
+	|	|--minimum
+	|	|--demo1
+	
+``:node`` - Gradle module for the actual runtime implementation of node. Must NOT depend upon :contract-core, or :contract-demos, otherwise references :core, :client-api and :contract-api
+
+.. code-block:: none
+
+	folders/namespaces under src/main/kotlin and src/test/kotlin
+	|--bootstrap - start/stop sequence, config loading, dependency injection, loading service plugins,etc
+	|--clientapi - implementation of the common public API entry point via JAX-RS, MQ, etc, perhaps does some security checking and then passes to actual services
+	|--recovery - code to carry out checking on startup and possibly recovery/undo/redo of the transactions
+	|--services - services listed below are only suggestions!!
+	|	|--api - internal non-serialised service interfaces and data types. Used for decoupling 
+	|	|--messaging
+	|	|--networkmapper
+	|	|--persistence
+	|	|--identity
+	|	|--notary
+	|	|--protocol - node side implementation of primitives exposed to contracts
+	|	|--statemachine
+	|	|--scheduler
+	|	|--contractsandbox
+	|	|--wallet
+	|--configuration
+	|--utilities
