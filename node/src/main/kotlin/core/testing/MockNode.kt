@@ -71,7 +71,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
         override fun makeMessagingService(): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id).start().get()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName).start().get()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
