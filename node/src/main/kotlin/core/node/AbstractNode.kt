@@ -4,14 +4,13 @@ import api.APIServer
 import api.APIServerImpl
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import core.RunOnCallerThread
 import core.crypto.Party
 import core.messaging.MessagingService
 import core.messaging.StateMachineManager
 import core.messaging.runOnNextMessage
 import core.node.services.*
-import core.node.subsystems.*
 import core.node.storage.CheckpointStorage
 import core.node.storage.PerFileCheckpointStorage
 import core.node.subsystems.*
@@ -76,7 +75,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         NodeInfo(net.myAddress, storage.myLegalIdentity, advertisedServices, findMyLocation())
     }
 
-    protected open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
+    open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
 
     lateinit var storage: StorageService
     lateinit var smm: StateMachineManager
@@ -92,7 +91,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     @Volatile var networkMapRegistrationFuture: ListenableFuture<Unit>? = null
         private set
 
+    /** Set to true once [start] has been successfully called. */
+    @Volatile var started = false
+        private set
+
     open fun start(): AbstractNode {
+        require(!started) { "Node has already been started" }
         log.info("Node starting up ...")
 
         storage = initialiseStorageService(dir)
@@ -115,6 +119,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         startMessagingService()
         networkMapRegistrationFuture = registerWithNetworkMap()
+        started = true
         return this
     }
     /**
@@ -156,7 +161,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val future = SettableFuture.create<NetworkMapService.RegistrationResponse>()
         val topic = NetworkMapService.REGISTER_PROTOCOL_TOPIC + "." + sessionID
 
-        net.runOnNextMessage(topic, MoreExecutors.directExecutor()) { message ->
+        net.runOnNextMessage(topic, RunOnCallerThread) { message ->
             future.set(message.data.deserialize())
         }
         net.send(message, serviceInfo.address)
