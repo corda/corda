@@ -29,6 +29,15 @@ interface ContractState {
     val contract: Contract
 }
 
+/**
+ * Marker interface for data classes that represent the issuance state for a contract. These are intended as templates
+ * from which the state object is initialised.
+ */
+interface IssuanceDefinition
+
+/**
+ * A contract state that can have a single owner.
+ */
 interface OwnableState : ContractState {
     /** There must be a MoveCommand signed by this key to claim the amount */
     val owner: PublicKey

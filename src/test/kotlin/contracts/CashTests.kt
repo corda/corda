@@ -1,14 +1,7 @@
-/*
- * Copyright 2015 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
-
 import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
+import contracts.cash.CashIssuanceDefinition
 import core.*
 import core.crypto.SecureHash
 import core.serialization.OpaqueBytes
@@ -18,6 +11,7 @@ import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class CashTests {
@@ -109,6 +103,13 @@ class CashTests {
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(ptx.commands()[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
+
+        // Test issuance from the issuance definition
+        val issuanceDef = Cash.IssuanceDefinition(MINI_CORP.ref(12, 34), USD)
+        val templatePtx = TransactionBuilder()
+        Cash().generateIssue(templatePtx, issuanceDef, 100.DOLLARS.pennies, owner = DUMMY_PUBKEY_1)
+        assertTrue(templatePtx.inputStates().isEmpty())
+        assertEquals(ptx.outputStates()[0], templatePtx.outputStates()[0])
 
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
@@ -422,5 +423,33 @@ class CashTests {
         assertFailsWith(InsufficientBalanceException::class) {
             makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1)
         }
+    }
+
+    /**
+     * Confirm that aggregation of states is correctly modelled.
+     */
+    @Test
+    fun aggregation() {
+        val fiveThousandDollarsFromMega = Cash.State(MEGA_CORP.ref(2), 5000.DOLLARS, MEGA_CORP_PUBKEY)
+        val twoThousandDollarsFromMega = Cash.State(MEGA_CORP.ref(2), 2000.DOLLARS, MINI_CORP_PUBKEY)
+        val oneThousandDollarsFromMini = Cash.State(MINI_CORP.ref(3), 1000.DOLLARS, MEGA_CORP_PUBKEY)
+
+        // Obviously it must be possible to aggregate states with themselves
+        assertEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
+
+        // Owner is not considered when calculating whether it is possible to aggregate states
+        assertEquals(fiveThousandDollarsFromMega.issuanceDef, twoThousandDollarsFromMega.issuanceDef)
+
+        // States cannot be aggregated if the deposit differs
+        assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, oneThousandDollarsFromMini.issuanceDef)
+        assertNotEquals(twoThousandDollarsFromMega.issuanceDef, oneThousandDollarsFromMini.issuanceDef)
+
+        // States cannot be aggregated if the currency differs
+        assertNotEquals(oneThousandDollarsFromMini.issuanceDef,
+                Cash.State(MINI_CORP.ref(3), 1000.POUNDS, MEGA_CORP_PUBKEY).issuanceDef)
+
+        // States cannot be aggregated if the reference differs
+        assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.copy(deposit = MEGA_CORP.ref(1)).issuanceDef)
+        assertNotEquals(fiveThousandDollarsFromMega.copy(deposit = MEGA_CORP.ref(1)).issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
     }
 }
