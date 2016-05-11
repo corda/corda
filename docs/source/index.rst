@@ -48,4 +48,5 @@ Read on to learn:
    visualiser
    codestyle
    building-the-docs
+   project-structure-proposal
 
