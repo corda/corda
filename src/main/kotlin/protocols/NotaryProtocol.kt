@@ -57,7 +57,7 @@ class NotaryProtocol(private val wtx: WireTransaction,
         response.validate {
             if (it.sig != null) validateSignature(it.sig, wtx.serialized)
             else if (it.error is NotaryError.Conflict) it.error.conflict.verified()
-            else if (it.error !is NotaryError)
+            else if (it.error == null || it.error !is NotaryError)
                 throw IllegalStateException("Received invalid result from Notary service '${notaryNode.identity}'")
             return it
         }
