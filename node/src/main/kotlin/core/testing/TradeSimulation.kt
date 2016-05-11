@@ -16,7 +16,7 @@ import java.time.Instant
  * then B and C trade with each other, then C and A etc).
  */
 class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(runAsync, latencyInjector) {
-    override fun start() {
+    override fun startMainSimulation() {
         BriefLogFormatter.loggingOn("bank", "core.contract.TransactionGroup", "recordingmap")
         startTradingCircle { i, j -> tradeBetween(i, j) }
     }

@@ -28,7 +28,7 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
 
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
-    override fun start() {
+    override fun startMainSimulation() {
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
             executeOnNextIteration.add {}

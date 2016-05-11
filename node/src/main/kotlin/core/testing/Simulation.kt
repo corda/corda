@@ -1,5 +1,6 @@
 package core.testing
 
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import core.node.CityDatabase
 import core.node.NodeConfiguration
@@ -58,7 +59,7 @@ abstract class Simulation(val runAsync: Boolean,
         }
 
         fun createAll(): List<SimulatedNode> = bankLocations.
-                map { network.createNode(networkMap.info, nodeFactory = this) as SimulatedNode }
+                map { network.createNode(networkMap.info, start = false, nodeFactory = this) as SimulatedNode }
     }
 
     val bankFactory = BankFactory()
@@ -128,25 +129,18 @@ abstract class Simulation(val runAsync: Boolean,
     }
 
     val network = MockNetwork(false)
-
-    val regulators: List<SimulatedNode> = listOf(network.createNode(null, nodeFactory = RegulatorFactory) as SimulatedNode)
+    // This one must come first.
     val networkMap: SimulatedNode
             = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(null, nodeFactory = NotaryNodeFactory, advertisedServices = NotaryService.Type) as SimulatedNode
+            = network.createNode(networkMap.info, nodeFactory = NotaryNodeFactory, advertisedServices = NotaryService.Type) as SimulatedNode
+    val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = network.createNode(null, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
+            = network.createNode(networkMap.info, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
     val banks: List<SimulatedNode> = bankFactory.createAll()
-
-    init {
-        // Now wire up the network maps for each node.
-        for (node in regulators + serviceProviders + banks) {
-            node.services.networkMapCache.addNode(node.info)
-        }
-    }
 
     private val _allProtocolSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()
@@ -214,11 +208,23 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    open fun start() {
+    fun start() {
+        network.startNodes()
+        // Wait for all the nodes to have finished registering with the network map service.
+        Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture }).then {
+            startMainSimulation()
+        }
+    }
+
+    /**
+     * Sub-classes should override this to trigger whatever they want to simulate. This method will be invoked once the
+     * network bringup has been simulated.
+     */
+    protected open fun startMainSimulation() {
     }
 
     fun stop() {
-        network.nodes.forEach { it.stop() }
+        network.stopNodes()
     }
 
     /**

@@ -99,12 +99,13 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             return this
         }
 
-        val place: PhysicalLocation get() = info.physicalLocation!!
+        // This does not indirect through the NodeInfo object so it can be called before the node is started.
+        val place: PhysicalLocation get() = findMyLocation()!!
     }
 
-    /** Returns a started node, optionally created by the passed factory method */
+    /** Returns a node, optionally created by the passed factory method. */
     fun createNode(networkMapAddress: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
-                   legalName: String? = null, keyPair: KeyPair? = null, vararg advertisedServices: ServiceType): MockNode {
+                   start: Boolean = true, legalName: String? = null, keyPair: KeyPair? = null, vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -116,7 +117,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair).start()
+        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
+        if (start) node.start()
         _nodes.add(node)
         return node
     }
@@ -143,13 +145,23 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, null, notaryKeyPair, NetworkMapService.Type, NotaryService.Type),
-                createNode(nodes[0].info, -1, nodeFactory, null)
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, NetworkMapService.Type, NotaryService.Type),
+                createNode(nodes[0].info, -1, nodeFactory, true, null)
         )
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, legalName, keyPair, NetworkMapService.Type, NotaryService.Type)
-    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, legalName, keyPair)
+    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, NetworkMapService.Type, NotaryService.Type)
+    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
+
+    fun startNodes() {
+        require(nodes.isNotEmpty())
+        nodes.forEach { if (!it.started) it.start() }
+    }
+
+    fun stopNodes() {
+        require(nodes.isNotEmpty())
+        nodes.forEach { if (it.started) it.stop() }
+    }
 }

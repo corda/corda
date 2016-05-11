@@ -180,7 +180,7 @@ class TwoPartyTradeProtocolTests {
                                     advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                     return MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id, BOB_KEY)
                 }
-            }, BOB.name, BOB_KEY)
+            }, true, BOB.name, BOB_KEY)
 
             // TODO: remove once validated transactions are persisted to disk
             bobNode.storage.validatedTransactions.putAll(recordedTransactions)
@@ -213,7 +213,7 @@ class TwoPartyTradeProtocolTests {
                     }
                 }
             }
-        }, name, keyPair)
+        }, true, name, keyPair)
     }
 
     @Test
