@@ -1,6 +1,7 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
+import com.google.common.util.concurrent.Futures
 import core.crypto.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
@@ -27,6 +28,10 @@ import java.util.*
  * Mock network nodes require manual pumping by default: they will not run asynchronous. This means that
  * for message exchanges to take place (and associated handlers to run), you must call the [runNetwork]
  * method.
+ *
+ * You can get a printout of every message sent by using code like:
+ *
+ *    BriefLogFormatter.initVerbose("+messaging")
  */
 class MockNetwork(private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
@@ -81,6 +86,9 @@ class MockNetwork(private val threadPerNode: Boolean = false,
         }
 
         override fun generateKeyPair(): KeyPair? = keyPair ?: super.generateKeyPair()
+
+        // It's OK to not have a network map service in the mock network.
+        override fun noNetworkMapConfigured() = Futures.immediateFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
