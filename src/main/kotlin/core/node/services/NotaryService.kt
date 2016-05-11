@@ -7,6 +7,7 @@ import core.crypto.DigitalSignature
 import core.crypto.SignedData
 import core.crypto.signWithECDSA
 import core.messaging.MessagingService
+import core.noneOrSingle
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -64,12 +65,11 @@ class NotaryService(net: MessagingService,
     }
 
     private fun validateTimestamp(tx: WireTransaction) {
-        // Need to have at most one timestamp command
-        val timestampCmds = tx.commands.filter { it.value is TimestampCommand }
-        if (timestampCmds.count() > 1)
+        val timestampCmd = try {
+            tx.commands.noneOrSingle { it.value is TimestampCommand } ?: return
+        } catch (e: IllegalArgumentException) {
             throw NotaryException(NotaryError.MoreThanOneTimestamp())
-
-        val timestampCmd = timestampCmds.singleOrNull() ?: return
+        }
         if (!timestampCmd.signers.contains(identity.owningKey))
             throw NotaryException(NotaryError.NotForMe())
         if (!timestampChecker.isValid(timestampCmd.value as TimestampCommand))

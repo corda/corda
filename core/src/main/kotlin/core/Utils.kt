@@ -83,6 +83,33 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
+/**
+ * Returns the single element matching the given [predicate], or `null` if element was not found,
+ * or throws if more than one element was found.
+ */
+fun <T> Iterable<T>.noneOrSingle(predicate: (T) -> Boolean): T? {
+    var single: T? = null
+    for (element in this) {
+        if (predicate(element)) {
+            if (single == null) {
+                single = element
+            } else throw IllegalArgumentException("Collection contains more than one matching element.")
+        }
+    }
+    return single
+}
+
+/** Returns single element, or `null` if element was not found, or throws if more than one element was found. */
+fun <T> Iterable<T>.noneOrSingle(): T? {
+    var single: T? = null
+    for (element in this) {
+        if (single == null) {
+            single = element
+        } else throw IllegalArgumentException("Collection contains more than one matching element.")
+    }
+    return single
+}
+
 // An alias that can sometimes make code clearer to read.
 val RunOnCallerThread = MoreExecutors.directExecutor()
 
