@@ -27,7 +27,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -44,8 +43,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
     }
-
-    val networkMapServiceCallTimeout: Duration = Duration.ofSeconds(1)
 
     // TODO: Persist this, as well as whether the node is registered.
     /**
