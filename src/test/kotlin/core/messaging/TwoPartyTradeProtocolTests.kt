@@ -13,6 +13,7 @@ import core.node.storage.CheckpointStorage
 import core.node.subsystems.NodeWalletService
 import core.node.subsystems.StorageServiceImpl
 import core.node.subsystems.Wallet
+import core.node.subsystems.WalletImpl
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork
 import core.testutils.*
@@ -394,7 +395,7 @@ class TwoPartyTradeProtocolTests {
             arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
         }
 
-        val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("bob cash 1"), lookup("bob cash 2")))
+        val wallet = WalletImpl(listOf<StateAndRef<Cash.State>>(lookup("bob cash 1"), lookup("bob cash 2")))
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
@@ -410,7 +411,7 @@ class TwoPartyTradeProtocolTests {
                 attachment(attachmentID)
         }
 
-        val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))
+        val wallet = WalletImpl(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))
         return Pair(wallet, listOf(ap))
     }
 }
