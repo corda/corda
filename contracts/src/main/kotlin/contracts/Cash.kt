@@ -1,5 +1,7 @@
 package contracts
 
+import contracts.cash.CashIssuanceDefinition
+import contracts.cash.CommonCashState
 import core.*
 import core.crypto.SecureHash
 import core.crypto.toStringShort
@@ -45,17 +47,27 @@ class Cash : Contract {
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
 
+    data class IssuanceDefinition(
+            /** Where the underlying currency backing this ledger entry can be found (propagated) */
+            override val deposit: PartyAndReference,
+
+            override val currency: Currency
+    ) : CashIssuanceDefinition
+
     /** A state representing a cash claim against some party */
     data class State(
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
-            val deposit: PartyAndReference,
+            override val deposit: PartyAndReference,
 
-            val amount: Amount,
+            override val amount: Amount,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
             override val owner: PublicKey
-    ) : OwnableState {
+    ) : CommonCashState<Cash.IssuanceDefinition> {
+        override val issuanceDef: Cash.IssuanceDefinition
+            get() = Cash.IssuanceDefinition(deposit, amount.currency)
         override val contract = CASH_PROGRAM_ID
+
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
@@ -82,11 +94,12 @@ class Cash : Contract {
     override fun verify(tx: TransactionForVerification) {
         // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
         // of cash are not fungible and must be kept separated for bookkeeping purposes.
-        val groups = tx.groupStates() { it: Cash.State -> Pair(it.deposit, it.amount.currency) }
+        val groups = tx.groupStates() { it: Cash.State -> it.issuanceDef }
 
         for ((inputs, outputs, key) in groups) {
             // Either inputs or outputs could be empty.
-            val (deposit, currency) = key
+            val deposit = key.deposit
+            val currency = key.currency
             val issuer = deposit.party
 
             requireThat {
@@ -143,6 +156,12 @@ class Cash : Contract {
             "there is only a single issue command" by (cashCommands.count() == 1)
         }
     }
+
+    /**
+     * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
+     */
+    fun generateIssue(tx: TransactionBuilder, issuanceDef: CashIssuanceDefinition, pennies: Long, owner: PublicKey)
+        = generateIssue(tx, Amount(pennies, issuanceDef.currency), issuanceDef.deposit, owner)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
