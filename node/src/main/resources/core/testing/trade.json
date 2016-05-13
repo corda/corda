@@ -6,9 +6,9 @@
       "currency": "USD"
     },
     "paymentFrequency": "SemiAnnual",
-    "effectiveDate": "2016-03-16",
+    "effectiveDate": "2016-03-11",
     "effectiveDateAdjustment": null,
-    "terminationDate": "2026-03-16",
+    "terminationDate": "2026-03-11",
     "terminationDateAdjustment": null,
     "fixedRate": {
       "ratioUnit": {
@@ -31,9 +31,9 @@
       "currency": "USD"
     },
     "paymentFrequency": "Quarterly",
-    "effectiveDate": "2016-03-12",
+    "effectiveDate": "2016-03-11",
     "effectiveDateAdjustment": null,
-    "terminationDate": "2026-03-12",
+    "terminationDate": "2026-03-11",
     "terminationDateAdjustment": null,
     "dayCountBasisDay": "D30",
     "dayCountBasisYear": "Y360",
@@ -49,7 +49,7 @@
     "resetRule": "InAdvance",
     "fixingsPerPayment": "Quarterly",
     "fixingCalendar": [ "NewYork" ],
-    "index": "3M USD",
+    "index": "ICE LIBOR",
     "indexSource": "Rates Service Provider",
     "indexTenor": {
       "name": "3M"
@@ -100,5 +100,5 @@
     "tradeID": "tradeXXX",
     "hashLegalDocs": "put hash here"
   },
-  "programRef": "1E6BBA305D445341F0026E51B6C7F3ACB834AFC6C2510C0EF7BC0477235EFECF"
+  "notary": "Notary Service"
 }

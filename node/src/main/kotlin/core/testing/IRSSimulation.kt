@@ -13,6 +13,7 @@ import core.crypto.SecureHash
 import core.node.subsystems.linearHeadsOfType
 import core.utilities.JsonSupport
 import protocols.TwoPartyDealProtocol
+import java.security.KeyPair
 import java.time.LocalDate
 import java.util.*
 
@@ -27,10 +28,17 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         currentDay = LocalDate.of(2016, 3, 10)   // Should be 12th but the actual first fixing date gets rolled backwards.
     }
 
+    private var nodeAKey: KeyPair? = null
+    private var nodeBKey: KeyPair? = null
+
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): ListenableFuture<Unit> {
         val future = SettableFuture.create<Unit>()
+
+        nodeAKey = banks[0].keyManagement.freshKey()
+        nodeBKey = banks[1].keyManagement.freshKey()
+
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
             executeOnNextIteration.add {}
@@ -80,10 +88,8 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         if (nextFixingDate > currentDay)
             currentDay = nextFixingDate
 
-        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, notary.info,
-                theDealRef, node1.services.keyManagementService.freshKey(), sessionID)
-        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, notary.info.identity,
-                theDealRef, sessionID)
+        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, notary.info, theDealRef, nodeAKey!!, sessionID)
+        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, notary.info.identity, theDealRef, sessionID)
 
         linkConsensus(listOf(node1, node2, regulators[0]), sideB)
         linkProtocolProgress(node1, sideA)
@@ -121,10 +127,8 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
 
         val sessionID = random63BitValue()
 
-        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, notary.info,
-                irs, node1.services.keyManagementService.freshKey(), sessionID)
-        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, notary.info.identity,
-                irs, sessionID)
+        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, notary.info, irs, nodeAKey!!, sessionID)
+        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, notary.info.identity, irs, sessionID)
 
         // TODO: Eliminate the need for linkProtocolProgress
         linkConsensus(listOf(node1, node2, regulators[0]), acceptor)
