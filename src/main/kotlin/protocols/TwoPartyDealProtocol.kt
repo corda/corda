@@ -366,7 +366,6 @@ object TwoPartyDealProtocol {
             val myName = serviceHub.storageService.myLegalIdentity.name
             val deal: T = dealToFix.state
             val myOldParty = deal.parties.single { it.name == myName }
-            val theirOldParty = deal.parties.single { it.name != myName }
 
             @Suppress("UNCHECKED_CAST")
             val newDeal = deal

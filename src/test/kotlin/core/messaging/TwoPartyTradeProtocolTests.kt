@@ -188,7 +188,6 @@ class TwoPartyTradeProtocolTests {
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
     private fun makeNodeWithTracking(name: String): MockNetwork.MockNode {
-        val networkMapAddr: NodeInfo? = null
         // Create a node in the mock network ...
         return net.createNode(null, nodeFactory = object : MockNetwork.Factory {
             override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,

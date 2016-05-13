@@ -25,6 +25,6 @@ class SignedDataTest {
         val keyPairB = generateKeyPair()
         val sig = keyPairA.private.signWithECDSA(serialized.bits, keyPairB.public)
         val wrappedData = SignedData(serialized, sig)
-        val unwrappedData = wrappedData.verified()
+        wrappedData.verified()
     }
 }

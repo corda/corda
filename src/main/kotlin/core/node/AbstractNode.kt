@@ -115,7 +115,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         require(initialNetworkMapAddress == null || NetworkMapService.Type in initialNetworkMapAddress.advertisedServices)
         { "Initial network map address must indicate a node that provides a network map service" }
-        configureNetworkMapCache(initialNetworkMapAddress)
+        configureNetworkMapCache()
 
         return this
     }
@@ -123,7 +123,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
      * Register this node with the network map cache, and load network map from a remote service (and register for
      * updates) if one has been supplied.
      */
-    private fun configureNetworkMapCache(networkMapAddress: NodeInfo?) {
+    private fun configureNetworkMapCache() {
         services.networkMapCache.addNode(info)
         if (initialNetworkMapAddress != null) {
             // TODO: Return a future so the caller knows these operations may not have completed yet, and can monitor
