@@ -6,6 +6,8 @@ import core.serialization.SerializedBytes
 
 /**
  * Thread-safe storage of fiber checkpoints.
+ *
+ * TODO: Make internal to node again once split [ServiceHub] into a public (to contracts etc) and private (to node) view
  */
 interface CheckpointStorage {
 
