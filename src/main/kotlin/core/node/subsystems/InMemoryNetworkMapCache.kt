@@ -7,7 +7,6 @@ import core.Contract
 import core.Party
 import core.crypto.SecureHash
 import core.messaging.MessagingService
-import core.messaging.StateMachineManager
 import core.messaging.runOnNextMessage
 import core.messaging.send
 import core.node.NodeInfo
@@ -43,7 +42,7 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
     override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.contains(serviceType) }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
 
-    override fun addMapService(smm: StateMachineManager, net: MessagingService, service: NodeInfo, subscribe: Boolean,
+    override fun addMapService(net: MessagingService, service: NodeInfo, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
@@ -95,7 +94,7 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
      *
      * @param service the network map service to listen to updates from.
      */
-    override fun deregisterForUpdates(smm: StateMachineManager, net: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
+    override fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
         // Fetch the network map and register for updates at the same time
         val sessionID = random63BitValue()
         val req = NetworkMapService.SubscribeRequest(false, net.myAddress, sessionID)

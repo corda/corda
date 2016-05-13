@@ -129,11 +129,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             // TODO: Return a future so the caller knows these operations may not have completed yet, and can monitor
             // if needed
             updateRegistration(initialNetworkMapAddress, AddOrRemove.ADD)
-            services.networkMapCache.addMapService(this.smm, net, initialNetworkMapAddress, true, null)
+            services.networkMapCache.addMapService(net, initialNetworkMapAddress, true, null)
         }
         if (inNodeNetworkMapService != null) {
             // Register for updates
-            services.networkMapCache.addMapService(this.smm, net, info, true, null)
+            services.networkMapCache.addMapService(net, info, true, null)
         }
     }
 

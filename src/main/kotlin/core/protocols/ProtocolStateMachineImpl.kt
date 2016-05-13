@@ -24,15 +24,15 @@ import org.slf4j.LoggerFactory
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, val loggerName: String) : Fiber<R>("protocol", scheduler) {
+class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, val loggerName: String) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachine<*>>) -> Unit)? = null
+    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
-    @Transient lateinit var serviceHub: ServiceHub
+    @Transient lateinit override var serviceHub: ServiceHub
 
     @Transient private var _logger: Logger? = null
-    val logger: Logger get() {
+    override val logger: Logger get() {
         return _logger ?: run {
             val l = LoggerFactory.getLogger(loggerName)
             _logger = l
@@ -56,7 +56,7 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberSched
 
     fun prepareForResumeWith(serviceHub: ServiceHub,
                              withObject: Any?,
-                             suspendAction: (StateMachineManager.FiberRequest, SerializedBytes<ProtocolStateMachine<*>>) -> Unit) {
+                             suspendAction: (StateMachineManager.FiberRequest, SerializedBytes<ProtocolStateMachineImpl<*>>) -> Unit) {
         this.suspendAction = suspendAction
         this.resumeWithObject = withObject
         this.serviceHub = serviceHub
@@ -84,20 +84,20 @@ class ProtocolStateMachine<R>(val logic: ProtocolLogic<R>, scheduler: FiberSched
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
-    fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
-                                 obj: Any, recvType: Class<T>): UntrustworthyData<T> {
+    override fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
+                                          obj: Any, recvType: Class<T>): UntrustworthyData<T> {
         val result = StateMachineManager.FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, obj, recvType)
         return suspendAndExpectReceive(result)
     }
 
     @Suspendable
-    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T> {
+    override fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T> {
         val result = StateMachineManager.FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
         return suspendAndExpectReceive(result)
     }
 
     @Suspendable
-    fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
+    override fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
         val result = StateMachineManager.FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
         suspend(result)
     }
