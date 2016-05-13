@@ -101,6 +101,30 @@ the contracts contents).</p>
 <tbody>
 <tr>
 <td>
+<a href="check-leg-amounts.html">checkLegAmounts</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkLegAmounts</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$checkLegAmounts(kotlin.Array((contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><a href="-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="check-leg-dates.html">checkLegDates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkLegDates</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$checkLegDates(kotlin.Array((contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><a href="-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="check-rates.html">checkRates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkRates</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$checkRates(kotlin.Array((contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><a href="-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="check-schedules.html">checkSchedules</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkSchedules</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$checkSchedules(kotlin.Array((contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><a href="-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="generate-agreement.html">generateAgreement</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$generateAgreement(contracts.InterestRateSwap.FloatingLeg, contracts.InterestRateSwap.FixedLeg, contracts.InterestRateSwap.Calculation, contracts.InterestRateSwap.Common)/floatingLeg">floatingLeg</span><span class="symbol">:</span>&nbsp;<a href="-floating-leg/index.html"><span class="identifier">FloatingLeg</span></a><span class="symbol">, </span><span class="identifier" id="contracts.InterestRateSwap$generateAgreement(contracts.InterestRateSwap.FloatingLeg, contracts.InterestRateSwap.FixedLeg, contracts.InterestRateSwap.Calculation, contracts.InterestRateSwap.Common)/fixedLeg">fixedLeg</span><span class="symbol">:</span>&nbsp;<a href="-fixed-leg/index.html"><span class="identifier">FixedLeg</span></a><span class="symbol">, </span><span class="identifier" id="contracts.InterestRateSwap$generateAgreement(contracts.InterestRateSwap.FloatingLeg, contracts.InterestRateSwap.FixedLeg, contracts.InterestRateSwap.Calculation, contracts.InterestRateSwap.Common)/calculation">calculation</span><span class="symbol">:</span>&nbsp;<a href="-calculation/index.html"><span class="identifier">Calculation</span></a><span class="symbol">, </span><span class="identifier" id="contracts.InterestRateSwap$generateAgreement(contracts.InterestRateSwap.FloatingLeg, contracts.InterestRateSwap.FixedLeg, contracts.InterestRateSwap.Calculation, contracts.InterestRateSwap.Common)/common">common</span><span class="symbol">:</span>&nbsp;<a href="-common/index.html"><span class="identifier">Common</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../core/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>This generates the agreement state and also the schedules from the initial data.
@@ -115,9 +139,16 @@ Note: The day count, interest rate calculation etc are not finished yet, but the
 </tr>
 <tr>
 <td>
+<a href="get-floating-leg-payments-differences.html">getFloatingLegPaymentsDifferences</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getFloatingLegPaymentsDifferences</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$getFloatingLegPaymentsDifferences(kotlin.collections.Map((java.time.LocalDate, contracts.Event)), kotlin.collections.Map((java.time.LocalDate, contracts.Event)))/payments1">payments1</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">,</span>&nbsp;<a href="../-event/index.html"><span class="identifier">Event</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="contracts.InterestRateSwap$getFloatingLegPaymentsDifferences(kotlin.collections.Map((java.time.LocalDate, contracts.Event)), kotlin.collections.Map((java.time.LocalDate, contracts.Event)))/payments2">payments2</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">,</span>&nbsp;<a href="../-event/index.html"><span class="identifier">Event</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-floating-rate-payment-event/index.html"><span class="identifier">FloatingRatePaymentEvent</span></a><span class="symbol">,</span>&nbsp;<a href="../-floating-rate-payment-event/index.html"><span class="identifier">FloatingRatePaymentEvent</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Compares two schedules of Floating Leg Payments, returns the difference (i.e. omissions in either leg or changes to the values).</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="verify.html">verify</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$verify(core.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../core/-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>verify() with a few examples of what needs to be checked. TODO: Lots more to add.</p>
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="contracts.InterestRateSwap$verify(core.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../core/-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>verify() with some examples of what needs to be checked.</p>
 </td>
 </tr>
 </tbody>

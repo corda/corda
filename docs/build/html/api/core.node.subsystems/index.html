@@ -103,7 +103,17 @@ anything like that, this interface is only big enough to support the prototyping
 <td>
 <a href="-wallet/index.html">Wallet</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Wallet</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Wallet</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
+change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
+about new transactions from our peers and generate new transactions that consume states ourselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-wallet-impl/index.html">WalletImpl</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">WalletImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
 change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
 about new transactions from our peers and generate new transactions that consume states ourselves.</p>

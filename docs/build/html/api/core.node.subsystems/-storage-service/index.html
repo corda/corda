@@ -25,6 +25,12 @@ anything like that, this interface is only big enough to support the prototyping
 </tr>
 <tr>
 <td>
+<a href="checkpoint-storage.html">checkpointStorage</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">checkpointStorage</span><span class="symbol">: </span><a href="../../core.node.storage/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="my-legal-identity.html">myLegalIdentity</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myLegalIdentity</span><span class="symbol">: </span><a href="../../core/-party/index.html"><span class="identifier">Party</span></a></code><p>Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
@@ -36,12 +42,6 @@ first installed.</p>
 <a href="my-legal-identity-key.html">myLegalIdentityKey</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myLegalIdentityKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="state-machines.html">stateMachines</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">stateMachines</span><span class="symbol">: </span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../../core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

@@ -195,6 +195,19 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
+<a href="../core.node.storage/-checkpoint/index.html">core.node.storage.Checkpoint</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.storage/-checkpoint-storage/index.html">core.node.storage.CheckpointStorage</a></td>
+<td>
+<p>Thread-safe storage of fiber checkpoints.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../core.node/-city-database/index.html">core.node.CityDatabase</a></td>
 <td>
 <p>A simple lookup table of city names to their coordinates. Lookups are case insensitive.</p>
@@ -946,6 +959,13 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
+<a href="../core.node.storage/-per-file-checkpoint-storage/index.html">core.node.storage.PerFileCheckpointStorage</a></td>
+<td>
+<p>File-based checkpoint storage, storing checkpoints per file.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../contracts/-percentage-ratio-unit/index.html">contracts.PercentageRatioUnit</a></td>
 <td>
 <p>A class to reprecent a percentage in an unambiguous way.</p>
@@ -1450,6 +1470,16 @@ intended as the way things will necessarily be done longer term</p>
 <tr>
 <td>
 <a href="../core.node.subsystems/-wallet/index.html">core.node.subsystems.Wallet</a></td>
+<td>
+<p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
+change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
+about new transactions from our peers and generate new transactions that consume states ourselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../core.node.subsystems/-wallet-impl/index.html">core.node.subsystems.WalletImpl</a></td>
 <td>
 <p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
