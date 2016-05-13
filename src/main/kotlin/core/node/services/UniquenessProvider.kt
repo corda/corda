@@ -23,9 +23,10 @@ interface UniquenessProvider {
      * Specifies the transaction id, the position of the consumed state in the inputs, and
      * the caller identity requesting the commit
      *
-     * TODO: need to replace the transaction id with some other identifier to avoid privacy leaks
-     *       e.g after buying an asset with some cash a party can construct a fake transaction with
-     *       the cash outputs as inputs and find out if and where the other party had spent it
+     * TODO: need to do more design work to prevent privacy problems: knowing the id of a
+     *       transaction, by the rules of our system the party can obtain it and see its contents.
+     *       This allows a party to just submit invalid transactions with outputs it was aware of and
+     *       find out where exactly they were spent.
      */
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 }
@@ -35,10 +36,7 @@ class UniquenessException(val error: UniquenessProvider.Conflict) : Exception()
 /** A dummy Uniqueness provider that stores the whole history of consumed states in memory */
 @ThreadSafe
 class InMemoryUniquenessProvider() : UniquenessProvider {
-    /**
-     * For each state store the consuming transaction id along with the identity of the party
-     * requesting validation of the transaction
-     */
+    /** For each input state store the consuming transaction information */
     private val committedStates = ThreadBox(HashMap<StateRef, UniquenessProvider.ConsumingTx>())
 
     // TODO: the uniqueness provider shouldn't be able to see all tx outputs and commands
