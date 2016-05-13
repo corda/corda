@@ -5,8 +5,6 @@ import contracts.Cash
 import core.*
 import core.crypto.SecureHash
 import core.node.ServiceHub
-import core.node.subsystems.Wallet
-import core.node.subsystems.WalletService
 import core.utilities.loggerFor
 import core.utilities.trace
 import java.security.PublicKey
@@ -26,7 +24,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
     // inside mutex.locked {} code block. So we can't forget to take the lock unless we accidentally leak a reference
     // to wallet somewhere.
     private class InnerState {
-        var wallet: Wallet = Wallet(emptyList<StateAndRef<OwnableState>>())
+        var wallet: Wallet = WalletImpl(emptyList<StateAndRef<OwnableState>>())
     }
 
     private val mutex = ThreadBox(InnerState())
@@ -105,7 +103,7 @@ class NodeWalletService(private val services: ServiceHub) : WalletService {
             "Applied tx ${tx.id.prefixChars()} to the wallet: consumed ${consumed.size} states and added ${newStates.size}"
         }
 
-        return Wallet(newStates)
+        return WalletImpl(newStates)
     }
 
     private class BalanceMetric : Gauge<Long> {
