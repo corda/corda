@@ -1,6 +1,7 @@
 package core.testing
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -28,26 +29,40 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
 
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
-    override fun startMainSimulation() {
+    override fun startMainSimulation(): ListenableFuture<Unit> {
+        val future = SettableFuture.create<Unit>()
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
             executeOnNextIteration.add {}
             executeOnNextIteration.add {
                 // Keep fixing until there's no more left to do.
-                doNextFixing(0, 1)?.addListener(object : Runnable {
-                    override fun run() {
+                val initialFixFuture = doNextFixing(0, 1)
+
+                Futures.addCallback(initialFixFuture, object : FutureCallback<Unit> {
+                    override fun onFailure(t: Throwable) {
+                        future.setException(t)   // Propagate the error.
+                    }
+
+                    override fun onSuccess(result: Unit?) {
                         // Pause for an iteration.
                         executeOnNextIteration.add {}
                         executeOnNextIteration.add {
-                            doNextFixing(0, 1)?.addListener(this, RunOnCallerThread)
+                            val f = doNextFixing(0, 1)
+                            if (f != null) {
+                                Futures.addCallback(f, this, RunOnCallerThread)
+                            } else {
+                                // All done!
+                                future.set(Unit)
+                            }
                         }
                     }
                 }, RunOnCallerThread)
             }
         }
+        return future
     }
 
-    private fun doNextFixing(i: Int, j: Int): ListenableFuture<*>? {
+    private fun doNextFixing(i: Int, j: Int): ListenableFuture<Unit>? {
         println("Doing a fixing between $i and $j")
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
@@ -77,12 +92,14 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         // We have to start the protocols in separate iterations, as adding to the SMM effectively 'iterates' that node
         // in the simulation, so if we don't do this then the two sides seem to act simultaneously.
 
-        val retFuture = SettableFuture.create<Any>()
+        val retFuture = SettableFuture.create<Unit>()
         val futA = node1.smm.add("floater", sideA)
         executeOnNextIteration += {
             val futB = node2.smm.add("fixer", sideB)
-            Futures.allAsList(futA, futB).then {
+            Futures.allAsList(futA, futB) success {
                 retFuture.set(null)
+            } failure { throwable ->
+                retFuture.setException(throwable)
             }
         }
         return retFuture
@@ -101,11 +118,6 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         val irs = om.readValue<InterestRateSwap.State>(javaClass.getResource("trade.json"))
         irs.fixedLeg.fixedRatePayer = node1.info.identity
         irs.floatingLeg.floatingRatePayer = node2.info.identity
-
-        if (irs.fixedLeg.effectiveDate < irs.floatingLeg.effectiveDate)
-            currentDay = irs.fixedLeg.effectiveDate
-        else
-            currentDay = irs.floatingLeg.effectiveDate
 
         val sessionID = random63BitValue()
 

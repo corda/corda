@@ -128,7 +128,7 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    val network = MockNetwork(false)
+    val network = MockNetwork(runAsync)
     // This one must come first.
     val networkMap: SimulatedNode
             = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
@@ -212,19 +212,19 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    fun start() {
+    fun start(): ListenableFuture<Unit> {
         network.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
-        Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture }).then {
-            startMainSimulation()
-        }
+        val startup: ListenableFuture<List<Unit>> = Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
+        return Futures.transformAsync(startup) { l: List<Unit>? -> startMainSimulation() }
     }
 
     /**
      * Sub-classes should override this to trigger whatever they want to simulate. This method will be invoked once the
      * network bringup has been simulated.
      */
-    protected open fun startMainSimulation() {
+    protected open fun startMainSimulation(): ListenableFuture<Unit> {
+        return Futures.immediateFuture(Unit)
     }
 
     fun stop() {
