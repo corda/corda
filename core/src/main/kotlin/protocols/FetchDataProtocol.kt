@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import core.NamedByHash
 import core.crypto.SecureHash
 import core.messaging.SingleMessageRecipient
-import core.node.subsystems.DataVendingService
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.utilities.UntrustworthyData
@@ -34,6 +33,7 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
     class HashNotFound(val requested: SecureHash) : BadAnswer()
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
 
+    class Request(val hashes: List<SecureHash>, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
     data class Result<T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     protected abstract val queryTopic: String
@@ -49,7 +49,7 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
             logger.trace("Requesting ${toFetch.size} dependency(s) for verification")
 
             val sid = random63BitValue()
-            val fetchReq = DataVendingService.Request(toFetch, serviceHub.networkService.myAddress, sid)
+            val fetchReq = Request(toFetch, serviceHub.networkService.myAddress, sid)
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
             val maybeItems = sendAndReceive<ArrayList<W?>>(queryTopic, otherSide, 0, sid, fetchReq)
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
@@ -98,4 +98,5 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
 
                 answers
             }
+
 }

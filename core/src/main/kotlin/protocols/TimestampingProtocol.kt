@@ -1,14 +1,10 @@
 package protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.Party
 import core.WireTransaction
 import core.crypto.DigitalSignature
 import core.messaging.MessageRecipients
-import core.messaging.StateMachineManager
 import core.node.NodeInfo
-import core.node.services.NodeTimestamperService
-import core.node.services.TimestamperService
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.SerializedBytes
@@ -27,19 +23,13 @@ class TimestampingProtocol(private val node: NodeInfo,
                            private val wtxBytes: SerializedBytes<WireTransaction>,
                            override val progressTracker: ProgressTracker = TimestampingProtocol.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
 
-    class Client(private val stateMachineManager: StateMachineManager, private val node: NodeInfo) : TimestamperService {
-        override val identity: Party = node.identity
-
-        override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
-            return stateMachineManager.add("platform.timestamping", TimestampingProtocol(node, wtxBytes)).get()
-        }
-    }
-
     companion object {
         object REQUESTING : ProgressTracker.Step("Requesting signature by timestamping service")
         object VALIDATING : ProgressTracker.Step("Validating received signature from timestamping service")
 
         fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
+
+        val TOPIC = "platform.timestamping.request"
     }
 
 
@@ -49,8 +39,7 @@ class TimestampingProtocol(private val node: NodeInfo,
         val sessionID = random63BitValue()
         val req = Request(wtxBytes, serviceHub.networkService.myAddress, sessionID)
 
-        val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(
-                NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
+        val maybeSignature = sendAndReceive<DigitalSignature.LegallyIdentifiable>(TOPIC, node.address, 0, sessionID, req)
 
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
         progressTracker.currentStep = VALIDATING

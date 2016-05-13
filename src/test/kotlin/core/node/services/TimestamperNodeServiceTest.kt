@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import core.*
 import core.crypto.SecureHash
 import core.node.NodeInfo
-import core.node.services.*
 import core.protocols.ProtocolLogic
 import core.serialization.serialize
 import core.testing.MockNetwork
@@ -57,7 +56,7 @@ class TimestamperNodeServiceTest {
     @Test
     fun successWithNetwork() {
         val timestamperNode = network.createNode(null, advertisedServices = TimestamperService.Type)
-        val logName = NodeTimestamperService.TIMESTAMPING_PROTOCOL_TOPIC
+        val logName = TimestampingProtocol.TOPIC
         val psm = TestPSM(timestamperNode.info, clock.instant())
         val future = timestamperNode.smm.add(logName, psm)
 

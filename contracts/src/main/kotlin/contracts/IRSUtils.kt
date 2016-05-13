@@ -1,8 +1,8 @@
 package contracts
 
-import core.*
+import core.Amount
+import core.Tenor
 import java.math.BigDecimal
-import java.security.PublicKey
 
 
 // Things in here will move to the general utils class when we've hammered out various discussions regarding amounts, dates, oracle etc.
@@ -40,53 +40,6 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
  * 0.1.percent was written  TODO: Discuss
  */
 val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
-
-/**
- * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
- * implementation of general protocols that manipulate many agreement types.
- */
-interface DealState : LinearState {
-
-    /** Human readable well known reference (e.g. trade reference) */
-    val ref: String
-
-    /** Exposes the Parties involved in a generic way */
-    val parties: Array<Party>
-
-    // TODO: This works by editing the keys used by a Party which is invalid.
-    fun withPublicKey(before: Party, after: PublicKey): DealState
-
-    /**
-     * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
-     * deal/agreement protocol to generate the necessary transaction for potential implementations
-     *
-     * TODO: Currently this is the "inception" transaction but in future an offer of some description might be an input state ref
-     *
-     * TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
-     * Contract instance from a ContractState are imminent, at which point we can move this out of here
-     */
-    fun generateAgreement(): TransactionBuilder
-}
-
-/**
- * Interface adding fixing specific methods
- */
-interface FixableDealState : DealState {
-    /**
-     * When is the next fixing and what is the fixing for?
-     *
-     * TODO: In future we would use this to register for an event to trigger a/the fixing protocol
-     */
-    fun nextFixingOf(): FixOf?
-
-    /**
-     * Generate a fixing command for this deal and fix
-     *
-     * TODO: This would also likely move to methods on the Contract once the changes to reference
-     * the Contract from the ContractState are in
-     */
-    fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix)
-}
 
 /**
  * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc

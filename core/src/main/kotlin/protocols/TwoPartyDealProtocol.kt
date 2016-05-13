@@ -1,8 +1,6 @@
 package protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import contracts.DealState
-import contracts.FixableDealState
 import core.*
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA

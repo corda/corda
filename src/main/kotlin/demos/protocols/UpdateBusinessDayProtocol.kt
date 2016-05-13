@@ -1,8 +1,8 @@
 package demos.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import contracts.DealState
 import contracts.InterestRateSwap
+import core.DealState
 import core.StateAndRef
 import core.node.Node
 import core.node.NodeInfo
@@ -15,7 +15,6 @@ import core.utilities.ANSIProgressRenderer
 import core.utilities.ProgressTracker
 import demos.DemoClock
 import protocols.TwoPartyDealProtocol
-import java.security.KeyPair
 import java.time.LocalDate
 
 /**

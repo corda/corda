@@ -1,11 +1,7 @@
 package api
 
 import com.google.common.util.concurrent.ListenableFuture
-import contracts.DealState
-import core.ContractState
-import core.SignedTransaction
-import core.StateRef
-import core.WireTransaction
+import core.*
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.node.AbstractNode

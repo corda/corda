@@ -3,7 +3,7 @@ package demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
-import contracts.DealState
+import core.DealState
 import core.Party
 import core.SignedTransaction
 import core.messaging.SingleMessageRecipient
