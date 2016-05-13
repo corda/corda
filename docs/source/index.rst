@@ -28,6 +28,7 @@ Read on to learn:
    inthebox
    getting-set-up
    data-model
+       consensus
    messaging
    running-the-demos
    node-administration
