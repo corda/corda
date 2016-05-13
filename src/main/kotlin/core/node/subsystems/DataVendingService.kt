@@ -1,17 +1,11 @@
 package core.node.subsystems
 
 import core.SignedTransaction
-import core.crypto.SecureHash
-import core.messaging.Message
 import core.messaging.MessagingService
-import core.messaging.SingleMessageRecipient
-import core.messaging.send
 import core.node.services.AbstractNodeService
-import core.node.subsystems.StorageService
-import core.serialization.deserialize
 import core.utilities.loggerFor
-import protocols.AbstractRequestMessage
 import protocols.FetchAttachmentsProtocol
+import protocols.FetchDataProtocol
 import protocols.FetchTransactionsProtocol
 import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
@@ -36,18 +30,16 @@ class DataVendingService(net: MessagingService, private val storage: StorageServ
 
     init {
         addMessageHandler(FetchTransactionsProtocol.TOPIC,
-                { req: Request -> handleTXRequest(req) },
+                { req: FetchDataProtocol.Request -> handleTXRequest(req) },
                 { message, e -> logger.error("Failure processing data vending request.", e) }
         )
         addMessageHandler(FetchAttachmentsProtocol.TOPIC,
-                { req: Request -> handleAttachmentRequest(req) },
+                { req: FetchDataProtocol.Request -> handleAttachmentRequest(req) },
                 { message, e -> logger.error("Failure processing data vending request.", e) }
         )
     }
 
-    class Request(val hashes: List<SecureHash>, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
-
-    private fun handleTXRequest(req: Request): List<SignedTransaction?> {
+    private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {
         require(req.hashes.isNotEmpty())
         return req.hashes.map {
             val tx = storage.validatedTransactions[it]
@@ -57,7 +49,7 @@ class DataVendingService(net: MessagingService, private val storage: StorageServ
         }
     }
 
-    private fun handleAttachmentRequest(req: Request): List<ByteArray?> {
+    private fun handleAttachmentRequest(req: FetchDataProtocol.Request): List<ByteArray?> {
         // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
         require(req.hashes.isNotEmpty())
         return req.hashes.map {

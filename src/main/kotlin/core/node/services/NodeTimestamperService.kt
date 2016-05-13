@@ -5,11 +5,9 @@ import core.Party
 import core.TimestampCommand
 import core.crypto.DigitalSignature
 import core.crypto.signWithECDSA
-import core.messaging.Message
 import core.messaging.MessagingService
 import core.seconds
 import core.serialization.deserialize
-import core.serialization.serialize
 import core.until
 import org.slf4j.LoggerFactory
 import protocols.TimestampingProtocol
@@ -31,14 +29,12 @@ class NodeTimestamperService(net: MessagingService,
                              val clock: Clock = Clock.systemDefaultZone(),
                              val tolerance: Duration = 30.seconds) : AbstractNodeService(net) {
     companion object {
-        val TIMESTAMPING_PROTOCOL_TOPIC = "platform.timestamping.request"
-
         private val logger = LoggerFactory.getLogger(NodeTimestamperService::class.java)
     }
 
     init {
         require(identity.owningKey == signingKey.public)
-        addMessageHandler(TIMESTAMPING_PROTOCOL_TOPIC,
+        addMessageHandler(TimestampingProtocol.TOPIC,
                 { req: TimestampingProtocol.Request -> processRequest(req) },
                 { message, e ->
                     if (e is TimestampingError) {
