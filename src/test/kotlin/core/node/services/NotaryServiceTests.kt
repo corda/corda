@@ -8,6 +8,8 @@ import core.testutils.DUMMY_NOTARY_KEY
 import core.testutils.issueState
 import org.junit.Before
 import org.junit.Test
+import protocols.NotaryError
+import protocols.NotaryException
 import protocols.NotaryProtocol
 import java.time.Instant
 import java.util.concurrent.ExecutionException

@@ -5,11 +5,10 @@ import core.Party
 import core.TimestampCommand
 import core.WireTransaction
 import core.crypto.DigitalSignature
+import core.crypto.SignedData
 import core.messaging.SingleMessageRecipient
 import core.node.NodeInfo
-import core.node.services.NotaryError
-import core.node.services.NotaryException
-import core.node.services.NotaryService
+import core.node.services.UniquenessProvider
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.SerializedBytes
@@ -45,13 +44,13 @@ class NotaryProtocol(private val wtx: WireTransaction,
 
         val sessionID = random63BitValue()
         val request = SignRequest(wtx.serialized, serviceHub.storageService.myLegalIdentity, serviceHub.networkService.myAddress, sessionID)
-        val response = sendAndReceive<NotaryService.Result>(TOPIC, notaryNode.address, 0, sessionID, request)
+        val response = sendAndReceive<Result>(TOPIC, notaryNode.address, 0, sessionID, request)
 
         val notaryResult = validateResponse(response)
         return notaryResult.sig ?: throw NotaryException(notaryResult.error!!)
     }
 
-    private fun validateResponse(response: UntrustworthyData<NotaryService.Result>): NotaryService.Result {
+    private fun validateResponse(response: UntrustworthyData<Result>): Result {
         progressTracker.currentStep = VALIDATING
 
         response.validate {
@@ -91,4 +90,27 @@ class NotaryProtocol(private val wtx: WireTransaction,
                       val callerIdentity: Party,
                       replyTo: SingleMessageRecipient,
                       sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+
+    data class Result private constructor(val sig: DigitalSignature.LegallyIdentifiable?, val error: NotaryError?) {
+        companion object {
+            fun withError(error: NotaryError) = Result(null, error)
+            fun noError(sig: DigitalSignature.LegallyIdentifiable) = Result(sig, null)
+        }
+    }
+}
+
+class NotaryException(val error: NotaryError) : Exception()
+
+sealed class NotaryError {
+    class Conflict(val tx: WireTransaction, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
+        override fun toString() = "One or more input states for transaction ${tx.id} have been used in another transaction"
+    }
+
+    class MoreThanOneTimestamp : NotaryError()
+
+    /** Thrown if the timestamp command in the transaction doesn't list this Notary as a signer */
+    class NotForMe : NotaryError()
+
+    /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
+    class TimestampInvalid : NotaryError()
 }

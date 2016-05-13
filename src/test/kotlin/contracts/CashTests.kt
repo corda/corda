@@ -1,7 +1,6 @@
 import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
-import contracts.cash.CashIssuanceDefinition
 import core.*
 import core.crypto.SecureHash
 import core.serialization.OpaqueBytes
@@ -109,7 +108,7 @@ class CashTests {
         // Test issuance from the issuance definition
         val issuanceDef = Cash.IssuanceDefinition(MINI_CORP.ref(12, 34), USD)
         val templatePtx = TransactionBuilder()
-        Cash().generateIssue(templatePtx, issuanceDef, 100.DOLLARS.pennies, owner = DUMMY_PUBKEY_1)
+        Cash().generateIssue(templatePtx, issuanceDef, 100.DOLLARS.pennies, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(templatePtx.inputStates().isEmpty())
         assertEquals(ptx.outputStates()[0], templatePtx.outputStates()[0])
 
@@ -432,9 +431,9 @@ class CashTests {
      */
     @Test
     fun aggregation() {
-        val fiveThousandDollarsFromMega = Cash.State(MEGA_CORP.ref(2), 5000.DOLLARS, MEGA_CORP_PUBKEY)
-        val twoThousandDollarsFromMega = Cash.State(MEGA_CORP.ref(2), 2000.DOLLARS, MINI_CORP_PUBKEY)
-        val oneThousandDollarsFromMini = Cash.State(MINI_CORP.ref(3), 1000.DOLLARS, MEGA_CORP_PUBKEY)
+        val fiveThousandDollarsFromMega = Cash.State(MEGA_CORP.ref(2), 5000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
+        val twoThousandDollarsFromMega = Cash.State(MEGA_CORP.ref(2), 2000.DOLLARS, MINI_CORP_PUBKEY, DUMMY_NOTARY)
+        val oneThousandDollarsFromMini = Cash.State(MINI_CORP.ref(3), 1000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
 
         // Obviously it must be possible to aggregate states with themselves
         assertEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
@@ -448,7 +447,7 @@ class CashTests {
 
         // States cannot be aggregated if the currency differs
         assertNotEquals(oneThousandDollarsFromMini.issuanceDef,
-                Cash.State(MINI_CORP.ref(3), 1000.POUNDS, MEGA_CORP_PUBKEY).issuanceDef)
+                Cash.State(MINI_CORP.ref(3), 1000.POUNDS, MEGA_CORP_PUBKEY, DUMMY_NOTARY).issuanceDef)
 
         // States cannot be aggregated if the reference differs
         assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.copy(deposit = MEGA_CORP.ref(1)).issuanceDef)

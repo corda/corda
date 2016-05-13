@@ -12,6 +12,8 @@ import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.utilities.loggerFor
+import protocols.NotaryError
+import protocols.NotaryException
 import protocols.NotaryProtocol
 import java.security.KeyPair
 
@@ -51,17 +53,17 @@ class NotaryService(net: MessagingService,
      *
      * TODO: the notary service should only be able to see timestamp commands and inputs
      */
-    fun processRequest(txBits: SerializedBytes<WireTransaction>, reqIdentity: Party): Result {
+    fun processRequest(txBits: SerializedBytes<WireTransaction>, reqIdentity: Party): NotaryProtocol.Result {
         val wtx = txBits.deserialize()
         try {
             validateTimestamp(wtx)
             commitInputStates(wtx, reqIdentity)
         } catch(e: NotaryException) {
-            return Result.withError(e.error)
+            return NotaryProtocol.Result.withError(e.error)
         }
 
         val sig = sign(txBits)
-        return Result.noError(sig)
+        return NotaryProtocol.Result.noError(sig)
     }
 
     private fun validateTimestamp(tx: WireTransaction) {
@@ -90,26 +92,5 @@ class NotaryService(net: MessagingService,
         return signingKey.signWithECDSA(bits, identity)
     }
 
-    data class Result private constructor(val sig: DigitalSignature.LegallyIdentifiable?, val error: NotaryError?) {
-        companion object {
-            fun withError(error: NotaryError) = Result(null, error)
-            fun noError(sig: DigitalSignature.LegallyIdentifiable) = Result(sig, null)
-        }
-    }
 }
 
-class NotaryException(val error: NotaryError) : Exception()
-
-sealed class NotaryError {
-    class Conflict(val tx: WireTransaction, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
-        override fun toString() = "One or more input states for transaction ${tx.id} have been used in another transaction"
-    }
-
-    class MoreThanOneTimestamp : NotaryError()
-
-    /** Thrown if the timestamp command in the transaction doesn't list this Notary as a signer */
-    class NotForMe : NotaryError()
-
-    /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
-    class TimestampInvalid : NotaryError()
-}
