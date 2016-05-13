@@ -8,7 +8,7 @@ fi
 if [ ! -e lib/dokka.jar ]; then
     echo "Downloading Dokka tool ... "
     echo
-    wget -O lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.7/dokka-fatjar.jar
+    wget -O lib/dokka.jar https://github.com/Kotlin/dokka/releases/download/0.9.8/dokka-fatjar.jar
 fi
 
 echo "Generating docsite ..."

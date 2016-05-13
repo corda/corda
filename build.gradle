@@ -12,7 +12,7 @@ allprojects {
 }
 
 buildscript {
-    ext.kotlin_version = '1.0.1'
+    ext.kotlin_version = '1.0.2'
     ext.quasar_version = '0.7.5'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
@@ -57,6 +57,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.1"
 
     compile "com.google.guava:guava:19.0"
 
