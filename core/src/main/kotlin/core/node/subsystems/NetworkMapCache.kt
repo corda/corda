@@ -4,7 +4,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import core.Contract
 import core.Party
 import core.messaging.MessagingService
-import core.messaging.StateMachineManager
 import core.node.NodeInfo
 import core.node.services.ServiceType
 import org.slf4j.LoggerFactory
@@ -60,14 +59,13 @@ interface NetworkMapCache {
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
      * updates.
      *
-     * @param smm state machine manager to use when requesting
      * @param net the network messaging service
      * @param service the network map service to fetch current state from.
      * @param subscribe if the cache should subscribe to updates
      * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
      * version is less than or equal to the given version, no update is fetched.
      */
-    fun addMapService(smm: StateMachineManager, net: MessagingService, service: NodeInfo,
+    fun addMapService(net: MessagingService, service: NodeInfo,
                       subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
 
     /**
@@ -83,11 +81,10 @@ interface NetworkMapCache {
     /**
      * Deregister from updates from the given map service.
      *
-     * @param smm state machine manager to use when requesting
      * @param net the network messaging service
      * @param service the network map service to fetch current state from.
      */
-    fun deregisterForUpdates(smm: StateMachineManager, net: MessagingService, service: NodeInfo): ListenableFuture<Unit>
+    fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit>
 }
 
 sealed class NetworkCacheError : Exception() {

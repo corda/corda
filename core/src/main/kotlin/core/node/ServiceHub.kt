@@ -3,8 +3,8 @@ package core.node
 import core.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
+import core.node.services.IdentityService
 import core.node.subsystems.*
-import core.node.services.*
 import core.utilities.RecordingMap
 import java.time.Clock
 
