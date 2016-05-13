@@ -38,6 +38,7 @@ repositories {
     jcenter()
 }
 
+//noinspection GroovyAssignabilityCheck
 configurations {
     quasar
 
