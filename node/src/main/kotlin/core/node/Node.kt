@@ -1,7 +1,7 @@
 package core.node
 
 import api.Config
-import api.InterestRateSwapAPI
+//import api.InterestRateSwapAPI
 import api.ResponseFilter
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
@@ -103,7 +103,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             resourceConfig.register(Config(services))
             resourceConfig.register(ResponseFilter())
             resourceConfig.register(api)
-            resourceConfig.register(InterestRateSwapAPI(api))
+            //resourceConfig.register(InterestRateSwapAPI(api))
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
                     ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))

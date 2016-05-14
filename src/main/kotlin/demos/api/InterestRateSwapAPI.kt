@@ -1,5 +1,6 @@
-package api
+package demo.api
 
+import api.*
 import contracts.InterestRateSwap
 import core.utilities.loggerFor
 import demos.protocols.AutoOfferProtocol
