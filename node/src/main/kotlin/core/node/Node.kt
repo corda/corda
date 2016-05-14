@@ -1,7 +1,6 @@
 package core.node
 
 import api.Config
-//import api.InterestRateSwapAPI
 import api.ResponseFilter
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
@@ -45,11 +44,15 @@ class ConfigurationException(message: String) : Exception(message)
  * network map service, while bootstrapping a network.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
+ * @param clientAPIs A list of JAX-RS annotated classes to register
+ * which will be used to register any extra client web interfaces the node requires for demos to use.
+ * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter
  * @param clock The clock used within the node and by all protocols etc
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
-           networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
-           clock: Clock = Clock.systemUTC()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
+           networkMapAddress: NodeInfo?,advertisedServices: Set<ServiceType>,
+           clock: Clock = Clock.systemUTC(),
+           val clientAPIs: List<Class<*>> = listOf()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         val DEFAULT_PORT = 31337
@@ -103,7 +106,15 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             resourceConfig.register(Config(services))
             resourceConfig.register(ResponseFilter())
             resourceConfig.register(api)
-            //resourceConfig.register(InterestRateSwapAPI(api))
+
+            clientAPIs.forEach {
+                customAPI ->
+                    val customAPI = customAPI.getConstructor(api.APIServer::class.java)
+                                            .newInstance(api)
+                resourceConfig.register(customAPI)
+            }
+
+
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
                     ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))

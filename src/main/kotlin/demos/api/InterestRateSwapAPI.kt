@@ -1,4 +1,4 @@
-package demo.api
+package demos.api
 
 import api.*
 import contracts.InterestRateSwap

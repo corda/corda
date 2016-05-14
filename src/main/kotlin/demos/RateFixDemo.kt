@@ -78,7 +78,9 @@ fun main(args: Array<String>) {
         override val nearestCity: String = "Atlantis"
     }
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress, advertisedServices).start() }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
+            advertisedServices, DemoClock(),
+            listOf(demos.api.InterestRateSwapAPI::class.java)).start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 
