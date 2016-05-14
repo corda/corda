@@ -1,6 +1,7 @@
 package contracts
 
 import core.*
+import core.contracts.*
 import core.testutils.*
 import org.junit.Test
 import java.math.BigDecimal

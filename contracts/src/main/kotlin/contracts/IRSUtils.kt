@@ -1,7 +1,7 @@
 package contracts
 
-import core.Amount
-import core.Tenor
+import core.contracts.Amount
+import core.contracts.Tenor
 import java.math.BigDecimal
 
 

@@ -1,6 +1,7 @@
 package core
 
 import contracts.Cash
+import core.contracts.*
 import core.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals

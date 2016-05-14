@@ -1,6 +1,6 @@
 package core.node.subsystems
 
-import core.Party
+import core.crypto.Party
 import core.node.services.IdentityService
 import java.security.PublicKey
 import java.util.concurrent.ConcurrentHashMap

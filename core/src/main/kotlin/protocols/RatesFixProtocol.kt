@@ -2,6 +2,10 @@ package protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import core.*
+import core.contracts.Fix
+import core.contracts.FixOf
+import core.contracts.TransactionBuilder
+import core.contracts.WireTransaction
 import core.crypto.DigitalSignature
 import core.messaging.SingleMessageRecipient
 import core.node.NodeInfo

@@ -1,6 +1,6 @@
 package core.node.subsystems
 
-import core.SignedTransaction
+import core.contracts.SignedTransaction
 import core.messaging.MessagingService
 import core.node.services.AbstractNodeService
 import core.utilities.loggerFor

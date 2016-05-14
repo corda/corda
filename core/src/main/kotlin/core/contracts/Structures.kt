@@ -1,5 +1,10 @@
-package core
+package core.contracts
 
+import core.contracts.TransactionBuilder
+import core.contracts.TransactionForVerification
+import core.contracts.Fix
+import core.contracts.FixOf
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.toStringShort
 import core.serialization.OpaqueBytes
@@ -124,14 +129,6 @@ data class StateAndRef<out T : ContractState>(val state: T, val ref: StateRef)
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
     return mapNotNull { if (it.state is T) StateAndRef(it.state, it.ref) else null }
-}
-
-/** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
-data class Party(val name: String, val owningKey: PublicKey) {
-    override fun toString() = name
-
-    fun ref(bytes: OpaqueBytes) = PartyAndReference(this, bytes)
-    fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 }
 
 /**

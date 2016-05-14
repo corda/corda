@@ -1,6 +1,10 @@
-package core
+package core.contracts
 
+import core.contracts.SignedTransaction
+import core.contracts.WireTransaction
+import core.contracts.*
 import core.crypto.DigitalSignature
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.signWithECDSA
 import core.serialization.serialize

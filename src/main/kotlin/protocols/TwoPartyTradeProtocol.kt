@@ -5,7 +5,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import contracts.Cash
 import contracts.sumCashBy
 import core.*
+import core.contracts.*
 import core.crypto.DigitalSignature
+import core.crypto.Party
 import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager

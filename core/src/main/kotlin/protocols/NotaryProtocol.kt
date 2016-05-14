@@ -1,9 +1,9 @@
 package protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.Party
-import core.TimestampCommand
-import core.WireTransaction
+import core.crypto.Party
+import core.contracts.TimestampCommand
+import core.contracts.WireTransaction
 import core.crypto.DigitalSignature
 import core.crypto.SignedData
 import core.messaging.SingleMessageRecipient

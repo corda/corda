@@ -2,8 +2,8 @@ package demos.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import contracts.InterestRateSwap
-import core.DealState
-import core.StateAndRef
+import core.contracts.DealState
+import core.contracts.StateAndRef
 import core.node.Node
 import core.node.NodeInfo
 import core.node.subsystems.linearHeadsOfType

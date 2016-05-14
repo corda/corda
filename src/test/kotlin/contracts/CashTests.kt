@@ -2,6 +2,8 @@ import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.serialization.OpaqueBytes
 import core.testutils.*

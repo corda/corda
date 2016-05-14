@@ -1,6 +1,6 @@
 package core.node
 
-import core.Attachment
+import core.contracts.Attachment
 import core.crypto.SecureHash
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream

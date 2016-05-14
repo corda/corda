@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import core.BusinessCalendar
-import core.Party
+import core.contracts.BusinessCalendar
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.node.services.IdentityService
 import java.math.BigDecimal

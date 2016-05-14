@@ -2,6 +2,10 @@ package demos
 
 import contracts.Cash
 import core.*
+import core.contracts.DOLLARS
+import core.contracts.FixOf
+import core.crypto.Party
+import core.contracts.TransactionBuilder
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeInfo

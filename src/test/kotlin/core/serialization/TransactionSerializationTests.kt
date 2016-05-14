@@ -2,6 +2,7 @@ package core.serialization
 
 import contracts.Cash
 import core.*
+import core.contracts.*
 import core.testutils.*
 import org.junit.Before
 import org.junit.Test

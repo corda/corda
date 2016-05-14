@@ -1,5 +1,7 @@
-package core
+package core.contracts
 
+import core.*
+import core.crypto.Party
 import java.security.PublicKey
 import java.util.*
 

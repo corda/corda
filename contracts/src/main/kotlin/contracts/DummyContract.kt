@@ -1,6 +1,8 @@
 package contracts
 
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.

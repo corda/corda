@@ -1,6 +1,6 @@
 package core.node.services
 
-import core.TransactionBuilder
+import core.contracts.TransactionBuilder
 import core.seconds
 import core.testing.MockNetwork
 import core.testutils.DUMMY_NOTARY

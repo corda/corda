@@ -3,6 +3,8 @@ package core.node
 import contracts.DUMMY_PROGRAM_ID
 import contracts.DummyContract
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.node.services.AttachmentStorage
 import core.serialization.*

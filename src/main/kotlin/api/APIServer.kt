@@ -1,9 +1,9 @@
 package api
 
-import core.ContractState
-import core.SignedTransaction
-import core.StateRef
-import core.WireTransaction
+import core.contracts.ContractState
+import core.contracts.SignedTransaction
+import core.contracts.StateRef
+import core.contracts.WireTransaction
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.serialization.SerializedBytes

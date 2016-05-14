@@ -1,6 +1,6 @@
 package core.testing
 
-import core.Party
+import core.crypto.Party
 import core.node.services.IdentityService
 import java.security.PublicKey
 import javax.annotation.concurrent.ThreadSafe

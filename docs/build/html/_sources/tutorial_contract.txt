@@ -200,7 +200,7 @@ Let's define a few commands now:
 
    .. sourcecode:: java
 
-      public static class Commands implements core.Command {
+      public static class Commands implements core.contract.Command {
           public static class Move extends Commands {
               @Override
               public boolean equals(Object obj) {

@@ -1,6 +1,6 @@
 package protocols
 
-import core.SignedTransaction
+import core.contracts.SignedTransaction
 import core.crypto.SecureHash
 import core.messaging.SingleMessageRecipient
 

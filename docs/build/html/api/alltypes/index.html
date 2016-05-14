@@ -61,7 +61,7 @@ fields such as replyTo and replyToTopic.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-accrual-adjustment/index.html">core.AccrualAdjustment</a></td>
+<a href="../core/-accrual-adjustment/index.html">core.contracts.AccrualAdjustment</a></td>
 <td>
 <p>Simple enum for returning accurals adjusted or unadjusted.
 We dont actually do anything with this yet though, so its ignored for now.</p>
@@ -91,7 +91,7 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-amount/index.html">core.Amount</a></td>
+<a href="../core/-amount/index.html">core.contracts.Amount</a></td>
 <td>
 <p>Amount represents a positive quantity of currency, measured in pennies, which are the smallest representable units.</p>
 </td>
@@ -108,7 +108,7 @@ as well.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-attachment/index.html">core.Attachment</a></td>
+<a href="../core/-attachment/index.html">core.contracts.Attachment</a></td>
 <td>
 <p>An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to
 contain public static data which can be referenced from transactions and utilised from contracts. Good examples
@@ -142,7 +142,7 @@ file paths.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-authenticated-object/index.html">core.AuthenticatedObject</a></td>
+<a href="../core/-authenticated-object/index.html">core.contracts.AuthenticatedObject</a></td>
 <td>
 <p>Wraps an object that was signed by a public key, which may be a well known/recognised institutional key.</p>
 </td>
@@ -164,7 +164,7 @@ API call from a single party without bi-directional access to the database of of
 </tr>
 <tr>
 <td>
-<a href="../core/-business-calendar/index.html">core.BusinessCalendar</a></td>
+<a href="../core/-business-calendar/index.html">core.contracts.BusinessCalendar</a></td>
 <td>
 <p>A business calendar performs date calculations that take into account national holidays and weekends. This is a
 typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
@@ -215,14 +215,14 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-command/index.html">core.Command</a></td>
+<a href="../core/-command/index.html">core.contracts.Command</a></td>
 <td>
 <p>Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-command-data.html">core.CommandData</a></td>
+<a href="../core/-command-data.html">core.contracts.CommandData</a></td>
 <td>
 <p>Marker interface for classes that represent commands</p>
 </td>
@@ -249,7 +249,7 @@ and to organise serializers / deserializers for java.time.* classes as necessary
 </tr>
 <tr>
 <td>
-<a href="../core/-contract/index.html">core.Contract</a></td>
+<a href="../core/-contract/index.html">core.contracts.Contract</a></td>
 <td>
 <p>Implemented by a program that implements business logic on the shared ledger. All participants run this code for
 every <a href="../core/-ledger-transaction/index.html">LedgerTransaction</a> they see on the network, for every input and output state. All contracts must accept the
@@ -278,7 +278,7 @@ timestamp attached to the transaction itself i.e. it is NOT necessarily the curr
 </tr>
 <tr>
 <td>
-<a href="../core/-contract-state/index.html">core.ContractState</a></td>
+<a href="../core/-contract-state/index.html">core.contracts.ContractState</a></td>
 <td>
 <p>A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
 file that the program can use to persist data across transactions. States are immutable: once created they are never
@@ -318,7 +318,7 @@ glue that sits between the network layer and the database layer.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-date-offset/index.html">core.DateOffset</a></td>
+<a href="../core/-date-offset/index.html">core.contracts.DateOffset</a></td>
 <td>
 <p>Date offset that the fixing is done prior to the accrual start date.
 Currently not used in the calculation.</p>
@@ -326,7 +326,7 @@ Currently not used in the calculation.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-date-roll-convention/index.html">core.DateRollConvention</a></td>
+<a href="../core/-date-roll-convention/index.html">core.contracts.DateRollConvention</a></td>
 <td>
 <p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
 Depending on the accounting requirement, we can move forward until we get to a business day, or backwards
@@ -335,7 +335,7 @@ There are some additional rules which are explained in the individual cases belo
 </tr>
 <tr>
 <td>
-<a href="../core/-date-roll-direction/index.html">core.DateRollDirection</a></td>
+<a href="../core/-date-roll-direction/index.html">core.contracts.DateRollDirection</a></td>
 <td>
 <p>This is utilised in the <a href="../core/-date-roll-convention/index.html">DateRollConvention</a> class to determine which way we should initially step when
 finding a business day</p>
@@ -343,7 +343,7 @@ finding a business day</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-day-count-basis-day/index.html">core.DayCountBasisDay</a></td>
+<a href="../core/-day-count-basis-day/index.html">core.contracts.DayCountBasisDay</a></td>
 <td>
 <p>This forms the day part of the "Day Count Basis" used for interest calculation.
 Note that the first character cannot be a number (enum naming constraints), so we drop that
@@ -352,7 +352,7 @@ in the toString lest some people get confused.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-day-count-basis-year/index.html">core.DayCountBasisYear</a></td>
+<a href="../core/-day-count-basis-year/index.html">core.contracts.DayCountBasisYear</a></td>
 <td>
 <p>This forms the year part of the "Day Count Basis" used for interest calculation.</p>
 </td>
@@ -434,20 +434,20 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-expression/index.html">core.Expression</a></td>
+<a href="../core/-expression/index.html">core.contracts.Expression</a></td>
 <td>
 <p>Represents a textual expression of e.g. a formula</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-expression-deserializer/index.html">core.ExpressionDeserializer</a></td>
+<a href="../core/-expression-deserializer/index.html">core.contracts.ExpressionDeserializer</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-expression-serializer/index.html">core.ExpressionSerializer</a></td>
+<a href="../core/-expression-serializer/index.html">core.contracts.ExpressionSerializer</a></td>
 <td>
 </td>
 </tr>
@@ -475,14 +475,14 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-fix/index.html">core.Fix</a></td>
+<a href="../core/-fix/index.html">core.contracts.Fix</a></td>
 <td>
 <p>A <a href="../core/-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-fix-of/index.html">core.FixOf</a></td>
+<a href="../core/-fix-of/index.html">core.contracts.FixOf</a></td>
 <td>
 <p>A <a href="../core/-fix-of/index.html">FixOf</a> identifies the question side of a fix: what day, tenor and type of fix ("LIBOR", "EURIBOR" etc)</p>
 </td>
@@ -526,7 +526,7 @@ If the rate is null returns a zero payment. // TODO: Is this the desired behavio
 </tr>
 <tr>
 <td>
-<a href="../core/-frequency/index.html">core.Frequency</a></td>
+<a href="../core/-frequency/index.html">core.contracts.Frequency</a></td>
 <td>
 <p>Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
 that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
@@ -671,7 +671,7 @@ call out to a hardware security module that enforces various auditing and freque
 </tr>
 <tr>
 <td>
-<a href="../core/-ledger-transaction/index.html">core.LedgerTransaction</a></td>
+<a href="../core/-ledger-transaction/index.html">core.contracts.LedgerTransaction</a></td>
 <td>
 <p>A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
 It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
@@ -687,7 +687,7 @@ with the commands from the wire, and verified/looked up.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-linear-state/index.html">core.LinearState</a></td>
+<a href="../core/-linear-state/index.html">core.contracts.LinearState</a></td>
 <td>
 <p>A state that evolves by superseding itself, all of which share the common "thread"</p>
 </td>
@@ -798,7 +798,7 @@ This is not an interface because it is too lightweight to bother mocking out.</p
 </tr>
 <tr>
 <td>
-<a href="../core/-named-by-hash/index.html">core.NamedByHash</a></td>
+<a href="../core/-named-by-hash/index.html">core.contracts.NamedByHash</a></td>
 <td>
 <p>Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments).</p>
 </td>
@@ -918,20 +918,20 @@ functionality to Java, but it wont arrive for a few years yet</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-ownable-state/index.html">core.OwnableState</a></td>
+<a href="../core/-ownable-state/index.html">core.contracts.OwnableState</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-party/index.html">core.Party</a></td>
+<a href="../core/-party/index.html">core.crypto.Party</a></td>
 <td>
 <p>A <a href="../core/-party/index.html">Party</a> is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-party-and-reference/index.html">core.PartyAndReference</a></td>
+<a href="../core/-party-and-reference/index.html">core.contracts.PartyAndReference</a></td>
 <td>
 <p>Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
 ledger. The reference is intended to be encrypted so its meaningless to anyone other than the party.</p>
@@ -952,7 +952,7 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
-<a href="../core/-payment-rule/index.html">core.PaymentRule</a></td>
+<a href="../core/-payment-rule/index.html">core.contracts.PaymentRule</a></td>
 <td>
 <p>Whether the payment should be made before the due date, or after it.</p>
 </td>
@@ -1110,7 +1110,7 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 </tr>
 <tr>
 <td>
-<a href="../core/-requirements/index.html">core.Requirements</a></td>
+<a href="../core/-requirements/index.html">core.contracts.Requirements</a></td>
 <td>
 </td>
 </tr>
@@ -1180,7 +1180,7 @@ contained within.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-signed-transaction/index.html">core.SignedTransaction</a></td>
+<a href="../core/-signed-transaction/index.html">core.contracts.SignedTransaction</a></td>
 <td>
 <p>Container for a <a href="../core/-wire-transaction/index.html">WireTransaction</a> and attached signatures.</p>
 </td>
@@ -1215,7 +1215,7 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-state-and-ref/index.html">core.StateAndRef</a></td>
+<a href="../core/-state-and-ref/index.html">core.contracts.StateAndRef</a></td>
 <td>
 <p>A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these.</p>
 </td>
@@ -1230,7 +1230,7 @@ Each such object represents an instantiation of a (two-party) protocol that has 
 </tr>
 <tr>
 <td>
-<a href="../core/-state-ref/index.html">core.StateRef</a></td>
+<a href="../core/-state-ref/index.html">core.contracts.StateRef</a></td>
 <td>
 <p>A stateref is a pointer (reference) to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which
 transaction defined the state and where in that transaction it was.</p>
@@ -1278,7 +1278,7 @@ anything like that, this interface is only big enough to support the prototyping
 </tr>
 <tr>
 <td>
-<a href="../core/-tenor/index.html">core.Tenor</a></td>
+<a href="../core/-tenor/index.html">core.contracts.Tenor</a></td>
 <td>
 <p>Placeholder class for the Tenor datatype - which is a standardised duration of time until maturity</p>
 </td>
@@ -1295,7 +1295,7 @@ way that ensures itll be released if theres an exception.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-timestamp-command/index.html">core.TimestampCommand</a></td>
+<a href="../core/-timestamp-command/index.html">core.contracts.TimestampCommand</a></td>
 <td>
 <p>If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
 public keys are identified in the containing <a href="../core/-command/index.html">Command</a> object. The true time must be between (after, before)</p>
@@ -1362,7 +1362,7 @@ then B and C trade with each other, then C and A etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-builder/index.html">core.TransactionBuilder</a></td>
+<a href="../core/-transaction-builder/index.html">core.contracts.TransactionBuilder</a></td>
 <td>
 <p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
 intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
@@ -1372,20 +1372,20 @@ multiple parties.</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-conflict-exception/index.html">core.TransactionConflictException</a></td>
+<a href="../core/-transaction-conflict-exception/index.html">core.contracts.TransactionConflictException</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-for-verification/index.html">core.TransactionForVerification</a></td>
+<a href="../core/-transaction-for-verification/index.html">core.contracts.TransactionForVerification</a></td>
 <td>
 <p>A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-graph-search/index.html">core.TransactionGraphSearch</a></td>
+<a href="../core/-transaction-graph-search/index.html">core.contracts.TransactionGraphSearch</a></td>
 <td>
 <p>Given a map of transaction id to <a href="../core/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
 the starting point down in order to find transactions that match the given query criteria.</p>
@@ -1393,7 +1393,7 @@ the starting point down in order to find transactions that match the given query
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-group/index.html">core.TransactionGroup</a></td>
+<a href="../core/-transaction-group/index.html">core.contracts.TransactionGroup</a></td>
 <td>
 <p>A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
 verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
@@ -1402,13 +1402,13 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-resolution-exception/index.html">core.TransactionResolutionException</a></td>
+<a href="../core/-transaction-resolution-exception/index.html">core.contracts.TransactionResolutionException</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core/-transaction-verification-exception/index.html">core.TransactionVerificationException</a></td>
+<a href="../core/-transaction-verification-exception/index.html">core.contracts.TransactionVerificationException</a></td>
 <td>
 <p>Thrown if a verification fails due to a contract rejection.</p>
 </td>
@@ -1439,7 +1439,7 @@ and seller) and the following steps:</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-type-only-command-data/index.html">core.TypeOnlyCommandData</a></td>
+<a href="../core/-type-only-command-data/index.html">core.contracts.TypeOnlyCommandData</a></td>
 <td>
 <p>Commands that inherit from this are intended to have no data items: its only their presence that matters.</p>
 </td>
@@ -1506,7 +1506,7 @@ consumed by someone else first</p>
 </tr>
 <tr>
 <td>
-<a href="../core/-wire-transaction/index.html">core.WireTransaction</a></td>
+<a href="../core/-wire-transaction/index.html">core.contracts.WireTransaction</a></td>
 <td>
 <p>Transaction ready for serialisation, without any signatures attached.</p>
 </td>

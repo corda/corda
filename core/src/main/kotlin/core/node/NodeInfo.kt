@@ -1,6 +1,6 @@
 package core.node
 
-import core.Party
+import core.crypto.Party
 import core.messaging.SingleMessageRecipient
 import core.node.services.ServiceType
 

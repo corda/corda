@@ -1,6 +1,7 @@
 package core
 
 import com.codahale.metrics.MetricRegistry
+import core.contracts.Attachment
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256

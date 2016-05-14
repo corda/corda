@@ -6,6 +6,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import contracts.InterestRateSwap
 import core.*
+import core.contracts.SignedTransaction
+import core.contracts.StateAndRef
 import core.crypto.SecureHash
 import core.node.subsystems.linearHeadsOfType
 import core.utilities.JsonSupport

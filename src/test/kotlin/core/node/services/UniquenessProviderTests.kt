@@ -1,6 +1,6 @@
 package core.node.services
 
-import core.TransactionBuilder
+import core.contracts.TransactionBuilder
 import core.testutils.MEGA_CORP
 import core.testutils.generateStateRef
 import org.junit.Test

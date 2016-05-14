@@ -1,5 +1,7 @@
-package core
+package core.contracts
 
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import java.util.*
 

@@ -1,6 +1,6 @@
 package core.node.services
 
-import core.TimestampCommand
+import core.contracts.TimestampCommand
 import core.seconds
 import org.junit.Test
 import java.time.Clock

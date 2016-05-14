@@ -1,7 +1,7 @@
 package protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.NamedByHash
+import core.contracts.NamedByHash
 import core.crypto.SecureHash
 import core.messaging.SingleMessageRecipient
 import core.protocols.ProtocolLogic

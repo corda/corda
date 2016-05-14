@@ -1,9 +1,11 @@
-package core
+package core.contracts
 
 import com.esotericsoftware.kryo.Kryo
+import core.contracts.*
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.toStringShort
+import core.indexOfOrThrow
 import core.serialization.SerializedBytes
 import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.deserialize

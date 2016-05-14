@@ -1,7 +1,7 @@
 package core.visualiser
 
-import core.CommandData
-import core.ContractState
+import core.contracts.CommandData
+import core.contracts.ContractState
 import core.crypto.SecureHash
 import core.testutils.TransactionGroupDSL
 import org.graphstream.graph.Edge

@@ -2,7 +2,7 @@ package demos
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
-import core.Party
+import core.crypto.Party
 import core.logElapsedTime
 import core.node.Node
 import core.node.NodeConfiguration

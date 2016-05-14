@@ -1,9 +1,9 @@
 package core.node.services
 
 import contracts.Cash
-import core.DOLLARS
-import core.Fix
-import core.TransactionBuilder
+import core.contracts.DOLLARS
+import core.contracts.Fix
+import core.contracts.TransactionBuilder
 import core.bd
 import core.testing.MockNetwork
 import core.testutils.*

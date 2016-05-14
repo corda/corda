@@ -2,7 +2,9 @@ package protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import core.*
+import core.contracts.*
 import core.crypto.DigitalSignature
+import core.crypto.Party
 import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
 import core.node.NodeInfo

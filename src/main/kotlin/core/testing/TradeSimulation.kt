@@ -4,6 +4,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import contracts.CommercialPaper
 import core.*
+import core.contracts.DOLLARS
+import core.contracts.SignedTransaction
 import core.node.subsystems.NodeWalletService
 import core.utilities.BriefLogFormatter
 import protocols.TwoPartyTradeProtocol
@@ -15,7 +17,7 @@ import java.time.Instant
  */
 class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(runAsync, latencyInjector) {
     override fun start() {
-        BriefLogFormatter.loggingOn("bank", "core.TransactionGroup", "recordingmap")
+        BriefLogFormatter.loggingOn("bank", "core.contract.TransactionGroup", "recordingmap")
         startTradingCircle { i, j -> tradeBetween(i, j) }
     }
 

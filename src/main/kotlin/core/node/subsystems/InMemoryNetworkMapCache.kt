@@ -3,8 +3,8 @@ package core.node.subsystems
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import core.Contract
-import core.Party
+import core.contracts.Contract
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.messaging.runOnNextMessage

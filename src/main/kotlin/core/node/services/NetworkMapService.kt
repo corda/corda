@@ -1,7 +1,7 @@
 package core.node.services
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import core.Party
+import core.crypto.Party
 import core.ThreadBox
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash

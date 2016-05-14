@@ -9,6 +9,8 @@
 package contracts.isolated
 
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
@@ -36,6 +38,6 @@ class AnotherDummyContract : Contract, core.node.DummyContractBackdoor {
         return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 
-    override fun inspectState(state: core.ContractState): Int = (state as State).magicNumber
+    override fun inspectState(state: ContractState): Int = (state as State).magicNumber
 
 }

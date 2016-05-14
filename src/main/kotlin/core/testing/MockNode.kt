@@ -1,7 +1,7 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
-import core.Party
+import core.crypto.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
 import core.node.AbstractNode

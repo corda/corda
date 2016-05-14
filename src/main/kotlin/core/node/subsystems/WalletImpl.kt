@@ -1,10 +1,10 @@
 package core.node.subsystems
 
 import contracts.Cash
-import core.Amount
-import core.ContractState
-import core.StateAndRef
-import core.sumOrThrow
+import core.contracts.Amount
+import core.contracts.ContractState
+import core.contracts.StateAndRef
+import core.contracts.sumOrThrow
 import java.util.*
 
 /**

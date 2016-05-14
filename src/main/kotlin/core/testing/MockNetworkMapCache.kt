@@ -8,7 +8,7 @@
 package core.testing
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import core.Party
+import core.crypto.Party
 import core.crypto.DummyPublicKey
 import core.messaging.SingleMessageRecipient
 import core.node.subsystems.InMemoryNetworkMapCache

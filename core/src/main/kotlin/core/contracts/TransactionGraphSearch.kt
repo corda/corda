@@ -1,5 +1,8 @@
-package core
+package core.contracts
 
+import core.contracts.SignedTransaction
+import core.contracts.WireTransaction
+import core.contracts.CommandData
 import core.crypto.SecureHash
 import java.util.*
 import java.util.concurrent.Callable

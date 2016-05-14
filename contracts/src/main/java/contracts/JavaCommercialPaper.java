@@ -1,8 +1,9 @@
 package contracts;
 
-import core.*;
-import core.TransactionForVerification.InOutGroup;
+import core.contracts.TransactionForVerification.InOutGroup;
+import core.contracts.*;
 import core.crypto.NullPublicKey;
+import core.crypto.Party;
 import core.crypto.SecureHash;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,7 +12,7 @@ import java.security.PublicKey;
 import java.time.Instant;
 import java.util.List;
 
-import static core.ContractsDSLKt.requireSingleCommand;
+import static core.contracts.ContractsDSLKt.requireSingleCommand;
 import static kotlin.collections.CollectionsKt.single;
 
 
@@ -119,7 +120,7 @@ public class JavaCommercialPaper implements Contract {
         }
     }
 
-    public static class Commands implements core.CommandData {
+    public static class Commands implements CommandData {
         public static class Move extends Commands {
             @Override
             public boolean equals(Object obj) {

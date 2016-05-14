@@ -9,6 +9,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import core.*
+import core.contracts.*
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256

@@ -1,4 +1,4 @@
-package core
+package core.contracts
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import core.contracts.CommandData
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -304,7 +305,7 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
         /** Calculates an event schedule that moves events around to ensure they fall on working days. */
         fun createGenericSchedule(startDate: LocalDate,
                                   period: Frequency,
-                                  calendar: BusinessCalendar = BusinessCalendar.getInstance(),
+                                  calendar: BusinessCalendar = getInstance(),
                                   dateRollConvention: DateRollConvention = DateRollConvention.Following,
                                   noOfAdditionalPeriods: Int = Integer.MAX_VALUE,
                                   endDate: LocalDate? = null,

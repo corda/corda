@@ -6,6 +6,7 @@ import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import contracts.*
 import core.*
+import core.contracts.*
 import core.crypto.*
 import core.node.AbstractNode
 import core.serialization.serialize

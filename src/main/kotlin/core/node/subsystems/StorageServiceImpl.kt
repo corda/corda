@@ -1,7 +1,7 @@
 package core.node.subsystems
 
-import core.Party
-import core.SignedTransaction
+import core.crypto.Party
+import core.contracts.SignedTransaction
 import core.crypto.SecureHash
 import core.node.services.AttachmentStorage
 import core.node.storage.CheckpointStorage

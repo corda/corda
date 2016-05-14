@@ -1,9 +1,9 @@
 package core.node.services
 
-import core.Party
-import core.StateRef
+import core.crypto.Party
+import core.contracts.StateRef
 import core.ThreadBox
-import core.WireTransaction
+import core.contracts.WireTransaction
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 

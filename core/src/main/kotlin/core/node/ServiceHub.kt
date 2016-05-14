@@ -1,6 +1,7 @@
 package core.node
 
 import core.*
+import core.contracts.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.node.services.IdentityService

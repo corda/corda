@@ -3,6 +3,8 @@ package core.messaging
 import contracts.Cash
 import contracts.CommercialPaper
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.node.NodeConfiguration
 import core.node.NodeInfo
@@ -49,12 +51,12 @@ class TwoPartyTradeProtocolTests {
     fun before() {
         net = MockNetwork(false)
         net.identities += MockIdentityService.identities
-        BriefLogFormatter.loggingOn("platform.trade", "core.TransactionGroup", "recordingmap")
+        BriefLogFormatter.loggingOn("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
     @After
     fun after() {
-        BriefLogFormatter.loggingOff("platform.trade", "core.TransactionGroup", "recordingmap")
+        BriefLogFormatter.loggingOff("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
     @Test

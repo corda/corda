@@ -2,6 +2,7 @@ package api
 
 import com.google.common.util.concurrent.ListenableFuture
 import core.*
+import core.contracts.*
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.node.AbstractNode

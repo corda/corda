@@ -1,5 +1,9 @@
-package core
+package core.contracts
 
+import core.contracts.AuthenticatedObject
+import core.contracts.LedgerTransaction
+import core.contracts.SignedTransaction
+import core.contracts.WireTransaction
 import core.node.services.AttachmentStorage
 import core.node.services.IdentityService
 import java.io.FileNotFoundException

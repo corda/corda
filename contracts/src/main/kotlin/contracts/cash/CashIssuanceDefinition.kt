@@ -1,7 +1,7 @@
 package contracts.cash
 
-import core.IssuanceDefinition
-import core.PartyAndReference
+import core.contracts.IssuanceDefinition
+import core.contracts.PartyAndReference
 import java.util.*
 
 /**

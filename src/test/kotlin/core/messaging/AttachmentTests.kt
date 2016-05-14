@@ -1,6 +1,6 @@
 package core.messaging
 
-import core.Attachment
+import core.contracts.Attachment
 import core.crypto.SecureHash
 import core.crypto.sha256
 import core.node.NodeConfiguration
