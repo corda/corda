@@ -2385,7 +2385,7 @@ GcList* addInterfaceMethods(Thread* t,
                                 method->spec(),
                                 0,
                                 class_,
-                                0);
+                                method->code());
 
             hashMapInsert(t, virtualMap, method, method, methodHash);
 
