@@ -22,9 +22,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.time.Clock
 import javax.management.ObjectName
 
@@ -164,20 +162,20 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         // twice with the same directory: that's a user error and we should bail out.
         val pidPath = dir.resolve("process-id")
         val file = pidPath.toFile()
-        if (file.exists()) {
-            val f = RandomAccessFile(file, "rw")
-            val l = f.channel.tryLock()
-            if (l == null) {
-                println("It appears there is already a node running with the specified data directory $dir")
-                println("Shut that other node down and try again. It may have process ID ${file.readText()}")
-                System.exit(1)
-            }
-            nodeFileLock = l
+        if (!file.exists()) {
+            file.createNewFile()
         }
+        file.deleteOnExit()
+        val f = RandomAccessFile(file, "rw")
+        val l = f.channel.tryLock()
+        if (l == null) {
+            println("It appears there is already a node running with the specified data directory $dir")
+            println("Shut that other node down and try again. It may have process ID ${file.readText()}")
+            System.exit(1)
+        }
+        nodeFileLock = l
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
-        Files.write(pidPath, ourProcessID.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-        pidPath.toFile().deleteOnExit()
-        if (nodeFileLock == null)
-            nodeFileLock = RandomAccessFile(file, "rw").channel.lock()
-    }
+        f.setLength(0)
+        f.write(ourProcessID.toByteArray())
+     }
 }

@@ -18,6 +18,7 @@ buildscript {
     ext.artemis_version = '1.2.0'
     ext.jetty_version = '9.1.1.v20140108'
     ext.jersey_version = '2.22.2'
+	ext.jolokia_version = '2.0.0-M1'
 
     repositories {
         mavenCentral()
@@ -98,6 +99,18 @@ task getIRSDemo(type: CreateStartScripts) {
     defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
     outputDir = new File(project.buildDir, 'scripts')
     classpath = jar.outputs.files + project.configurations.runtime
+}
+
+// Force windows script classpath to wildcard path to avoid the 'Command Line Is Too Long' issues
+// with generated scripts. Include Jolokia .war explicitly as this isn't picked up by wildcard
+tasks.withType(CreateStartScripts)
+{
+    doLast {
+        windowsScript.text = windowsScript
+                .readLines()
+                .collect { line -> line.replaceAll(~/^set CLASSPATH=.*$/, 'set CLASSPATH=%APP_HOME%/lib/*;%APP_HOME%/lib/jolokia-agent-war-'+project.ext.jolokia_version+'.war') }
+                .join('\r\n')
+    }
 }
 
 // These lines tell gradle to run the Quasar suspendables scanner to look for unannotated super methods
