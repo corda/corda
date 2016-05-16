@@ -12,6 +12,7 @@ tags
 
 .gradle
 /build/
+/node/build/
 /contracts/build
 /contracts/isolated/build
 /core/build
