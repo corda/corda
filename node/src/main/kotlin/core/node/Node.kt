@@ -107,10 +107,8 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             resourceConfig.register(ResponseFilter())
             resourceConfig.register(api)
 
-            clientAPIs.forEach {
-                customAPIClass ->
-                    val customAPI = customAPIClass.getConstructor(api.APIServer::class.java)
-                                            .newInstance(api)
+            for(customAPIClass in clientAPIs) {
+                val customAPI = customAPIClass.getConstructor(api.APIServer::class.java).newInstance(api)
                 resourceConfig.register(customAPI)
             }
 
