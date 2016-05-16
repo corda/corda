@@ -1,6 +1,8 @@
 package contracts;
 
-import core.*;
+import core.contracts.Amount;
+import core.contracts.ContractState;
+import core.contracts.PartyAndReference;
 
 import java.security.*;
 import java.time.*;

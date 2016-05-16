@@ -1,6 +1,8 @@
 package contracts
 
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import java.security.PublicKey
 import java.time.Instant
@@ -80,7 +82,7 @@ class CrowdFund : Contract {
         when (command.value) {
             is Commands.Register -> {
                 requireThat {
-                    "there is no input state" by tx.inStates.filterIsInstance<CrowdFund.State>().isEmpty()
+                    "there is no input state" by tx.inStates.filterIsInstance<State>().isEmpty()
                     "the transaction is signed by the owner of the crowdsourcing" by (command.signers.contains(outputCrowdFund.campaign.owner))
                     "the output registration is empty of pledges" by (outputCrowdFund.pledges.isEmpty())
                     "the output registration has a non-zero target" by (outputCrowdFund.campaign.target.pennies > 0)

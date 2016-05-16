@@ -1,7 +1,7 @@
 package core.crypto
 
 import com.google.common.io.BaseEncoding
-import core.Party
+import core.crypto.Party
 import core.serialization.OpaqueBytes
 import core.serialization.SerializedBytes
 import core.serialization.deserialize

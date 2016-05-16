@@ -3,6 +3,8 @@ package contracts
 import contracts.cash.CashIssuanceDefinition
 import contracts.cash.CommonCashState
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.toStringShort
 import core.utilities.Emoji
@@ -185,7 +187,7 @@ class Cash : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder, amount: Amount, to: PublicKey,
-                      cashStates: List<StateAndRef<Cash.State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
+                      cashStates: List<StateAndRef<State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -215,7 +217,7 @@ class Cash : Contract {
                 ofCurrency
         }
 
-        val gathered = arrayListOf<StateAndRef<Cash.State>>()
+        val gathered = arrayListOf<StateAndRef<State>>()
         var gatheredAmount = Amount(0, currency)
         for (c in acceptableCoins) {
             if (gatheredAmount >= amount) break

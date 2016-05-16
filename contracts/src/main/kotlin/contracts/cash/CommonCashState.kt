@@ -1,8 +1,8 @@
 package contracts.cash
 
-import core.Amount
-import core.OwnableState
-import core.PartyAndReference
+import core.contracts.Amount
+import core.contracts.OwnableState
+import core.contracts.PartyAndReference
 
 /**
  * Common elements of cash contract states.

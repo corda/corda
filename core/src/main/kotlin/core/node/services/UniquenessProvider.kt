@@ -1,8 +1,8 @@
 package core.node.services
 
-import core.Party
-import core.StateRef
-import core.WireTransaction
+import core.crypto.Party
+import core.contracts.StateRef
+import core.contracts.WireTransaction
 import core.crypto.SecureHash
 
 /**

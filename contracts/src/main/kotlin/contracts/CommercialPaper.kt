@@ -1,7 +1,9 @@
 package contracts
 
 import core.*
+import core.contracts.*
 import core.crypto.NullPublicKey
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.toStringShort
 import core.utilities.Emoji

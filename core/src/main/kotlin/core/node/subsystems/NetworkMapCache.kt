@@ -1,8 +1,8 @@
 package core.node.subsystems
 
 import com.google.common.util.concurrent.ListenableFuture
-import core.Contract
-import core.Party
+import core.contracts.Contract
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.messaging.MessagingService
 import core.node.NodeInfo

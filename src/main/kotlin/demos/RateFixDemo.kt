@@ -2,6 +2,10 @@ package demos
 
 import contracts.Cash
 import core.*
+import core.contracts.DOLLARS
+import core.contracts.FixOf
+import core.crypto.Party
+import core.contracts.TransactionBuilder
 import core.node.Node
 import core.node.NodeConfiguration
 import core.node.NodeInfo
@@ -74,7 +78,9 @@ fun main(args: Array<String>) {
         override val nearestCity: String = "Atlantis"
     }
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress, advertisedServices).start() }
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
+            advertisedServices, DemoClock(),
+            listOf(demos.api.InterestRateSwapAPI::class.java)).start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 

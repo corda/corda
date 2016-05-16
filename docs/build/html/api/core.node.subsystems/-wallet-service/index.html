@@ -56,14 +56,14 @@ keys in this wallet, you must inform the wallet service so it can update its int
 <td>
 <a href="notify.html">notify</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.WalletService$notify(core.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Same as notifyAll but with a single transaction.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.WalletService$notify(core.contracts.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Same as notifyAll but with a single transaction.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="notify-all.html">notifyAll</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.WalletService$notifyAll(kotlin.collections.Iterable((core.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.WalletService$notifyAll(kotlin.collections.Iterable((core.contracts.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
 new states that they create. You should only insert transactions that have been successfully verified here</p>
 </td>
 </tr>
@@ -71,7 +71,7 @@ new states that they create. You should only insert transactions that have been 
 <td>
 <a href="states-for-refs.html">statesForRefs</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.WalletService$statesForRefs(kotlin.collections.List((core.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../core/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../core/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../core/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="core.node.subsystems.WalletService$statesForRefs(kotlin.collections.List((core.contracts.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../core/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../core/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../core/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

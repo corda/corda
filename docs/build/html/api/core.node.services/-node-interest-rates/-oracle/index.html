@@ -21,7 +21,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">Oracle</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.Party, java.security.KeyPair)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.Party, java.security.KeyPair)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">)</span></code><p>An implementation of an interest rate fix oracle which is given data in a simple string format.</p>
+<code><span class="identifier">Oracle</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.crypto.Party, java.security.KeyPair)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$<init>(core.crypto.Party, java.security.KeyPair)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">)</span></code><p>An implementation of an interest rate fix oracle which is given data in a simple string format.</p>
 </td>
 </tr>
 </tbody>
@@ -50,13 +50,13 @@
 <td>
 <a href="query.html">query</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$query(kotlin.collections.List((core.FixOf)))/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$query(kotlin.collections.List((core.contracts.FixOf)))/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../core/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../core/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="sign.html">sign</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$sign(core.WireTransaction)/wtx">wtx</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code></td>
+<code><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="identifier" id="core.node.services.NodeInterestRates.Oracle$sign(core.contracts.WireTransaction)/wtx">wtx</span><span class="symbol">:</span>&nbsp;<a href="../../../core/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code></td>
 </tr>
 </tbody>
 </table>

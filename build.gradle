@@ -51,72 +51,15 @@ configurations {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    compile project(':contracts')
-
-    compile "com.google.code.findbugs:jsr305:3.0.1"
-    compile "org.slf4j:slf4j-jdk14:1.7.13"
+    compile project(':node')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.1"
 
-    compile "com.google.guava:guava:19.0"
-
-    // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:4.9"
-
     // Quasar: for the bytecode rewriting for state machines.
     quasar "co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar"
-
-    // Artemis: for reliable p2p message queues.
-    compile "org.apache.activemq:artemis-server:${artemis_version}"
-    compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-
-    // JAnsi: for drawing things to the terminal in nicely coloured ways.
-    compile "org.fusesource.jansi:jansi:1.11"
-
-    // GraphStream: For visualisation
-    compile "org.graphstream:gs-core:1.3"
-    compile "org.graphstream:gs-ui:1.3"
-    compile("com.intellij:forms_rt:7.0.3") {
-        exclude group: "asm"
-    }
-
-    // Force commons logging to version 1.2 to override Artemis, which pulls in 1.1.3 (ARTEMIS-424)
-    compile "commons-logging:commons-logging:1.2"
-
-    // Web stuff: for HTTP[S] servlets
-    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
-    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
-    compile "javax.servlet:javax.servlet-api:3.1.0"
-    compile "org.jolokia:jolokia-agent-war:${jolokia_version}"
-    compile "commons-fileupload:commons-fileupload:1.3.1"
-
-    // Jersey for JAX-RS implementation for use in Jetty
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
-    // NOTE there is a Jackson version clash between jersey-media-json-jackson (v2.5.4) and jackson-module-kotlin (v.2.5.5)
-    // Have not found an Issue in the issue tracker for Jersey for this issue
-    compile ("org.glassfish.jersey.media:jersey-media-json-jackson:${jersey_version}") {
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
-    }
-    compile ("com.fasterxml.jackson.module:jackson-module-kotlin:2.5.5-2") {
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
-    }
-    compile "com.fasterxml.jackson.core:jackson-annotations:2.5.5"
-
-    // Coda Hale's Metrics: for monitoring of key statistics
-    compile "io.dropwizard.metrics:metrics-core:3.1.2"
-
-    // JimFS: in memory java.nio filesystem. Used for test and simulation utilities.
-    compile "com.google.jimfs:jimfs:1.1"
-
-    // TypeSafe Config: for simple and human friendly config files.
-    compile "com.typesafe:config:1.3.0"
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
@@ -178,7 +121,7 @@ tasks.withType(CreateStartScripts)
 // TODO: Make this task incremental, as it can be quite slow.
 
 //noinspection GroovyAssignabilityCheck
-task quasarScan(dependsOn: ['classes', 'core:classes', 'contracts:classes']) << {
+task quasarScan(dependsOn: ['classes', 'core:classes', 'contracts:classes', 'node:classes']) << {
     ant.taskdef(name:'scanSuspendables', classname:'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
             classpath: "${sourceSets.main.output.classesDir}:${sourceSets.main.output.resourcesDir}:${configurations.runtime.asPath}")
     delete "$sourceSets.main.output.resourcesDir/META-INF/suspendables", "$sourceSets.main.output.resourcesDir/META-INF/suspendable-supers"

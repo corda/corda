@@ -5,6 +5,8 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import contracts.CommercialPaper
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.SingleMessageRecipient

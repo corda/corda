@@ -3,9 +3,9 @@ package demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
-import core.DealState
-import core.Party
-import core.SignedTransaction
+import core.contracts.DealState
+import core.crypto.Party
+import core.contracts.SignedTransaction
 import core.messaging.SingleMessageRecipient
 import core.node.Node
 import core.protocols.ProtocolLogic
