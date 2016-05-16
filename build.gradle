@@ -84,7 +84,7 @@ tasks.withType(JavaExec) {
     jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
 }
 
-// Package up the other demo programs.
+// Package up the demo programs.
 task getRateFixDemo(type: CreateStartScripts) {
     mainClassName = "demos.RateFixDemoKt"
     applicationName = "get-rate-fix"
@@ -96,6 +96,14 @@ task getRateFixDemo(type: CreateStartScripts) {
 task getIRSDemo(type: CreateStartScripts) {
     mainClassName = "demos.IRSDemoKt"
     applicationName = "irsdemo"
+    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+task getTraderDemo(type: CreateStartScripts) {
+    mainClassName = "demos.TraderDemoKt"
+    applicationName = "trader-demo"
     defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
     outputDir = new File(project.buildDir, 'scripts')
     classpath = jar.outputs.files + project.configurations.runtime
@@ -138,5 +146,6 @@ jar.dependsOn quasarScan
 applicationDistribution.into("bin") {
     from(getRateFixDemo)
     from(getIRSDemo)
+    from(getTraderDemo)
     fileMode = 0755
 }
