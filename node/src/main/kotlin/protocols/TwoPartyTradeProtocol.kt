@@ -73,7 +73,7 @@ object TwoPartyTradeProtocol {
     )
 
     class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
-                               val notarySig: DigitalSignature.WithKey)
+                               val notarySig: DigitalSignature.LegallyIdentifiable)
 
     open class Seller(val otherSide: SingleMessageRecipient,
                       val notaryNode: NodeInfo,
@@ -215,6 +215,8 @@ object TwoPartyTradeProtocol {
             val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
             logger.trace { "Got signatures from seller, verifying ... " }
+
+            verifyCorrectNotary(stx.tx, signatures.notarySig)
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
@@ -268,6 +270,11 @@ object TwoPartyTradeProtocol {
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
+        }
+
+        private fun verifyCorrectNotary(wtx: WireTransaction, sig: DigitalSignature.LegallyIdentifiable) {
+            val notary = serviceHub.loadState(wtx.inputs.first()).notary
+            check(sig.signer == notary) { "Transaction not signed by the required Notary" }
         }
 
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {

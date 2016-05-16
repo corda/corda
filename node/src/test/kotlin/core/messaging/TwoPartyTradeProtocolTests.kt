@@ -163,6 +163,9 @@ class TwoPartyTradeProtocolTests {
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             assertThat(bobNode.storage.checkpointStorage.checkpoints).hasSize(1)
 
+            // TODO: remove once validated transactions are persisted to disk
+            val recordedTransactions = bobNode.storage.validatedTransactions
+
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
             bobNode.stop()
 
@@ -179,8 +182,11 @@ class TwoPartyTradeProtocolTests {
                 }
             }, BOB.name, BOB_KEY)
 
+            // TODO: remove once validated transactions are persisted to disk
+            bobNode.storage.validatedTransactions.putAll(recordedTransactions)
+
             // Find the future representing the result of this state machine again.
-            var bobFuture = bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).single().second
+            val bobFuture = bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).single().second
 
             // And off we go again.
             net.runNetwork()
@@ -268,7 +274,9 @@ class TwoPartyTradeProtocolTests {
                         RecordingMap.Get(bobsFakeCash[1].id),
                         RecordingMap.Get(bobsFakeCash[2].id),
                         // Alice notices that Bob's cash txns depend on a third tx she also doesn't know. She asks, Bob answers.
-                        RecordingMap.Get(bobsFakeCash[0].id)
+                        RecordingMap.Get(bobsFakeCash[0].id),
+                        // Bob wants to verify that the tx has been signed by the correct Notary, which requires looking up an input state
+                        RecordingMap.Get(bobsFakeCash[1].id)
                 )
                 assertEquals(expected, records)
 
