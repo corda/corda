@@ -99,7 +99,9 @@ class NotaryProtocol(private val wtx: WireTransaction,
     }
 }
 
-class NotaryException(val error: NotaryError) : Exception()
+class NotaryException(val error: NotaryError) : Exception() {
+    override fun toString() = "${super.toString()}: Error response from Notary - ${error.toString()}"
+}
 
 sealed class NotaryError {
     class Conflict(val tx: WireTransaction, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
