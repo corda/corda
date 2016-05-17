@@ -2,12 +2,13 @@ package core.testing
 
 import com.google.common.base.Throwables
 import core.utilities.BriefLogFormatter
+import org.junit.Ignore
 import org.junit.Test
 
 class IRSSimulationTest {
     // TODO: These tests should be a lot more complete.
 
-    @Test fun `runs to completion`() {
+    @Test @Ignore fun `runs to completion`() {
         BriefLogFormatter.initVerbose("messaging")
         val sim = IRSSimulation(false, null)
         val future = sim.start()
