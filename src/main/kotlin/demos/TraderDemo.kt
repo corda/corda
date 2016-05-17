@@ -30,6 +30,7 @@ import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
 import core.utilities.ProgressTracker
 import joptsimple.OptionParser
+import joptsimple.OptionSet
 import protocols.NotaryProtocol
 import protocols.TwoPartyTradeProtocol
 import java.nio.file.Files
@@ -43,93 +44,162 @@ import kotlin.test.assertEquals
 // TRADING DEMO
 //
 // Please see docs/build/html/running-the-trading-demo.html
+//
+// This program is a simple driver for exercising the two party trading protocol. Until Corda has a unified node server
+// programs like this are required to wire up the pieces and run a demo scenario end to end.
+//
+// If you are creating a new scenario, you can use this program as a template for creating your own driver. Make sure to
+// copy/paste the right parts of the build.gradle file to make sure it gets a script to run it deposited in
+// build/install/r3prototyping/bin
+//
+// In this scenario, a buyer wants to purchase some commercial paper by swapping his cash for the CP. The seller learns
+// that the buyer exists, and sends them a message to kick off the trade. The seller, having obtained his CP, then quits
+// and the buyer goes back to waiting. The buyer will sell as much CP as he can!
+//
+// The different roles in the scenario this program can adopt are:
+
+enum class Role {
+    BUYER,
+    SELLER
+}
+
+// And this is the directory under the current working directory where each node will create its own server directory,
+// which holds things like checkpoints, keys, databases, message logs etc.
+val DIRNAME = "trader-demo"
 
 fun main(args: Array<String>) {
     val parser = OptionParser()
 
-    val modeArg = parser.accepts("mode").withRequiredArg().required()
+    val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
     val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
     val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
 
-    val options = try {
-        parser.parse(*args)
-    } catch (e: Exception) {
-        println(e.message)
-        printHelp()
-        exitProcess(1)
-    }
+    val options = parseOptions(args, parser)
+    val role = options.valueOf(roleArg)!!
 
-    val mode = options.valueOf(modeArg)
-
-    val DIRNAME = "trader-demo"
-    val BUYER = "buyer"
-    val SELLER = "seller"
-
-    if (mode !in setOf(BUYER, SELLER)) {
-        printHelp()
-        exitProcess(1)
-    }
+    val myNetAddr = HostAndPort.fromString(options.valueOf(myNetworkAddress)).withDefaultPort(
+            when (role) {
+                Role.BUYER -> 31337
+                Role.SELLER -> 31340
+            }
+    )
+    val theirNetAddr = HostAndPort.fromString(options.valueOf(theirNetworkAddress)).withDefaultPort(
+            when (role) {
+                Role.BUYER -> 31340
+                Role.SELLER -> 31337
+            }
+    )
 
     // Suppress the Artemis MQ noise, and activate the demo logging.
+    //
+    // The first two strings correspond to the first argument to StateMachineManager.add() but the way we handle logging
+    // for protocols will change in future.
     BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
-    val dir = Paths.get(DIRNAME, mode)
-    Files.createDirectories(dir)
+    val directory = setupDirectory(role)
 
-    val advertisedServices: Set<ServiceType>
-    val myNetAddr = HostAndPort.fromString(options.valueOf(myNetworkAddress)).withDefaultPort(if (mode == BUYER) Node.DEFAULT_PORT else 31340)
-    val theirNetAddr = HostAndPort.fromString(options.valueOf(theirNetworkAddress)).withDefaultPort(if (mode == SELLER) Node.DEFAULT_PORT else 31340)
-
-    val listening = mode == BUYER
+    // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
-        val override = ConfigFactory.parseString("""myLegalName = ${ if (mode == BUYER) "Bank A" else "Bank B" }""")
+        val myLegalName = when (role) {
+            Role.BUYER -> "Bank A"
+            Role.SELLER -> "Bank B"
+        }
+        val override = ConfigFactory.parseString("myLegalName = $myLegalName")
         NodeConfigurationFromConfig(override.withFallback(ConfigFactory.load()))
     }
 
-    val networkMapId = if (mode == SELLER) {
-        val path = Paths.get(DIRNAME, BUYER, "identity-public")
+    // Which services will this instance of the node provide to the network?
+    val advertisedServices: Set<ServiceType>
+
+    // One of the two servers needs to run the network map and notary services. In such a trivial two-node network
+    // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
+    // the side that sticks around waiting for the seller.
+    val networkMapId = if (role == Role.BUYER) {
+        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
+        null
+    } else {
+        // In a real system, the identity file of the network map would be shipped with the server software, and there'd
+        // be a single shared map service  (this is analagous to the DNS seeds in Bitcoin).
+        //
+        // TODO: AbstractNode should write out the full NodeInfo object and we should just load it here.
+        val path = Paths.get(DIRNAME, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
-    } else {
-        // We must be the network map service
-        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
-        null
     }
 
     // TODO: Remove this once checkpoint resume works.
     StateMachineManager.restoreCheckpointsOnStart = false
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId, advertisedServices).start() }
 
-    if (listening) {
-        // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
-        // Buyer will fetch the attachment from the seller.
-        val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
-            it.automaticallyExtractAttachments = true
-            it.storePath
-        }
+    // And now construct then start the node object. It takes a little while.
+    val node = logElapsedTime("Node startup") {
+        Node(directory, myNetAddr, config, networkMapId, advertisedServices).start()
+    }
 
-        val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
-        ANSIProgressRenderer.progressTracker = buyer.progressTracker
-        node.smm.add("demo.buyer", buyer).get()   // This thread will halt forever here.
+    // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
+    // will contact the buyer and actually make something happen.
+    if (role == Role.BUYER) {
+        runBuyer(node)
     } else {
-        // Make sure we have the transaction prospectus attachment loaded into our store.
-        if (node.storage.attachments.openAttachment(TraderDemoProtocolSeller.PROSPECTUS_HASH) == null) {
-            TraderDemoProtocolSeller::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
-                val id = node.storage.attachments.importAttachment(it)
-                assertEquals(TraderDemoProtocolSeller.PROSPECTUS_HASH, id)
-            }
-        }
-
-        val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
-        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
-        ANSIProgressRenderer.progressTracker = seller.progressTracker
-        node.smm.add("demo.seller", seller).get()
-        node.stop()
+        runSeller(myNetAddr, node, theirNetAddr)
     }
 }
 
+fun setupDirectory(mode: Role): Path {
+    val directory = Paths.get(DIRNAME, mode.name.toLowerCase())
+    Files.createDirectories(directory)
+    return directory
+}
+
+fun parseOptions(args: Array<String>, parser: OptionParser): OptionSet {
+    try {
+        return parser.parse(*args)
+    } catch (e: Exception) {
+        println(e.message)
+        println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
+        exitProcess(1)
+    }
+}
+
+fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
+    // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
+    //
+    // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
+    // attachment. Make sure we have the transaction prospectus attachment loaded into our store.
+    //
+    // This can also be done via an HTTP upload, but here we short-circuit and do it from code.
+    if (node.storage.attachments.openAttachment(TraderDemoProtocolSeller.PROSPECTUS_HASH) == null) {
+        TraderDemoProtocolSeller::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
+            val id = node.storage.attachments.importAttachment(it)
+            assertEquals(TraderDemoProtocolSeller.PROSPECTUS_HASH, id)
+        }
+    }
+
+    val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
+    val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
+    ANSIProgressRenderer.progressTracker = seller.progressTracker
+    node.smm.add("demo.seller", seller).get()
+    node.stop()
+}
+
+fun runBuyer(node: Node) {
+    // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
+    // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
+    val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
+        it.automaticallyExtractAttachments = true
+        it.storePath
+    }
+
+    // We use a simple scenario-specific wrapper protocol to make things happen.
+    val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
+    ANSIProgressRenderer.progressTracker = buyer.progressTracker
+    // This thread will halt forever here.
+    node.smm.add("demo.buyer", buyer).get()
+}
+
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
+
+val DEMO_TOPIC = "initiate.demo.trade"
 
 class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Party) : ProtocolLogic<Unit>() {
     companion object {
@@ -142,8 +212,9 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Par
 
     @Suspendable
     override fun call() {
-        // Give us some cash. Note that as nodes do not currently track forward pointers, we can spend the same cash over
-        // and over again and the double spends will never be detected! Fixing that is the next step.
+        // Self issue some cash.
+        //
+        // TODO: At some point this demo should be extended to have a central bank node.
         (serviceHub.walletService as NodeWalletService).fillWithSomeTestCash(notary, 1500.DOLLARS)
 
         while (true) {
@@ -151,18 +222,22 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Par
             // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the
             // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
             //
-            // As the seller initiates the DVP/two-party trade protocol, here, we will be the buyer.
+            // As the seller initiates the two-party trade protocol, here, we will be the buyer.
             try {
                 progressTracker.currentStep = WAITING_FOR_SELLER_TO_CONNECT
-                val hostname = receive<HostAndPort>("test.junktrade", 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
+                val hostname = receive<HostAndPort>(DEMO_TOPIC, 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
                 val newPartnerAddr = ArtemisMessagingService.makeRecipient(hostname)
+
+                // The session ID disambiguates the test trade.
                 val sessionID = random63BitValue()
                 progressTracker.currentStep = STARTING_BUY
-                send("test.junktrade", newPartnerAddr, 0, sessionID)
+                send(DEMO_TOPIC, newPartnerAddr, 0, sessionID)
 
                 val notary = serviceHub.networkMapCache.notaryNodes[0]
                 val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, notary.identity, 1000.DOLLARS,
                         CommercialPaper.State::class.java, sessionID)
+
+                // This invokes the trading protocol and out pops our finished transaction.
                 val tradeTX: SignedTransaction = subProtocol(buyer)
 
                 logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
@@ -217,7 +292,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
     override fun call() {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>("test.junktrade", otherSide, 0, 0, myAddress).validate { it }
+        val sessionID = sendAndReceive<Long>(DEMO_TOPIC, otherSide, 0, 0, myAddress).validate { it }
 
         progressTracker.currentStep = SELF_ISSUING
 
@@ -240,7 +315,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
         val keyPair = generateKeyPair()
         val party = Party("Bank of London", keyPair.public)
 
-        val issuance = run {
+        val issuance: SignedTransaction = run {
             val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days, notaryNode.identity)
 
             // TODO: Consider moving these two steps below into generateIssue.
@@ -248,32 +323,35 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             // Attach the prospectus.
             tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!)
 
-            // Timestamp it, all CP must be timestamped.
+            // Requesting timestamping, all CP must be timestamped.
             tx.setTime(Instant.now(), notaryNode.identity, 30.seconds)
+
+            // Sign it as ourselves.
             tx.signWith(keyPair)
+
+            // Get the notary to sign it, thus committing the outputs.
             val notarySig = subProtocol(NotaryProtocol(tx.toWireTransaction()))
             tx.addSignatureUnchecked(notarySig)
-            tx.toSignedTransaction(true)
+
+            // Commit it to local storage.
+            val stx = tx.toSignedTransaction(true)
+            serviceHub.recordTransactions(listOf(stx))
+
+            stx
         }
 
-        serviceHub.recordTransactions(listOf(issuance))
-
-        val move = run {
-            val tx = TransactionBuilder()
-            CommercialPaper().generateMove(tx, issuance.tx.outRef(0), ownedBy)
-            tx.signWith(keyPair)
-            val notarySig = subProtocol(NotaryProtocol(tx.toWireTransaction()))
-            tx.addSignatureUnchecked(notarySig)
-            tx.toSignedTransaction(true)
+        // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
+        val move: SignedTransaction = run {
+            val builder = TransactionBuilder()
+            CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
+            builder.signWith(keyPair)
+            builder.addSignatureUnchecked(subProtocol(NotaryProtocol(builder.toWireTransaction())))
+            val tx = builder.toSignedTransaction(true)
+            serviceHub.recordTransactions(listOf(tx))
+            tx
         }
-
-        serviceHub.recordTransactions(listOf(move))
 
         return move.tx.outRef(0)
     }
 
-}
-
-private fun printHelp() {
-    println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
 }

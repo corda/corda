@@ -19,14 +19,14 @@ Trader demo
 
 Open two terminals, and in the first run:::
 
-    gradle installDist && ./build/install/r3prototyping/trader-demo.sh --mode=buyer
+    gradle installDist && ./build/install/r3prototyping/trader-demo.sh --role=BUYER
 
 It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
 start the node. You should see it waiting for a trade to begin.
 
 In the second terminal, run::
 
-    ./build/install/r3prototyping/trader-demo.sh --mode=seller
+    ./build/install/r3prototyping/trader-demo.sh --role=SELLER
 
 You should see some log lines scroll past, and within a few seconds the messages "Purchase complete - we are a
 happy customer!" and "Sale completed - we have a happy customer!" should be printed.
