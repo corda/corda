@@ -4,14 +4,15 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import contracts.CommercialPaper
-import core.*
 import core.contracts.*
 import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
+import core.days
+import core.logElapsedTime
 import core.messaging.SingleMessageRecipient
+import core.messaging.StateMachineManager
 import core.node.Node
-import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
 import core.node.services.NetworkMapService
@@ -21,6 +22,8 @@ import core.node.services.ServiceType
 import core.node.subsystems.ArtemisMessagingService
 import core.node.subsystems.NodeWalletService
 import core.protocols.ProtocolLogic
+import core.random63BitValue
+import core.seconds
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
 import core.utilities.BriefLogFormatter
@@ -43,17 +46,10 @@ import kotlin.test.assertEquals
 
 fun main(args: Array<String>) {
     val parser = OptionParser()
-    val networkAddressArg = parser.accepts("network-address").withRequiredArg().required()
-    val dirArg = parser.accepts("directory").withRequiredArg().defaultsTo("nodedata")
 
-    // Some dummy functionality that won't last long ...
-
-    // Mode flags for the first demo.
-    val serviceFakeTradesArg = parser.accepts("service-fake-trades")
-    val fakeTradeWithArg = parser.accepts("fake-trade-with").requiredUnless(serviceFakeTradesArg).withRequiredArg()
-
-    val networkMapIdentityFile = parser.accepts("network-map-identity-file").requiredIf(fakeTradeWithArg).withRequiredArg()
-    val networkMapNetAddr = parser.accepts("network-map-address").requiredIf(networkMapIdentityFile).withRequiredArg()
+    val modeArg = parser.accepts("mode").withRequiredArg().required()
+    val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
+    val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
 
     val options = try {
         parser.parse(*args)
@@ -63,39 +59,46 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    // Suppress the Artemis MQ noise, and activate the demo logging.
-    BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
+    val mode = options.valueOf(modeArg)
 
-    val dir = Paths.get(options.valueOf(dirArg))
-    val configFile = dir.resolve("config")
+    val DIRNAME = "trader-demo"
+    val BUYER = "buyer"
+    val SELLER = "seller"
 
-    if (!Files.exists(dir)) {
-        Files.createDirectory(dir)
-    }
-
-    val config = loadConfigFile(configFile)
-
-    val advertisedServices: Set<ServiceType>
-    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
-    val listening = options.has(serviceFakeTradesArg)
-
-    if (listening && config.myLegalName != "Bank A") {
-        println("The buyer node must have a legal name of 'Bank A'. Please edit the config file.")
+    if (mode !in setOf(BUYER, SELLER)) {
+        printHelp()
         exitProcess(1)
     }
 
-    val networkMapId = if (options.has(networkMapIdentityFile)) {
-        val addr = HostAndPort.fromString(options.valueOf(networkMapNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
-        val path = Paths.get(options.valueOf(networkMapIdentityFile))
+    // Suppress the Artemis MQ noise, and activate the demo logging.
+    BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
+
+    val dir = Paths.get(DIRNAME, mode)
+    Files.createDirectories(dir)
+
+    val advertisedServices: Set<ServiceType>
+    val myNetAddr = HostAndPort.fromString(options.valueOf(myNetworkAddress)).withDefaultPort(if (mode == BUYER) Node.DEFAULT_PORT else 31340)
+    val theirNetAddr = HostAndPort.fromString(options.valueOf(theirNetworkAddress)).withDefaultPort(if (mode == SELLER) Node.DEFAULT_PORT else 31340)
+
+    val listening = mode == BUYER
+    val config = run {
+        val override = ConfigFactory.parseString("""myLegalName = ${ if (mode == BUYER) "Bank A" else "Bank B" }""")
+        NodeConfigurationFromConfig(override.withFallback(ConfigFactory.load()))
+    }
+
+    val networkMapId = if (mode == SELLER) {
+        val path = Paths.get(DIRNAME, BUYER, "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, setOf(NetworkMapService.Type))
+        NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     } else {
         // We must be the network map service
         advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
         null
     }
 
+    // TODO: Remove this once checkpoint resume works.
+    StateMachineManager.restoreCheckpointsOnStart = false
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId, advertisedServices).start() }
 
     if (listening) {
@@ -110,11 +113,6 @@ fun main(args: Array<String>) {
         ANSIProgressRenderer.progressTracker = buyer.progressTracker
         node.smm.add("demo.buyer", buyer).get()   // This thread will halt forever here.
     } else {
-        if (!options.has(fakeTradeWithArg)) {
-            println("Need the --fake-trade-with command line argument")
-            exitProcess(1)
-        }
-
         // Make sure we have the transaction prospectus attachment loaded into our store.
         if (node.storage.attachments.openAttachment(TraderDemoProtocolSeller.PROSPECTUS_HASH) == null) {
             TraderDemoProtocolSeller::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
@@ -123,8 +121,7 @@ fun main(args: Array<String>) {
             }
         }
 
-        val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
-        val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
+        val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
         val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
         ANSIProgressRenderer.progressTracker = seller.progressTracker
         node.smm.add("demo.seller", seller).get()
@@ -277,43 +274,6 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
 }
 
-private fun loadConfigFile(configFile: Path): NodeConfiguration {
-    fun askAdminToEditConfig(configFile: Path?) {
-        println()
-        println("This is the first run, so you should edit the config file in $configFile and then start the node again.")
-        println()
-        exitProcess(1)
-    }
-
-    val defaultLegalName = "Global MegaCorp, Ltd."
-
-    if (!Files.exists(configFile)) {
-        createDefaultConfigFile(configFile, defaultLegalName)
-        askAdminToEditConfig(configFile)
-    }
-
-    System.setProperty("config.file", configFile.toAbsolutePath().toString())
-    val config = NodeConfigurationFromConfig(ConfigFactory.load())
-
-    // Make sure admin did actually edit at least the legal name.
-    if (config.myLegalName == defaultLegalName)
-        askAdminToEditConfig(configFile)
-
-    return config
-}
-
-private fun createDefaultConfigFile(configFile: Path?, defaultLegalName: String) {
-    Files.write(configFile,
-            """
-        # Node configuration: give the buyer node the name 'Bank of Zurich' (no quotes)
-        # The seller node can be named whatever you like.
-
-        myLegalName = $defaultLegalName
-        """.trimIndent().toByteArray())
-}
-
 private fun printHelp() {
-    println("""
-    Please refer to the documentation in docs/build/index.html to learn how to run the demo.
-    """.trimIndent())
+    println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
 }

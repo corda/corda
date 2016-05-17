@@ -94,11 +94,16 @@ class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExec
         field.get(null)
     }
 
+    companion object {
+        var restoreCheckpointsOnStart = true
+    }
+
     init {
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
             (fiber as ProtocolStateMachineImpl<*>).logger.error("Caught exception from protocol", throwable)
         }
-        restoreCheckpoints()
+        if (restoreCheckpointsOnStart)
+            restoreCheckpoints()
     }
 
     /** Reads the database map and resurrects any serialised state machines. */
