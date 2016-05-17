@@ -1,6 +1,7 @@
 package core.testing
 
 import com.google.common.jimfs.Jimfs
+import com.google.common.util.concurrent.Futures
 import core.crypto.Party
 import core.messaging.MessagingService
 import core.messaging.SingleMessageRecipient
@@ -27,6 +28,10 @@ import java.util.*
  * Mock network nodes require manual pumping by default: they will not run asynchronous. This means that
  * for message exchanges to take place (and associated handlers to run), you must call the [runNetwork]
  * method.
+ *
+ * You can get a printout of every message sent by using code like:
+ *
+ *    BriefLogFormatter.initVerbose("+messaging")
  */
 class MockNetwork(private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
@@ -71,7 +76,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
         override fun makeMessagingService(): MessagingService {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id).start().get()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName).start().get()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
@@ -82,6 +87,9 @@ class MockNetwork(private val threadPerNode: Boolean = false,
 
         override fun generateKeyPair(): KeyPair? = keyPair ?: super.generateKeyPair()
 
+        // It's OK to not have a network map service in the mock network.
+        override fun noNetworkMapConfigured() = Futures.immediateFuture(Unit)
+
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
 
@@ -91,12 +99,13 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             return this
         }
 
-        val place: PhysicalLocation get() = info.physicalLocation!!
+        // This does not indirect through the NodeInfo object so it can be called before the node is started.
+        val place: PhysicalLocation get() = findMyLocation()!!
     }
 
-    /** Returns a started node, optionally created by the passed factory method */
+    /** Returns a node, optionally created by the passed factory method. */
     fun createNode(networkMapAddress: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
-                   legalName: String? = null, keyPair: KeyPair? = null, vararg advertisedServices: ServiceType): MockNode {
+                   start: Boolean = true, legalName: String? = null, keyPair: KeyPair? = null, vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -108,7 +117,8 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
         }
-        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair).start()
+        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
+        if (start) node.start()
         _nodes.add(node)
         return node
     }
@@ -121,8 +131,9 @@ class MockNetwork(private val threadPerNode: Boolean = false,
      */
     fun runNetwork(rounds: Int = -1) {
         fun pumpAll() = messagingNetwork.endpoints.map { it.pump(false) }
+
         if (rounds == -1)
-            while (pumpAll().any { it }) {
+            while (pumpAll().any { it != null }) {
             }
         else
             repeat(rounds) { pumpAll() }
@@ -135,13 +146,23 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, null, notaryKeyPair, NetworkMapService.Type, NotaryService.Type),
-                createNode(nodes[0].info, -1, nodeFactory, null)
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, NetworkMapService.Type, NotaryService.Type),
+                createNode(nodes[0].info, -1, nodeFactory, true, null)
         )
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, legalName, keyPair, NetworkMapService.Type, NotaryService.Type)
-    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, legalName, keyPair)
+    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, NetworkMapService.Type, NotaryService.Type)
+    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
+
+    fun startNodes() {
+        require(nodes.isNotEmpty())
+        nodes.forEach { if (!it.started) it.start() }
+    }
+
+    fun stopNodes() {
+        require(nodes.isNotEmpty())
+        nodes.forEach { if (it.started) it.stop() }
+    }
 }

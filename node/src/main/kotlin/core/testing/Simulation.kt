@@ -1,5 +1,6 @@
 package core.testing
 
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import core.node.CityDatabase
 import core.node.NodeConfiguration
@@ -58,7 +59,7 @@ abstract class Simulation(val runAsync: Boolean,
         }
 
         fun createAll(): List<SimulatedNode> = bankLocations.
-                map { network.createNode(networkMap.info, nodeFactory = this) as SimulatedNode }
+                map { network.createNode(networkMap.info, start = false, nodeFactory = this) as SimulatedNode }
     }
 
     val bankFactory = BankFactory()
@@ -68,9 +69,9 @@ abstract class Simulation(val runAsync: Boolean,
                             networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             require(advertisedServices.contains(NetworkMapService.Type))
             val cfg = object : NodeConfiguration {
-                override val myLegalName: String = "Network Map Service Provider"
+                override val myLegalName: String = "Network coordination center"
                 override val exportJMXto: String = ""
-                override val nearestCity: String = "Madrid"
+                override val nearestCity: String = "Amsterdam"
             }
 
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
@@ -127,24 +128,19 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    val network = MockNetwork(false)
-
-    val regulators: List<SimulatedNode> = listOf(network.createNode(null, nodeFactory = RegulatorFactory) as SimulatedNode)
+    val network = MockNetwork(runAsync)
+    // This one must come first.
     val networkMap: SimulatedNode
             = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(null, nodeFactory = NotaryNodeFactory, advertisedServices = NotaryService.Type) as SimulatedNode
+            = network.createNode(networkMap.info, nodeFactory = NotaryNodeFactory, advertisedServices = NotaryService.Type) as SimulatedNode
+    val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = network.createNode(null, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
-    val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle)
-    val banks: List<SimulatedNode> = bankFactory.createAll()
+            = network.createNode(networkMap.info, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
 
-    init {
-        // Now wire up the network maps for each node.
-        for (node in regulators + serviceProviders + banks) {
-            node.services.networkMapCache.addNode(node.info)
-        }
-    }
+    // All nodes must be in one of these two lists for the purposes of the visualiser tool.
+    val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
+    val banks: List<SimulatedNode> = bankFactory.createAll()
 
     private val _allProtocolSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()
@@ -179,18 +175,22 @@ abstract class Simulation(val runAsync: Boolean,
      * will carry on from where this one stopped. In an environment where you want to take actions between anything
      * interesting happening, or control the precise speed at which things operate (beyond the latency injector), this
      * is a useful way to do things.
+     *
+     * @return the message that was processed, or null if no node accepted a message in this round.
      */
-    open fun iterate() {
+    open fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
         // Keep going until one of the nodes has something to do, or we have checked every node.
         val endpoints = network.messagingNetwork.endpoints
         var countDown = endpoints.size
         while (countDown > 0) {
             val handledMessage = endpoints[pumpCursor].pump(false)
-            if (handledMessage) break
+            if (handledMessage != null)
+                return handledMessage
             // If this node had nothing to do, advance the cursor with wraparound and try again.
             pumpCursor = (pumpCursor + 1) % endpoints.size
             countDown--
         }
+        return null
     }
 
     protected fun linkProtocolProgress(node: SimulatedNode, protocol: ProtocolLogic<*>) {
@@ -212,11 +212,23 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    open fun start() {
+    fun start(): ListenableFuture<Unit> {
+        network.startNodes()
+        // Wait for all the nodes to have finished registering with the network map service.
+        val startup: ListenableFuture<List<Unit>> = Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
+        return Futures.transformAsync(startup) { l: List<Unit>? -> startMainSimulation() }
+    }
+
+    /**
+     * Sub-classes should override this to trigger whatever they want to simulate. This method will be invoked once the
+     * network bringup has been simulated.
+     */
+    protected open fun startMainSimulation(): ListenableFuture<Unit> {
+        return Futures.immediateFuture(Unit)
     }
 
     fun stop() {
-        network.nodes.forEach { it.stop() }
+        network.stopNodes()
     }
 
     /**

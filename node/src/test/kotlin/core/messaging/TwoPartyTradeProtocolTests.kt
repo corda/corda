@@ -36,6 +36,7 @@ import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -171,7 +172,7 @@ class TwoPartyTradeProtocolTests {
 
             // Alice doesn't know that and carries on: she wants to know about the cash transactions he's trying to use.
             // She will wait around until Bob comes back.
-            assertTrue(pumpAlice())
+            assertNotNull(pumpAlice())
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
@@ -180,7 +181,7 @@ class TwoPartyTradeProtocolTests {
                                     advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                     return MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id, BOB_KEY)
                 }
-            }, BOB.name, BOB_KEY)
+            }, true, BOB.name, BOB_KEY)
 
             // TODO: remove once validated transactions are persisted to disk
             bobNode.storage.validatedTransactions.putAll(recordedTransactions)
@@ -213,7 +214,7 @@ class TwoPartyTradeProtocolTests {
                     }
                 }
             }
-        }, name, keyPair)
+        }, true, name, keyPair)
     }
 
     @Test

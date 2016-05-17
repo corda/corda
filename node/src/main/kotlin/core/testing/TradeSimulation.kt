@@ -3,11 +3,12 @@ package core.testing
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import contracts.CommercialPaper
-import core.*
 import core.contracts.DOLLARS
 import core.contracts.SignedTransaction
+import core.days
 import core.node.subsystems.NodeWalletService
-import core.utilities.BriefLogFormatter
+import core.random63BitValue
+import core.seconds
 import protocols.TwoPartyTradeProtocol
 import java.time.Instant
 
@@ -16,9 +17,9 @@ import java.time.Instant
  * then B and C trade with each other, then C and A etc).
  */
 class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(runAsync, latencyInjector) {
-    override fun start() {
-        BriefLogFormatter.loggingOn("bank", "core.contract.TransactionGroup", "recordingmap")
+    override fun startMainSimulation(): ListenableFuture<Unit> {
         startTradingCircle { i, j -> tradeBetween(i, j) }
+        return Futures.immediateFailedFuture(UnsupportedOperationException("This future never completes"))
     }
 
     private fun tradeBetween(buyerBankIndex: Int, sellerBankIndex: Int): ListenableFuture<MutableList<SignedTransaction>> {

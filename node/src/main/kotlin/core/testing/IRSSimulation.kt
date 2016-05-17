@@ -1,6 +1,7 @@
 package core.testing
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -12,6 +13,7 @@ import core.crypto.SecureHash
 import core.node.subsystems.linearHeadsOfType
 import core.utilities.JsonSupport
 import protocols.TwoPartyDealProtocol
+import java.security.KeyPair
 import java.time.LocalDate
 import java.util.*
 
@@ -26,28 +28,49 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         currentDay = LocalDate.of(2016, 3, 10)   // Should be 12th but the actual first fixing date gets rolled backwards.
     }
 
+    private var nodeAKey: KeyPair? = null
+    private var nodeBKey: KeyPair? = null
+
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
-    override fun start() {
+    override fun startMainSimulation(): ListenableFuture<Unit> {
+        val future = SettableFuture.create<Unit>()
+
+        nodeAKey = banks[0].keyManagement.freshKey()
+        nodeBKey = banks[1].keyManagement.freshKey()
+
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
             executeOnNextIteration.add {}
             executeOnNextIteration.add {
                 // Keep fixing until there's no more left to do.
-                doNextFixing(0, 1)?.addListener(object : Runnable {
-                    override fun run() {
+                val initialFixFuture = doNextFixing(0, 1)
+
+                Futures.addCallback(initialFixFuture, object : FutureCallback<Unit> {
+                    override fun onFailure(t: Throwable) {
+                        future.setException(t)   // Propagate the error.
+                    }
+
+                    override fun onSuccess(result: Unit?) {
                         // Pause for an iteration.
                         executeOnNextIteration.add {}
                         executeOnNextIteration.add {
-                            doNextFixing(0, 1)?.addListener(this, RunOnCallerThread)
+                            val f = doNextFixing(0, 1)
+                            if (f != null) {
+                                Futures.addCallback(f, this, RunOnCallerThread)
+                            } else {
+                                // All done!
+                                future.set(Unit)
+                            }
                         }
                     }
                 }, RunOnCallerThread)
             }
         }
+        return future
     }
 
-    private fun doNextFixing(i: Int, j: Int): ListenableFuture<*>? {
+    private fun doNextFixing(i: Int, j: Int): ListenableFuture<Unit>? {
         println("Doing a fixing between $i and $j")
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
@@ -65,10 +88,8 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         if (nextFixingDate > currentDay)
             currentDay = nextFixingDate
 
-        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, notary.info,
-                theDealRef, node1.services.keyManagementService.freshKey(), sessionID)
-        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, notary.info.identity,
-                theDealRef, sessionID)
+        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, notary.info, theDealRef, nodeAKey!!, sessionID)
+        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, notary.info.identity, theDealRef, sessionID)
 
         linkConsensus(listOf(node1, node2, regulators[0]), sideB)
         linkProtocolProgress(node1, sideA)
@@ -77,12 +98,14 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         // We have to start the protocols in separate iterations, as adding to the SMM effectively 'iterates' that node
         // in the simulation, so if we don't do this then the two sides seem to act simultaneously.
 
-        val retFuture = SettableFuture.create<Any>()
+        val retFuture = SettableFuture.create<Unit>()
         val futA = node1.smm.add("floater", sideA)
         executeOnNextIteration += {
             val futB = node2.smm.add("fixer", sideB)
-            Futures.allAsList(futA, futB).then {
+            Futures.allAsList(futA, futB) success {
                 retFuture.set(null)
+            } failure { throwable ->
+                retFuture.setException(throwable)
             }
         }
         return retFuture
@@ -102,17 +125,10 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         irs.fixedLeg.fixedRatePayer = node1.info.identity
         irs.floatingLeg.floatingRatePayer = node2.info.identity
 
-        if (irs.fixedLeg.effectiveDate < irs.floatingLeg.effectiveDate)
-            currentDay = irs.fixedLeg.effectiveDate
-        else
-            currentDay = irs.floatingLeg.effectiveDate
-
         val sessionID = random63BitValue()
 
-        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, notary.info,
-                irs, node1.services.keyManagementService.freshKey(), sessionID)
-        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, notary.info.identity,
-                irs, sessionID)
+        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, notary.info, irs, nodeAKey!!, sessionID)
+        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, notary.info.identity, irs, sessionID)
 
         // TODO: Eliminate the need for linkProtocolProgress
         linkConsensus(listOf(node1, node2, regulators[0]), acceptor)
@@ -126,9 +142,9 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         }
     }
 
-    override fun iterate() {
+    override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
         if (executeOnNextIteration.isNotEmpty())
             executeOnNextIteration.removeAt(0)()
-        super.iterate()
+        return super.iterate()
     }
 }
