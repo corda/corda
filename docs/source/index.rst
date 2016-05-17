@@ -26,7 +26,7 @@ Read on to learn:
    inthebox
    getting-set-up
    data-model
-       consensus
+   consensus
    messaging
    running-the-demos
    node-administration
@@ -36,7 +36,7 @@ Read on to learn:
    :maxdepth: 2
    :caption: Tutorials
 
-   tutorial_contract
+   tutorial-contract
    protocol-state-machines
    oracles
 
