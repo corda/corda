@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import contracts.Cash
 import contracts.sumCashBy
-import core.*
 import core.contracts.*
 import core.crypto.DigitalSignature
 import core.crypto.Party
@@ -13,6 +12,8 @@ import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
 import core.node.NodeInfo
 import core.protocols.ProtocolLogic
+import core.random63BitValue
+import core.seconds
 import core.utilities.ProgressTracker
 import core.utilities.trace
 import java.security.KeyPair
@@ -73,7 +74,7 @@ object TwoPartyTradeProtocol {
     )
 
     class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
-                               val notarySig: DigitalSignature.WithKey)
+                               val notarySig: DigitalSignature.LegallyIdentifiable)
 
     open class Seller(val otherSide: SingleMessageRecipient,
                       val notaryNode: NodeInfo,
@@ -215,6 +216,10 @@ object TwoPartyTradeProtocol {
             val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
             logger.trace { "Got signatures from seller, verifying ... " }
+
+            // TODO: figure out a way to do Notary verification along with other command signatures in SignedTransaction.verify()
+            verifyCorrectNotary(stx.tx, signatures.notarySig)
+
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
@@ -268,6 +273,11 @@ object TwoPartyTradeProtocol {
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
+        }
+
+        private fun verifyCorrectNotary(wtx: WireTransaction, sig: DigitalSignature.LegallyIdentifiable) {
+            val notary = serviceHub.loadState(wtx.inputs.first()).notary
+            check(sig.signer == notary) { "Transaction not signed by the required Notary" }
         }
 
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {

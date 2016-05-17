@@ -43,7 +43,7 @@ object TwoPartyDealProtocol {
             val sessionID: Long
     )
 
-    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.WithKey)
+    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.LegallyIdentifiable)
 
     /**
      * Abstracted bilateral deal protocol participant that initiates communication/handshake.
@@ -211,6 +211,8 @@ object TwoPartyDealProtocol {
             val signatures = swapSignaturesWithPrimary(stx, handshake.sessionID)
 
             logger.trace { "Got signatures from other party, verifying ... " }
+
+            verifyCorrectNotary(stx.tx, signatures.notarySig)
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
@@ -253,6 +255,11 @@ object TwoPartyDealProtocol {
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
+        }
+
+        private fun verifyCorrectNotary(wtx: WireTransaction, sig: DigitalSignature.LegallyIdentifiable) {
+            val notary = serviceHub.loadState(wtx.inputs.first()).notary
+            check(sig.signer == notary) { "Transaction not signed by the required Notary" }
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
