@@ -1,7 +1,6 @@
 package protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import core.*
 import core.contracts.*
 import core.crypto.DigitalSignature
 import core.crypto.Party
@@ -9,6 +8,8 @@ import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
 import core.node.NodeInfo
 import core.protocols.ProtocolLogic
+import core.random63BitValue
+import core.seconds
 import core.utilities.ProgressTracker
 import core.utilities.UntrustworthyData
 import core.utilities.trace
@@ -258,6 +259,7 @@ object TwoPartyDealProtocol {
         }
 
         private fun verifyCorrectNotary(wtx: WireTransaction, sig: DigitalSignature.LegallyIdentifiable) {
+            if (wtx.inputs.isEmpty()) return // Can choose any Notary if there are no inputs
             val notary = serviceHub.loadState(wtx.inputs.first()).notary
             check(sig.signer == notary) { "Transaction not signed by the required Notary" }
         }
