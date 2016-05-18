@@ -31,6 +31,9 @@ dependencies {
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:3.4.1"
+
     // SLF4J: Logging framework.
     compile "org.slf4j:slf4j-jdk14:1.7.13"
 

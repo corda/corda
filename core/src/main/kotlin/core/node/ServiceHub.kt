@@ -1,6 +1,5 @@
 package core.node
 
-import core.*
 import core.contracts.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
@@ -13,6 +12,8 @@ import java.time.Clock
  * A service hub simply vends references to the other services a node has. Some of those services may be missing or
  * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
  * functionality and you don't want to hard-code which types in the interface.
+ *
+ * All services exposed to protocols (public view) need to implement [SerializeAsToken] or similar to avoid being serialized in checkpoints.
  *
  * TODO: Split into a public (to contracts etc) and private (to node) view
  */
