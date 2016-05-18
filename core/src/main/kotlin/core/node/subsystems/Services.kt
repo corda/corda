@@ -1,12 +1,10 @@
 package core.node.subsystems
 
 import com.codahale.metrics.MetricRegistry
-import core.*
 import core.contracts.*
 import core.crypto.Party
 import core.crypto.SecureHash
 import core.node.services.AttachmentStorage
-import core.node.storage.CheckpointStorage
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -127,8 +125,6 @@ interface StorageService {
      * the transaction data to other nodes that need it.
      */
     val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
-
-    val checkpointStorage: CheckpointStorage
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage

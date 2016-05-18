@@ -91,7 +91,7 @@ class MockCheckpointStorage : CheckpointStorage {
 
 
 @ThreadSafe
-class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), MockCheckpointStorage(), generateKeyPair())
+class MockStorageService : StorageServiceImpl(MockAttachmentStorage(), generateKeyPair())
 
 class MockServices(
         customWallet: WalletService? = null,

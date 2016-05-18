@@ -1,21 +1,23 @@
 package core.messaging
 
+import com.google.common.util.concurrent.ListenableFuture
 import contracts.Cash
 import contracts.CommercialPaper
-import core.*
 import core.contracts.*
 import core.crypto.Party
 import core.crypto.SecureHash
+import core.days
 import core.node.NodeConfiguration
 import core.node.NodeInfo
 import core.node.ServiceHub
 import core.node.services.NodeAttachmentService
 import core.node.services.ServiceType
-import core.node.storage.CheckpointStorage
 import core.node.subsystems.NodeWalletService
 import core.node.subsystems.StorageServiceImpl
 import core.node.subsystems.Wallet
 import core.node.subsystems.WalletImpl
+import core.random63BitValue
+import core.seconds
 import core.testing.InMemoryMessagingNetwork
 import core.testing.MockNetwork
 import core.testutils.*
@@ -79,7 +81,7 @@ class TwoPartyTradeProtocolTests {
 
             val buyerSessionID = random63BitValue()
 
-            val aliceResult = TwoPartyTradeProtocol.runSeller(
+            val aliceResult = runSeller(
                     aliceNode.smm,
                     notaryNode.info,
                     bobNode.net.myAddress,
@@ -88,7 +90,7 @@ class TwoPartyTradeProtocolTests {
                     ALICE_KEY,
                     buyerSessionID
             )
-            val bobResult = TwoPartyTradeProtocol.runBuyer(
+            val bobResult = runBuyer(
                     bobNode.smm,
                     notaryNode.info,
                     aliceNode.net.myAddress,
@@ -104,8 +106,8 @@ class TwoPartyTradeProtocolTests {
             aliceNode.stop()
             bobNode.stop()
 
-            assertThat(aliceNode.storage.checkpointStorage.checkpoints).isEmpty()
-            assertThat(bobNode.storage.checkpointStorage.checkpoints).isEmpty()
+            assertThat(aliceNode.checkpointStorage.checkpoints).isEmpty()
+            assertThat(bobNode.checkpointStorage.checkpoints).isEmpty()
         }
     }
 
@@ -129,7 +131,7 @@ class TwoPartyTradeProtocolTests {
 
             val buyerSessionID = random63BitValue()
 
-            val aliceFuture = TwoPartyTradeProtocol.runSeller(
+            val aliceFuture = runSeller(
                     aliceNode.smm,
                     notaryNode.info,
                     bobAddr,
@@ -138,7 +140,7 @@ class TwoPartyTradeProtocolTests {
                     ALICE_KEY,
                     buyerSessionID
             )
-            TwoPartyTradeProtocol.runBuyer(
+            runBuyer(
                     bobNode.smm,
                     notaryNode.info,
                     aliceAddr,
@@ -162,7 +164,7 @@ class TwoPartyTradeProtocolTests {
             pumpBob()
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            assertThat(bobNode.storage.checkpointStorage.checkpoints).hasSize(1)
+            assertThat(bobNode.checkpointStorage.checkpoints).hasSize(1)
 
             // TODO: remove once validated transactions are persisted to disk
             val recordedTransactions = bobNode.storage.validatedTransactions
@@ -208,14 +210,30 @@ class TwoPartyTradeProtocolTests {
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     // That constructs the storage service object in a customised way ...
-                    override fun constructStorageService(attachments: NodeAttachmentService, checkpointStorage: CheckpointStorage, keypair: KeyPair, identity: Party): StorageServiceImpl {
+                    override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
                         // To use RecordingMaps instead of ordinary HashMaps.
-                        return StorageServiceImpl(attachments, checkpointStorage, keypair, identity, { tableName -> name })
+                        return StorageServiceImpl(attachments, keypair, identity, { tableName -> name })
                     }
                 }
             }
         }, true, name, keyPair)
     }
+
+
+    private fun runSeller(smm: StateMachineManager, notary: NodeInfo,
+                  otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
+                  myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
+        val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
+        return smm.add("${TwoPartyTradeProtocol.TRADE_TOPIC}.seller", seller)
+    }
+
+    private fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
+                 otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
+                 sessionID: Long): ListenableFuture<SignedTransaction> {
+        val buyer = TwoPartyTradeProtocol.Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
+        return smm.add("${TwoPartyTradeProtocol.TRADE_TOPIC}.buyer", buyer)
+    }
+
 
     @Test
     fun checkDependenciesOfSaleAssetAreResolved() {
@@ -243,7 +261,7 @@ class TwoPartyTradeProtocolTests {
 
             net.runNetwork() // Clear network map registration messages
 
-            TwoPartyTradeProtocol.runSeller(
+            runSeller(
                     aliceNode.smm,
                     notaryNode.info,
                     bobNode.net.myAddress,
@@ -252,7 +270,7 @@ class TwoPartyTradeProtocolTests {
                     ALICE_KEY,
                     buyerSessionID
             )
-            TwoPartyTradeProtocol.runBuyer(
+            runBuyer(
                     bobNode.smm,
                     notaryNode.info,
                     aliceNode.net.myAddress,
@@ -356,7 +374,7 @@ class TwoPartyTradeProtocolTests {
 
         net.runNetwork() // Clear network map registration messages
 
-        val aliceResult = TwoPartyTradeProtocol.runSeller(
+        val aliceResult = runSeller(
                 aliceNode.smm,
                 notaryNode.info,
                 bobAddr,
@@ -365,7 +383,7 @@ class TwoPartyTradeProtocolTests {
                 ALICE_KEY,
                 buyerSessionID
         )
-        val bobResult = TwoPartyTradeProtocol.runBuyer(
+        val bobResult = runBuyer(
                 bobNode.smm,
                 notaryNode.info,
                 aliceAddr,
