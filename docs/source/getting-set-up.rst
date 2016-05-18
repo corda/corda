@@ -1,7 +1,7 @@
 Getting set up
 ==============
 
-Ensure that you access to R3 git repository.
+Ensure that you have access to R3 git repository.
 
     https://bitbucket.org/R3-CEV/r3prototyping.git
 
@@ -22,7 +22,7 @@ You can confirm what is the latest version of Kotlin plugin on this page:
 Choose "Check out from version control" and use this git URL. Please remember to replace your_username with your
 actual bitbucket user name.
 
-    https://your_username@bitbucket.org/R3-CEV/r3repository.git
+    https://your_username@bitbucket.org/R3-CEV/r3prototyping.git
 
 After code is cloned open the project. Please ensure that Gradle project is imported.
 You should have the "Unliked Gradle project?" pop-up window in the IntelliJ top right corner. Please click on "Import Gradle Project". Wait for it to think and download the dependencies. After that you might have another popup titled "Unindexed remote maven repositories found." This is general IntelliJ question and doesn't affect Corda, therefore you can decided to index them or not.
@@ -55,7 +55,7 @@ Doing it without IntelliJ
 -------------------------
 
 If you don't want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:
-* First run ``git clone https://your_username@bitbucket.org/R3-CEV/r3repository.git`` to download Corda source code. Please remember to replace your_username with your actual bitbucket user name.
+* First run ``git clone https://your_username@bitbucket.org/R3-CEV/r3prototyping.git`` to download Corda source code. Please remember to replace your_username with your actual bitbucket user name.
 * Next ensure that you are in r3repository ``cd r3repository``
 * Then you can run ``./gradlew test`` to run the unit tests.
 * Finally remeber to run ``git pull`` to upgrade the source code.
