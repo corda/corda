@@ -1,7 +1,6 @@
 package protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
 import contracts.Cash
 import contracts.sumCashBy
 import core.contracts.*
@@ -9,7 +8,6 @@ import core.crypto.DigitalSignature
 import core.crypto.Party
 import core.crypto.signWithECDSA
 import core.messaging.SingleMessageRecipient
-import core.messaging.StateMachineManager
 import core.node.NodeInfo
 import core.protocols.ProtocolLogic
 import core.random63BitValue
@@ -45,20 +43,6 @@ import java.security.SignatureException
  */
 object TwoPartyTradeProtocol {
     val TRADE_TOPIC = "platform.trade"
-
-    fun runSeller(smm: StateMachineManager, notary: NodeInfo,
-                  otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
-                  myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
-        val seller = Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
-        return smm.add("${TRADE_TOPIC}.seller", seller)
-    }
-
-    fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
-                 otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
-                 sessionID: Long): ListenableFuture<SignedTransaction> {
-        val buyer = Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
-        return smm.add("$TRADE_TOPIC.buyer", buyer)
-    }
 
     class UnacceptablePriceException(val givenPrice: Amount) : Exception()
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {

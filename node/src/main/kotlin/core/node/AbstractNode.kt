@@ -78,6 +78,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
 
     lateinit var storage: StorageService
+    lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
@@ -99,9 +100,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         require(!started) { "Node has already been started" }
         log.info("Node starting up ...")
 
-        storage = initialiseStorageService(dir)
+        val storageServices = initialiseStorageService(dir)
+        storage = storageServices.first
+        checkpointStorage = storageServices.second
         net = makeMessagingService()
-        smm = StateMachineManager(services, serverThread)
+        smm = StateMachineManager(services, checkpointStorage, serverThread)
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
@@ -216,16 +219,16 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected abstract fun startMessagingService()
 
-    protected open fun initialiseStorageService(dir: Path): StorageService {
+    protected open fun initialiseStorageService(dir: Path): Pair<StorageService,CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return constructStorageService(attachments, checkpointStorage, keypair, identity)
+        return Pair(constructStorageService(attachments, keypair, identity),checkpointStorage)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService, checkpointStorage: CheckpointStorage, keypair: KeyPair, identity: Party) =
-            StorageServiceImpl(attachments, checkpointStorage, keypair, identity)
+    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party) =
+            StorageServiceImpl(attachments, keypair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that

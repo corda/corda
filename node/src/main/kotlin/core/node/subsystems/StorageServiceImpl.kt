@@ -11,7 +11,6 @@ import java.security.KeyPair
 import java.util.*
 
 open class StorageServiceImpl(override val attachments: AttachmentStorage,
-                              override val checkpointStorage: CheckpointStorage,
                               override val myLegalIdentityKey: KeyPair,
                               override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
                               // This parameter is for unit tests that want to observe operation details.

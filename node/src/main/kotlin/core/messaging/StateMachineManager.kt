@@ -9,6 +9,7 @@ import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
 import core.node.ServiceHub
 import core.node.storage.Checkpoint
+import core.node.storage.CheckpointStorage
 import core.protocols.ProtocolLogic
 import core.protocols.ProtocolStateMachine
 import core.protocols.ProtocolStateMachineImpl
@@ -53,14 +54,13 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.
  */
 @ThreadSafe
-class StateMachineManager(val serviceHub: ServiceHub, val executor: AffinityExecutor) {
+class StateMachineManager(val serviceHub: ServiceHub, val checkpointStorage: CheckpointStorage, val executor: AffinityExecutor) {
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
     val scheduler = FiberScheduler()
 
     // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
     // them across node restarts.
-    private val checkpointStorage = serviceHub.storageService.checkpointStorage
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
     private val stateMachines = synchronizedMap(HashMap<ProtocolStateMachineImpl<*>, Checkpoint>())
