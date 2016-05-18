@@ -1,6 +1,10 @@
 package contracts
 
+import contracts.cash.CashIssuanceDefinition
+import contracts.cash.CommonCashState
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.toStringShort
 import core.utilities.Emoji
@@ -45,17 +49,29 @@ class Cash : Contract {
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
 
+    data class IssuanceDefinition(
+            /** Where the underlying currency backing this ledger entry can be found (propagated) */
+            override val deposit: PartyAndReference,
+
+            override val currency: Currency
+    ) : CashIssuanceDefinition
+
     /** A state representing a cash claim against some party */
     data class State(
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
-            val deposit: PartyAndReference,
+            override val deposit: PartyAndReference,
 
-            val amount: Amount,
+            override val amount: Amount,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
-            override val owner: PublicKey
-    ) : OwnableState {
+            override val owner: PublicKey,
+
+            override val notary: Party
+    ) : CommonCashState<Cash.IssuanceDefinition> {
+        override val issuanceDef: Cash.IssuanceDefinition
+            get() = Cash.IssuanceDefinition(deposit, amount.currency)
         override val contract = CASH_PROGRAM_ID
+
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
@@ -82,11 +98,12 @@ class Cash : Contract {
     override fun verify(tx: TransactionForVerification) {
         // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
         // of cash are not fungible and must be kept separated for bookkeeping purposes.
-        val groups = tx.groupStates() { it: Cash.State -> Pair(it.deposit, it.amount.currency) }
+        val groups = tx.groupStates() { it: Cash.State -> it.issuanceDef }
 
         for ((inputs, outputs, key) in groups) {
             // Either inputs or outputs could be empty.
-            val (deposit, currency) = key
+            val deposit = key.deposit
+            val currency = key.currency
             val issuer = deposit.party
 
             requireThat {
@@ -145,12 +162,18 @@ class Cash : Contract {
     }
 
     /**
+     * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
+     */
+    fun generateIssue(tx: TransactionBuilder, issuanceDef: CashIssuanceDefinition, pennies: Long, owner: PublicKey, notary: Party)
+        = generateIssue(tx, Amount(pennies, issuanceDef.currency), issuanceDef.deposit, owner, notary)
+
+    /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyAndReference, owner: PublicKey) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyAndReference, owner: PublicKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
-        tx.addOutputState(Cash.State(at, amount, owner))
+        tx.addOutputState(Cash.State(at, amount, owner, notary))
         tx.addCommand(Cash.Commands.Issue(), at.party.owningKey)
     }
 
@@ -164,7 +187,7 @@ class Cash : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     fun generateSpend(tx: TransactionBuilder, amount: Amount, to: PublicKey,
-                      cashStates: List<StateAndRef<Cash.State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
+                      cashStates: List<StateAndRef<State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -194,7 +217,7 @@ class Cash : Contract {
                 ofCurrency
         }
 
-        val gathered = arrayListOf<StateAndRef<Cash.State>>()
+        val gathered = arrayListOf<StateAndRef<State>>()
         var gatheredAmount = Amount(0, currency)
         for (c in acceptableCoins) {
             if (gatheredAmount >= amount) break
@@ -211,7 +234,7 @@ class Cash : Contract {
         val states = gathered.groupBy { it.state.deposit }.map {
             val (deposit, coins) = it
             val totalAmount = coins.map { it.state.amount }.sumOrThrow()
-            State(deposit, totalAmount, to)
+            State(deposit, totalAmount, to, coins.first().state.notary)
         }
 
         val outputs = if (change.pennies > 0) {
@@ -222,7 +245,7 @@ class Cash : Contract {
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
                     states.last().let { it.copy(amount = it.amount - change) } +
-                    State(gathered.last().state.deposit, change, changeKey)
+                    State(gathered.last().state.deposit, change, changeKey, gathered.last().state.notary)
         } else states
 
         for (state in gathered) tx.addInputState(state.ref)

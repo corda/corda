@@ -1,6 +1,6 @@
 package core.node.services
 
-import core.Attachment
+import core.contracts.Attachment
 import core.crypto.SecureHash
 import java.io.InputStream
 

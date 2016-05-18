@@ -1,17 +1,19 @@
 package contracts;
 
-import core.*;
-import core.TransactionForVerification.*;
-import core.crypto.*;
-import core.node.services.*;
-import org.jetbrains.annotations.*;
+import core.contracts.TransactionForVerification.InOutGroup;
+import core.contracts.*;
+import core.crypto.NullPublicKey;
+import core.crypto.Party;
+import core.crypto.SecureHash;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.security.*;
-import java.time.*;
-import java.util.*;
+import java.security.PublicKey;
+import java.time.Instant;
+import java.util.List;
 
-import static core.ContractsDSLKt.*;
-import static kotlin.collections.CollectionsKt.*;
+import static core.contracts.ContractsDSLKt.requireSingleCommand;
+import static kotlin.collections.CollectionsKt.single;
 
 
 /**
@@ -27,35 +29,37 @@ public class JavaCommercialPaper implements Contract {
         private PublicKey owner;
         private Amount faceValue;
         private Instant maturityDate;
+        private Party notary;
 
         public State() {
         }  // For serialization
 
-        public State(PartyAndReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate) {
+        public State(PartyAndReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate, Party notary) {
             this.issuance = issuance;
             this.owner = owner;
             this.faceValue = faceValue;
             this.maturityDate = maturityDate;
+            this.notary = notary;
         }
 
         public State copy() {
-            return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
+            return new State(this.issuance, this.owner, this.faceValue, this.maturityDate, this.notary);
         }
 
         public ICommercialPaperState withOwner(PublicKey newOwner) {
-            return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
+            return new State(this.issuance, newOwner, this.faceValue, this.maturityDate, this.notary);
         }
 
         public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
-            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
+            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate, this.notary);
         }
 
         public ICommercialPaperState withFaceValue(Amount newFaceValue) {
-            return new State(this.issuance, this.owner, newFaceValue, this.maturityDate);
+            return new State(this.issuance, this.owner, newFaceValue, this.maturityDate, this.notary);
         }
 
         public ICommercialPaperState withMaturityDate(Instant newMaturityDate) {
-            return new State(this.issuance, this.owner, this.faceValue, newMaturityDate);
+            return new State(this.issuance, this.owner, this.faceValue, newMaturityDate, this.notary);
         }
 
         public PartyAndReference getIssuance() {
@@ -76,6 +80,12 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
+        public Party getNotary() {
+            return notary;
+        }
+
+        @NotNull
+        @Override
         public Contract getContract() {
             return JCP_PROGRAM_ID;
             //return SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
@@ -91,8 +101,8 @@ public class JavaCommercialPaper implements Contract {
             if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
             if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
             if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
+            if (notary != null ? !notary.equals(state.notary) : state.notary != null) return false;
             return !(maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null);
-
         }
 
         @Override
@@ -101,15 +111,16 @@ public class JavaCommercialPaper implements Contract {
             result = 31 * result + (owner != null ? owner.hashCode() : 0);
             result = 31 * result + (faceValue != null ? faceValue.hashCode() : 0);
             result = 31 * result + (maturityDate != null ? maturityDate.hashCode() : 0);
+            result = 31 * result + (notary != null ? notary.hashCode() : 0);
             return result;
         }
 
         public State withoutOwner() {
-            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
+            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate, notary);
         }
     }
 
-    public static class Commands implements core.CommandData {
+    public static class Commands implements CommandData {
         public static class Move extends Commands {
             @Override
             public boolean equals(Object obj) {
@@ -158,7 +169,7 @@ public class JavaCommercialPaper implements Contract {
                     throw new IllegalStateException("Failed Requirement: the face value is not zero");
                 }
 
-                TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
+                TimestampCommand timestampCommand = tx.getTimestampByName("Notary Service");
                 if (timestampCommand == null)
                     throw new IllegalArgumentException("Failed Requirement: must be timestamped");
 
@@ -188,7 +199,7 @@ public class JavaCommercialPaper implements Contract {
                             !output.getMaturityDate().equals(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
                 } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-                    TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
+                    TimestampCommand timestampCommand = tx.getTimestampByName("Notary Service");
                     if (timestampCommand == null)
                         throw new IllegalArgumentException("Failed Requirement: must be timestamped");
                     Instant time = timestampCommand.getBefore();
@@ -215,8 +226,8 @@ public class JavaCommercialPaper implements Contract {
         return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
-    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
-        State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
+    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
+        State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate, notary);
         return new TransactionBuilder().withItems(state, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
@@ -228,7 +239,7 @@ public class JavaCommercialPaper implements Contract {
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
         tx.addInputState(paper.getRef());
-        tx.addOutputState(new State(paper.getState().getIssuance(), newOwner, paper.getState().getFaceValue(), paper.getState().getMaturityDate()));
+        tx.addOutputState(new State(paper.getState().getIssuance(), newOwner, paper.getState().getFaceValue(), paper.getState().getMaturityDate(), paper.getState().getNotary()));
         tx.addCommand(new Command(new Commands.Move(), paper.getState().getOwner()));
     }
 }

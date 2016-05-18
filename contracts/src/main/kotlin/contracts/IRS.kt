@@ -1,6 +1,8 @@
 package contracts
 
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
@@ -492,7 +494,7 @@ class InterestRateSwap() : Contract {
         val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
 
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
-        val time = tx.commands.getTimestampByName("Mock Company 0", "Timestamping Service", "Bank A")?.midpoint
+        val time = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         for ((inputs, outputs, key) in groups) {
@@ -503,8 +505,8 @@ class InterestRateSwap() : Contract {
                         "There are no in states for an agreement" by inputs.isEmpty()
                         "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
                         "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
-                        "All notionals must be non zero" by ( irs.fixedLeg.notional.pennies > 0 && irs.floatingLeg.notional.pennies > 0)
-                        "The fixed leg rate must be positive" by ( irs.fixedLeg.fixedRate.isPositive() )
+                        "All notionals must be non zero" by (irs.fixedLeg.notional.pennies > 0 && irs.floatingLeg.notional.pennies > 0)
+                        "The fixed leg rate must be positive" by (irs.fixedLeg.fixedRate.isPositive())
                         "The currency of the notionals must be the same" by (irs.fixedLeg.notional.currency == irs.floatingLeg.notional.currency)
                         "All leg notionals must be the same" by (irs.fixedLeg.notional == irs.floatingLeg.notional)
 
@@ -539,7 +541,7 @@ class InterestRateSwap() : Contract {
                     val fixValue = fixCommand.value
                     // Need to check that everything is the same apart from the new fixed rate entry.
                     requireThat {
-                        "The fixed leg parties are constant" by ( irs.fixedLeg.fixedRatePayer == prevIrs.fixedLeg.fixedRatePayer) // Although superseded by the below test, this is included for a regression issue
+                        "The fixed leg parties are constant" by (irs.fixedLeg.fixedRatePayer == prevIrs.fixedLeg.fixedRatePayer) // Although superseded by the below test, this is included for a regression issue
                         "The fixed leg is constant" by (irs.fixedLeg == prevIrs.fixedLeg)
                         "The floating leg is constant" by (irs.floatingLeg == prevIrs.floatingLeg)
                         "The common values are constant" by (irs.common == prevIrs.common)
@@ -548,7 +550,7 @@ class InterestRateSwap() : Contract {
                         "There is only one changed payment in the floating leg" by (paymentDifferences.size == 1)
                         "There changed payment is a floating payment" by (oldFloatingRatePaymentEvent.rate is ReferenceRate)
                         "The new payment is a fixed payment" by (newFixedRatePaymentEvent.rate is FixedRate)
-                        "The changed payments dates are aligned" by ( oldFloatingRatePaymentEvent.date == newFixedRatePaymentEvent.date)
+                        "The changed payments dates are aligned" by (oldFloatingRatePaymentEvent.date == newFixedRatePaymentEvent.date)
                         "The new payment has the correct rate" by (newFixedRatePaymentEvent.rate.ratioUnit!!.value == fixValue.value)
                         "The fixing is for the next required date" by (prevIrs.calculation.nextFixingDate() == fixValue.of.forDay)
                         "The fix payment has the same currency as the notional" by (newFixedRatePaymentEvent.flow.currency == irs.floatingLeg.notional.currency)
@@ -586,7 +588,8 @@ class InterestRateSwap() : Contract {
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
-            val common: Common
+            val common: Common,
+            override val notary: Party
     ) : FixableDealState {
 
         override val contract = IRS_PROGRAM_ID
@@ -616,7 +619,7 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common)
+        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix) {
             InterestRateSwap().generateFix(ptx, StateAndRef(this, oldStateRef), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
@@ -660,7 +663,8 @@ class InterestRateSwap() : Contract {
      *  This generates the agreement state and also the schedules from the initial data.
      *  Note: The day count, interest rate calculation etc are not finished yet, but they are demonstrable.
      */
-    fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation, common: Common): TransactionBuilder {
+    fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation,
+                          common: Common, notary: Party): TransactionBuilder {
 
         val fixedLegPaymentSchedule = HashMap<LocalDate, FixedRatePaymentEvent>()
         var dates = BusinessCalendar.createGenericSchedule(fixedLeg.effectiveDate, fixedLeg.paymentFrequency, fixedLeg.paymentCalendar, fixedLeg.rollConvention, endDate = fixedLeg.terminationDate)
@@ -709,7 +713,7 @@ class InterestRateSwap() : Contract {
         val newCalculation = Calculation(calculation.expression, floatingLegPaymentSchedule, fixedLegPaymentSchedule)
 
         // Put all the above into a new State object.
-        val state = State(fixedLeg, floatingLeg, newCalculation, common)
+        val state = State(fixedLeg, floatingLeg, newCalculation, common, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 

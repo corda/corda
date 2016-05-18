@@ -8,7 +8,7 @@ Monitoring your node
 --------------------
 
 Like most Java servers, the node exports various useful metrics and management operations via the industry-standard
-`JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard _in-process_ API
+`JMX infrastructure <https://en.wikipedia.org/wiki/Java_Management_Extensions>`_. JMX is a standard API
 for registering so-called _MBeans_ ... objects whose properties and methods are intended for server management. It does
 not require any particular network protocol for export. So this data can be exported from the node in various ways:
 some monitoring systems provide a "Java Agent", which is essentially a JVM plugin that finds all the MBeans and sends

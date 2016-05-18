@@ -1,7 +1,12 @@
 package core.node
 
-interface DummyContractBackdoor {
-    fun generateInitial(owner: core.PartyAndReference, magicNumber: Int) : core.TransactionBuilder
+import core.contracts.ContractState
+import core.crypto.Party
+import core.contracts.PartyAndReference
+import core.contracts.TransactionBuilder
 
-    fun inspectState(state: core.ContractState) : Int
+interface DummyContractBackdoor {
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
+
+    fun inspectState(state: ContractState): Int
 }

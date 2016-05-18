@@ -4,32 +4,39 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import contracts.CommercialPaper
-import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
+import core.days
+import core.logElapsedTime
 import core.messaging.SingleMessageRecipient
+import core.messaging.StateMachineManager
 import core.node.Node
-import core.node.NodeConfiguration
 import core.node.NodeConfigurationFromConfig
 import core.node.NodeInfo
+import core.node.services.NetworkMapService
+import core.node.services.NodeAttachmentService
+import core.node.services.NotaryService
+import core.node.services.ServiceType
 import core.node.subsystems.ArtemisMessagingService
 import core.node.subsystems.NodeWalletService
-import core.node.services.*
 import core.protocols.ProtocolLogic
+import core.random63BitValue
+import core.seconds
 import core.serialization.deserialize
 import core.utilities.ANSIProgressRenderer
 import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
 import core.utilities.ProgressTracker
 import joptsimple.OptionParser
-import protocols.TimestampingProtocol
+import protocols.NotaryProtocol
 import protocols.TwoPartyTradeProtocol
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
-import java.util.*
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
@@ -39,17 +46,10 @@ import kotlin.test.assertEquals
 
 fun main(args: Array<String>) {
     val parser = OptionParser()
-    val networkAddressArg = parser.accepts("network-address").withRequiredArg().required()
-    val dirArg = parser.accepts("directory").withRequiredArg().defaultsTo("nodedata")
 
-    // Some dummy functionality that won't last long ...
-
-    // Mode flags for the first demo.
-    val serviceFakeTradesArg = parser.accepts("service-fake-trades")
-    val fakeTradeWithArg = parser.accepts("fake-trade-with").requiredUnless(serviceFakeTradesArg).withRequiredArg()
-
-    val networkMapIdentityFile = parser.accepts("network-map-identity-file").requiredIf(fakeTradeWithArg).withRequiredArg()
-    val networkMapNetAddr = parser.accepts("network-map-address").requiredIf(networkMapIdentityFile).withRequiredArg()
+    val modeArg = parser.accepts("mode").withRequiredArg().required()
+    val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
+    val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
 
     val options = try {
         parser.parse(*args)
@@ -59,39 +59,46 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    // Suppress the Artemis MQ noise, and activate the demo logging.
-    BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
+    val mode = options.valueOf(modeArg)
 
-    val dir = Paths.get(options.valueOf(dirArg))
-    val configFile = dir.resolve("config")
+    val DIRNAME = "trader-demo"
+    val BUYER = "buyer"
+    val SELLER = "seller"
 
-    if (!Files.exists(dir)) {
-        Files.createDirectory(dir)
-    }
-
-    val config = loadConfigFile(configFile)
-
-    val advertisedServices: Set<ServiceType>
-    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
-    val listening = options.has(serviceFakeTradesArg)
-
-    if (listening && config.myLegalName != "Bank A") {
-        println("The buyer node must have a legal name of 'Bank A'. Please edit the config file.")
+    if (mode !in setOf(BUYER, SELLER)) {
+        printHelp()
         exitProcess(1)
     }
 
-    val networkMapId = if (options.has(networkMapIdentityFile)) {
-        val addr = HostAndPort.fromString(options.valueOf(networkMapNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
-        val path = Paths.get(options.valueOf(networkMapIdentityFile))
+    // Suppress the Artemis MQ noise, and activate the demo logging.
+    BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
+
+    val dir = Paths.get(DIRNAME, mode)
+    Files.createDirectories(dir)
+
+    val advertisedServices: Set<ServiceType>
+    val myNetAddr = HostAndPort.fromString(options.valueOf(myNetworkAddress)).withDefaultPort(if (mode == BUYER) Node.DEFAULT_PORT else 31340)
+    val theirNetAddr = HostAndPort.fromString(options.valueOf(theirNetworkAddress)).withDefaultPort(if (mode == SELLER) Node.DEFAULT_PORT else 31340)
+
+    val listening = mode == BUYER
+    val config = run {
+        val override = ConfigFactory.parseString("""myLegalName = ${ if (mode == BUYER) "Bank A" else "Bank B" }""")
+        NodeConfigurationFromConfig(override.withFallback(ConfigFactory.load()))
+    }
+
+    val networkMapId = if (mode == SELLER) {
+        val path = Paths.get(DIRNAME, BUYER, "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        NodeInfo(ArtemisMessagingService.makeRecipient(addr), party, setOf(NetworkMapService.Type))
+        NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     } else {
         // We must be the network map service
-        advertisedServices = setOf(NetworkMapService.Type, TimestamperService.Type)
+        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
         null
     }
 
+    // TODO: Remove this once checkpoint resume works.
+    StateMachineManager.restoreCheckpointsOnStart = false
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId, advertisedServices).start() }
 
     if (listening) {
@@ -102,15 +109,10 @@ fun main(args: Array<String>) {
             it.storePath
         }
 
-        val buyer = TraderDemoProtocolBuyer(attachmentsPath)
+        val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
         ANSIProgressRenderer.progressTracker = buyer.progressTracker
         node.smm.add("demo.buyer", buyer).get()   // This thread will halt forever here.
     } else {
-        if (!options.has(fakeTradeWithArg)) {
-            println("Need the --fake-trade-with command line argument")
-            exitProcess(1)
-        }
-
         // Make sure we have the transaction prospectus attachment loaded into our store.
         if (node.storage.attachments.openAttachment(TraderDemoProtocolSeller.PROSPECTUS_HASH) == null) {
             TraderDemoProtocolSeller::class.java.getResourceAsStream("bank-of-london-cp.jar").use {
@@ -119,8 +121,7 @@ fun main(args: Array<String>) {
             }
         }
 
-        val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
-        val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
+        val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
         val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
         ANSIProgressRenderer.progressTracker = seller.progressTracker
         node.smm.add("demo.seller", seller).get()
@@ -130,18 +131,20 @@ fun main(args: Array<String>) {
 
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
 
-class TraderDemoProtocolBuyer(private val attachmentsPath: Path) : ProtocolLogic<Unit>() {
+class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Party) : ProtocolLogic<Unit>() {
     companion object {
         object WAITING_FOR_SELLER_TO_CONNECT : ProgressTracker.Step("Waiting for seller to connect to us")
+
         object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
     }
+
     override val progressTracker = ProgressTracker(WAITING_FOR_SELLER_TO_CONNECT, STARTING_BUY)
 
     @Suspendable
     override fun call() {
         // Give us some cash. Note that as nodes do not currently track forward pointers, we can spend the same cash over
         // and over again and the double spends will never be detected! Fixing that is the next step.
-        (serviceHub.walletService as NodeWalletService).fillWithSomeTestCash(1500.DOLLARS)
+        (serviceHub.walletService as NodeWalletService).fillWithSomeTestCash(notary, 1500.DOLLARS)
 
         while (true) {
             // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
@@ -157,8 +160,8 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path) : ProtocolLogic
                 progressTracker.currentStep = STARTING_BUY
                 send("test.junktrade", newPartnerAddr, 0, sessionID)
 
-                val tsa = serviceHub.networkMapCache.timestampingNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, tsa.identity, 1000.DOLLARS,
+                val notary = serviceHub.networkMapCache.notaryNodes[0]
+                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, notary.identity, 1000.DOLLARS,
                         CommercialPaper.State::class.java, sessionID)
                 val tradeTX: SignedTransaction = subProtocol(buyer)
 
@@ -197,7 +200,9 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
 
         object ANNOUNCING : ProgressTracker.Step("Announcing to the buyer node")
+
         object SELF_ISSUING : ProgressTracker.Step("Got session ID back, issuing and timestamping some commercial paper")
+
         object TRADING : ProgressTracker.Step("Starting the trade protocol")
 
         // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
@@ -216,27 +221,27 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         progressTracker.currentStep = SELF_ISSUING
 
-        val tsa = serviceHub.networkMapCache.timestampingNodes[0]
+        val notary = serviceHub.networkMapCache.notaryNodes[0]
         val cpOwnerKey = serviceHub.keyManagementService.freshKey()
-        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, tsa)
+        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, notary)
 
         progressTracker.currentStep = TRADING
 
-        val seller = TwoPartyTradeProtocol.Seller(otherSide, tsa, commercialPaper, 1000.DOLLARS, cpOwnerKey, sessionID,
-                progressTracker.childrenFor[TRADING]!!)
+        val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, commercialPaper, 1000.DOLLARS, cpOwnerKey,
+                sessionID, progressTracker.childrenFor[TRADING]!!)
         val tradeTX: SignedTransaction = subProtocol(seller)
 
         logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
     }
 
     @Suspendable
-    fun selfIssueSomeCommercialPaper(ownedBy: PublicKey, tsa: NodeInfo): StateAndRef<CommercialPaper.State> {
+    fun selfIssueSomeCommercialPaper(ownedBy: PublicKey, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
         val keyPair = generateKeyPair()
         val party = Party("Bank of London", keyPair.public)
 
         val issuance = run {
-            val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days)
+            val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days, notaryNode.identity)
 
             // TODO: Consider moving these two steps below into generateIssue.
 
@@ -244,68 +249,31 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!)
 
             // Timestamp it, all CP must be timestamped.
-            tx.setTime(Instant.now(), tsa.identity, 30.seconds)
-            val tsaSig = subProtocol(TimestampingProtocol(tsa, tx.toWireTransaction().serialized))
-            tx.checkAndAddSignature(tsaSig)
+            tx.setTime(Instant.now(), notaryNode.identity, 30.seconds)
             tx.signWith(keyPair)
-
+            val notarySig = subProtocol(NotaryProtocol(tx.toWireTransaction()))
+            tx.addSignatureUnchecked(notarySig)
             tx.toSignedTransaction(true)
         }
+
+        serviceHub.recordTransactions(listOf(issuance))
 
         val move = run {
             val tx = TransactionBuilder()
             CommercialPaper().generateMove(tx, issuance.tx.outRef(0), ownedBy)
             tx.signWith(keyPair)
+            val notarySig = subProtocol(NotaryProtocol(tx.toWireTransaction()))
+            tx.addSignatureUnchecked(notarySig)
             tx.toSignedTransaction(true)
         }
 
-        with(serviceHub.storageService) {
-            validatedTransactions[issuance.id] = issuance
-            validatedTransactions[move.id] = move
-        }
+        serviceHub.recordTransactions(listOf(move))
 
         return move.tx.outRef(0)
     }
 
 }
 
-private fun loadConfigFile(configFile: Path): NodeConfiguration {
-    fun askAdminToEditConfig(configFile: Path?) {
-        println()
-        println("This is the first run, so you should edit the config file in $configFile and then start the node again.")
-        println()
-        exitProcess(1)
-    }
-
-    val defaultLegalName = "Global MegaCorp, Ltd."
-
-    if (!Files.exists(configFile)) {
-        createDefaultConfigFile(configFile, defaultLegalName)
-        askAdminToEditConfig(configFile)
-    }
-
-    System.setProperty("config.file", configFile.toAbsolutePath().toString())
-    val config = NodeConfigurationFromConfig(ConfigFactory.load())
-
-    // Make sure admin did actually edit at least the legal name.
-    if (config.myLegalName == defaultLegalName)
-        askAdminToEditConfig(configFile)
-
-    return config
-}
-
-private fun createDefaultConfigFile(configFile: Path?, defaultLegalName: String) {
-    Files.write(configFile,
-            """
-        # Node configuration: give the buyer node the name 'Bank of Zurich' (no quotes)
-        # The seller node can be named whatever you like.
-
-        myLegalName = $defaultLegalName
-        """.trimIndent().toByteArray())
-}
-
 private fun printHelp() {
-    println("""
-    Please refer to the documentation in docs/build/index.html to learn how to run the demo.
-    """.trimIndent())
+    println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
 }

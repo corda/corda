@@ -176,11 +176,11 @@ Implementation involves the following steps:
 2. Defining a lower level service class, that binds network messages to the API.
 3. Defining a protocol using the :doc:`protocol-state-machines` framework to make it easy for a client to interact
    with the oracle.
+4. Constructing it (when advertised) in ``AbstractNode``.
 
 An example of how to do this can be found in the ``NodeInterestRates.Oracle``, ``NodeInterestRates.Service`` and
-``RateFixProtocol`` classes. The exact details of how this code works will change in future, so for now consulting
-the protocols tutorial and the code for the server-side oracles implementation will have to suffice. There will be more
-detail added once the platform APIs have settled down.
+``RateFixProtocol`` classes.
 
-Currently, there's no network map service, so the location and identity keys of an oracle must be distributed out of
-band.
+The exact details of how this code works will change in future, so for now consulting the protocols tutorial and the
+code for the server-side oracles implementation will have to suffice. There will be more detail added once the
+platform APIs have settled down.

@@ -1,6 +1,6 @@
 package core.node.services
 
-import core.Party
+import core.crypto.Party
 import java.security.PublicKey
 
 /**

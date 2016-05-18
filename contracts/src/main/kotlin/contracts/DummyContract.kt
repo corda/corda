@@ -1,6 +1,8 @@
 package contracts
 
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
@@ -8,7 +10,8 @@ import core.crypto.SecureHash
 val DUMMY_PROGRAM_ID = DummyContract()
 
 class DummyContract : Contract {
-    class State(val magicNumber: Int = 0) : ContractState {
+    class State(val magicNumber: Int = 0,
+                override val notary: Party) : ContractState {
         override val contract = DUMMY_PROGRAM_ID
     }
 
@@ -23,8 +26,8 @@ class DummyContract : Contract {
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("")
 
-    fun generateInitial(owner: PartyAndReference, magicNumber: Int) : TransactionBuilder {
-        val state = State(magicNumber)
-        return TransactionBuilder().withItems( state, Command(Commands.Create(), owner.party.owningKey) )
+    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
+        val state = State(magicNumber, notary)
+        return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 }

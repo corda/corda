@@ -1,8 +1,9 @@
 package contracts
 
 import core.*
+import core.contracts.*
+import core.crypto.Party
 import core.crypto.SecureHash
-import core.node.services.DummyTimestampingAuthority
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -46,6 +47,7 @@ class CrowdFund : Contract {
 
     data class State(
             val campaign: Campaign,
+            override val notary: Party,
             val closed: Boolean = false,
             val pledges: List<Pledge> = ArrayList()
     ) : ContractState {
@@ -74,13 +76,13 @@ class CrowdFund : Contract {
         val outputCrowdFund: CrowdFund.State = tx.outStates.filterIsInstance<CrowdFund.State>().single()
         val outputCash: List<Cash.State> = tx.outStates.filterIsInstance<Cash.State>()
 
-        val time = tx.getTimestampBy(DummyTimestampingAuthority.identity)?.midpoint
+        val time = tx.commands.getTimestampByName("Notary Service")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         when (command.value) {
             is Commands.Register -> {
                 requireThat {
-                    "there is no input state" by tx.inStates.filterIsInstance<CrowdFund.State>().isEmpty()
+                    "there is no input state" by tx.inStates.filterIsInstance<State>().isEmpty()
                     "the transaction is signed by the owner of the crowdsourcing" by (command.signers.contains(outputCrowdFund.campaign.owner))
                     "the output registration is empty of pledges" by (outputCrowdFund.pledges.isEmpty())
                     "the output registration has a non-zero target" by (outputCrowdFund.campaign.target.pennies > 0)
@@ -136,9 +138,9 @@ class CrowdFund : Contract {
      * Returns a transaction that registers a crowd-funding campaing, owned by the issuing institution's key. Does not update
      * an existing transaction because it's not possible to register multiple campaigns in a single transaction
      */
-    fun generateRegister(owner: PartyAndReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
+    fun generateRegister(owner: PartyAndReference, fundingTarget: Amount, fundingName: String, closingTime: Instant, notary: Party): TransactionBuilder {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
-        val state = State(campaign)
+        val state = State(campaign, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Register(), owner.party.owningKey))
     }
 
