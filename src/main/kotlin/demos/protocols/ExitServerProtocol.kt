@@ -5,7 +5,7 @@ import co.paralleluniverse.strands.Strand
 import core.node.NodeInfo
 import core.protocols.ProtocolLogic
 import core.serialization.deserialize
-import node.core.Node
+import node.internal.Node
 import node.services.network.MockNetworkMapCache
 import java.util.concurrent.TimeUnit
 

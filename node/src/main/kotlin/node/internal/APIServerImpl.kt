@@ -1,4 +1,4 @@
-package node.core
+package node.internal
 
 import com.google.common.util.concurrent.ListenableFuture
 import core.contracts.*

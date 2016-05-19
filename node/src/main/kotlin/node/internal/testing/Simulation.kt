@@ -1,4 +1,4 @@
-package node.core.testing
+package node.internal.testing
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture

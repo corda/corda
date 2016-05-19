@@ -1,4 +1,4 @@
-package node.core
+package node.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture

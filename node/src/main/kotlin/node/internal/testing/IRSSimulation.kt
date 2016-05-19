@@ -1,4 +1,4 @@
-package node.core.testing
+package node.internal.testing
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.util.concurrent.FutureCallback

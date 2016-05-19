@@ -7,7 +7,7 @@ import core.contracts.StateRef
 import core.crypto.Party
 import core.testing.DUMMY_NOTARY
 import core.testing.DUMMY_NOTARY_KEY
-import node.core.AbstractNode
+import node.internal.AbstractNode
 import java.util.*
 
 fun issueState(node: AbstractNode, notary: Party = DUMMY_NOTARY): StateRef {

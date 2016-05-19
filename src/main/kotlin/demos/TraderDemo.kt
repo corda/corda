@@ -12,7 +12,7 @@ import core.days
 import core.logElapsedTime
 import core.messaging.SingleMessageRecipient
 import node.services.statemachine.StateMachineManager
-import node.core.Node
+import node.internal.Node
 import node.services.config.NodeConfigurationFromConfig
 import core.node.NodeInfo
 import node.services.network.NetworkMapService

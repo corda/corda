@@ -1,7 +1,7 @@
 package node.servlets
 
 import node.services.api.AcceptsFileUpload
-import node.core.Node
+import node.internal.Node
 import core.utilities.loggerFor
 import org.apache.commons.fileupload.servlet.ServletFileUpload
 import java.util.*

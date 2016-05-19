@@ -8,7 +8,7 @@ import core.node.services.ServiceType
 import core.serialization.OpaqueBytes
 import core.testing.rootCauseExceptions
 import core.utilities.BriefLogFormatter
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import node.services.config.NodeConfiguration
 import node.services.network.NetworkMapService
 import node.services.persistence.NodeAttachmentService

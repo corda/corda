@@ -6,7 +6,7 @@ import core.node.NodeInfo
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.utilities.BriefLogFormatter
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import node.services.network.InMemoryNetworkMapService
 import node.services.network.NetworkMapService
 import node.services.network.NodeRegistration

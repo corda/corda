@@ -7,7 +7,7 @@ import core.contracts.DealState
 import core.crypto.Party
 import core.contracts.SignedTransaction
 import core.messaging.SingleMessageRecipient
-import node.core.Node
+import node.internal.Node
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.deserialize

@@ -13,7 +13,7 @@ import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
 import demos.api.InterestRateSwapAPI
 import joptsimple.OptionParser
-import node.core.Node
+import node.internal.Node
 import node.services.clientapi.NodeInterestRates
 import node.services.config.NodeConfiguration
 import node.services.messaging.ArtemisMessagingService

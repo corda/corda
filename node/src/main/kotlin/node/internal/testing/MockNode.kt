@@ -1,4 +1,4 @@
-package node.core.testing
+package node.internal.testing
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
@@ -11,7 +11,7 @@ import core.node.PhysicalLocation
 import core.node.services.ServiceType
 import core.node.services.testing.MockIdentityService
 import core.utilities.loggerFor
-import node.core.AbstractNode
+import node.internal.AbstractNode
 import node.services.config.NodeConfiguration
 import node.services.network.InMemoryMessagingNetwork
 import node.services.network.NetworkMapService
