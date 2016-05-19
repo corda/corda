@@ -1,23 +1,33 @@
 Getting set up
 ==============
 
-Install the Oracle JDK 8u45 or higher. OpenJDK will probably also work but I'm not testing with that.
+Ensure that you have access to R3 git repository.
 
-Then install IntelliJ version 15 community edition:
+    https://bitbucket.org/R3-CEV/r3prototyping.git
 
-   https://www.jetbrains.com/idea/download/
+If you cannot access the page please contact the R3 admin team.
 
-Upgrade the Kotlin plugin to the latest version (1.0-beta-4584) by clicking "Configure > Plugins" in the opening screen,
+Install the Oracle JDK 8u45 or higher. OpenJDK will probably also work, but it hasn't been tested.
+
+Then install IntelliJ. The Community Edition is good enough:
+
+    https://www.jetbrains.com/idea/download/
+
+Upgrade the Kotlin plugin to the latest version by clicking "Configure > Plugins" in the opening screen,
 then clicking "Install JetBrains plugin", then searching for Kotlin, then hitting "Upgrade" and then "Restart".
+You can confirm what is the latest version of Kotlin plugin on this page:
 
-Choose "Check out from version control" and use this git URL
+    https://plugins.jetbrains.com/plugin/6954
 
-     https://your_username@bitbucket.org/R3-CEV/r3repository.git
+Choose "Check out from version control" and use this git URL. Please remember to replace your_username with your
+actual bitbucket user name.
 
-Agree to the defaults for importing a Gradle project. Wait for it to think and download the dependencies.
+    https://your_username@bitbucket.org/R3-CEV/r3prototyping.git
 
-Right click on the tests directory, click "Run -> All Tests" (note: NOT the first item in the submenu that has the
-gradle logo next to it).
+After code is cloned open the project. Please ensure that Gradle project is imported.
+You should have the "Unliked Gradle project?" pop-up window in the IntelliJ top right corner. Please click on "Import Gradle Project". Wait for it to think and download the dependencies. After that you might have another popup titled "Unindexed remote maven repositories found." This is general IntelliJ question and doesn't affect Corda, therefore you can decided to index them or not.
+
+Next click on "green arrow" next to "All tests" pop-up on the top toolbar.
 
 The code should build, the unit tests should show as all green.
 
@@ -26,7 +36,7 @@ You can catch up with the latest code by selecting "VCS -> Update Project" in th
 If IntelliJ complains about lack of an SDK
 ------------------------------------------
 
-If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:
+If on attempting to open the project (including importing Gradle project), IntelliJ refuses because SDK was not selected, do the following:
 
    Configure -> Project Defaults -> Project Structure
 
@@ -45,6 +55,7 @@ Doing it without IntelliJ
 -------------------------
 
 If you don't want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:
-
-* Run ``./gradlew test`` to run the unit tests.
-* Run ``git pull`` to upgrade
+* First run ``git clone https://your_username@bitbucket.org/R3-CEV/r3prototyping.git`` to download Corda source code. Please remember to replace your_username with your actual bitbucket user name.
+* Next ensure that you are in r3repository ``cd r3repository``
+* Then you can run ``./gradlew test`` to run the unit tests.
+* Finally remeber to run ``git pull`` to upgrade the source code.
