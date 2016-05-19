@@ -22,7 +22,7 @@ thread, which is then executed. Inbound closures/commands stack up until they ar
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">Gate</span><span class="symbol">(</span><span class="identifier" id="core.utilities.AffinityExecutor.Gate$<init>(kotlin.Boolean)/alwaysQueue">alwaysQueue</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span></code><p>An executor useful for unit tests: allows the current thread to block until a command arrives from another
+<code><span class="identifier">Gate</span><span class="symbol">(</span><span class="identifier" id="node.utilities.AffinityExecutor.Gate$<init>(kotlin.Boolean)/alwaysQueue">alwaysQueue</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span></code><p>An executor useful for unit tests: allows the current thread to block until a command arrives from another
 thread, which is then executed. Inbound closures/commands stack up until they are cleared by looping.</p>
 </td>
 </tr>
@@ -53,7 +53,7 @@ thread, which is then executed. Inbound closures/commands stack up until they ar
 <td>
 <a href="execute.html">execute</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">execute</span><span class="symbol">(</span><span class="identifier" id="core.utilities.AffinityExecutor.Gate$execute(java.lang.Runnable)/command">command</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Runnable.html"><span class="identifier">Runnable</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">execute</span><span class="symbol">(</span><span class="identifier" id="node.utilities.AffinityExecutor.Gate$execute(java.lang.Runnable)/command">command</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Runnable.html"><span class="identifier">Runnable</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
@@ -77,14 +77,14 @@ thread, which is then executed. Inbound closures/commands stack up until they ar
 <td>
 <a href="../execute-a-s-a-p.html">executeASAP</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">executeASAP</span><span class="symbol">(</span><span class="identifier" id="core.utilities.AffinityExecutor$executeASAP(kotlin.Function0((kotlin.Unit)))/runnable">runnable</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>If isOnThread() then runnable is invoked immediately, otherwise the closure is queued onto the backing thread.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">executeASAP</span><span class="symbol">(</span><span class="identifier" id="node.utilities.AffinityExecutor$executeASAP(kotlin.Function0((kotlin.Unit)))/runnable">runnable</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>If isOnThread() then runnable is invoked immediately, otherwise the closure is queued onto the backing thread.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../fetch-from.html">fetchFrom</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">fetchFrom</span><span class="symbol">(</span><span class="identifier" id="core.utilities.AffinityExecutor$fetchFrom(kotlin.Function0((core.utilities.AffinityExecutor.fetchFrom.T)))/fetcher">fetcher</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><p>Runs the given function on the executor, blocking until the result is available. Be careful not to deadlock this
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">fetchFrom</span><span class="symbol">(</span><span class="identifier" id="node.utilities.AffinityExecutor$fetchFrom(kotlin.Function0((node.utilities.AffinityExecutor.fetchFrom.T)))/fetcher">fetcher</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><p>Runs the given function on the executor, blocking until the result is available. Be careful not to deadlock this
 way Make sure the executor cant possibly be waiting for the calling thread.</p>
 </td>
 </tr>

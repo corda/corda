@@ -9,7 +9,7 @@
 <tbody>
 <tr>
 <td>
-<a href="../core.utilities/-a-n-s-i-progress-renderer/index.html">core.utilities.ANSIProgressRenderer</a></td>
+<a href="../core.utilities/-a-n-s-i-progress-renderer/index.html">node.utilities.ANSIProgressRenderer</a></td>
 <td>
 <p>Knows how to render a <a href="../core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
 command line tools, demos, tests etc. Just set the <a href="../core.utilities/-a-n-s-i-progress-renderer/progress-tracker.html">progressTracker</a> field and it will go ahead and start drawing
@@ -18,20 +18,20 @@ if the terminal supports it. Otherwise it just prints out the name of the step w
 </tr>
 <tr>
 <td>
-<a href="../api/-a-p-i-server/index.html">api.APIServer</a></td>
+<a href="../api/-a-p-i-server/index.html">node.api.APIServer</a></td>
 <td>
 <p>Top level interface to external interaction with the distributed ledger.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../api/-a-p-i-server-impl/index.html">api.APIServerImpl</a></td>
+<a href="../api/-a-p-i-server-impl/index.html">node.core.APIServerImpl</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-abstract-node/index.html">core.node.AbstractNode</a></td>
+<a href="../core.node/-abstract-node/index.html">node.core.AbstractNode</a></td>
 <td>
 <p>A base node implementation that can be customised either for production (with real implementations that do real
 I/O), or a mock implementation suitable for unit test environments.</p>
@@ -39,7 +39,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-abstract-node-service/index.html">core.node.services.AbstractNodeService</a></td>
+<a href="../core.node.services/-abstract-node-service/index.html">node.services.api.AbstractNodeService</a></td>
 <td>
 <p>Abstract superclass for services that a node can host, which provides helper functions.</p>
 </td>
@@ -54,7 +54,7 @@ fields such as replyTo and replyToTopic.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-accepts-file-upload/index.html">core.node.AcceptsFileUpload</a></td>
+<a href="../core.node/-accepts-file-upload/index.html">node.services.api.AcceptsFileUpload</a></td>
 <td>
 <p>A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.</p>
 </td>
@@ -69,14 +69,14 @@ We dont actually do anything with this yet though, so its ignored for now.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.utilities/-add-or-remove/index.html">core.utilities.AddOrRemove</a></td>
+<a href="../core.utilities/-add-or-remove/index.html">node.utilities.AddOrRemove</a></td>
 <td>
 <p>Enum for when adding/removing something, for example adding or removing an entry in a directory.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.utilities/-affinity-executor/index.html">core.utilities.AffinityExecutor</a></td>
+<a href="../core.utilities/-affinity-executor/index.html">node.utilities.AffinityExecutor</a></td>
 <td>
 <p>An extended executor interface that supports thread affinity assertions and short circuiting. This can be useful
 for ensuring code runs on the right thread, and also for unit testing.</p>
@@ -98,7 +98,7 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-artemis-messaging-service/index.html">core.node.subsystems.ArtemisMessagingService</a></td>
+<a href="../core.node.subsystems/-artemis-messaging-service/index.html">node.services.messaging.ArtemisMessagingService</a></td>
 <td>
 <p>This class implements the <a href="../core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
@@ -117,7 +117,7 @@ of how attachments are meant to be used include:</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.servlets/-attachment-download-servlet/index.html">core.node.servlets.AttachmentDownloadServlet</a></td>
+<a href="../core.node.servlets/-attachment-download-servlet/index.html">node.servlets.AttachmentDownloadServlet</a></td>
 <td>
 <p>Allows the node administrator to either download full attachment zips, or individual files within those zips.</p>
 </td>
@@ -195,13 +195,13 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.storage/-checkpoint/index.html">core.node.storage.Checkpoint</a></td>
+<a href="../core.node.storage/-checkpoint/index.html">node.services.api.Checkpoint</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node.storage/-checkpoint-storage/index.html">core.node.storage.CheckpointStorage</a></td>
+<a href="../core.node.storage/-checkpoint-storage/index.html">node.services.api.CheckpointStorage</a></td>
 <td>
 <p>Thread-safe storage of fiber checkpoints.</p>
 </td>
@@ -235,7 +235,7 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../api/-config/index.html">api.Config</a></td>
+<a href="../api/-config/index.html">node.servlets.Config</a></td>
 <td>
 <p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
 and to organise serializers / deserializers for java.time.* classes as necessary</p>
@@ -243,7 +243,7 @@ and to organise serializers / deserializers for java.time.* classes as necessary
 </tr>
 <tr>
 <td>
-<a href="../core.node/-configuration-exception/index.html">core.node.ConfigurationException</a></td>
+<a href="../core.node/-configuration-exception/index.html">node.core.ConfigurationException</a></td>
 <td>
 </td>
 </tr>
@@ -259,20 +259,20 @@ timestamp attached to the transaction itself i.e. it is NOT necessarily the curr
 </tr>
 <tr>
 <td>
-<a href="../api/-contract-class-ref/index.html">api.ContractClassRef</a></td>
+<a href="../api/-contract-class-ref/index.html">node.api.ContractClassRef</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../api/-contract-def-ref.html">api.ContractDefRef</a></td>
+<a href="../api/-contract-def-ref.html">node.api.ContractDefRef</a></td>
 <td>
 <p>Encapsulates the contract type.  e.g. Cash or CommercialPaper etc.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../api/-contract-ledger-ref/index.html">api.ContractLedgerRef</a></td>
+<a href="../api/-contract-ledger-ref/index.html">node.api.ContractLedgerRef</a></td>
 <td>
 </td>
 </tr>
@@ -303,14 +303,14 @@ return the funds to the pledge-makers (if the target has not been reached).</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.servlets/-data-upload-servlet/index.html">core.node.servlets.DataUploadServlet</a></td>
+<a href="../core.node.servlets/-data-upload-servlet/index.html">node.servlets.DataUploadServlet</a></td>
 <td>
 <p>Accepts binary streams, finds the right <a href="../core.node/-accepts-file-upload/index.html">AcceptsFileUpload</a> implementor and hands the stream off to it.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-data-vending-service/index.html">core.node.subsystems.DataVendingService</a></td>
+<a href="../core.node.subsystems/-data-vending-service/index.html">node.services.persistence.DataVendingService</a></td>
 <td>
 <p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
 glue that sits between the network layer and the database layer.</p>
@@ -407,7 +407,7 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-e2-e-test-key-management-service/index.html">core.node.subsystems.E2ETestKeyManagementService</a></td>
+<a href="../core.node.subsystems/-e2-e-test-key-management-service/index.html">node.services.keys.E2ETestKeyManagementService</a></td>
 <td>
 <p>A simple in-memory KMS that doesnt bother saving keys to disk. A real implementation would:</p>
 </td>
@@ -534,7 +534,7 @@ that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-i-r-s-simulation/index.html">core.testing.IRSSimulation</a></td>
+<a href="../core.testing/-i-r-s-simulation/index.html">node.core.testing.IRSSimulation</a></td>
 <td>
 <p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
 </td>
@@ -558,14 +558,14 @@ set via the constructor and the class is immutable.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-in-memory-identity-service/index.html">core.node.subsystems.InMemoryIdentityService</a></td>
+<a href="../core.node.subsystems/-in-memory-identity-service/index.html">node.services.identity.InMemoryIdentityService</a></td>
 <td>
 <p>Simple identity service which caches parties and provides functionality for efficient lookup.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-in-memory-messaging-network/index.html">core.testing.InMemoryMessagingNetwork</a></td>
+<a href="../core.testing/-in-memory-messaging-network/index.html">node.services.network.InMemoryMessagingNetwork</a></td>
 <td>
 <p>An in-memory network allows you to manufacture <a href="../core.testing/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
 <a href="../core.testing/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> maintains a queue of messages it has received, and a background thread that dispatches
@@ -576,14 +576,14 @@ testing).</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-in-memory-network-map-cache/index.html">core.node.subsystems.InMemoryNetworkMapCache</a></td>
+<a href="../core.node.subsystems/-in-memory-network-map-cache/index.html">node.services.network.InMemoryNetworkMapCache</a></td>
 <td>
 <p>Extremely simple in-memory cache of the network map.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-in-memory-network-map-service/index.html">core.node.services.InMemoryNetworkMapService</a></td>
+<a href="../core.node.services/-in-memory-network-map-service/index.html">node.services.network.InMemoryNetworkMapService</a></td>
 <td>
 </td>
 </tr>
@@ -649,7 +649,7 @@ This is just a representation of a vanilla Fixed vs Floating (same currency) IRS
 </tr>
 <tr>
 <td>
-<a href="../core.utilities/-json-support/index.html">core.utilities.JsonSupport</a></td>
+<a href="../core.utilities/-json-support/index.html">node.utilities.JsonSupport</a></td>
 <td>
 <p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
 the java.time API, some core types, and Kotlin data classes.</p>
@@ -657,7 +657,7 @@ the java.time API, some core types, and Kotlin data classes.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-key-management-service/index.html">core.node.subsystems.KeyManagementService</a></td>
+<a href="../core.node.subsystems/-key-management-service/index.html">core.node.services.KeyManagementService</a></td>
 <td>
 <p>The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
 call out to a hardware security module that enforces various auditing and frequency-of-use requirements.</p>
@@ -765,7 +765,7 @@ may let you cast the returned future to an object that lets you get status info.
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-mock-identity-service/index.html">core.testing.MockIdentityService</a></td>
+<a href="../core.testing/-mock-identity-service/index.html">core.testservices.MockIdentityService</a></td>
 <td>
 <p>Scaffolding: a dummy identity service that just expects to have identities loaded off disk or found elsewhere.
 This class allows the provided list of identities to be mutated after construction, so it takes the list lock
@@ -775,7 +775,7 @@ MockNetwork code.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-mock-network/index.html">core.testing.MockNetwork</a></td>
+<a href="../core.testing/-mock-network/index.html">node.core.testing.MockNetwork</a></td>
 <td>
 <p>A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
 Components that do IO are either swapped out for mocks, or pointed to a <a href="#">Jimfs</a> in memory filesystem.</p>
@@ -783,7 +783,7 @@ Components that do IO are either swapped out for mocks, or pointed to a <a href=
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-mock-network-map-cache/index.html">core.testing.MockNetworkMapCache</a></td>
+<a href="../core.testing/-mock-network-map-cache/index.html">node.services.network.MockNetworkMapCache</a></td>
 <td>
 <p>Network map cache with no backing map service.</p>
 </td>
@@ -805,13 +805,13 @@ This is not an interface because it is too lightweight to bother mocking out.</p
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-network-cache-error/index.html">core.node.subsystems.NetworkCacheError</a></td>
+<a href="../core.node.subsystems/-network-cache-error/index.html">core.node.services.NetworkCacheError</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-network-map-cache/index.html">core.node.subsystems.NetworkMapCache</a></td>
+<a href="../core.node.subsystems/-network-map-cache/index.html">core.node.services.NetworkMapCache</a></td>
 <td>
 <p>A network map contains lists of nodes on the network along with information about their identity keys, services
 they provide and host names or IP addresses where they can be connected to. The cache wraps around a map fetched
@@ -821,7 +821,7 @@ with a specified network map service, which it fetches data from and then subscr
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-network-map-service/index.html">core.node.services.NetworkMapService</a></td>
+<a href="../core.node.services/-network-map-service/index.html">node.services.network.NetworkMapService</a></td>
 <td>
 <p>A network map contains lists of nodes on the network along with information about their identity keys, services
 they provide and host names or IP addresses where they can be connected to. This information is cached locally within
@@ -831,7 +831,7 @@ replace each other based on a serial number present in the change.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-node/index.html">core.node.Node</a></td>
+<a href="../core.node/-node/index.html">node.core.Node</a></td>
 <td>
 <p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../core.node/-service-hub/index.html">ServiceHub</a>,
 loads important data off disk and starts listening for connections.</p>
@@ -839,20 +839,20 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-node-attachment-service/index.html">core.node.services.NodeAttachmentService</a></td>
+<a href="../core.node.services/-node-attachment-service/index.html">node.services.persistence.NodeAttachmentService</a></td>
 <td>
 <p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-node-configuration/index.html">core.node.NodeConfiguration</a></td>
+<a href="../core.node/-node-configuration/index.html">node.services.config.NodeConfiguration</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-node-configuration-from-config/index.html">core.node.NodeConfigurationFromConfig</a></td>
+<a href="../core.node/-node-configuration-from-config/index.html">node.services.config.NodeConfigurationFromConfig</a></td>
 <td>
 </td>
 </tr>
@@ -865,7 +865,7 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-node-interest-rates/index.html">core.node.services.NodeInterestRates</a></td>
+<a href="../core.node.services/-node-interest-rates/index.html">node.services.clientapi.NodeInterestRates</a></td>
 <td>
 <p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
 rate fix (e.g. LIBOR, EURIBOR ...).</p>
@@ -873,13 +873,13 @@ rate fix (e.g. LIBOR, EURIBOR ...).</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-node-map-error/index.html">core.node.services.NodeMapError</a></td>
+<a href="../core.node.services/-node-map-error/index.html">node.services.network.NodeMapError</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-node-registration/index.html">core.node.services.NodeRegistration</a></td>
+<a href="../core.node.services/-node-registration/index.html">node.services.network.NodeRegistration</a></td>
 <td>
 <p>A node registration state in the network map.</p>
 </td>
@@ -894,7 +894,7 @@ add features like checking against other NTP servers to make sure the clock hasn
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-node-wallet-service/index.html">core.node.subsystems.NodeWalletService</a></td>
+<a href="../core.node.subsystems/-node-wallet-service/index.html">node.services.wallet.NodeWalletService</a></td>
 <td>
 <p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
 method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
@@ -959,7 +959,7 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 </tr>
 <tr>
 <td>
-<a href="../core.node.storage/-per-file-checkpoint-storage/index.html">core.node.storage.PerFileCheckpointStorage</a></td>
+<a href="../core.node.storage/-per-file-checkpoint-storage/index.html">node.services.persistence.PerFileCheckpointStorage</a></td>
 <td>
 <p>File-based checkpoint storage, storing checkpoints per file.</p>
 </td>
@@ -1003,13 +1003,13 @@ a singleton).</p>
 </tr>
 <tr>
 <td>
-<a href="../api/-protocol-class-ref/index.html">api.ProtocolClassRef</a></td>
+<a href="../api/-protocol-class-ref/index.html">node.api.ProtocolClassRef</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../api/-protocol-instance-ref/index.html">api.ProtocolInstanceRef</a></td>
+<a href="../api/-protocol-instance-ref/index.html">node.api.ProtocolInstanceRef</a></td>
 <td>
 </td>
 </tr>
@@ -1024,14 +1024,14 @@ a node crash, how many instances of your protocol there are running and so on.</
 </tr>
 <tr>
 <td>
-<a href="../api/-protocol-ref.html">api.ProtocolRef</a></td>
+<a href="../api/-protocol-ref.html">node.api.ProtocolRef</a></td>
 <td>
 <p>Encapsulates the protocol to be instantiated.  e.g. TwoPartyTradeProtocol.Buyer.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../api/-protocol-requiring-attention/index.html">api.ProtocolRequiringAttention</a></td>
+<a href="../api/-protocol-requiring-attention/index.html">node.api.ProtocolRequiringAttention</a></td>
 <td>
 <p>Thinking that Instant is OK for short lived protocol deadlines.</p>
 </td>
@@ -1103,7 +1103,7 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-regulator-service/index.html">core.node.services.RegulatorService</a></td>
+<a href="../core.node.services/-regulator-service/index.html">node.services.api.RegulatorService</a></td>
 <td>
 <p>Placeholder interface for regulator services.</p>
 </td>
@@ -1125,7 +1125,7 @@ all the transactions have been successfully verified and inserted into the local
 </tr>
 <tr>
 <td>
-<a href="../api/-response-filter/index.html">api.ResponseFilter</a></td>
+<a href="../api/-response-filter/index.html">node.servlets.ResponseFilter</a></td>
 <td>
 <p>This adds headers needed for cross site scripting on API clients</p>
 </td>
@@ -1187,7 +1187,7 @@ contained within.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-simulation/index.html">core.testing.Simulation</a></td>
+<a href="../core.testing/-simulation/index.html">node.core.testing.Simulation</a></td>
 <td>
 <p>Base class for network simulations that are based on the unit test / mock environment.</p>
 </td>
@@ -1209,7 +1209,7 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.messaging/-stack-snapshot/index.html">core.messaging.StackSnapshot</a></td>
+<a href="../core.messaging/-stack-snapshot/index.html">node.services.statemachine.StackSnapshot</a></td>
 <td>
 </td>
 </tr>
@@ -1222,7 +1222,7 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.messaging/-state-machine-manager/index.html">core.messaging.StateMachineManager</a></td>
+<a href="../core.messaging/-state-machine-manager/index.html">node.services.statemachine.StateMachineManager</a></td>
 <td>
 <p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
 Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
@@ -1238,14 +1238,14 @@ transaction defined the state and where in that transaction it was.</p>
 </tr>
 <tr>
 <td>
-<a href="../api/-states-query/index.html">api.StatesQuery</a></td>
+<a href="../api/-states-query/index.html">node.api.StatesQuery</a></td>
 <td>
 <p>Extremely rudimentary query language which should most likely be replaced with a product</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-storage-service/index.html">core.node.subsystems.StorageService</a></td>
+<a href="../core.node.subsystems/-storage-service/index.html">core.node.services.StorageService</a></td>
 <td>
 <p>A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
 transactions, serialised protocol state machines and so on. Again, this isnt intended to imply lack of SQL or
@@ -1254,7 +1254,7 @@ anything like that, this interface is only big enough to support the prototyping
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-storage-service-impl/index.html">core.node.subsystems.StorageServiceImpl</a></td>
+<a href="../core.node.subsystems/-storage-service-impl/index.html">node.services.persistence.StorageServiceImpl</a></td>
 <td>
 </td>
 </tr>
@@ -1335,7 +1335,7 @@ themselves.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-trade-simulation/index.html">core.testing.TradeSimulation</a></td>
+<a href="../core.testing/-trade-simulation/index.html">node.core.testing.TradeSimulation</a></td>
 <td>
 <p>Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
 then B and C trade with each other, then C and A etc).</p>
@@ -1355,7 +1355,7 @@ then B and C trade with each other, then C and A etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../api/-transaction-build-step/index.html">api.TransactionBuildStep</a></td>
+<a href="../api/-transaction-build-step/index.html">node.api.TransactionBuildStep</a></td>
 <td>
 <p>Encapsulate a generateXXX method call on a contract.</p>
 </td>
@@ -1469,7 +1469,7 @@ intended as the way things will necessarily be done longer term</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-wallet/index.html">core.node.subsystems.Wallet</a></td>
+<a href="../core.node.subsystems/-wallet/index.html">core.node.services.Wallet</a></td>
 <td>
 <p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
@@ -1479,7 +1479,7 @@ about new transactions from our peers and generate new transactions that consume
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-wallet-impl/index.html">core.node.subsystems.WalletImpl</a></td>
+<a href="../core.node.subsystems/-wallet-impl/index.html">node.services.wallet.WalletImpl</a></td>
 <td>
 <p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
@@ -1489,7 +1489,7 @@ about new transactions from our peers and generate new transactions that consume
 </tr>
 <tr>
 <td>
-<a href="../core.node.subsystems/-wallet-service/index.html">core.node.subsystems.WalletService</a></td>
+<a href="../core.node.subsystems/-wallet-service/index.html">core.node.services.WalletService</a></td>
 <td>
 <p>A <a href="../core.node.subsystems/-wallet-service/index.html">WalletService</a> is responsible for securely and safely persisting the current state of a wallet to storage. The
 wallet service vends immutable snapshots of the current wallet for working with: if you build a transaction based
@@ -1499,7 +1499,7 @@ consumed by someone else first</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node.services/-wire-node-registration/index.html">core.node.services.WireNodeRegistration</a></td>
+<a href="../core.node.services/-wire-node-registration/index.html">node.services.network.WireNodeRegistration</a></td>
 <td>
 <p>A node registration and its signature as a pair.</p>
 </td>

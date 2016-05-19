@@ -1,22 +1,23 @@
 package demos
 
 import contracts.Cash
-import core.*
 import core.contracts.DOLLARS
 import core.contracts.FixOf
-import core.crypto.Party
 import core.contracts.TransactionBuilder
-import core.node.Node
-import core.node.NodeConfiguration
+import core.crypto.Party
+import core.logElapsedTime
 import core.node.NodeInfo
-import core.node.services.NodeInterestRates
 import core.node.services.ServiceType
-import core.node.subsystems.ArtemisMessagingService
 import core.serialization.deserialize
-import core.utilities.ANSIProgressRenderer
 import core.utilities.BriefLogFormatter
 import core.utilities.Emoji
+import demos.api.InterestRateSwapAPI
 import joptsimple.OptionParser
+import node.core.Node
+import node.services.clientapi.NodeInterestRates
+import node.services.config.NodeConfiguration
+import node.services.messaging.ArtemisMessagingService
+import node.utilities.*
 import protocols.RatesFixProtocol
 import java.math.BigDecimal
 import java.nio.file.Files
@@ -80,7 +81,7 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
             advertisedServices, DemoClock(),
-            listOf(demos.api.InterestRateSwapAPI::class.java)).start() }
+            listOf(InterestRateSwapAPI::class.java)).start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 
