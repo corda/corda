@@ -1,22 +1,48 @@
 package core.serialization
 
-import contracts.Cash
-import core.*
 import core.contracts.*
+import core.crypto.Party
+import core.crypto.SecureHash
 import core.node.services.testing.MockStorageService
+import core.seconds
 import core.testing.*
 import org.junit.Before
 import org.junit.Test
+import java.security.PublicKey
+import java.security.SecureRandom
 import java.security.SignatureException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
+val TEST_PROGRAM_ID = TransactionSerializationTests.TestCash()
+
 class TransactionSerializationTests {
-    // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
+    class TestCash : Contract {
+        override val legalContractReference = SecureHash.sha256("TestCash")
+
+        override fun verify(tx: TransactionForVerification) {
+        }
+
+        data class State(
+            val deposit: PartyAndReference,
+            val amount: Amount,
+            override val owner: PublicKey,
+            override val notary: Party) : OwnableState {
+            override val contract: Contract = TEST_PROGRAM_ID
+            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        }
+        interface Commands : CommandData {
+            class Move() : TypeOnlyCommandData(), Commands
+            data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
+            data class Exit(val amount: Amount) : Commands
+        }
+    }
+
+        // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
-    val outputState = Cash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1, DUMMY_NOTARY)
-    val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public, DUMMY_NOTARY)
+    val outputState = TestCash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1, DUMMY_NOTARY)
+    val changeState = TestCash.State(depositRef, 400.POUNDS, TestUtils.keypair.public, DUMMY_NOTARY)
 
     val fakeStateRef = generateStateRef()
     lateinit var tx: TransactionBuilder
@@ -24,7 +50,7 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = TransactionBuilder().withItems(
-                fakeStateRef, outputState, changeState, Command(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
+                fakeStateRef, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
 
@@ -61,7 +87,7 @@ class TransactionSerializationTests {
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = TransactionBuilder().withItems(fakeStateRef, outputState, changeState,
-                    Command(Cash.Commands.Move(), TestUtils.keypair2.public))
+                    Command(TestCash.Commands.Move(), TestUtils.keypair2.public))
             tx2.signWith(TestUtils.keypair2)
 
             signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()

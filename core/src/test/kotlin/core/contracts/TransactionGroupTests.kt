@@ -1,16 +1,43 @@
 package core.contracts
 
-import contracts.Cash
-import contracts.testing.`owned by`
+import core.crypto.Party
+import core.crypto.SecureHash
 import core.node.services.testing.MockStorageService
 import core.testing.*
 import org.junit.Test
+import java.security.PublicKey
+import java.security.SecureRandom
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
+val TEST_PROGRAM_ID = TransactionGroupTests.TestCash()
+
 class TransactionGroupTests {
-    val A_THOUSAND_POUNDS = Cash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY, DUMMY_NOTARY)
+    val A_THOUSAND_POUNDS = TestCash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY, DUMMY_NOTARY)
+
+    class TestCash : Contract {
+        override val legalContractReference = SecureHash.sha256("TestCash")
+
+        override fun verify(tx: TransactionForVerification) {
+        }
+
+        data class State(
+                val deposit: PartyAndReference,
+                val amount: Amount,
+                override val owner: PublicKey,
+                override val notary: Party) : OwnableState {
+            override val contract: Contract = TEST_PROGRAM_ID
+            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        }
+        interface Commands : CommandData {
+            class Move() : TypeOnlyCommandData(), Commands
+            data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
+            data class Exit(val amount: Amount) : Commands
+        }
+    }
+
+    infix fun TestCash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
 
     @Test
     fun success() {
@@ -22,13 +49,13 @@ class TransactionGroupTests {
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE_PUBKEY) { Cash.Commands.Move() }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
+                arg(ALICE_PUBKEY) { TestCash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
             }
 
             verify()
@@ -40,7 +67,7 @@ class TransactionGroupTests {
         transactionGroup {
             val t = transaction {
                 output("cash") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
             }
 
             val conflict1 = transaction {
@@ -48,7 +75,7 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` BOB_PUBKEY
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
             }
 
             verify()
@@ -59,7 +86,7 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` ALICE_PUBKEY
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
             }
 
             assertNotEquals(conflict1, conflict2)
@@ -78,7 +105,7 @@ class TransactionGroupTests {
         val tg = transactionGroup {
             transaction {
                 output("cash") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
             }
 
             transaction {
@@ -93,7 +120,7 @@ class TransactionGroupTests {
         tg.txns += TransactionBuilder().apply {
             addInputState(input)
             addOutputState(A_THOUSAND_POUNDS)
-            addCommand(Cash.Commands.Move(), BOB_PUBKEY)
+            addCommand(TestCash.Commands.Move(), BOB_PUBKEY)
         }.toWireTransaction()
 
         val e = assertFailsWith(TransactionResolutionException::class) {
@@ -114,7 +141,7 @@ class TransactionGroupTests {
                 input("£1000")
                 input("£1000")
                 output { A_THOUSAND_POUNDS.copy(amount = A_THOUSAND_POUNDS.amount * 2) }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
             }
 
             assertFailsWith(TransactionConflictException::class) {
@@ -128,19 +155,19 @@ class TransactionGroupTests {
         val signedTxns: List<SignedTransaction> = transactionGroup {
             transaction {
                 output("£1000") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
             }
 
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE_PUBKEY) { Cash.Commands.Move() }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
+                arg(ALICE_PUBKEY) { TestCash.Commands.Move() }
+                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
             }
         }.signAll()
 

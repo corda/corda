@@ -74,6 +74,7 @@ class SerializationTokenTest {
 
     @Test(expected = IllegalStateException::class)
     fun `unannotated throws`() {
+        @Suppress("UNUSED_VARIABLE")
         val tokenizableBefore = UnannotatedSerializeAsSingletonToken()
     }
 }

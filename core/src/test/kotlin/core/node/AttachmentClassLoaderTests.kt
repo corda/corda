@@ -1,14 +1,8 @@
 package core.node
 
-import contracts.DUMMY_PROGRAM_ID
-import contracts.DummyContract
-import core.contracts.Contract
-import core.contracts.ContractState
-import core.contracts.PartyAndReference
-import core.contracts.TransactionBuilder
+import core.contracts.*
 import core.crypto.Party
 import core.crypto.SecureHash
-import core.node.AttachmentsClassLoader
 import core.node.services.AttachmentStorage
 import core.node.services.testing.MockAttachmentStorage
 import core.serialization.*
@@ -30,9 +24,34 @@ interface DummyContractBackdoor {
     fun inspectState(state: ContractState): Int
 }
 
+val ATTACHMENT_TEST_PROGRAM_ID = AttachmentClassLoaderTests.AttachmentDummyContract()
+
 class AttachmentClassLoaderTests {
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
+    }
+
+    class AttachmentDummyContract : Contract {
+        class State(val magicNumber: Int = 0,
+                    override val notary: Party) : ContractState {
+            override val contract = ATTACHMENT_TEST_PROGRAM_ID
+        }
+
+        interface Commands : CommandData {
+            class Create : TypeOnlyCommandData(), Commands
+        }
+
+        override fun verify(tx: TransactionForVerification) {
+            // Always accepts.
+        }
+
+        // The "empty contract"
+        override val legalContractReference: SecureHash = SecureHash.sha256("")
+
+        fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
+            val state = State(magicNumber, notary)
+            return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
+        }
     }
 
     fun importJar(storage: AttachmentStorage) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
@@ -127,7 +146,7 @@ class AttachmentClassLoaderTests {
 
     @Test
     fun `verify that contract DummyContract is in classPath`() {
-        val contractClass = Class.forName("contracts.DummyContract")
+        val contractClass = Class.forName("core.node.AttachmentClassLoaderTests\$AttachmentDummyContract")
         val contract = contractClass.newInstance() as Contract
 
         assertNotNull(contract)
@@ -190,13 +209,13 @@ class AttachmentClassLoaderTests {
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
-        val tx = DUMMY_PROGRAM_ID.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
+        val tx = ATTACHMENT_TEST_PROGRAM_ID.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val wireTransaction = tx.toWireTransaction()
         val bytes = wireTransaction.serialize()
         val copiedWireTransaction = bytes.deserialize()
 
         assertEquals(1, copiedWireTransaction.outputs.size)
-        assertEquals(42, (copiedWireTransaction.outputs[0] as DummyContract.State).magicNumber)
+        assertEquals(42, (copiedWireTransaction.outputs[0] as AttachmentDummyContract.State).magicNumber)
     }
 
     @Test
