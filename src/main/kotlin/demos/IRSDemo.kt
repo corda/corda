@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import core.crypto.Party
 import core.logElapsedTime
-import node.core.Node
+import node.internal.Node
 import node.services.config.NodeConfiguration
 import node.services.config.NodeConfigurationFromConfig
 import core.node.NodeInfo

@@ -25,13 +25,13 @@ if the terminal supports it. Otherwise it just prints out the name of the step w
 </tr>
 <tr>
 <td>
-<a href="../api/-a-p-i-server-impl/index.html">node.core.APIServerImpl</a></td>
+<a href="../api/-a-p-i-server-impl/index.html">node.internal.APIServerImpl</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-abstract-node/index.html">node.core.AbstractNode</a></td>
+<a href="../core.node/-abstract-node/index.html">node.internal.AbstractNode</a></td>
 <td>
 <p>A base node implementation that can be customised either for production (with real implementations that do real
 I/O), or a mock implementation suitable for unit test environments.</p>
@@ -243,7 +243,7 @@ and to organise serializers / deserializers for java.time.* classes as necessary
 </tr>
 <tr>
 <td>
-<a href="../core.node/-configuration-exception/index.html">node.core.ConfigurationException</a></td>
+<a href="../core.node/-configuration-exception/index.html">node.internal.ConfigurationException</a></td>
 <td>
 </td>
 </tr>
@@ -534,7 +534,7 @@ that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-i-r-s-simulation/index.html">node.core.testing.IRSSimulation</a></td>
+<a href="../core.testing/-i-r-s-simulation/index.html">node.internal.testing.IRSSimulation</a></td>
 <td>
 <p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
 </td>
@@ -775,7 +775,7 @@ MockNetwork code.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-mock-network/index.html">node.core.testing.MockNetwork</a></td>
+<a href="../core.testing/-mock-network/index.html">node.internal.testing.MockNetwork</a></td>
 <td>
 <p>A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
 Components that do IO are either swapped out for mocks, or pointed to a <a href="#">Jimfs</a> in memory filesystem.</p>
@@ -831,7 +831,7 @@ replace each other based on a serial number present in the change.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.node/-node/index.html">node.core.Node</a></td>
+<a href="../core.node/-node/index.html">node.internal.Node</a></td>
 <td>
 <p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../core.node/-service-hub/index.html">ServiceHub</a>,
 loads important data off disk and starts listening for connections.</p>
@@ -1187,7 +1187,7 @@ contained within.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-simulation/index.html">node.core.testing.Simulation</a></td>
+<a href="../core.testing/-simulation/index.html">node.internal.testing.Simulation</a></td>
 <td>
 <p>Base class for network simulations that are based on the unit test / mock environment.</p>
 </td>
@@ -1335,7 +1335,7 @@ themselves.</p>
 </tr>
 <tr>
 <td>
-<a href="../core.testing/-trade-simulation/index.html">node.core.testing.TradeSimulation</a></td>
+<a href="../core.testing/-trade-simulation/index.html">node.internal.testing.TradeSimulation</a></td>
 <td>
 <p>Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
 then B and C trade with each other, then C and A etc).</p>

@@ -1,6 +1,6 @@
 package node.services
 
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test
 

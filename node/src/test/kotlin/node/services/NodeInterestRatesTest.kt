@@ -11,7 +11,7 @@ import core.testing.ALICE_PUBKEY
 import core.testing.MEGA_CORP
 import core.testing.MEGA_CORP_KEY
 import core.utilities.BriefLogFormatter
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import node.services.clientapi.NodeInterestRates
 import org.junit.Assert
 import org.junit.Test

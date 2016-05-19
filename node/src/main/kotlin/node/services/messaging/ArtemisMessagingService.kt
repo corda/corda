@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import core.RunOnCallerThread
 import core.ThreadBox
 import core.messaging.*
-import node.core.Node
+import node.internal.Node
 import core.utilities.loggerFor
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration

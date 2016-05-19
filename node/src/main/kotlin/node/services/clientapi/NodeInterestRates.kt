@@ -8,7 +8,7 @@ import core.math.CubicSplineInterpolator
 import core.math.Interpolator
 import core.math.InterpolatorFactory
 import core.node.services.ServiceType
-import node.core.AbstractNode
+import node.internal.AbstractNode
 import node.services.api.AbstractNodeService
 import node.services.api.AcceptsFileUpload
 import org.slf4j.LoggerFactory

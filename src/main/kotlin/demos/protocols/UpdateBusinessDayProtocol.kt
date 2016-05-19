@@ -12,7 +12,7 @@ import core.serialization.deserialize
 import core.utilities.ProgressTracker
 import node.utilities.ANSIProgressRenderer
 import demos.DemoClock
-import node.core.Node
+import node.internal.Node
 import node.services.network.MockNetworkMapCache
 import protocols.TwoPartyDealProtocol
 import java.time.LocalDate

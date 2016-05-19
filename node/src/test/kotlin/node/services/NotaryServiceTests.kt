@@ -4,7 +4,7 @@ import core.contracts.TransactionBuilder
 import core.seconds
 import core.testing.DUMMY_NOTARY
 import core.testing.DUMMY_NOTARY_KEY
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import node.testutils.issueState
 import org.junit.Before
 import org.junit.Test

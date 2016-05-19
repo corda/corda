@@ -1,4 +1,4 @@
-package node.core
+package node.internal
 
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort

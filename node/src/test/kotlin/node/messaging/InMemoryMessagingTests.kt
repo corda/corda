@@ -6,7 +6,7 @@ import core.messaging.Message
 import core.messaging.TopicStringValidator
 import core.messaging.send
 import core.serialization.deserialize
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.util.*

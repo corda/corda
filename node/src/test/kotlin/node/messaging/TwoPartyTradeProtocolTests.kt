@@ -20,7 +20,7 @@ import core.seconds
 import core.testing.*
 import core.utilities.BriefLogFormatter
 import core.utilities.RecordingMap
-import node.core.testing.MockNetwork
+import node.internal.testing.MockNetwork
 import node.services.config.NodeConfiguration
 import node.services.network.InMemoryMessagingNetwork
 import node.services.persistence.NodeAttachmentService
