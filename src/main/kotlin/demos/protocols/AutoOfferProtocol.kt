@@ -7,11 +7,11 @@ import core.contracts.DealState
 import core.crypto.Party
 import core.contracts.SignedTransaction
 import core.messaging.SingleMessageRecipient
-import core.node.Node
+import node.core.Node
 import core.protocols.ProtocolLogic
 import core.random63BitValue
 import core.serialization.deserialize
-import core.utilities.ANSIProgressRenderer
+import node.utilities.ANSIProgressRenderer
 import core.utilities.ProgressTracker
 import protocols.TwoPartyDealProtocol
 

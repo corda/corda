@@ -3,8 +3,7 @@ package core.node
 import core.contracts.*
 import core.crypto.SecureHash
 import core.messaging.MessagingService
-import core.node.services.IdentityService
-import core.node.subsystems.*
+import core.node.services.*
 import core.utilities.RecordingMap
 import java.time.Clock
 
@@ -24,7 +23,6 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapCache: NetworkMapCache
-    val monitoringService: MonitoringService
     val clock: Clock
 
     /**
