@@ -37,7 +37,7 @@ class NotaryServiceTests {
         tx.setTime(Instant.now(), DUMMY_NOTARY, 30.seconds)
         var wtx = tx.toWireTransaction()
 
-        val protocol = NotaryProtocol(wtx, NotaryProtocol.Companion.tracker())
+        val protocol = NotaryProtocol(wtx, NotaryProtocol.tracker())
         val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
@@ -49,7 +49,7 @@ class NotaryServiceTests {
         val inputState = issueState(clientNode)
         val wtx = TransactionBuilder().withItems(inputState).toWireTransaction()
 
-        val protocol = NotaryProtocol(wtx, NotaryProtocol.Companion.tracker())
+        val protocol = NotaryProtocol(wtx, NotaryProtocol.tracker())
         val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
@@ -63,7 +63,7 @@ class NotaryServiceTests {
         tx.setTime(Instant.now().plusSeconds(3600), DUMMY_NOTARY, 30.seconds)
         var wtx = tx.toWireTransaction()
 
-        val protocol = NotaryProtocol(wtx, NotaryProtocol.Companion.tracker())
+        val protocol = NotaryProtocol(wtx, NotaryProtocol.tracker())
         val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 

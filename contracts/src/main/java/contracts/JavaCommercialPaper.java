@@ -88,7 +88,7 @@ public class JavaCommercialPaper implements Contract {
         @Override
         public Contract getContract() {
             return JCP_PROGRAM_ID;
-            //return SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
+            //return SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
         }
 
         @Override

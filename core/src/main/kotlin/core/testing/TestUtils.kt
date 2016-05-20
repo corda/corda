@@ -73,7 +73,7 @@ val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUM
 
 val MOCK_IDENTITY_SERVICE = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
-fun generateStateRef() = StateRef(SecureHash.Companion.randomSHA256(), 0)
+fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -146,7 +146,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
 
     protected fun runCommandsAndVerify(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
-        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.Companion.randomSHA256())
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.randomSHA256())
         tx.verify()
     }
 
