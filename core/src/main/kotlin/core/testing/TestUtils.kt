@@ -146,7 +146,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
 
     protected fun runCommandsAndVerify(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
-        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.randomSHA256())
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.Companion.randomSHA256())
         tx.verify()
     }
 
