@@ -31,6 +31,9 @@ dependencies {
     testCompile 'org.assertj:assertj-core:3.4.1'
     testCompile "commons-fileupload:commons-fileupload:1.3.1"
 
+    // Guava: Google test library (collections test suite)
+    testCompile "com.google.guava:guava-testlib:19.0"
+
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
