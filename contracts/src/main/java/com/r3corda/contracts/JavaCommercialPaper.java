@@ -3,8 +3,8 @@ package com.r3corda.contracts;
 import com.r3corda.contracts.cash.Cash;
 import com.r3corda.contracts.cash.CashKt;
 import com.r3corda.contracts.cash.InsufficientBalanceException;
-import com.r3corda.core.contracts.TransactionForVerification.InOutGroup;
 import com.r3corda.core.contracts.*;
+import com.r3corda.core.contracts.TransactionForVerification.InOutGroup;
 import com.r3corda.core.crypto.NullPublicKey;
 import com.r3corda.core.crypto.Party;
 import com.r3corda.core.crypto.SecureHash;
@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.Currency;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.r3corda.core.contracts.ContractsDSLKt.requireSingleCommand;
@@ -122,6 +123,20 @@ public class JavaCommercialPaper implements Contract {
 
         public State withoutOwner() {
             return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate, notary);
+        }
+
+        @NotNull
+        @Override
+        public ContractState withNewNotary(@NotNull Party newNotary) {
+            return new State(this.issuance, this.owner, this.faceValue, this.maturityDate, newNotary);
+        }
+
+        @NotNull
+        @Override
+        public List<PublicKey> getParticipants() {
+            List<PublicKey> keys = new ArrayList<>();
+            keys.add(this.owner);
+            return keys;
         }
     }
 

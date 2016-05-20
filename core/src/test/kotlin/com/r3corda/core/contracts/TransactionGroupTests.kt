@@ -29,8 +29,13 @@ class TransactionGroupTests {
                 override val owner: PublicKey,
                 override val notary: Party) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
+            override val participants: List<PublicKey>
+                get() = listOf(owner)
+
+            override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
             override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         }
+
         interface Commands : CommandData {
             class Move() : TypeOnlyCommandData(), Commands
             data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands

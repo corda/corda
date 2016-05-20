@@ -30,7 +30,11 @@ class TransactionSerializationTests {
                 override val owner: PublicKey,
                 override val notary: Party) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
+            override val participants: List<PublicKey>
+                get() = listOf(owner)
+
             override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+            override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
         }
         interface Commands : CommandData {
             class Move() : TypeOnlyCommandData(), Commands
@@ -39,7 +43,7 @@ class TransactionSerializationTests {
         }
     }
 
-        // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
+    // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
     val outputState = TestCash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1, DUMMY_NOTARY)

@@ -1,7 +1,6 @@
 package com.r3corda.core.contracts
 
 import com.esotericsoftware.kryo.Kryo
-import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -131,8 +130,14 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         return copy(sigs = sigs + sig)
     }
 
+    fun withAdditionalSignatures(sigList: Collection<DigitalSignature.WithKey>): SignedTransaction {
+        return copy(sigs = sigs + sigList)
+    }
+
     /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
     operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)
+
+    operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
      * Returns the set of missing signatures - a signature must be present for every command pub key

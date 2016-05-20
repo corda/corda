@@ -595,6 +595,9 @@ class InterestRateSwap() : Contract {
         override val thread = SecureHash.sha256(common.tradeID)
         override val ref = common.tradeID
 
+        override val participants: List<PublicKey>
+            get() = parties.map { it.owningKey }
+
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return (fixedLeg.fixedRatePayer.owningKey in ourKeys) || (floatingLeg.floatingRatePayer.owningKey in ourKeys)
         }
@@ -617,6 +620,8 @@ class InterestRateSwap() : Contract {
                 throw IllegalArgumentException("No such party: $before")
             }
         }
+
+        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
 
         override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 

@@ -16,6 +16,7 @@ import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.api.APIServer
+import com.r3corda.node.services.NotaryChangeService
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MonitoringService
@@ -101,6 +102,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
+    lateinit var notaryChangeService: NotaryChangeService
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeNotaryService: NotaryService? = null
     lateinit var identity: IdentityService
@@ -128,6 +130,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net = makeMessagingService()
         wallet = NodeWalletService(services)
         makeInterestRatesOracleService()
+        api = APIServerImpl(this)
+        notaryChangeService = NotaryChangeService(net, smm)
+
         identity = makeIdentityService()
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with

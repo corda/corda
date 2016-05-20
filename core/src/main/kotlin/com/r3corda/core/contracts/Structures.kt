@@ -1,9 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.TransactionBuilder
-import com.r3corda.core.contracts.TransactionForVerification
-import com.r3corda.core.contracts.Fix
-import com.r3corda.core.contracts.FixOf
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -33,6 +29,15 @@ interface ContractState {
 
     /** Identity of the notary that ensures this state is not used as an input to a transaction more than once */
     val notary: Party
+
+    /** List of public keys for each party that can consume this state in a valid transaction. */
+    val participants: List<PublicKey>
+
+    /**
+     * Copies the underlying data structure, replacing the notary field with the new value.
+     * To replace the notary, we need an approval (signature) from _all_ participants.
+     */
+    fun withNewNotary(newNotary: Party): ContractState
 }
 
 /**
@@ -161,10 +166,6 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 data class Command(val value: CommandData, val signers: List<PublicKey>) {
-    init {
-        require(signers.isNotEmpty())
-    }
-
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
@@ -195,6 +196,12 @@ data class TimestampCommand(val after: Instant?, val before: Instant?) : Command
 
     val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
 }
+
+/**
+ * Indicates that the transaction is only used for changing the Notary for a state. If present in a transaction,
+ * the contract code is not run, and special platform-level validation logic is used instead
+ */
+class ChangeNotary : TypeOnlyCommandData()
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for

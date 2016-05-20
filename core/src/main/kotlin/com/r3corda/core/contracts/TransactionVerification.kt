@@ -1,6 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import java.util.*
@@ -64,25 +63,20 @@ data class TransactionForVerification(val inStates: List<ContractState>,
     /**
      * Verifies that the transaction is valid:
      * - Checks that the input states and the timestamp point to the same Notary
-     * - Runs the contracts for this transaction. If any contract fails to verify, the whole transaction
-     *   is considered to be invalid
+     * - Runs the contracts for this transaction. If any contract fails to verify, the whole transaction is
+     *   considered to be invalid. In case of a special type of transaction, e.g. for changing notary for a state,
+     *   runs custom platform level validation logic instead.
      *
      * TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.
      *
-     * @throws TransactionVerificationException if a contract throws an exception (the original is in the cause field)
-     *                                          or the transaction has references to more than one Notary
+     * @throws TransactionVerificationException if validation logic fails or if a contract throws an exception
+     *                                          (the original is in the cause field)
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
         verifySingleNotary()
-        val contracts = (inStates.map { it.contract } + outStates.map { it.contract }).toSet()
-        for (contract in contracts) {
-            try {
-                contract.verify(this)
-            } catch(e: Throwable) {
-                throw TransactionVerificationException.ContractRejection(this, contract, e)
-            }
-        }
+
+        if (isChangeNotaryTx()) verifyNotaryChange() else runContractVerify()
     }
 
     private fun verifySingleNotary() {
@@ -91,6 +85,36 @@ data class TransactionForVerification(val inStates: List<ContractState>,
         if (inStates.any { it.notary != notary }) throw TransactionVerificationException.MoreThanOneNotary(this)
         val timestampCmd = commands.singleOrNull { it.value is TimestampCommand } ?: return
         if (!timestampCmd.signers.contains(notary.owningKey)) throw TransactionVerificationException.MoreThanOneNotary(this)
+    }
+
+    private fun isChangeNotaryTx() = commands.any { it.value is ChangeNotary }
+
+    /**
+     * A notary change transaction is valid if:
+     * - It contains only a single command - [ChangeNotary]
+     * - Outputs are identical to inputs apart from the notary field (each input/output state pair must have the same index)
+     */
+    private fun verifyNotaryChange() {
+        try {
+            check(commands.size == 1)
+            inStates.zip(outStates).forEach {
+                // TODO: Check that input and output state(s) differ only by notary pointer
+                check(it.first.notary != it.second.notary)
+            }
+        } catch (e: IllegalStateException) {
+            throw TransactionVerificationException.InvalidNotaryChange(this)
+        }
+    }
+
+    private fun runContractVerify() {
+        val contracts = (inStates.map { it.contract } + outStates.map { it.contract }).toSet()
+        for (contract in contracts) {
+            try {
+                contract.verify(this)
+            } catch(e: Throwable) {
+                throw TransactionVerificationException.ContractRejection(this, contract, e)
+            }
+        }
     }
 
     /**
@@ -108,6 +132,7 @@ data class TransactionForVerification(val inStates: List<ContractState>,
 
     /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
     fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
+
     /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */
     fun getTimestampByName(vararg authorityName: String): TimestampCommand? = commands.getTimestampByName(*authorityName)
 
@@ -169,4 +194,5 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
 sealed class TransactionVerificationException(val tx: TransactionForVerification, cause: Throwable?) : Exception(cause) {
     class ContractRejection(tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
+    class InvalidNotaryChange(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
 }

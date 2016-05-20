@@ -60,10 +60,13 @@ class Cash : FungibleAsset<Currency>() {
         override val contract = CASH_PROGRAM_ID
         override val issuanceDef: Issued<Currency>
             get() = amount.token
+        override val participants: List<PublicKey>
+            get() = listOf(owner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
     }
 
     // Just for grouping

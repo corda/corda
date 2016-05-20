@@ -13,6 +13,7 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.URLClassLoader
+import java.security.PublicKey
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -32,9 +33,13 @@ class AttachmentClassLoaderTests {
     }
 
     class AttachmentDummyContract : Contract {
-        class State(val magicNumber: Int = 0,
-                    override val notary: Party) : ContractState {
+        data class State(val magicNumber: Int = 0,
+                         override val notary: Party) : ContractState {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
+            override val participants: List<PublicKey>
+                get() = listOf()
+
+            override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
         }
 
         interface Commands : CommandData {

@@ -3,7 +3,6 @@ package com.r3corda.contracts
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.cash.InsufficientBalanceException
 import com.r3corda.contracts.cash.sumCashBy
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
@@ -51,6 +50,8 @@ class CommercialPaper : Contract {
             override val notary: Party
     ) : OwnableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
+        override val participants: List<PublicKey>
+            get() = listOf(owner)
 
         fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
@@ -62,6 +63,8 @@ class CommercialPaper : Contract {
         override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
+
+        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
     }
 
     interface Commands : CommandData {

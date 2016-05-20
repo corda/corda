@@ -8,18 +8,22 @@
 
 package com.r3corda.contracts.isolated
 
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import java.security.PublicKey
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
 val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
 class AnotherDummyContract : Contract, com.r3corda.core.node.DummyContractBackdoor {
-    class State(val magicNumber: Int = 0, override val notary: Party) : ContractState {
+    data class State(val magicNumber: Int = 0, override val notary: Party) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
+        override val participants: List<PublicKey>
+            get() = emptyList()
+
+        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
     }
 
     interface Commands : CommandData {
