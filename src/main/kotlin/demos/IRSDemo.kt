@@ -4,17 +4,18 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import core.crypto.Party
 import core.logElapsedTime
-import core.node.Node
-import core.node.NodeConfiguration
-import core.node.NodeConfigurationFromConfig
+import node.internal.Node
+import node.services.config.NodeConfiguration
+import node.services.config.NodeConfigurationFromConfig
 import core.node.NodeInfo
-import core.node.services.NetworkMapService
-import core.node.services.NodeInterestRates
-import core.node.services.NotaryService
+import node.services.network.NetworkMapService
+import node.services.clientapi.NodeInterestRates
+import node.services.transactions.NotaryService
 import core.node.services.ServiceType
-import core.node.subsystems.ArtemisMessagingService
+import node.services.messaging.ArtemisMessagingService
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
+import demos.api.InterestRateSwapAPI
 import demos.protocols.AutoOfferProtocol
 import demos.protocols.ExitServerProtocol
 import demos.protocols.UpdateBusinessDayProtocol
@@ -76,8 +77,8 @@ fun main(args: Array<String>) {
     }
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapId,
-                                                advertisedServices, DemoClock(),
-                                                listOf(demos.api.InterestRateSwapAPI::class.java)).start() }
+            advertisedServices, DemoClock(),
+            listOf(InterestRateSwapAPI::class.java)).start() }
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.

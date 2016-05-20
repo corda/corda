@@ -2,6 +2,7 @@ package core.testing
 
 import com.google.common.base.Throwables
 import core.utilities.BriefLogFormatter
+import node.internal.testing.IRSSimulation
 import org.junit.Test
 
 class IRSSimulationTest {

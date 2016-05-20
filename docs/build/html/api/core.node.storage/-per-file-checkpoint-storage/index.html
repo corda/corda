@@ -18,7 +18,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">PerFileCheckpointStorage</span><span class="symbol">(</span><span class="identifier" id="core.node.storage.PerFileCheckpointStorage$<init>(java.nio.file.Path)/storeDir">storeDir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span></code><p>File-based checkpoint storage, storing checkpoints per file.</p>
+<code><span class="identifier">PerFileCheckpointStorage</span><span class="symbol">(</span><span class="identifier" id="node.services.persistence.PerFileCheckpointStorage$<init>(java.nio.file.Path)/storeDir">storeDir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span></code><p>File-based checkpoint storage, storing checkpoints per file.</p>
 </td>
 </tr>
 </tbody>
@@ -50,14 +50,14 @@ checkpoints to disk.</p>
 <td>
 <a href="add-checkpoint.html">addCheckpoint</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">addCheckpoint</span><span class="symbol">(</span><span class="identifier" id="core.node.storage.PerFileCheckpointStorage$addCheckpoint(core.node.storage.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Add a new checkpoint to the store.</p>
+<code><span class="keyword">fun </span><span class="identifier">addCheckpoint</span><span class="symbol">(</span><span class="identifier" id="node.services.persistence.PerFileCheckpointStorage$addCheckpoint(node.services.api.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Add a new checkpoint to the store.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="remove-checkpoint.html">removeCheckpoint</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">removeCheckpoint</span><span class="symbol">(</span><span class="identifier" id="core.node.storage.PerFileCheckpointStorage$removeCheckpoint(core.node.storage.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Remove existing checkpoint from the store. It is an error to attempt to remove a checkpoint which doesnt exist
+<code><span class="keyword">fun </span><span class="identifier">removeCheckpoint</span><span class="symbol">(</span><span class="identifier" id="node.services.persistence.PerFileCheckpointStorage$removeCheckpoint(node.services.api.Checkpoint)/checkpoint">checkpoint</span><span class="symbol">:</span>&nbsp;<a href="../-checkpoint/index.html"><span class="identifier">Checkpoint</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Remove existing checkpoint from the store. It is an error to attempt to remove a checkpoint which doesnt exist
 in the store. Doing so will throw an <a href="http://docs.oracle.com/javase/6/docs/api/java/lang/IllegalArgumentException.html">IllegalArgumentException</a>.</p>
 </td>
 </tr>

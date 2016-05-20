@@ -1,11 +1,13 @@
 package demos.api
 
-import api.*
 import contracts.InterestRateSwap
 import core.utilities.loggerFor
 import demos.protocols.AutoOfferProtocol
 import demos.protocols.ExitServerProtocol
 import demos.protocols.UpdateBusinessDayProtocol
+import node.api.APIServer
+import node.api.ProtocolClassRef
+import node.api.StatesQuery
 import java.net.URI
 import java.time.LocalDate
 import javax.ws.rs.*
