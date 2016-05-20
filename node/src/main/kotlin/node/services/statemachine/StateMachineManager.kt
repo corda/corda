@@ -61,8 +61,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
 
     val scheduler = FiberScheduler()
 
-    // This map is backed by a database and will be used to store serialised state machines to disk, so we can resurrect
-    // them across node restarts.
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
     private val stateMachines = synchronizedMap(HashMap<ProtocolStateMachineImpl<*>, Checkpoint>())
