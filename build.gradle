@@ -73,7 +73,7 @@ dependencies {
 // In Java 9 (hopefully) the requirement to annotate methods as @Suspendable will go away.
 
 applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
-mainClassName = 'demos.TraderDemoKt'
+mainClassName = 'com.r3corda.demos.TraderDemoKt'
 
 tasks.withType(Test) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
