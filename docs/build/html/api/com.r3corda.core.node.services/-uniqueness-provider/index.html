@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<title>UniquenessProvider - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">UniquenessProvider</a><br/>
+<br/>
+<h1>UniquenessProvider</h1>
+<code><span class="keyword">interface </span><span class="identifier">UniquenessProvider</span></code><br/>
+<p>A service that records input states of the given transaction and provides conflict information
+if any of the inputs have already been used in another transaction</p>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-conflict/index.html">Conflict</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Conflict</span></code><p>Specifies the consuming transaction for every conflicting state</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-consuming-tx/index.html">ConsumingTx</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ConsumingTx</span></code><p>Specifies the transaction id, the position of the consumed state in the inputs, and
+the caller identity requesting the commit</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="commit.html">commit</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">commit</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.UniquenessProvider$commit(com.r3corda.core.contracts.WireTransaction, com.r3corda.core.crypto.Party)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.node.services.UniquenessProvider$commit(com.r3corda.core.contracts.WireTransaction, com.r3corda.core.crypto.Party)/callerIdentity">callerIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Commits all input states of the given transaction</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.transactions/-in-memory-uniqueness-provider/index.html">InMemoryUniquenessProvider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryUniquenessProvider</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">UniquenessProvider</span></code><p>A dummy Uniqueness provider that stores the whole history of consumed states in memory</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

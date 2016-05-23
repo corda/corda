@@ -1,0 +1,32 @@
+<HTML>
+<HEAD>
+<title>ArtemisMessagingService.<init> - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">ArtemisMessagingService</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">ArtemisMessagingService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingService$<init>(java.nio.file.Path, , java.util.concurrent.Executor)/directory">directory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingService$<init>(java.nio.file.Path, , java.util.concurrent.Executor)/myHostPort">myHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingService$<init>(java.nio.file.Path, , java.util.concurrent.Executor)/defaultExecutor">defaultExecutor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a>&nbsp;<span class="symbol">=</span>&nbsp;RunOnCallerThread<span class="symbol">)</span></code><br/>
+<p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
+with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
+as well.</p>
+<p>The current implementation is skeletal and lacks features like security or firewall tunnelling (that is, you must
+be able to receive TCP connections in order to receive messages). It is good enough for local communication within
+a fully connected network, trusted network or on localhost.</p>
+<br/>
+<br/>
+<h3>Parameters</h3>
+<a name="directory"></a>
+<code>directory</code> - A place where Artemis can stash its message journal and other files.<br/>
+<br/>
+<a name="myHostPort"></a>
+<code>myHostPort</code> - What host and port to bind to for receiving inbound connections.<br/>
+<br/>
+<a name="defaultExecutor"></a>
+<code>defaultExecutor</code> - This will be used as the default executor to run message handlers on, if no other is specified.<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

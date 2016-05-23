@@ -1,0 +1,44 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.node.services.persistence - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">com.r3corda.node.services.persistence</a><br/>
+<br/>
+<h2>Package com.r3corda.node.services.persistence</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-data-vending-service/index.html">DataVendingService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DataVendingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
+glue that sits between the network layer and the database layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-attachment-service/index.html">NodeAttachmentService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeAttachmentService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a></code><p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-per-file-checkpoint-storage/index.html">PerFileCheckpointStorage</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">PerFileCheckpointStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a></code><p>File-based checkpoint storage, storing checkpoints per file.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-storage-service-impl/index.html">StorageServiceImpl</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">StorageServiceImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

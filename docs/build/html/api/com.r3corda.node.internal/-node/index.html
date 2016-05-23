@@ -1,0 +1,343 @@
+<HTML>
+<HEAD>
+<title>Node - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.node.internal</a>&nbsp;/&nbsp;<a href=".">Node</a><br/>
+<br/>
+<h1>Node</h1>
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></code><br/>
+<p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="#">ServiceHub</a>,
+loads important data off disk and starts listening for connections.</p>
+<h3>Parameters</h3>
+<a name="dir"></a>
+<code>dir</code> - A <a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html">Path</a> to a location on disk where working files can be found or stored.<br/>
+<br/>
+<a name="p2pAddr"></a>
+<code>p2pAddr</code> - The host and port that this server will use. It cant find out its own external hostname, so you
+have to specify that yourself.<br/>
+<br/>
+<a name="configuration"></a>
+<code>configuration</code> - This is typically loaded from a .properties file<br/>
+<br/>
+<a name="networkMapAddress"></a>
+<code>networkMapAddress</code> - An external network map service to use. Should only ever be null when creating the first
+network map service, while bootstrapping a network.<br/>
+<br/>
+<a name="advertisedServices"></a>
+<code>advertisedServices</code> - The services this node advertises. This must be a subset of the services it runs,
+but nodes are not required to advertise services they run (hence subset).<br/>
+<br/>
+<a name="clientAPIs"></a>
+<code>clientAPIs</code> - A list of JAX-RS annotated classes to register
+which will be used to register any extra client web interfaces the node requires for demos to use.
+Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter<br/>
+<br/>
+<a name="clock"></a>
+<code>clock</code> - The clock used within the node and by all protocols etc<br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Node</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/p2pAddr">p2pAddr</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/configuration">configuration</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/networkMapAddress">networkMapAddress</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/clock">clock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Clock.systemUTC()<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/clientAPIs">clientAPIs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;listOf()<span class="symbol">)</span></code><p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="#">ServiceHub</a>,
+loads important data off disk and starts listening for connections.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="client-a-p-is.html">clientAPIs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">clientAPIs</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="log.html">log</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">log</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="p2p-addr.html">p2pAddr</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">p2pAddr</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="server-thread.html">serverThread</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serverThread</span><span class="symbol">: </span><a href="../../com.r3corda.node.utilities/-affinity-executor/-service-affinity-executor/index.html"><span class="identifier">ServiceAffinityExecutor</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="web-server.html">webServer</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">webServer</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-node/_services-that-accept-uploads.html">_servicesThatAcceptUploads</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">_servicesThatAcceptUploads</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.api/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/advertised-services.html">advertisedServices</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">advertisedServices</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/api.html">api</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">api</span><span class="symbol">: </span><a href="../../com.r3corda.node.api/-a-p-i-server/index.html"><span class="identifier">APIServer</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/checkpoint-storage.html">checkpointStorage</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">checkpointStorage</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/configuration.html">configuration</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/dir.html">dir</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dir</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/identity.html">identity</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/in-node-network-map-service.html">inNodeNetworkMapService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeNetworkMapService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.network/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/in-node-notary-service.html">inNodeNotaryService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeNotaryService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.transactions/-notary-service/index.html"><span class="identifier">NotaryService</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/info.html">info</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">info</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/interest-rates-service.html">interestRatesService</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">interestRatesService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-service/index.html"><span class="identifier">Service</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/key-management.html">keyManagement</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">keyManagement</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.keys/-e2-e-test-key-management-service/index.html"><span class="identifier">E2ETestKeyManagementService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/net.html">net</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/network-map-registration-future.html">networkMapRegistrationFuture</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">networkMapRegistrationFuture</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">?</span></code><p>Completes once the node has successfully registered with the network map service. Null until <a href="../-abstract-node/start.html">start</a> returns.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/network-map-seq.html">networkMapSeq</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">networkMapSeq</span><span class="symbol">: </span><span class="identifier">Long</span></code><p>Sequence number of changes sent to the network map service, when registering/de-registering this node</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/network-map-service.html">networkMapService</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/platform-clock.html">platformClock</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">platformClock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/services.html">services</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/services-that-accept-uploads.html">servicesThatAcceptUploads</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">servicesThatAcceptUploads</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.node.services.api/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/smm.html">smm</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">smm</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.statemachine/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/started.html">started</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">started</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Set to true once <a href="../-abstract-node/start.html">start</a> has been successfully called.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/storage.html">storage</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/wallet.html">wallet</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">wallet</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="make-messaging-service.html">makeMessagingService</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Node</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="start-messaging-service.html">startMessagingService</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">startMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="stop.html">stop</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-node/construct-storage-service.html">constructStorageService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">constructStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, java.security.KeyPair, com.r3corda.core.crypto.Party)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.persistence/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, java.security.KeyPair, com.r3corda.core.crypto.Party)/keypair">keypair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, java.security.KeyPair, com.r3corda.core.crypto.Party)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.persistence/-storage-service-impl/index.html"><span class="identifier">StorageServiceImpl</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/find-my-location.html">findMyLocation</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">findMyLocation</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-physical-location/index.html"><span class="identifier">PhysicalLocation</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/generate-key-pair.html">generateKeyPair</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/initialise-storage-service.html">initialiseStorageService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/make-attachment-storage.html">makeAttachmentStorage</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">makeAttachmentStorage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$makeAttachmentStorage(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.persistence/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/make-identity-service.html">makeIdentityService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeIdentityService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/make-interest-rates-oracle-service.html">makeInterestRatesOracleService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeInterestRatesOracleService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/make-network-map-service.html">makeNetworkMapService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNetworkMapService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/make-notary-service.html">makeNotaryService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNotaryService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/no-network-map-configured.html">noNetworkMapConfigured</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">noNetworkMapConfigured</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This is overriden by the mock node implementation to enable operation without any network map service</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-d-e-f-a-u-l-t_-p-o-r-t.html">DEFAULT_PORT</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DEFAULT_PORT</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>The port that is used by default if none is specified. As you know, 31337 is the most elite number.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

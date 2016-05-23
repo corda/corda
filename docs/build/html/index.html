@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to the R3 prototyping repository! &mdash; R3 Corda latest documentation</title>
+  <title>Welcome to the Corda repository! &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -89,6 +89,7 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -96,12 +97,13 @@
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorial_contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
@@ -135,7 +137,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="#">Docs</a> &raquo;</li>
       
-    <li>Welcome to the R3 prototyping repository!</li>
+    <li>Welcome to the Corda repository!</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -149,20 +151,21 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="welcome-to-the-r3-prototyping-repository">
-<h1>Welcome to the R3 prototyping repository!<a class="headerlink" href="#welcome-to-the-r3-prototyping-repository" title="Permalink to this headline">¶</a></h1>
-<p>This documentation describes the first prototype of a possible future R3 shared ledger platform.</p>
-<p>The goal of this prototype is to explore fundamentally better designs for transactions, states and smart contract APIs
-than what presently exists on the market, tailor made for the needs of the financial industry. We are attempting to
-prove or disprove the following hypothesis:</p>
-<p><em>The combination of</em></p>
+  <div class="section" id="welcome-to-the-corda-repository">
+<h1>Welcome to the Corda repository!<a class="headerlink" href="#welcome-to-the-corda-repository" title="Permalink to this headline">¶</a></h1>
+<p>This documentation describes the prototype of a proposed architecture for distributed ledgers.</p>
+<p>The goal of this prototype is to explore fundamentally better designs for distributed ledgers than what presently exists
+on the market, tailor made for the needs of the financial industry. We are attempting to prove or disprove the
+following hypothesis:</p>
+<p>The combination of</p>
 <ul class="simple">
-<li><em>An upgraded state transition model</em></li>
-<li><em>Industry standard, production quality virtual machines and languages</em></li>
-<li><em>Limited data propagation</em></li>
-<li><em>Conflict resolution without proof of work or blocks</em></li>
+<li>An upgraded state transition model</li>
+<li>Industry standard, production quality virtual machines and languages</li>
+<li>An advanced orchestration framework</li>
+<li>Limited data propagation</li>
+<li>Conflict resolution without proof of work or blocks</li>
 </ul>
-<p><em>is sufficiently powerful to justify the creation of a new platform implementation.</em></p>
+<p>is sufficiently powerful to justify the creation of a new platform implementation.</p>
 <p>Read on to learn:</p>
 <div class="toctree-wrapper compound" id="overview">
 <p class="caption"><span class="caption-text">Overview</span><a class="headerlink" href="#overview" title="Permalink to this toctree">¶</a></p>
@@ -185,6 +188,14 @@ prove or disprove the following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="data-model.html#rationale">Rationale</a></li>
 <li class="toctree-l2"><a class="reference internal" href="data-model.html#pros">Pros</a></li>
 <li class="toctree-l2"><a class="reference internal" href="data-model.html#cons">Cons</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#notary">Notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#validation">Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#multiple-notaries">Multiple Notaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#timestamping">Timestamping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#implementation-usage">Implementation &amp; Usage</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a><ul>
@@ -215,16 +226,16 @@ prove or disprove the following hypothesis:</p>
 <div class="toctree-wrapper compound" id="tutorials">
 <p class="caption"><span class="caption-text">Tutorials</span><a class="headerlink" href="#tutorials" title="Permalink to this toctree">¶</a></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorial_contract.html">Writing a contract</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#starting-the-commercial-paper-class">Starting the commercial paper class</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#states">States</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#commands">Commands</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#the-verify-function">The verify function</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#using-state-groups">Using state groups</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#checking-the-requirements">Checking the requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#how-to-test-your-contract">How to test your contract</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#adding-a-generation-api-to-your-contract">Adding a generation API to your contract</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_contract.html#non-asset-oriented-based-smart-contracts">Non-asset-oriented based smart contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#starting-the-commercial-paper-class">Starting the commercial paper class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#states">States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#commands">Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#the-verify-function">The verify function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#using-state-groups">Using state groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#checking-the-requirements">Checking the requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#how-to-test-your-contract">How to test your contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#adding-a-generation-api-to-your-contract">Adding a generation API to your contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial-contract.html#non-asset-oriented-based-smart-contracts">Non-asset-oriented based smart contracts</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a><ul>
@@ -251,6 +262,7 @@ prove or disprove the following hypothesis:</p>
 <div class="toctree-wrapper compound" id="appendix">
 <p class="caption"><span class="caption-text">Appendix</span><a class="headerlink" href="#appendix" title="Permalink to this toctree">¶</a></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="codestyle.html#general-style">1. General style</a></li>

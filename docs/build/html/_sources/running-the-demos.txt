@@ -14,28 +14,26 @@ The demos have only been tested on MacOS X and Ubuntu Linux. If you have success
 The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.
 
-For Windows users, the contents of the shell scripts are very trivial and can easily be done by hand from a command
-window. Essentially, it just runs Gradle to create the startup scripts, and then starts the node with one set of
-flags or another. Alternatively you could play with the new Linux syscall support in Windows 10!
-
 Trader demo
 -----------
 
 Open two terminals, and in the first run:::
 
-    ./scripts/trader-demo.sh buyer
+    gradle installDist && ./build/install/r3prototyping/bin/trader-demo.sh --role=BUYER
 
-It will compile things, if necessary, then create a directory named "buyer" with a bunch of files inside and start
-the node. You should see it waiting for a trade to begin.
+It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
+start the node. You should see it waiting for a trade to begin.
 
 In the second terminal, run::
 
-    ./scripts/trader-demo.sh seller
+    ./build/install/r3prototyping/bin/trader-demo.sh --role=SELLER
 
 You should see some log lines scroll past, and within a few seconds the messages "Purchase complete - we are a
 happy customer!" and "Sale completed - we have a happy customer!" should be printed.
 
 If it doesn't work, jump on the mailing list and let us know.
+
+On Windows, use the same commands, but run the batch file instead of the shell file.
 
 
 IRS demo

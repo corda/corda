@@ -1,0 +1,134 @@
+<HTML>
+<HEAD>
+<title>InterestRateSwap.Common - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.contracts</a>&nbsp;/&nbsp;<a href="../index.html">InterestRateSwap</a>&nbsp;/&nbsp;<a href=".">Common</a><br/>
+<br/>
+<h1>Common</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Common</span></code><br/>
+<p>This Common area contains all the information that is not leg specific.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Common</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/baseCurrency">baseCurrency</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/eligibleCurrency">eligibleCurrency</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/eligibleCreditSupport">eligibleCreditSupport</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/independentAmounts">independentAmounts</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/threshold">threshold</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/minimumTransferAmount">minimumTransferAmount</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/rounding">rounding</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/valuationDate">valuationDate</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/notificationTime">notificationTime</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/resolutionTime">resolutionTime</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/interestRate">interestRate</span><span class="symbol">:</span>&nbsp;<a href="../../-reference-rate/index.html"><span class="identifier">ReferenceRate</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/addressForTransfers">addressForTransfers</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/exposure">exposure</span><span class="symbol">:</span>&nbsp;<a href="../../-unknown-type/index.html"><span class="identifier">UnknownType</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/localBusinessDay">localBusinessDay</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-business-calendar/index.html"><span class="identifier">BusinessCalendar</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/dailyInterestAmount">dailyInterestAmount</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-expression/index.html"><span class="identifier">Expression</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/tradeID">tradeID</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Common$<init>(java.util.Currency, java.util.Currency, kotlin.String, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, com.r3corda.core.contracts.Amount, kotlin.String, kotlin.String, kotlin.String, com.r3corda.contracts.ReferenceRate, kotlin.String, com.r3corda.contracts.UnknownType, com.r3corda.core.contracts.BusinessCalendar, com.r3corda.core.contracts.Expression, kotlin.String, kotlin.String)/hashLegalDocs">hashLegalDocs</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span></code><p>This Common area contains all the information that is not leg specific.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="address-for-transfers.html">addressForTransfers</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">addressForTransfers</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="base-currency.html">baseCurrency</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">baseCurrency</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="daily-interest-amount.html">dailyInterestAmount</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dailyInterestAmount</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-expression/index.html"><span class="identifier">Expression</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="eligible-credit-support.html">eligibleCreditSupport</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">eligibleCreditSupport</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="eligible-currency.html">eligibleCurrency</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">eligibleCurrency</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="exposure.html">exposure</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">exposure</span><span class="symbol">: </span><a href="../../-unknown-type/index.html"><span class="identifier">UnknownType</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="hash-legal-docs.html">hashLegalDocs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">hashLegalDocs</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="independent-amounts.html">independentAmounts</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">independentAmounts</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="interest-rate.html">interestRate</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">interestRate</span><span class="symbol">: </span><a href="../../-reference-rate/index.html"><span class="identifier">ReferenceRate</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="local-business-day.html">localBusinessDay</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">localBusinessDay</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-business-calendar/index.html"><span class="identifier">BusinessCalendar</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="minimum-transfer-amount.html">minimumTransferAmount</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">minimumTransferAmount</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="notification-time.html">notificationTime</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">notificationTime</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="resolution-time.html">resolutionTime</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">resolutionTime</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="rounding.html">rounding</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">rounding</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="threshold.html">threshold</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">threshold</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="trade-i-d.html">tradeID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">tradeID</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="valuation-date.html">valuationDate</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">valuationDate</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

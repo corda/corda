@@ -1,0 +1,48 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.node.utilities - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">com.r3corda.node.utilities</a><br/>
+<br/>
+<h2>Package com.r3corda.node.utilities</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-a-n-s-i-progress-renderer/index.html">ANSIProgressRenderer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ANSIProgressRenderer</span></code><p>Knows how to render a <a href="../com.r3corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
+command line tools, demos, tests etc. Just set the <a href="-a-n-s-i-progress-renderer/progress-tracker.html">progressTracker</a> field and it will go ahead and start drawing
+if the terminal supports it. Otherwise it just prints out the name of the step whenever it changes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-add-or-remove/index.html">AddOrRemove</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">AddOrRemove</span></code><p>Enum for when adding/removing something, for example adding or removing an entry in a directory.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-affinity-executor/index.html">AffinityExecutor</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">AffinityExecutor</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a></code><p>An extended executor interface that supports thread affinity assertions and short circuiting. This can be useful
+for ensuring code runs on the right thread, and also for unit testing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-json-support/index.html">JsonSupport</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">JsonSupport</span></code><p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
+the java.time API, some core types, and Kotlin data classes.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

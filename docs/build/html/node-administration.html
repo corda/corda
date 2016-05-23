@@ -90,6 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Node administration</a><ul>
@@ -102,12 +103,13 @@
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorial_contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
@@ -162,7 +164,7 @@ access a REST API and so on.</p>
 <div class="section" id="monitoring-your-node">
 <h2>Monitoring your node<a class="headerlink" href="#monitoring-your-node" title="Permalink to this headline">¶</a></h2>
 <p>Like most Java servers, the node exports various useful metrics and management operations via the industry-standard
-<a class="reference external" href="https://en.wikipedia.org/wiki/Java_Management_Extensions">JMX infrastructure</a>. JMX is a standard _in-<a href="#id1"><span class="problematic" id="id2">process_</span></a> API
+<a class="reference external" href="https://en.wikipedia.org/wiki/Java_Management_Extensions">JMX infrastructure</a>. JMX is a standard API
 for registering so-called _MBeans_ ... objects whose properties and methods are intended for server management. It does
 not require any particular network protocol for export. So this data can be exported from the node in various ways:
 some monitoring systems provide a &#8220;Java Agent&#8221;, which is essentially a JVM plugin that finds all the MBeans and sends

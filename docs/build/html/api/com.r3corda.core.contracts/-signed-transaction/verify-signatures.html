@@ -1,0 +1,21 @@
+<HTML>
+<HEAD>
+<title>SignedTransaction.verifySignatures - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">SignedTransaction</a>&nbsp;/&nbsp;<a href=".">verifySignatures</a><br/>
+<br/>
+<h1>verifySignatures</h1>
+<a name="com.r3corda.core.contracts.SignedTransaction$verifySignatures()"></a>
+<code><span class="keyword">fun </span><span class="identifier">verifySignatures</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<p>Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
+to ensure there are no missing signatures: use verify() to do that. This weaker version can be useful for
+checking a partially signed transaction being prepared by multiple co-operating parties.</p>
+<h3>Exceptions</h3>
+<a name="SignatureException"></a>
+<code>SignatureException</code> - if the signature is invalid or does not match.<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

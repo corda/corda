@@ -1,0 +1,42 @@
+<HTML>
+<HEAD>
+<title>Node.<init> - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.node.internal</a>&nbsp;/&nbsp;<a href="index.html">Node</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">Node</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/p2pAddr">p2pAddr</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/configuration">configuration</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/networkMapAddress">networkMapAddress</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/clock">clock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Clock.systemUTC()<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.Node$<init>(java.nio.file.Path, , com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock, kotlin.collections.List((java.lang.Class((kotlin.Any)))))/clientAPIs">clientAPIs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;listOf()<span class="symbol">)</span></code><br/>
+<p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="#">ServiceHub</a>,
+loads important data off disk and starts listening for connections.</p>
+<h3>Parameters</h3>
+<a name="dir"></a>
+<code>dir</code> - A <a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html">Path</a> to a location on disk where working files can be found or stored.<br/>
+<br/>
+<a name="p2pAddr"></a>
+<code>p2pAddr</code> - The host and port that this server will use. It cant find out its own external hostname, so you
+have to specify that yourself.<br/>
+<br/>
+<a name="configuration"></a>
+<code>configuration</code> - This is typically loaded from a .properties file<br/>
+<br/>
+<a name="networkMapAddress"></a>
+<code>networkMapAddress</code> - An external network map service to use. Should only ever be null when creating the first
+network map service, while bootstrapping a network.<br/>
+<br/>
+<a name="advertisedServices"></a>
+<code>advertisedServices</code> - The services this node advertises. This must be a subset of the services it runs,
+but nodes are not required to advertise services they run (hence subset).<br/>
+<br/>
+<a name="clientAPIs"></a>
+<code>clientAPIs</code> - A list of JAX-RS annotated classes to register
+which will be used to register any extra client web interfaces the node requires for demos to use.
+Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter<br/>
+<br/>
+<a name="clock"></a>
+<code>clock</code> - The clock used within the node and by all protocols etc<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

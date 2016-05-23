@@ -1,0 +1,25 @@
+<HTML>
+<HEAD>
+<title>NotaryService.processRequest - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.node.services.transactions</a>&nbsp;/&nbsp;<a href="index.html">NotaryService</a>&nbsp;/&nbsp;<a href=".">processRequest</a><br/>
+<br/>
+<h1>processRequest</h1>
+<a name="com.r3corda.node.services.transactions.NotaryService$processRequest(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.contracts.WireTransaction)), com.r3corda.core.crypto.Party)"></a>
+<code><span class="keyword">fun </span><span class="identifier">processRequest</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$processRequest(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.contracts.WireTransaction)), com.r3corda.core.crypto.Party)/txBits">txBits</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$processRequest(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.contracts.WireTransaction)), com.r3corda.core.crypto.Party)/reqIdentity">reqIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-result/index.html"><span class="identifier">Result</span></a></code><br/>
+<p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
+if any of the input states have been previously committed</p>
+<p>Note that the transaction is not checked for contract-validity, as that would require fully resolving it
+into a <a href="#">TransactionForVerification</a>, for which the caller would have to reveal the whole transaction history chain.
+As a result, the Notary <emph>will commit invalid transactions</emph> as well, but as it also records the identity of
+the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
+undo the commit of the input states (the exact mechanism still needs to be worked out)</p>
+<p>TODO: the notary service should only be able to see timestamp commands and inputs</p>
+<br/>
+<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

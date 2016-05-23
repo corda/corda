@@ -1,0 +1,53 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.contracts.testing - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">com.r3corda.contracts.testing</a><br/>
+<br/>
+<h2>Package com.r3corda.contracts.testing</h2>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-c-a-s-h.html">CASH</a></td>
+<td>
+<code><span class="keyword">val </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">.</span><span class="identifier">CASH</span><span class="symbol">: </span><a href="../com.r3corda.contracts/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-t-e-s-t_-p-r-o-g-r-a-m_-m-a-p.html">TEST_PROGRAM_MAP</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">TEST_PROGRAM_MAP</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-state.html">generateState</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$generateState(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts/-dummy-contract/-state/index.html"><span class="identifier">State</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="issued by.html">issued by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.Cash.State, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="owned by.html">owned by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.Cash.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts/-cash/-state/index.html"><span class="identifier">State</span></a></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.CommercialPaper.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(, java.security.PublicKey)/new_owner">new_owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

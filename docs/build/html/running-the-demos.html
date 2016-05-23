@@ -90,6 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running the demos</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#trader-demo">Trader demo</a></li>
@@ -101,12 +102,13 @@
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorial_contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
@@ -167,24 +169,22 @@ rates oracle, all driven via the HTTP API.</li>
 <p>The demos have only been tested on MacOS X and Ubuntu Linux. If you have success on other platforms, please let us know.</p>
 <p>The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.</p>
-<p>For Windows users, the contents of the shell scripts are very trivial and can easily be done by hand from a command
-window. Essentially, it just runs Gradle to create the startup scripts, and then starts the node with one set of
-flags or another. Alternatively you could play with the new Linux syscall support in Windows 10!</p>
 <div class="section" id="trader-demo">
 <h2>Trader demo<a class="headerlink" href="#trader-demo" title="Permalink to this headline">¶</a></h2>
 <p>Open two terminals, and in the first run::</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">buyer</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradle</span> <span class="n">installDist</span> <span class="p">&amp;&amp;</span> <span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">BUYER</span>
 </pre></div>
 </div>
-<p>It will compile things, if necessary, then create a directory named &#8220;buyer&#8221; with a bunch of files inside and start
-the node. You should see it waiting for a trade to begin.</p>
+<p>It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
+start the node. You should see it waiting for a trade to begin.</p>
 <p>In the second terminal, run:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">seller</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">SELLER</span>
 </pre></div>
 </div>
 <p>You should see some log lines scroll past, and within a few seconds the messages &#8220;Purchase complete - we are a
 happy customer!&#8221; and &#8220;Sale completed - we have a happy customer!&#8221; should be printed.</p>
 <p>If it doesn&#8217;t work, jump on the mailing list and let us know.</p>
+<p>On Windows, use the same commands, but run the batch file instead of the shell file.</p>
 </div>
 <div class="section" id="irs-demo">
 <h2>IRS demo<a class="headerlink" href="#irs-demo" title="Permalink to this headline">¶</a></h2>

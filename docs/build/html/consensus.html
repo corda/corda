@@ -1,0 +1,338 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Consensus Model &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Networking and messaging" href="messaging.html"/>
+        <link rel="prev" title="Data model" href="data-model.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Consensus Model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#notary">Notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#validation">Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#multiple-notaries">Multiple Notaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#timestamping">Timestamping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-usage">Implementation &amp; Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Consensus Model</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/consensus.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="consensus-model">
+<h1>Consensus Model<a class="headerlink" href="#consensus-model" title="Permalink to this headline">¶</a></h1>
+<p>The fundamental unit of consensus in Corda is the <strong>state</strong>. The concept of consensus can be divided into two parts:</p>
+<ol class="arabic simple">
+<li>Consensus over state <strong>validity</strong> &#8211; parties can reach certainty that a transaction defining output states is accepted by the contracts pointed to by the states and has all the required signatures. This is achieved by parties independently running the same contract code and validation logic (as described in <a class="reference internal" href="data-model.html"><span class="doc">data model</span></a>)</li>
+<li>Consensus over state <strong>uniqueness</strong> &#8211; parties can reach certainty the the output states created in a transaction are the unique successors to the input states consumed by that transaction (in other words &#8211; a state has not been used as an input by more than one transaction)</li>
+</ol>
+<p>This article presents an initial model for addressing the <strong>uniqueness</strong> problem.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The current model is still a <strong>work in progress</strong> and everything described in this article can and is likely to change</p>
+</div>
+<div class="section" id="notary">
+<h2>Notary<a class="headerlink" href="#notary" title="Permalink to this headline">¶</a></h2>
+<p>We introduce the concept of a <strong>Notary</strong>, which is an authority responsible for attesting that for a given transaction, it had not signed another transaction consuming any of its input states.
+The data model is extended so that every <strong>state</strong> has an appointed Notary:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">interface</span> <span class="nc">ContractState</span> <span class="p">{</span>
+    <span class="cm">/** Contract by which the state belongs */</span>
+    <span class="k">val</span> <span class="py">contract</span><span class="p">:</span> <span class="n">Contract</span>
+
+    <span class="cm">/** Identity of the notary that ensures this state is not used as an input to a transaction more than once */</span>
+    <span class="k">val</span> <span class="py">notary</span><span class="p">:</span> <span class="n">Party</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>All transactions have to be signed by their input state Notary for the output states to be <strong>valid</strong> (apart from <em>issue</em> transactions, containing no input states).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The Notary is a logical concept and can itself be a distributed entity, potentially a cluster maintained by mutually distrusting parties</p>
+</div>
+<p>When the Notary is requested to sign a transaction, it either signs over it, attesting that the outputs are the <strong>unique</strong> successors of the inputs,
+or provides conflict information for any input state that had been consumed by another transaction it had signed before.
+In doing so, the Notary provides the point of finality in the system. Until the Notary signature is obtained, parties cannot be sure that an equally valid, but conflicting transaction,
+will not be regarded as confirmed. After the signature is obtained, the parties know that the inputs to this transaction have been uniquely consumed by this transaction.
+Hence it is the point at which we can say finality has occurred.</p>
+</div>
+<div class="section" id="validation">
+<h2>Validation<a class="headerlink" href="#validation" title="Permalink to this headline">¶</a></h2>
+<p>The Notary <em>does not validate</em> transaction integrity (i.e. does not run contracts or check signatures) to minimise the exposed data.
+Validation would require the caller to reveal the whole transaction history chain, resulting in a privacy leak.</p>
+<p>However, this makes it open to &#8220;denial of state&#8221; attacks, where a party could submit any invalid transaction to the Notary and thus &#8220;block&#8221; someone else&#8217;s states.
+That is partially alleviated by requiring the calling party to authenticate and storing its identity for the request.
+The conflict information returned by the Notary specifies the consuming transaction id along with the identity of the party that had requested the commit.
+If the conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states of the conflicting invalid transaction are &#8220;un-committed&#8221; (to be covered by legal process).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">At present the Notary can see the entire transaction, but we have a separate piece of work to replace the parts of the transaction it does not require knowing about with hashes (only input references, timestamp information, overall transaction ID and the necessary digests of the rest of the transaction to prove that the referenced inputs/timestamps really do form part of the stated transaction ID should be visible).</p>
+</div>
+</div>
+<div class="section" id="multiple-notaries">
+<h2>Multiple Notaries<a class="headerlink" href="#multiple-notaries" title="Permalink to this headline">¶</a></h2>
+<p>More than one Notary can exist in the network. This gives the following benefits:</p>
+<ul class="simple">
+<li><strong>Custom behaviour</strong>. We can have both validating and privacy preserving Notaries &#8211; parties can make a choice based on their specific requirements</li>
+<li><strong>Load balancing</strong>. Spreading the transaction load over multiple Notaries will allow higher transaction throughput in the platform overall</li>
+<li><strong>Low latency</strong>. Latency could be minimised by choosing a Notary physically closer the transacting parties</li>
+</ul>
+<p>A transaction should only be signed by a Notary if all of its input states point to it.
+In cases where a transaction involves states controlled by multiple Notaries, the states first have to be repointed to the same notary.
+This is achieved by using a special type of transaction that doesn&#8217;t modify anything but the Notary pointer of the state.
+Ensuring that all input states point to the same Notary is the responsibility of each involved party
+(it is another condition for an output state of the transaction to be <strong>valid</strong>)</p>
+</div>
+<div class="section" id="timestamping">
+<h2>Timestamping<a class="headerlink" href="#timestamping" title="Permalink to this headline">¶</a></h2>
+<p>In this model the Notary also acts as a <strong>Timestamping Authority</strong>, verifying the transaction timestamp command.</p>
+<p>For a timestamp to be meaningful, its implications must be binding on the party requesting it.
+A party can obtain a timestamp signature in order to prove that some event happened before/on/or after a particular point in time.
+However, if the party is not also compelled to commit to the associated transaction, it has a choice of whether or not to reveal this fact until some point in the future.
+As a result, we need to ensure that the Notary either has to also sign the transaction within some time tolerance,
+or perform timestamping <em>and</em> notarisation at the same time, which is the chosen behaviour for this model.</p>
+</div>
+<div class="section" id="implementation-usage">
+<h2>Implementation &amp; Usage<a class="headerlink" href="#implementation-usage" title="Permalink to this headline">¶</a></h2>
+<p>At present we have single basic implementation of a Notary that uses a <code class="code docutils literal"><span class="pre">UniquenessProvider</span></code> storing committed input states in memory:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">InMemoryUniquenessProvider</span><span class="p">()</span> <span class="p">:</span> <span class="n">UniquenessProvider</span> <span class="p">{</span>
+    <span class="cm">/** For each input state store the consuming transaction information */</span>
+    <span class="k">private</span> <span class="k">val</span> <span class="py">committedStates</span> <span class="p">=</span> <span class="n">HashMap</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;()</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">commit</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">,</span> <span class="n">callerIdentity</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="p">...</span>
+<span class="cm">/**</span>
+<span class="cm"> * Specifies the transaction id, the position of the consumed state in the inputs, and</span>
+<span class="cm"> * the caller identity requesting the commit</span>
+<span class="cm"> */</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">ConsumingTx</span><span class="p">(</span><span class="k">val</span> <span class="py">id</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">,</span> <span class="k">val</span> <span class="py">inputIndex</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="k">val</span> <span class="py">requestingParty</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To obtain a signature from a Notary use <code class="code docutils literal"><span class="pre">NotaryProtocol</span></code>, passing in a <code class="code docutils literal"><span class="pre">WireTransaction</span></code>.
+The protocol will work out which Notary needs to be called based on the input states and the timestamp command.
+For example, the following snippet can be used when writing a custom protocol:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">private</span> <span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">NotaryProtocol</span><span class="p">(</span><span class="n">wtx</span><span class="p">))</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>On conflict the <code class="code docutils literal"><span class="pre">NotaryProtocol</span></code> with throw a <code class="code docutils literal"><span class="pre">NotaryException</span></code> containing the conflict details:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** Specifies the consuming transaction for the conflicting input state */</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">Conflict</span><span class="p">(</span><span class="k">val</span> <span class="py">stateHistory</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;)</span>
+</pre></div>
+</div>
+<p>Conflict handling and resolution is currently the responsibility of the protocol author.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="messaging.html" class="btn btn-neutral float-right" title="Networking and messaging" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="data-model.html" class="btn btn-neutral" title="Data model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

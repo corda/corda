@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Using the visualiser" href="visualiser.html"/>
+        <link rel="next" title="Release process" href="release-process.html"/>
         <link rel="prev" title="Protocol state machines" href="protocol-state-machines.html"/> 
 
   
@@ -90,6 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -97,7 +98,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="tutorial_contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Writing oracle services</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
@@ -110,6 +111,7 @@
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
@@ -309,13 +311,13 @@ requested via <code class="docutils literal"><span class="pre">query</span></cod
 <li>Defining a lower level service class, that binds network messages to the API.</li>
 <li>Defining a protocol using the <a class="reference internal" href="protocol-state-machines.html"><span class="doc">Protocol state machines</span></a> framework to make it easy for a client to interact
 with the oracle.</li>
+<li>Constructing it (when advertised) in <code class="docutils literal"><span class="pre">AbstractNode</span></code>.</li>
 </ol>
 <p>An example of how to do this can be found in the <code class="docutils literal"><span class="pre">NodeInterestRates.Oracle</span></code>, <code class="docutils literal"><span class="pre">NodeInterestRates.Service</span></code> and
-<code class="docutils literal"><span class="pre">RateFixProtocol</span></code> classes. The exact details of how this code works will change in future, so for now consulting
-the protocols tutorial and the code for the server-side oracles implementation will have to suffice. There will be more
-detail added once the platform APIs have settled down.</p>
-<p>Currently, there&#8217;s no network map service, so the location and identity keys of an oracle must be distributed out of
-band.</p>
+<code class="docutils literal"><span class="pre">RateFixProtocol</span></code> classes.</p>
+<p>The exact details of how this code works will change in future, so for now consulting the protocols tutorial and the
+code for the server-side oracles implementation will have to suffice. There will be more detail added once the
+platform APIs have settled down.</p>
 </div>
 </div>
 
@@ -326,7 +328,7 @@ band.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="visualiser.html" class="btn btn-neutral float-right" title="Using the visualiser" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="release-process.html" class="btn btn-neutral float-right" title="Release process" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="protocol-state-machines.html" class="btn btn-neutral" title="Protocol state machines" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -1,0 +1,102 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.demos - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">com.r3corda.demos</a><br/>
+<br/>
+<h2>Package com.r3corda.demos</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-demo-clock/index.html">DemoClock</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DemoClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-role/index.html">Role</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">Role</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-trader-demo-protocol-buyer/index.html">TraderDemoProtocolBuyer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TraderDemoProtocolBuyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-trader-demo-protocol-seller/index.html">TraderDemoProtocolSeller</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TraderDemoProtocolSeller</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-d-e-m-o_-t-o-p-i-c.html">DEMO_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DEMO_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-i-r-n-a-m-e.html">DIRNAME</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DIRNAME</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="main.html">main</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><code><span class="keyword">fun </span><span class="identifier">main</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$main(kotlin.Array((kotlin.String)))/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Creates a dummy transaction that requires a rate fix within a certain range, and gets it signed by an oracle
+service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="node-info.html">nodeInfo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">nodeInfo</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$nodeInfo(kotlin.String, kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)))/hostAndPortString">hostAndPortString</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos$nodeInfo(kotlin.String, kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)))/identityFile">identityFile</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos$nodeInfo(kotlin.String, kotlin.String, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)))/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;emptySet()<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="parse-options.html">parseOptions</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseOptions</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$parseOptions(kotlin.Array((kotlin.String)), )/args">args</span><span class="symbol">:</span>&nbsp;<span class="identifier">Array</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos$parseOptions(kotlin.Array((kotlin.String)), )/parser">parser</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="run-buyer.html">runBuyer</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">runBuyer</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$runBuyer(com.r3corda.node.internal.Node)/node">node</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.internal/-node/index.html"><span class="identifier">Node</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="run-seller.html">runSeller</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">runSeller</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$runSeller(, com.r3corda.node.internal.Node, )/myNetAddr">myNetAddr</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos$runSeller(, com.r3corda.node.internal.Node, )/node">node</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.internal/-node/index.html"><span class="identifier">Node</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos$runSeller(, com.r3corda.node.internal.Node, )/theirNetAddr">theirNetAddr</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="setup-directory.html">setupDirectory</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">setupDirectory</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos$setupDirectory(com.r3corda.demos.Role)/mode">mode</span><span class="symbol">:</span>&nbsp;<a href="-role/index.html"><span class="identifier">Role</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,102 @@
+<HTML>
+<HEAD>
+<title>FixableDealState - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">FixableDealState</a><br/>
+<br/>
+<h1>FixableDealState</h1>
+<code><span class="keyword">interface </span><span class="identifier">FixableDealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-deal-state/index.html"><span class="identifier">DealState</span></a></code><br/>
+<p>Interface adding fixing specific methods</p>
+<br/>
+<br/>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-deal-state/parties.html">parties</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">parties</span><span class="symbol">: </span><span class="identifier">Array</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code><p>Exposes the Parties involved in a generic way</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-deal-state/ref.html">ref</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">ref</span><span class="symbol">: </span><span class="identifier">String</span></code><p>Human readable well known reference (e.g. trade reference)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-fix.html">generateFix</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateRef, com.r3corda.core.contracts.Fix)/ptx">ptx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateRef, com.r3corda.core.contracts.Fix)/oldStateRef">oldStateRef</span><span class="symbol">:</span>&nbsp;<a href="../-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateRef, com.r3corda.core.contracts.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="../-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Generate a fixing command for this deal and fix</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="next-fixing-of.html">nextFixingOf</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">nextFixingOf</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">?</span></code><p>When is the next fixing and what is the fixing for?</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-deal-state/generate-agreement.html">generateAgreement</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
+deal/agreement protocol to generate the necessary transaction for potential implementations</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-deal-state/with-public-key.html">withPublicKey</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">withPublicKey</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DealState$withPublicKey(com.r3corda.core.crypto.Party, java.security.PublicKey)/before">before</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.DealState$withPublicKey(com.r3corda.core.crypto.Party, java.security.PublicKey)/after">after</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-deal-state/index.html"><span class="identifier">DealState</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../hash.html">hash</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">hash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>Returns the SHA-256 hash of the serialised contents of this state (not cached)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.testing/label.html">label</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">label</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing$label(com.r3corda.core.contracts.ContractState, kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.testing/-labeled-output/index.html"><span class="identifier">LabeledOutput</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts/-interest-rate-swap/-state/index.html">State</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FixableDealState</span></code><p>The state class contains the 4 major data classes</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,0 +1,44 @@
+<HTML>
+<HEAD>
+<title>SerializeAsToken - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">SerializeAsToken</a><br/>
+<br/>
+<h1>SerializeAsToken</h1>
+<code><span class="keyword">interface </span><span class="identifier">SerializeAsToken</span></code><br/>
+<p>This interface should be implemented by classes that want to substitute a token representation of themselves if
+they are serialized because they have a lot of internal state that does not serialize (well).</p>
+<p>This models a similar pattern to the readReplace/writeReplace methods in Java serialization.</p>
+<p>With Kryo serialisation, these classes should also annotate themselves with @DefaultSerializer.  See below.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="token.html">token</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">token</span><span class="symbol">: </span><a href="../-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-serialize-as-string-token/index.html">SerializeAsStringToken</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">SerializeAsStringToken</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SerializeAsToken</span></code><p>A base class for implementing large objects / components / services that need to serialize themselves to a string token
+to indicate which instance the token is a serialized form of.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
