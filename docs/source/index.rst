@@ -36,6 +36,7 @@ Read on to learn:
    :maxdepth: 2
    :caption: Tutorials
 
+   where-to-start
    tutorial-contract
    protocol-state-machines
    oracles
