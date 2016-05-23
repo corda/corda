@@ -331,7 +331,7 @@ Here are some code examples:
 The ``groupStates`` call uses the provided function to calculate a "grouping key". All states that have the same
 grouping key are placed in the same group. A grouping key can be anything that implements equals/hashCode, but it's
 always an aggregate of the fields that shouldn't change between input and output. In the above example we picked the
-fields we wanted and packed them into a ``Pair``. It returns a list of ``InOutGroup``s, which is just a holder for the
+fields we wanted and packed them into a ``Pair``. It returns a list of ``InOutGroup``, which is just a holder for the
 inputs, outputs and the key that was used to define the group. In the Kotlin version we unpack these using destructuring
 to get convenient access to the inputs, the outputs, the deposit data and the currency. The Java version is more
 verbose, but equivalent.
