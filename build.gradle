@@ -86,7 +86,7 @@ tasks.withType(JavaExec) {
 
 // Package up the demo programs.
 task getRateFixDemo(type: CreateStartScripts) {
-    mainClassName = "demos.RateFixDemoKt"
+    mainClassName = "com.r3corda.demos.RateFixDemoKt"
     applicationName = "get-rate-fix"
     defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
     outputDir = new File(project.buildDir, 'scripts')
@@ -94,7 +94,7 @@ task getRateFixDemo(type: CreateStartScripts) {
 }
 
 task getIRSDemo(type: CreateStartScripts) {
-    mainClassName = "demos.IRSDemoKt"
+    mainClassName = "com.r3corda.demos.IRSDemoKt"
     applicationName = "irsdemo"
     defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
     outputDir = new File(project.buildDir, 'scripts')
@@ -102,7 +102,7 @@ task getIRSDemo(type: CreateStartScripts) {
 }
 
 task getTraderDemo(type: CreateStartScripts) {
-    mainClassName = "demos.TraderDemoKt"
+    mainClassName = "com.r3corda.demos.TraderDemoKt"
     applicationName = "trader-demo"
     defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
     outputDir = new File(project.buildDir, 'scripts')
