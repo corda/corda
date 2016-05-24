@@ -32,6 +32,9 @@ import kotlin.concurrent.withLock
  * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [ProtocolLogic]
  * implementations to be able to wait for some condition to become true outside of message send/receive.  At that point
  * we may revisit this implementation and indeed the whole model for this, when we understand that requirement more fully.
+ *
+ * TODO: We should consider using a [Semaphore] or [CountDownLatch] here to make it a little easier to understand, but it seems
+ *       as though the current version of Qasar does not support suspending on either of their implementations.
  */
 class FiberBox<T>(private val content: T, private val lock: Lock = ReentrantLock()) {
     private var mutated: SettableFuture<Boolean>? = null
