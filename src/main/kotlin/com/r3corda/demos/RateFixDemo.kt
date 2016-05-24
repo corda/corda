@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.hours
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
@@ -83,7 +84,7 @@ fun main(args: Array<String>) {
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionType.General.Builder()
     tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.keyManagement.freshKey().public), notary.identity))
-    val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance)
+    val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance, 24.hours)
     node.smm.add("demo.ratefix", protocol).get()
     node.stop()
 

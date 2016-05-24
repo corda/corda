@@ -71,9 +71,15 @@ abstract class ProtocolLogic<T> {
 
     private fun maybeWireUpProgressTracking(subLogic: ProtocolLogic<*>) {
         val ours = progressTracker
+
         val theirs = subLogic.progressTracker
-        if (ours != null && theirs != null)
+        if (ours != null && theirs != null) {
+            if (ours.currentStep == ProgressTracker.UNSTARTED) {
+                logger.warn("ProgressTracker has not been started for $this")
+                ours.nextStep()
+            }
             ours.setChildProgressTracker(ours.currentStep, theirs)
+        }
     }
 
     /**

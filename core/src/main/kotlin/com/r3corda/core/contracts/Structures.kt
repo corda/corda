@@ -3,6 +3,8 @@ package com.r3corda.core.contracts
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.protocols.ProtocolLogicRef
+import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.serialize
 import java.io.FileNotFoundException
@@ -141,6 +143,33 @@ interface OwnableState : ContractState {
     fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
 }
 
+/** Something which is scheduled to happen at a point in time */
+interface Scheduled {
+    val scheduledAt: Instant
+}
+
+/**
+ * Represents a contract state (unconsumed output) of type [LinearState] and a point in time that a lifecycle event is expected to take place
+ * for that contract state.
+ *
+ * This is effectively the input to a scheduler, which wakes up at that point in time and asks the contract state what
+ * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
+ */
+data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
+
+/**
+ * This class represents the lifecycle activity that a contract state of type [LinearState] would like to perform at a given point in time.
+ * e.g. run a fixing protocol
+ *
+ * Note the use of [ProtocolLogicRef] to represent a safe way to transport a [ProtocolLogic] out of the contract sandbox.
+ *
+ * Currently we support only protocol based activities as we expect there to be a transaction generated off the back of
+ * the activity, otherwise we have to start tracking secondary state on the platform of which scheduled activities
+ * for a particular [ContractState] have been processed/fired etc.  If the activity is not "on ledger" then the
+ * scheduled activity shouldn't be either.
+ */
+data class ScheduledActivity(val logicRef: ProtocolLogicRef, override val scheduledAt: Instant) : Scheduled
+
 /**
  * A state that evolves by superseding itself, all of which share the common "thread"
  *
@@ -154,12 +183,24 @@ interface LinearState : ContractState {
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
 }
 
+interface SchedulableState : ContractState {
+    /**
+     * Indicate whether there is some activity to be performed at some future point in time with respect to this
+     * [ContractState], what that activity is and at what point in time it should be initiated.
+     * This can be used to implement deadlines for payment or processing of financial instruments according to a schedule.
+     *
+     * The state has no reference to it's own StateRef, so supply that for use as input to any ProtocolLogic constructed.
+     *
+     * @return null if there is no activity to schedule
+     */
+    fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity?
+}
+
 /**
  * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
  * implementation of general protocols that manipulate many agreement types.
  */
 interface DealState : LinearState {
-
     /** Human readable well known reference (e.g. trade reference) */
     val ref: String
 
@@ -187,8 +228,6 @@ interface DealState : LinearState {
 interface FixableDealState : DealState {
     /**
      * When is the next fixing and what is the fixing for?
-     *
-     * TODO: In future we would use this to register for an event to trigger a/the fixing protocol
      */
     fun nextFixingOf(): FixOf?
 

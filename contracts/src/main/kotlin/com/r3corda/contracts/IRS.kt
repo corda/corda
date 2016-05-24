@@ -3,6 +3,9 @@ package com.r3corda.contracts
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
+import com.r3corda.protocols.TwoPartyDealProtocol
 import org.apache.commons.jexl3.JexlBuilder
 import org.apache.commons.jexl3.MapContext
 import java.math.BigDecimal
@@ -588,7 +591,7 @@ class InterestRateSwap() : Contract {
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
             val common: Common
-    ) : FixableDealState {
+    ) : FixableDealState, SchedulableState {
 
         override val contract = IRS_PROGRAM_ID
         override val thread = SecureHash.sha256(common.tradeID)
@@ -603,6 +606,14 @@ class InterestRateSwap() : Contract {
 
         override val parties: Array<Party>
             get() = arrayOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
+
+        override fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity? {
+            val nextFixingOf = nextFixingOf() ?: return null
+
+            // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
+            val (instant, duration) = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay)
+            return ScheduledActivity(protocolLogicRefFactory.create(TwoPartyDealProtocol.FixingRoleDecider::class.java, thisStateRef, duration), instant)
+        }
 
         // TODO: This changing of the public key violates the assumption that Party is a fixed identity key.
         override fun withPublicKey(before: Party, after: PublicKey): DealState {

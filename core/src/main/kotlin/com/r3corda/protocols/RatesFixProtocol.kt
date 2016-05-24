@@ -1,7 +1,6 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.*
 import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.FixOf
 import com.r3corda.core.contracts.TransactionBuilder
@@ -10,8 +9,12 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
 import java.math.BigDecimal
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 
 // This code is unit tested in NodeInterestRates.kt
@@ -29,6 +32,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
                             private val fixOf: FixOf,
                             private val expectedRate: BigDecimal,
                             private val rateTolerance: BigDecimal,
+                            private val timeOut: Duration,
                             override val progressTracker: ProgressTracker = RatesFixProtocol.tracker(fixOf.name)) : ProtocolLogic<Unit>() {
     companion object {
         val TOPIC = "platform.rates.interest.fix"
@@ -44,7 +48,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     class FixOutOfRange(val byAmount: BigDecimal) : Exception()
 
-    class QueryRequest(val queries: List<FixOf>, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class QueryRequest(val queries: List<FixOf>, replyTo: SingleMessageRecipient, sessionID: Long, val deadline: Instant) : AbstractRequestMessage(replyTo, sessionID)
     class SignRequest(val tx: WireTransaction, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
 
     @Suspendable
@@ -92,7 +96,9 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
     @Suspendable
     fun query(): Fix {
         val sessionID = random63BitValue()
-        val req = QueryRequest(listOf(fixOf), serviceHub.networkService.myAddress, sessionID)
+        val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.identity.name, fixOf.forDay).end
+        val req = QueryRequest(listOf(fixOf), serviceHub.networkService.myAddress, sessionID, deadline)
+        // TODO: add deadline to receive
         val resp = sendAndReceive<ArrayList<Fix>>(TOPIC_QUERY, oracle.address, 0, sessionID, req)
 
         return resp.validate {

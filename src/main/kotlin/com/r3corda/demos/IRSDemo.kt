@@ -1,18 +1,11 @@
 package com.r3corda.demos
 
 import com.google.common.net.HostAndPort
-import com.typesafe.config.ConfigFactory
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.node.internal.Node
-import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.demos.api.InterestRateSwapAPI
@@ -20,13 +13,23 @@ import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.internal.Node
 import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.node.services.FixingSessionInitiationHandler
+import com.r3corda.node.services.clientapi.NodeInterestRates
+import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.OptionSet
+import org.apache.commons.io.IOUtils
 import java.io.DataOutputStream
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -34,8 +37,6 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
-import org.apache.commons.io.IOUtils
-import java.net.SocketTimeoutException
 
 // IRS DEMO
 //
@@ -304,6 +305,7 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
         AutoOfferProtocol.Handler.register(node)
         UpdateBusinessDayProtocol.Handler.register(node)
         ExitServerProtocol.Handler.register(node)
+        FixingSessionInitiationHandler.register(node)
 
         if (cliParams.uploadRates) {
             runUploadRates(cliParams.apiAddress)

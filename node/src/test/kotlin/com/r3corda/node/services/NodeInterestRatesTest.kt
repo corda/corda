@@ -21,6 +21,8 @@ import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.protocols.RatesFixProtocol
 import org.junit.Assert
 import org.junit.Test
+import java.time.Clock
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -37,11 +39,12 @@ class NodeInterestRatesTest {
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
     val DUMMY_CASH_ISSUER = Party("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
 
-    val oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY).apply { knownFixes = TEST_DATA }
+    val clock = Clock.systemUTC()
+    val oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
 
     @Test fun `query successfully`() {
         val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val res = oracle.query(listOf(q))
+        val res = oracle.query(listOf(q), clock.instant())
         assertEquals(1, res.size)
         assertEquals("0.678".bd, res[0].value)
         assertEquals(q, res[0].of)
@@ -50,13 +53,13 @@ class NodeInterestRatesTest {
     @Test fun `query with one success and one missing`() {
         val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
-        val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2)) }
+        val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2), clock.instant()) }
         assertEquals(e.fix, q2)
     }
 
     @Test fun `query successfully with interpolated rate`() {
         val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
-        val res = oracle.query(listOf(q))
+        val res = oracle.query(listOf(q), clock.instant())
         assertEquals(1, res.size)
         Assert.assertEquals(0.7316228, res[0].value.toDouble(), 0.0000001)
         assertEquals(q, res[0].of)
@@ -64,11 +67,11 @@ class NodeInterestRatesTest {
 
     @Test fun `rate missing and unable to interpolate`() {
         val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
-        assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q)) }
+        assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q), clock.instant()) }
     }
 
     @Test fun `empty query`() {
-        assertFailsWith<IllegalArgumentException> { oracle.query(emptyList()) }
+        assertFailsWith<IllegalArgumentException> { oracle.query(emptyList(), clock.instant()) }
     }
 
     @Test fun `refuse to sign with no relevant commands`() {
@@ -80,7 +83,7 @@ class NodeInterestRatesTest {
 
     @Test fun `sign successfully`() {
         val tx = makeTX()
-        val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
+        val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
         tx.addCommand(fix, oracle.identity.owningKey)
 
         // Sign successfully.
@@ -106,7 +109,7 @@ class NodeInterestRatesTest {
 
         val tx = TransactionType.General.Builder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.info, fixOf, "0.675".bd, "0.1".bd)
+        val protocol = RatesFixProtocol(tx, n2.info, fixOf, "0.675".bd, "0.1".bd, Duration.ofNanos(1))
         BriefLogFormatter.initVerbose("rates")
         val future = n1.smm.add("rates", protocol)
 
