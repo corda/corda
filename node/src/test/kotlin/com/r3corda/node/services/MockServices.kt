@@ -5,6 +5,7 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.testing.MOCK_IDENTITY_SERVICE
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.Checkpoint
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MonitoringService
@@ -40,7 +41,7 @@ class MockServices(
         val storage: StorageService? = MockStorageService(),
         val mapCache: NetworkMapCache? = MockNetworkMapCache(),
         val mapService: NetworkMapService? = null,
-        val overrideClock: Clock? = Clock.systemUTC()
+        val overrideClock: Clock? = NodeClock()
 ) : ServiceHubInternal {
     override val walletService: WalletService = customWallet ?: NodeWalletService(this)
 

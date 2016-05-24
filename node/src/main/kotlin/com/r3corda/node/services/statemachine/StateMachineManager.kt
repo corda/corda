@@ -12,10 +12,7 @@ import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
-import com.r3corda.core.serialization.SerializedBytes
-import com.r3corda.core.serialization.THREAD_LOCAL_KRYO
-import com.r3corda.core.serialization.createKryo
-import com.r3corda.core.serialization.deserialize
+import com.r3corda.core.serialization.*
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.trace
@@ -51,8 +48,6 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Timeouts
  * TODO: Surfacing of exceptions via an API and/or management UI
  * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
- * TODO: Make Kryo (de)serialize markers for heavy objects that are currently in the service hub. This avoids mistakes
- *       where services are temporarily put on the stack.
  * TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.
  */
 @ThreadSafe
@@ -75,6 +70,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
     private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
     private val totalStartedProtocols = metrics.counter("Protocols.Started")
     private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
+
+    // Context for tokenized services in checkpoints
+    private val serializationContext = SerializeAsTokenContext(serviceHub)
 
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
     fun <T> findStateMachines(klass: Class<out ProtocolLogic<T>>): List<Pair<ProtocolLogic<T>, ListenableFuture<T>>> {
@@ -139,6 +137,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
     private fun deserializeFiber(serialisedFiber: SerializedBytes<out ProtocolStateMachine<*>>): ProtocolStateMachineImpl<*> {
         val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
         val kryo = createKryo(deserializer.kryo)
+        // put the map of token -> tokenized into the kryo context
+        SerializeAsTokenSerializer.setContext(kryo, serializationContext)
         return serialisedFiber.deserialize(kryo) as ProtocolStateMachineImpl<*>
     }
 
@@ -202,9 +202,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
                                     obj: Any?,
                                     resumeFunc: (ProtocolStateMachineImpl<*>) -> Unit) {
         executor.checkOnThread()
-        val onSuspend = fun(request: FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) {
+        val onSuspend = fun(request: FiberRequest, fiber: ProtocolStateMachineImpl<*>) {
             // We have a request to do something: send, receive, or send-and-receive.
             if (request is FiberRequest.ExpectingResponse<*>) {
+                // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
+                val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
+                val kryo = createKryo(deserializer.kryo)
+                // add the map of tokens -> tokenizedServices to the kyro context
+                SerializeAsTokenSerializer.setContext(kryo, serializationContext)
+                val serialisedFiber = fiber.serialize(kryo)
                 // Prepare a listener on the network that runs in the background thread when we received a message.
                 checkpointAndSetupMessageHandler(psm, request, serialisedFiber)
             }
