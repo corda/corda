@@ -168,28 +168,40 @@ how this works in <a class="reference internal" href="protocol-state-machines.ht
 <li>The IRS demo, which shows two nodes establishing an interest rate swap between them and performing fixings with a
 rates oracle, all driven via the HTTP API.</li>
 </ol>
-<p>The demos have only been tested on MacOS X and Ubuntu Linux. If you have success on other platforms, please let us know.</p>
 <p>The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Corda is developed on MacOS and works best on UNIX systems. The trader demo is easily run on Windows but
+you won&#8217;t get the nice coloured output. The IRS demo relies on a shell script wrapper and isn&#8217;t so easily run on
+Windows currently: we will fix this soon.</p>
+</div>
 <div class="section" id="trader-demo">
 <h2>Trader demo<a class="headerlink" href="#trader-demo" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">On Windows, use the same commands, but run the batch file instead of the shell file (add .bat to the command)</p>
+</div>
 <p>Open two terminals, and in the first run::</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradle</span> <span class="n">installDist</span> <span class="p">&amp;&amp;</span> <span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">BUYER</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">gradle</span> <span class="n">installDist</span> <span class="p">&amp;&amp;</span> <span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">BUYER</span>
 </pre></div>
 </div>
 <p>It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
 start the node. You should see it waiting for a trade to begin.</p>
 <p>In the second terminal, run:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">SELLER</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">SELLER</span>
 </pre></div>
 </div>
 <p>You should see some log lines scroll past, and within a few seconds the messages &#8220;Purchase complete - we are a
 happy customer!&#8221; and &#8220;Sale completed - we have a happy customer!&#8221; should be printed.</p>
 <p>If it doesn&#8217;t work, jump on the mailing list and let us know.</p>
-<p>On Windows, use the same commands, but run the batch file instead of the shell file.</p>
 </div>
 <div class="section" id="irs-demo">
 <h2>IRS demo<a class="headerlink" href="#irs-demo" title="Permalink to this headline">¶</a></h2>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This demo currently works best on MacOS or Linux</p>
+</div>
 <p>Open three terminals. In the first run::</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">irs</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">nodeA</span>
 </pre></div>
@@ -205,9 +217,12 @@ see some rates data get loaded.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">irs</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">trade</span> <span class="n">trade1</span>
 </pre></div>
 </div>
-<p>You should see some activity in the other two terminals as they set up the deal. Further instructions will be printed
-at this point showing how to advance the current date, so you can see them perform fixings and (eventually) complete
-the deal.</p>
+<p>You should see some activity in the other two terminals as they set up the deal. You can now run this command in
+a separate window to roll the fake clock forward and trigger lots of fixing events. Things go fast so make sure you
+can see the other terminals whilst you run this command!:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">scripts</span><span class="p">/</span><span class="n">irs</span><span class="p">-</span><span class="n">demo</span><span class="p">.</span><span class="n">sh</span> <span class="n">date</span> <span class="m">2017</span><span class="p">-</span><span class="m">01</span><span class="p">-</span><span class="m">30</span>
+</pre></div>
+</div>
 </div>
 </div>
 
