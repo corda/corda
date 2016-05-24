@@ -1,6 +1,6 @@
-package com.r3corda.core.testutils
+package com.r3corda.node.internal.testing
 
-import com.r3corda.core.utilities.MutableClock
+import com.r3corda.node.utilities.MutableClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

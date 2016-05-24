@@ -1,6 +1,6 @@
 package com.r3corda.demos
 
-import com.r3corda.core.utilities.MutableClock
+import com.r3corda.node.utilities.MutableClock
 import java.time.*
 import javax.annotation.concurrent.ThreadSafe
 

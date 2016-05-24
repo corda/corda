@@ -1,11 +1,11 @@
-package com.r3corda.core.utilities
+package com.r3corda.node.utilities
 
 
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.r3corda.core.RetryableException
-import com.r3corda.core.testutils.TestClock
+import com.r3corda.node.internal.testing.TestClock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
