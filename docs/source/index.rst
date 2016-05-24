@@ -46,6 +46,7 @@ Read on to learn:
    :caption: Appendix
 
    release-process
+   release-notes
    visualiser
    codestyle
    building-the-docs
