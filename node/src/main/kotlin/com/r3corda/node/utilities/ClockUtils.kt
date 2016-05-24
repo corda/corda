@@ -26,7 +26,7 @@ import java.util.function.BiConsumer
  */
 
 /**
- * A marker interface and helper methods for a type of Clock that might have it's concept of "now"
+ * An abstract class with helper methods for a type of Clock that might have it's concept of "now"
  * adjusted externally.
  *
  * e.g. for testing (so unit tests do not have to wait for timeouts in realtime) or for demos and simulations.

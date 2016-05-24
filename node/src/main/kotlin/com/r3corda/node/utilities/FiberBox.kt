@@ -16,7 +16,7 @@ import kotlin.concurrent.withLock
  *
  * It supports 3 main operations, all of which operate in a similar context to the [locked] method
  * of [ThreadBox].  i.e. in the context of the content.
- * * [read] operations which acquire the associated lock but do not notifty any waiters (see [readWithDeadline])
+ * * [read] operations which acquire the associated lock but do not notify any waiters (see [readWithDeadline])
  * and is a direct equivalent of [ThreadBox.locked].
  * * [write] operations which are the same as [read] operations but additionally notify any waiters that the content may have changed.
  * * [readWithDeadline] operations acquire the lock and are evaluated repeatedly until they no longer throw any subclass
@@ -25,9 +25,15 @@ import kotlin.concurrent.withLock
  *
  * The construct also supports [MutableClock]s so it can cope with artificial progress towards the deadline, for simulations
  * or testing.
+ *
+ * Currently this is intended for use within a node as a simplified way for Oracles to implement subscriptions for changing
+ * data by running a protocol internally to implement the request handler (see [NodeInterestRates.Oracle]), which can then
+ * effectively relinquish control until the data becomes available.  This isn't the most scalable design and is intended
+ * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [ProtocolLogic]
+ * implementations to be able to wait for some condition to become true outside of message send/receive.  At that point
+ * we may revisit this implementation and indeed the whole model for this, when we understand that requirement more fully.
  */
-class FiberBox<T>(content: T, val lock: Lock = ReentrantLock()) {
-    val content = content
+class FiberBox<T>(private val content: T, private val lock: Lock = ReentrantLock()) {
     private var mutated: SettableFuture<Boolean>? = null
     @Suspendable
     fun <R> readWithDeadline(clock: Clock, deadline: Instant, body: T.() -> R): R {
