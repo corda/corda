@@ -147,6 +147,14 @@ class ThreadBox<T>(content: T, val lock: Lock = ReentrantLock()) {
 }
 
 /**
+ * This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
+ * again.
+ *
+ * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
+ */
+abstract class RetryableException(message: String) : Exception(message)
+
+/**
  * A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property
  * will not be serialized to disk, and if it's missing (or the first time it's accessed), the initializer will be
  * used to set it up. Note that the initializer will be called with the TransientProperty object locked.
