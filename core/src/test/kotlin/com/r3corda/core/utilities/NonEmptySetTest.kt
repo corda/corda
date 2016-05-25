@@ -44,6 +44,13 @@ class NonEmptySetTest {
                     .suppressing(CollectionRetainAllTester::class.java.getMethods().toList())
                     .createTestSuite()
         }
+
+        /**
+         * For some reason IntelliJ really wants to scan this class for tests and fail when
+         * it doesn't find any. This stops that error from occurring.
+         */
+        @Test fun dummy() {
+        }
     }
 
     /**
