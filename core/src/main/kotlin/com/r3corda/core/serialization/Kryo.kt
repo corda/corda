@@ -16,6 +16,8 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.node.AttachmentsClassLoader
 import com.r3corda.core.node.services.AttachmentStorage
+import com.r3corda.core.utilities.NonEmptySet
+import com.r3corda.core.utilities.NonEmptySetSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -350,6 +352,9 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         register(Issued::class.java, ImmutableClassSerializer(Issued::class))
         register(TransactionState::class.java, ImmutableClassSerializer(TransactionState::class))
 
+        // This ensures a NonEmptySetSerializer is constructed with an initial value.
+        register(NonEmptySet::class.java, NonEmptySetSerializer)
+        
         noReferencesWithin<WireTransaction>()
     }
 }
