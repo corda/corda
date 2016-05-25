@@ -18,8 +18,8 @@ Things you need to know:
 
   There is also Java code included, to demonstrate how to use the framework from a more familiar language.
 
-* For bug tracking we use [JIRA](https://r3-cev.atlassian.net/secure/RapidBoard.jspa?rapidView=9&projectKey=PD). For source control we use this BitBucket
-  repository. You should have received credentials for these
+* For bug tracking and project management we use [JIRA](https://r3-cev.atlassian.net/secure/RapidBoard.jspa?rapidView=25&projectKey=COR).
+  For source control we use this BitBucket repository. You should have received credentials for these
   services as part of getting set up. If you don't have access, please contact Richard Brown or James Carlyle.
 
 * There will be a mailing list for discussion, brainstorming etc called [r3dlg-awg](https://groups.google.com/forum/#!forum/r3dlg-awg). 
