@@ -18,7 +18,8 @@ tags
 /core/build
 /docs/build/doctrees
 
-/network-explorer
+# This exists only in the internal repo
+/network-explorer/build
 
 lib/dokka.jar
 
