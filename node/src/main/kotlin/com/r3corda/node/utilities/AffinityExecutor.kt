@@ -53,7 +53,7 @@ interface AffinityExecutor : Executor {
      */
     class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor,
             ThreadPoolExecutor(numThreads, numThreads, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>()) {
-        protected val threads = Collections.synchronizedSet(HashSet<Thread>())
+        private val threads = Collections.synchronizedSet(HashSet<Thread>())
         private val uncaughtExceptionHandler = Thread.currentThread().uncaughtExceptionHandler
 
         init {
