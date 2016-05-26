@@ -1987,11 +1987,14 @@ inline unsigned baseSize(Thread* t UNUSED, object o, GcClass* class_)
 {
   assertT(t, class_->fixedSize() >= BytesPerWord);
 
-  return ceilingDivide(class_->fixedSize(), BytesPerWord)
-         + ceilingDivide(class_->arrayElementSize()
-                         * fieldAtOffset<uintptr_t>(
-                               o, class_->fixedSize() - BytesPerWord),
-                         BytesPerWord);
+  unsigned size = ceilingDivide(class_->fixedSize(), BytesPerWord);
+  if (class_->arrayElementSize() > 0) {
+    size += ceilingDivide(class_->arrayElementSize()
+                       * fieldAtOffset<uintptr_t>(
+                             o, class_->fixedSize() - BytesPerWord),
+                       BytesPerWord);
+  }
+  return size;
 }
 
 object makeTrace(Thread* t, Processor::StackWalker* walker);
