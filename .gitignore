@@ -1,0 +1,9 @@
+#object file
+.o
+
+#library
+.a
+
+#share object
+.so
+.so.*
