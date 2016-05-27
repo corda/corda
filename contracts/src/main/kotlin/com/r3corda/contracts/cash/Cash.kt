@@ -69,13 +69,20 @@ class Cash : FungibleAsset<Currency>() {
 
     // Just for grouping
     interface Commands : CommandData {
-        class Move() : TypeOnlyCommandData(), FungibleAsset.Commands.Move
+        /**
+         * A command stating that money has been moved, optionally to fulfil another contract.
+         *
+         * @param contractHash the hash of the contract this cash is settling, to ensure one cash contract cannot be
+         * used to settle multiple contracts. May be null, if this is not relevant to any other contract in the
+         * same transaction
+         */
+        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue
+        data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for

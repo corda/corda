@@ -228,6 +228,21 @@ data class Command(val value: CommandData, val signers: List<PublicKey>) {
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.map { it.toStringShort() }}"
 }
 
+/** A common issue command, to enforce that issue commands have a nonce value. */
+interface IssueCommand : CommandData {
+    val nonce: Long
+}
+
+/** A common move command for contracts which can change owner. */
+interface MoveCommand : CommandData {
+    /**
+     * Contract code the moved state(s) are for the attention of, for example to indicate that the states are moved in
+     * order to settle an obligation contract's state object(s).
+     */
+    // TODO: Replace SecureHash here with a general contract constraints object
+    val contractHash: SecureHash?
+}
+
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
         val signers: List<PublicKey>,
