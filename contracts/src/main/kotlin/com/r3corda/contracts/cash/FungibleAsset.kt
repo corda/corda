@@ -89,7 +89,7 @@ abstract class FungibleAsset<T> : Contract {
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
 
-                verifyMoveCommands<Commands.Move>(inputs, tx)
+                verifyMoveCommand<Commands.Move>(inputs, tx)
             }
         }
     }
