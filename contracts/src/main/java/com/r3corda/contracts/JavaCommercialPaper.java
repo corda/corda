@@ -1,5 +1,8 @@
 package com.r3corda.contracts;
 
+import com.r3corda.contracts.cash.Cash;
+import com.r3corda.contracts.cash.CashKt;
+import com.r3corda.contracts.cash.InsufficientBalanceException;
 import com.r3corda.core.contracts.TransactionForVerification.InOutGroup;
 import com.r3corda.core.contracts.*;
 import com.r3corda.core.crypto.NullPublicKey;

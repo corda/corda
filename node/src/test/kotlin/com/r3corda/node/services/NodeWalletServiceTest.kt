@@ -1,6 +1,6 @@
 package com.r3corda.node.services
 
-import com.r3corda.contracts.Cash
+import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.contracts.USD

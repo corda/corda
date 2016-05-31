@@ -8,7 +8,7 @@ Unreleased
 
 Here are changes in git master that haven't yet made it to a snapshot release:
 
-* Nothing yet
+* The cash contract has moved from com.r3corda.contracts to com.r3corda.contracts.cash.
 
 
 Milestone 0

@@ -1,6 +1,6 @@
 package com.r3corda.node.services.wallet
 
-import com.r3corda.contracts.Cash
+import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef

@@ -1,6 +1,8 @@
 package com.r3corda.contracts.testing
 
 import com.r3corda.contracts.*
+import com.r3corda.contracts.cash.Cash
+import com.r3corda.contracts.cash.CASH_PROGRAM_ID
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.NullPublicKey
