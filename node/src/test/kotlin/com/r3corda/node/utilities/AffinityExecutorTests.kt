@@ -59,18 +59,20 @@ class AffinityExecutorTests {
         assert(!executor.isOnThread)
 
         val latch = CountDownLatch(1)
+        val latch2 = CountDownLatch(2)
         val threads = Collections.synchronizedList(ArrayList<Thread>())
 
         fun blockAThread() {
             executor.execute {
                 assert(executor.isOnThread)
                 threads += Thread.currentThread()
+                latch2.countDown()
                 latch.await()
             }
         }
         blockAThread()
         blockAThread()
-        executor.flush()
+        latch2.await()
         assertEquals(2, threads.size)
         val numThreads = executor.fetchFrom {
             assert(executor.isOnThread)
