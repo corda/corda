@@ -9,6 +9,7 @@ Unreleased
 Here are changes in git master that haven't yet made it to a snapshot release:
 
 * The cash contract has moved from com.r3corda.contracts to com.r3corda.contracts.cash.
+* Amount class is now generic, to support non-currency types (such as assets, or currency with additional information).
 
 
 Milestone 0

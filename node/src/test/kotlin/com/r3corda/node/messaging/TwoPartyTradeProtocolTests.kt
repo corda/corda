@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.util.Currency
 import java.util.concurrent.ExecutionException
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
@@ -56,14 +57,14 @@ class TwoPartyTradeProtocolTests {
     lateinit var net: MockNetwork
 
     private fun runSeller(smm: StateMachineManager, notary: NodeInfo,
-                          otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
+                          otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount<Currency>,
                           myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
         return smm.add("${TwoPartyTradeProtocol.TRADE_TOPIC}.seller", seller)
     }
 
     private fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
-                         otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
+                         otherSide: SingleMessageRecipient, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>,
                          sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = TwoPartyTradeProtocol.Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
         return smm.add("${TwoPartyTradeProtocol.TRADE_TOPIC}.buyer", buyer)

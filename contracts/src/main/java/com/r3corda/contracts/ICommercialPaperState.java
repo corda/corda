@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.PartyAndReference;
 
 import java.security.*;
 import java.time.*;
+import java.util.Currency;
 
 /* This is an interface solely created to demonstrate that the same kotlin tests can be run against
  * either a Java implementation of the CommercialPaper or a kotlin implementation.
@@ -17,7 +18,7 @@ public interface ICommercialPaperState extends ContractState {
 
     ICommercialPaperState withIssuance(PartyAndReference newIssuance);
 
-    ICommercialPaperState withFaceValue(Amount newFaceValue);
+    ICommercialPaperState withFaceValue(Amount<Currency> newFaceValue);
 
     ICommercialPaperState withMaturityDate(Instant newMaturityDate);
 }

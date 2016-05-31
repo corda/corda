@@ -12,6 +12,7 @@ import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
 import java.time.Instant
+import java.util.Currency
 
 /**
  * This is an ultra-trivial implementation of commercial paper, which is essentially a simpler version of a corporate
@@ -45,7 +46,7 @@ class CommercialPaper : Contract {
     data class State(
             val issuance: PartyAndReference,
             override val owner: PublicKey,
-            val faceValue: Amount,
+            val faceValue: Amount<Currency>,
             val maturityDate: Instant,
             override val notary: Party
     ) : OwnableState, ICommercialPaperState {
@@ -59,7 +60,7 @@ class CommercialPaper : Contract {
         override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
 
         override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
-        override fun withFaceValue(newFaceValue: Amount): ICommercialPaperState = copy(faceValue = newFaceValue)
+        override fun withFaceValue(newFaceValue: Amount<Currency>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
     }
 
@@ -135,7 +136,7 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(issuance: PartyAndReference, faceValue: Amount, maturityDate: Instant, notary: Party): TransactionBuilder {
+    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Currency>, maturityDate: Instant, notary: Party): TransactionBuilder {
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }

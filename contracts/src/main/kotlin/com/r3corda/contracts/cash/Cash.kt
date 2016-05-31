@@ -18,7 +18,7 @@ import java.util.*
 val CASH_PROGRAM_ID = Cash()
     //SecureHash.sha256("cash")
 
-class InsufficientBalanceException(val amountMissing: Amount) : Exception()
+class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Exception()
 
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
@@ -58,7 +58,7 @@ class Cash : Contract {
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
             override val deposit: PartyAndReference,
 
-            override val amount: Amount,
+            override val amount: Amount<Currency>,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
             override val owner: PublicKey,
@@ -66,7 +66,7 @@ class Cash : Contract {
             override val notary: Party
     ) : CommonCashState<Cash.IssuanceDefinition> {
         override val issuanceDef: Cash.IssuanceDefinition
-            get() = Cash.IssuanceDefinition(deposit, amount.currency)
+            get() = Cash.IssuanceDefinition(deposit, amount.token)
         override val contract = CASH_PROGRAM_ID
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
@@ -88,7 +88,7 @@ class Cash : Contract {
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(val amount: Amount) : Commands
+        data class Exit(val amount: Amount<Currency>) : Commands
     }
 
     /** This is the function EVERYONE runs */
@@ -167,7 +167,7 @@ class Cash : Contract {
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount, at: PartyAndReference, owner: PublicKey, notary: Party) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Currency>, at: PartyAndReference, owner: PublicKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
         tx.addOutputState(Cash.State(at, amount, owner, notary))
@@ -183,7 +183,7 @@ class Cash : Contract {
      *                        about which type of cash claims they are willing to accept.
      */
     @Throws(InsufficientBalanceException::class)
-    fun generateSpend(tx: TransactionBuilder, amount: Amount, to: PublicKey,
+    fun generateSpend(tx: TransactionBuilder, amount: Amount<Currency>, to: PublicKey,
                       cashStates: List<StateAndRef<State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
         // Discussion
         //
@@ -205,9 +205,9 @@ class Cash : Contract {
         //
         // Finally, we add the states to the provided partial transaction.
 
-        val currency = amount.currency
+        val currency = amount.token
         val acceptableCoins = run {
-            val ofCurrency = cashStates.filter { it.state.amount.currency == currency }
+            val ofCurrency = cashStates.filter { it.state.amount.token == currency }
             if (onlyFromParties != null)
                 ofCurrency.filter { it.state.deposit.party in onlyFromParties }
             else

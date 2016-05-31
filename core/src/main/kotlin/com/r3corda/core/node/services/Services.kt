@@ -37,7 +37,7 @@ abstract class Wallet {
      * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
      * which we have no cash evaluate to null (not present in map), not 0.
      */
-    abstract val cashBalances: Map<Currency, Amount>
+    abstract val cashBalances: Map<Currency, Amount<Currency>>
 }
 
 /**
@@ -57,7 +57,7 @@ interface WalletService {
      * Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
      * which we have no cash evaluate to null, not 0.
      */
-    val cashBalances: Map<Currency, Amount>
+    val cashBalances: Map<Currency, Amount<Currency>>
 
     /**
      * Returns a snapshot of the heads of LinearStates

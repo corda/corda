@@ -7,6 +7,7 @@ import com.r3corda.core.testing.*
 import org.junit.Test
 import java.security.PublicKey
 import java.security.SecureRandom
+import java.util.Currency
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -24,7 +25,7 @@ class TransactionGroupTests {
 
         data class State(
                 val deposit: PartyAndReference,
-                val amount: Amount,
+                val amount: Amount<Currency>,
                 override val owner: PublicKey,
                 override val notary: Party) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
@@ -33,7 +34,7 @@ class TransactionGroupTests {
         interface Commands : CommandData {
             class Move() : TypeOnlyCommandData(), Commands
             data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
-            data class Exit(val amount: Amount) : Commands
+            data class Exit(val amount: Amount<Currency>) : Commands
         }
     }
 
