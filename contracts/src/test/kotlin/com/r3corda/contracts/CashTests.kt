@@ -1,6 +1,10 @@
 import com.r3corda.contracts.Cash
 import com.r3corda.contracts.DummyContract
 import com.r3corda.contracts.InsufficientBalanceException
+import com.r3corda.contracts.sumCash
+import com.r3corda.contracts.sumCashBy
+import com.r3corda.contracts.sumCashOrNull
+import com.r3corda.contracts.sumCashOrZero
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.core.contracts.*
@@ -14,6 +18,7 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CashTests {
@@ -168,6 +173,25 @@ class CashTests {
             }
             this.accepts()
         }
+    }
+
+    /**
+     * Test that the issuance builder rejects building into a transaction with existing
+     * cash inputs.
+     */
+    @Test(expected = IllegalStateException::class)
+    fun `reject issuance with inputs`() {
+        // Issue some cash
+        var ptx = TransactionBuilder()
+
+        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+        ptx.signWith(MINI_CORP_KEY)
+        val tx = ptx.toSignedTransaction()
+
+        // Include the previously issued cash in a new issuance command
+        ptx = TransactionBuilder()
+        ptx.addInputState(tx.tx.outRef<Cash.State>(0).ref)
+        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
     }
 
     @Test
@@ -455,5 +479,60 @@ class CashTests {
         // States cannot be aggregated if the reference differs
         assertNotEquals(fiveThousandDollarsFromMega.issuanceDef, fiveThousandDollarsFromMega.copy(deposit = MEGA_CORP.ref(1)).issuanceDef)
         assertNotEquals(fiveThousandDollarsFromMega.copy(deposit = MEGA_CORP.ref(1)).issuanceDef, fiveThousandDollarsFromMega.issuanceDef)
+    }
+
+    @Test
+    fun `summing by owner`() {
+        val states = listOf(
+                Cash.State(MEGA_CORP.ref(1), 1000.DOLLARS, MINI_CORP_PUBKEY, DUMMY_NOTARY),
+                Cash.State(MEGA_CORP.ref(1), 2000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY),
+                Cash.State(MEGA_CORP.ref(1), 4000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
+        )
+        assertEquals(6000.DOLLARS, states.sumCashBy(MEGA_CORP_PUBKEY))
+    }
+
+    @Test(expected = UnsupportedOperationException::class)
+    fun `summing by owner throws`() {
+        val states = listOf(
+                Cash.State(MEGA_CORP.ref(1), 2000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY),
+                Cash.State(MEGA_CORP.ref(1), 4000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
+        )
+        states.sumCashBy(MINI_CORP_PUBKEY)
+    }
+
+    @Test
+    fun `summing no currencies`() {
+        val states = emptyList<Cash.State>()
+        assertEquals(0.POUNDS, states.sumCashOrZero(GBP))
+        assertNull(states.sumCashOrNull())
+    }
+
+    @Test(expected = UnsupportedOperationException::class)
+    fun `summing no currencies throws`() {
+        val states = emptyList<Cash.State>()
+        states.sumCash()
+    }
+
+    @Test
+    fun `summing a single currency`() {
+        val states = listOf(
+                Cash.State(MEGA_CORP.ref(1), 1000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY),
+                Cash.State(MEGA_CORP.ref(1), 2000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY),
+                Cash.State(MEGA_CORP.ref(1), 4000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
+        )
+        // Test that summing everything produces the total number of dollars
+        var expected = 7000.DOLLARS
+        var actual = states.sumCash()
+        assertEquals(expected, actual)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `summing multiple currencies`() {
+        val states = listOf(
+                Cash.State(MEGA_CORP.ref(1), 1000.DOLLARS, MEGA_CORP_PUBKEY, DUMMY_NOTARY),
+                Cash.State(MEGA_CORP.ref(1), 4000.POUNDS, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
+        )
+        // Test that summing everything fails because we're mixing units
+        states.sumCash()
     }
 }

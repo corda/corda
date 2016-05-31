@@ -259,10 +259,17 @@ class Cash : Contract {
 
 // Small DSL extensions.
 
-/** Sums the cash states in the list that are owned by the given key, throwing an exception if there are none. */
+/**
+ * Sums the cash states in the list belonging to a single owner, throwing an exception
+ * if there are none, or if any of the cash states cannot be added together (i.e. are
+ * different currencies).
+ */
 fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
 
-/** Sums the cash states in the list, throwing an exception if there are none. */
+/**
+ * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
+ * states cannot be added together (i.e. are different currencies).
+ */
 fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
 
 /** Sums the cash states in the list, returning null if there are none. */
