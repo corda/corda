@@ -8,9 +8,9 @@ import java.util.Currency
 /**
  * Common elements of cash contract states.
  */
-interface CommonCashState<I : CashIssuanceDefinition> : OwnableState {
+interface FungibleAssetState<T, I : AssetIssuanceDefinition<T>> : OwnableState {
     val issuanceDef: I
     /** Where the underlying currency backing this ledger entry can be found (propagated) */
     val deposit: PartyAndReference
-    val amount: Amount<Currency>
+    val amount: Amount<T>
 }

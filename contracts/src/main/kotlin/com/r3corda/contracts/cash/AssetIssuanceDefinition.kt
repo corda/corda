@@ -8,8 +8,8 @@ import java.util.*
  * Subset of cash-like contract state, containing the issuance definition. If these definitions match for two
  * contracts' states, those states can be aggregated.
  */
-interface CashIssuanceDefinition : IssuanceDefinition {
-    /** Where the underlying currency backing this ledger entry can be found (propagated) */
+interface AssetIssuanceDefinition<T> : IssuanceDefinition {
+    /** Where the underlying asset backing this ledger entry can be found (propagated) */
     val deposit: PartyAndReference
-    val currency: Currency
+    val token: T
 }

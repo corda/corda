@@ -18,8 +18,6 @@ import java.util.*
 val CASH_PROGRAM_ID = Cash()
     //SecureHash.sha256("cash")
 
-class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Exception()
-
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
  * input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
@@ -33,7 +31,7 @@ class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Except
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class Cash : Contract {
+class Cash : FungibleAsset<Currency>() {
     /**
      * TODO:
      * 1) hash should be of the contents, not the URI
@@ -46,12 +44,12 @@ class Cash : Contract {
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
 
-    data class IssuanceDefinition(
+    data class IssuanceDefinition<T>(
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
             override val deposit: PartyAndReference,
 
-            override val currency: Currency
-    ) : CashIssuanceDefinition
+            override val token: T
+    ) : AssetIssuanceDefinition<T>
 
     /** A state representing a cash claim against some party */
     data class State(
@@ -64,9 +62,9 @@ class Cash : Contract {
             override val owner: PublicKey,
 
             override val notary: Party
-    ) : CommonCashState<Cash.IssuanceDefinition> {
-        override val issuanceDef: Cash.IssuanceDefinition
-            get() = Cash.IssuanceDefinition(deposit, amount.token)
+    ) : FungibleAsset.State<Currency> {
+        override val issuanceDef: IssuanceDefinition<Currency>
+            get() = IssuanceDefinition(deposit, amount.token)
         override val contract = CASH_PROGRAM_ID
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
@@ -76,93 +74,26 @@ class Cash : Contract {
 
     // Just for grouping
     interface Commands : CommandData {
-        class Move() : TypeOnlyCommandData(), Commands
+        class Move() : TypeOnlyCommandData(), FungibleAsset.Commands.Move
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
+        data class Issue(override val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : FungibleAsset.Commands.Issue
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(val amount: Amount<Currency>) : Commands
-    }
-
-    /** This is the function EVERYONE runs */
-    override fun verify(tx: TransactionForVerification) {
-        // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
-        // of cash are not fungible and must be kept separated for bookkeeping purposes.
-        val groups = tx.groupStates() { it: Cash.State -> it.issuanceDef }
-
-        for ((inputs, outputs, key) in groups) {
-            // Either inputs or outputs could be empty.
-            val deposit = key.deposit
-            val currency = key.currency
-            val issuer = deposit.party
-
-            requireThat {
-                "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0L }
-            }
-
-            val issueCommand = tx.commands.select<Commands.Issue>().firstOrNull()
-            if (issueCommand != null) {
-                verifyIssueCommand(inputs, outputs, tx, issueCommand, currency, issuer)
-            } else {
-                val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
-                val outputAmount = outputs.sumCashOrZero(currency)
-
-                // If we want to remove cash from the ledger, that must be signed for by the issuer.
-                // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
-                val exitCommand = tx.commands.select<Commands.Exit>(party = issuer).singleOrNull()
-                val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, currency)
-
-                requireThat {
-                    "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0L }
-                    "for deposit ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
-                            (inputAmount == outputAmount + amountExitingLedger)
-                }
-
-                verifyMoveCommands<Commands.Move>(inputs, tx)
-            }
-        }
-    }
-
-    private fun verifyIssueCommand(inputs: List<State>,
-                                   outputs: List<State>,
-                                   tx: TransactionForVerification,
-                                   issueCommand: AuthenticatedObject<Commands.Issue>,
-                                   currency: Currency,
-                                   issuer: Party) {
-        // If we have an issue command, perform special processing: the group is allowed to have no inputs,
-        // and the output states must have a deposit reference owned by the signer.
-        //
-        // Whilst the transaction *may* have no inputs, it can have them, and in this case the outputs must
-        // sum to more than the inputs. An issuance of zero size is not allowed.
-        //
-        // Note that this means literally anyone with access to the network can issue cash claims of arbitrary
-        // amounts! It is up to the recipient to decide if the backing party is trustworthy or not, via some
-        // as-yet-unwritten identity service. See ADP-22 for discussion.
-
-        // The grouping ensures that all outputs have the same deposit reference and currency.
-        val inputAmount = inputs.sumCashOrZero(currency)
-        val outputAmount = outputs.sumCash()
-        val cashCommands = tx.commands.select<Cash.Commands>()
-        requireThat {
-            "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-            "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
-            "output values sum to more than the inputs" by (outputAmount > inputAmount)
-            "there is only a single issue command" by (cashCommands.count() == 1)
-        }
+        data class Exit(override val amount: Amount<Currency>) : Commands, FungibleAsset.Commands.Exit<Currency>
     }
 
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, issuanceDef: CashIssuanceDefinition, pennies: Long, owner: PublicKey, notary: Party)
-        = generateIssue(tx, Amount(pennies, issuanceDef.currency), issuanceDef.deposit, owner, notary)
+    fun generateIssue(tx: TransactionBuilder, issuanceDef: AssetIssuanceDefinition<Currency>, pennies: Long, owner: PublicKey, notary: Party)
+            = generateIssue(tx, Amount(pennies, issuanceDef.token), issuanceDef.deposit, owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
@@ -234,7 +165,7 @@ class Cash : Contract {
             State(deposit, totalAmount, to, coins.first().state.notary)
         }
 
-        val outputs = if (change.pennies > 0) {
+        val outputs = if (change.quantity > 0) {
             // Just copy a key across as the change key. In real life of course, this works but leaks private data.
             // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
             // value flows through the transaction graph.

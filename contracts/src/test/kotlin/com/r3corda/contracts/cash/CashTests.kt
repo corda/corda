@@ -41,7 +41,7 @@ class CashTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "required com.r3corda.contracts.cash.Cash.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.cash.FungibleAsset.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -52,7 +52,7 @@ class CashTests {
                 output { outState }
                 output { outState `issued by` MINI_CORP }
                 arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this `fails requirement` "at least one cash input"
+                this `fails requirement` "at least one asset input"
             }
             // Simple reallocation works.
             tweak {
@@ -71,7 +71,7 @@ class CashTests {
             output { outState }
             arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
-            this `fails requirement` "there is at least one cash input"
+            this `fails requirement` "there is at least one asset input"
         }
 
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
@@ -112,7 +112,7 @@ class CashTests {
         // Test issuance from the issuance definition
         val issuanceDef = Cash.IssuanceDefinition(MINI_CORP.ref(12, 34), USD)
         val templatePtx = TransactionBuilder()
-        Cash().generateIssue(templatePtx, issuanceDef, 100.DOLLARS.pennies, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
+        Cash().generateIssue(templatePtx, issuanceDef, 100.DOLLARS.quantity, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(templatePtx.inputStates().isEmpty())
         assertEquals(ptx.outputStates()[0], templatePtx.outputStates()[0])
 
@@ -297,7 +297,7 @@ class CashTests {
 
             tweak {
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS) }
-                this `fails requirement` "required com.r3corda.contracts.cash.Cash.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.cash.FungibleAsset.Commands.Move command"
 
                 tweak {
                     arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }

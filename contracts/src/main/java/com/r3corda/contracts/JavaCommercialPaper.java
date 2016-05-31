@@ -168,7 +168,7 @@ public class JavaCommercialPaper implements Contract {
                 if (!inputs.isEmpty()) {
                     throw new IllegalStateException("Failed Requirement: there is no input state");
                 }
-                if (output.faceValue.getPennies() == 0) {
+                if (output.faceValue.getQuantity() == 0) {
                     throw new IllegalStateException("Failed Requirement: the face value is not zero");
                 }
 

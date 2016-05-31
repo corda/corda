@@ -350,7 +350,7 @@ class TwoPartyTradeProtocolTests {
     @Test
     fun `dependency with error on buyer side`() {
         transactionGroupFor<ContractState> {
-            runWithError(true, false, "at least one cash input")
+            runWithError(true, false, "at least one asset input")
         }
     }
 
