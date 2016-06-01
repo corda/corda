@@ -29,18 +29,10 @@ elif [[ "$mode" == "nodeB" ]]; then
         echo "myLegalName = Bank B" >nodeB/config
     fi
 
-    # enable job control
-    set -o monitor
-
     RC=83
     while [ $RC -eq 83 ]
     do
-		build/install/r3prototyping/bin/irsdemo --role=NodeB &
-        while ! curl -F rates=@scripts/example.rates.txt http://localhost:31341/upload/interest-rates; do
-            echo "Retry to upload interest rates to oracle after 5 seconds"
-            sleep 5
-        done
-        fg %1
+		build/install/r3prototyping/bin/irsdemo --role=NodeB
         RC=$?
     done
 elif [[ "$mode" == "trade" && "$2" != "" ]]; then

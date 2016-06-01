@@ -20,9 +20,14 @@ import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import joptsimple.OptionParser
+import java.io.DataOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
+import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
 
 // IRS DEMO
@@ -35,12 +40,13 @@ enum class IRSDemoRole {
 }
 
 class NodeParams() {
-    public var dir : Path = Paths.get("")
-    public var address : String = ""
-    public var mapAddress: String = ""
-    public var identityFile: Path = Paths.get("")
-    public var tradeWithAddrs: List<String> = listOf()
-    public var tradeWithIdentities: List<Path> = listOf()
+    var dir : Path = Paths.get("")
+    var address : String = ""
+    var mapAddress: String = ""
+    var identityFile: Path = Paths.get("")
+    var tradeWithAddrs: List<String> = listOf()
+    var tradeWithIdentities: List<Path> = listOf()
+    var uploadRates: Boolean = false
 }
 
 fun main(args: Array<String>) {
@@ -105,11 +111,47 @@ fun runNode(nodeParams : NodeParams) : Unit {
     UpdateBusinessDayProtocol.Handler.register(node)
     ExitServerProtocol.Handler.register(node)
 
+    if(nodeParams.uploadRates) {
+        runUploadRates()
+    }
+
     try {
         while (true) Thread.sleep(Long.MAX_VALUE)
     } catch(e: InterruptedException) {
         node.stop()
     }
+}
+
+fun runUploadRates() {
+    val fileContents = Files.readAllBytes(Paths.get("scripts/example.rates.txt"))
+    var timer : Timer? = null
+    timer = fixedRateTimer("upload-rates", false, 0, 5000, {
+        try {
+            val boundary = "===" + System.currentTimeMillis() + "===";
+            val url = URL("http://localhost:31341/upload/interest-rates")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.doOutput = true
+            connection.doInput = true;
+            connection.useCaches = false
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Connection", "Keep-Alive");
+            connection.setRequestProperty("Cache-Control", "no-cache")
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            val outStream = DataOutputStream(connection.outputStream)
+            outStream.write(fileContents)
+            outStream.close()
+
+            if (connection.responseCode == 200) {
+                timer!!.cancel()
+                println("Rates uploaded successfully")
+            } else {
+                print("Could not upload rates. Retrying in 5 seconds. ")
+                println("Status Code: " + connection + ". Mesage: " + connection.responseMessage)
+            }
+        } catch (e: Exception) {
+            println("Could not upload rates due to exception. Retrying in 5 seconds")
+        }
+    })
 }
 
 fun createNodeAParams() : NodeParams {
@@ -127,6 +169,7 @@ fun createNodeBParams() : NodeParams {
     params.address = "localhost:31340"
     params.tradeWithAddrs = listOf("localhost")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeA).resolve("identity-public"))
+    params.uploadRates = true
     return params
 }
 
