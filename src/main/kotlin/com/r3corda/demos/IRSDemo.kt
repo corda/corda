@@ -249,6 +249,7 @@ private fun runNode(nodeParams : NodeParams) : Unit {
     } catch(e: InterruptedException) {
         node.stop()
     }
+    exitProcess(0)
 }
 
 private fun runUploadRates() {
