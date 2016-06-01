@@ -33,7 +33,11 @@ import kotlin.system.exitProcess
 
 // IRS DEMO
 //
-// TODO: Please see TBD
+// Please see docs/build/html/running-the-trading-demo.html
+//
+// TODO: TBD
+//
+// The different roles in the scenario this program can adopt are:
 
 enum class IRSDemoRole {
     NodeA,
@@ -51,12 +55,6 @@ class NodeParams() {
     var tradeWithIdentities: List<Path> = listOf()
     var uploadRates: Boolean = false
 }
-
-/*
-
-    echo "Setting demo date to ${demodate}"
-    echo "\"$demodate\"" | curl -H "Content-Type: application/json" -X PUT -d @- http://localhost:31338/api/irs/demodate
- */
 
 fun main(args: Array<String>) {
     val parser = OptionParser()

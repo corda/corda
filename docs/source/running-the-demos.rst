@@ -41,15 +41,15 @@ If it doesn't work, jump on the mailing list and let us know.
 IRS demo
 --------
 
-.. warning:: This demo currently works best on MacOS or Linux
+.. note:: On Windows, use the same commands, but run the batch file instead of the shell file (add .bat to the command)
 
 Open three terminals. In the first run:::
 
-    ./scripts/irs-demo.sh nodeA
+    gradle installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
 
 And in the second run:::
 
-    ./scripts/irs-demo.sh nodeB
+    ./build/install/r3prototyping/bin/irsdemo --role=NodeB
 
 The node in the first terminal will complain that it didn't know about nodeB, so restart it. It'll then find the
 location and identity keys of nodeA and be happy. NodeB also doubles up as the interest rates oracle and you should
@@ -57,10 +57,10 @@ see some rates data get loaded.
 
 Now in the third terminal run:::
 
-    ./scripts/irs-demo.sh trade trade1
+    ./build/install/r3prototyping/bin/irsdemo --role=Trade trade1
 
 You should see some activity in the other two terminals as they set up the deal. You can now run this command in
 a separate window to roll the fake clock forward and trigger lots of fixing events. Things go fast so make sure you
 can see the other terminals whilst you run this command!::
 
-    ./scripts/irs-demo.sh date 2017-01-30
+    ./build/install/r3prototyping/bin/irsdemo --role=Date 2017-01-30
