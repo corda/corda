@@ -37,8 +37,7 @@ elif [[ "$mode" == "nodeB" ]]; then
     done
 elif [[ "$mode" == "trade" && "$2" != "" ]]; then
     tradeID=$2
-    echo "Uploading tradeID ${tradeID}"
-    sed "s/tradeXXX/${tradeID}/g" scripts/example-irs-trade.json | curl -H "Content-Type: application/json" -d @- http://localhost:31338/api/irs/deals
+    build/install/r3prototyping/bin/irsdemo --role=Trade $tradeId
 elif [[ "$mode" == "date" && "$2" != "" ]]; then
     demodate=$2
     echo "Setting demo date to ${demodate}"

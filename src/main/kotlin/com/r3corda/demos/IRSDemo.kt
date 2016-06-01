@@ -36,7 +36,8 @@ import kotlin.system.exitProcess
 
 enum class IRSDemoRole {
     NodeA,
-    NodeB
+    NodeB,
+    Trade
 }
 
 class NodeParams() {
@@ -64,6 +65,8 @@ fun main(args: Array<String>) {
     val fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withOptionalArg()
     val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
 
+    val tradeIdArg = parser.nonOptions("Trade ID")
+
     val options = try {
         parser.parse(*args)
     } catch (e: Exception) {
@@ -76,32 +79,63 @@ fun main(args: Array<String>) {
     BriefLogFormatter.initVerbose("+demo.irsdemo", "+api-call", "+platform.deal", "-org.apache.activemq")
 
     val role = options.valueOf(roleArg)!!
-    val nodeParams = when(role) {
-        IRSDemoRole.NodeA -> createNodeAParams()
-        IRSDemoRole.NodeB -> createNodeBParams()
-    }
-
-    nodeParams.mapAddress = options.valueOf(networkMapNetAddr)
-    if(options.has(dirArg)) {
-        nodeParams.dir = Paths.get(options.valueOf(dirArg))
-    }
-    if(options.has(networkAddressArg)) {
-        nodeParams.address = options.valueOf(networkAddressArg)
-    }
-    nodeParams.identityFile = if(options.has(networkMapIdentityFile)) {
-       Paths.get(options.valueOf(networkMapIdentityFile))
+    if(role == IRSDemoRole.Trade) {
+        val tradeId : String? = options.valuesOf(tradeIdArg)[0]
+        if(tradeId != null) {
+            if(runTrade(tradeId)) {
+                exitProcess(0)
+            } else {
+                exitProcess(1)
+            }
+        } else {
+            println("Please provide a trade ID")
+            exitProcess(1)
+        }
     } else {
-        nodeParams.dir.resolve("identity-public")
-    }
-    if(options.has(fakeTradeWithIdentityFile)) {
-        nodeParams.tradeWithIdentities = options.valuesOf(fakeTradeWithIdentityFile).map { Paths.get(it) }
-    }
-    if(options.has(fakeTradeWithAddr)) {
-        nodeParams.tradeWithAddrs = options.valuesOf(fakeTradeWithAddr)
-    }
+        val nodeParams = when (role) {
+            IRSDemoRole.NodeA -> createNodeAParams()
+            IRSDemoRole.NodeB -> createNodeBParams()
+            else -> {
+                throw IllegalArgumentException()
+            }
+        }
 
-    runNode(nodeParams)
-    exitProcess(0)
+        nodeParams.mapAddress = options.valueOf(networkMapNetAddr)
+        if (options.has(dirArg)) {
+            nodeParams.dir = Paths.get(options.valueOf(dirArg))
+        }
+        if (options.has(networkAddressArg)) {
+            nodeParams.address = options.valueOf(networkAddressArg)
+        }
+        nodeParams.identityFile = if (options.has(networkMapIdentityFile)) {
+            Paths.get(options.valueOf(networkMapIdentityFile))
+        } else {
+            nodeParams.dir.resolve("identity-public")
+        }
+        if (options.has(fakeTradeWithIdentityFile)) {
+            nodeParams.tradeWithIdentities = options.valuesOf(fakeTradeWithIdentityFile).map { Paths.get(it) }
+        }
+        if (options.has(fakeTradeWithAddr)) {
+            nodeParams.tradeWithAddrs = options.valuesOf(fakeTradeWithAddr)
+        }
+
+        runNode(nodeParams)
+        exitProcess(0)
+    }
+}
+
+fun runTrade(tradeId : String) : Boolean {
+    println("Uploading tradeID " + tradeId)
+    val fileContents = Files.readAllBytes(Paths.get("scripts/example-irs-trade.json"))
+    val tradeFile = String(fileContents).replace("tradeXXX", tradeId)
+    var url = URL("http://localhost:31338/api/irs/deals")
+    if(postJson(url, tradeFile)) {
+        println("Trade sent")
+        return true
+    } else {
+        println("Trade failed to send")
+        return false
+    }
 }
 
 fun runNode(nodeParams : NodeParams) : Unit {
@@ -127,31 +161,60 @@ fun runUploadRates() {
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
-            val boundary = "===" + System.currentTimeMillis() + "===";
             val url = URL("http://localhost:31341/upload/interest-rates")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.doOutput = true
-            connection.doInput = true;
-            connection.useCaches = false
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Connection", "Keep-Alive");
-            connection.setRequestProperty("Cache-Control", "no-cache")
-            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-            val outStream = DataOutputStream(connection.outputStream)
-            outStream.write(fileContents)
-            outStream.close()
-
-            if (connection.responseCode == 200) {
+            if(uploadFile(url, fileContents)) {
                 timer!!.cancel()
                 println("Rates uploaded successfully")
             } else {
                 print("Could not upload rates. Retrying in 5 seconds. ")
-                println("Status Code: " + connection + ". Mesage: " + connection.responseMessage)
             }
         } catch (e: Exception) {
             println("Could not upload rates due to exception. Retrying in 5 seconds")
         }
     })
+}
+
+fun postJson(url: URL, data: String) : Boolean {
+    val connection = url.openConnection() as HttpURLConnection
+    connection.doOutput = true
+    connection.useCaches = false
+    connection.requestMethod = "POST"
+    connection.setRequestProperty("Connection", "Keep-Alive");
+    connection.setRequestProperty("Cache-Control", "no-cache")
+    connection.setRequestProperty("Content-Type", "application/json");
+    connection.setRequestProperty("Content-Length", data.length.toString())
+    val outStream = DataOutputStream(connection.outputStream)
+    outStream.writeBytes(data)
+    outStream.close()
+
+    if (connection.responseCode == 200) {
+        return true
+    } else {
+        println("Failed to post data. Status Code: " + connection + ". Mesage: " + connection.responseMessage)
+        return false
+    }
+}
+
+fun uploadFile(url: URL, file: ByteArray) : Boolean {
+    val boundary = "===" + System.currentTimeMillis() + "===";
+    val connection = url.openConnection() as HttpURLConnection
+    connection.doOutput = true
+    connection.doInput = true
+    connection.useCaches = false
+    connection.requestMethod = "POST"
+    connection.setRequestProperty("Connection", "Keep-Alive");
+    connection.setRequestProperty("Cache-Control", "no-cache")
+    connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+    val outStream = DataOutputStream(connection.outputStream)
+    outStream.write(file)
+    outStream.close()
+
+    if (connection.responseCode == 200) {
+        return true
+    } else {
+        println("Could not upload file. Status Code: " + connection + ". Mesage: " + connection.responseMessage)
+        return false
+    }
 }
 
 fun createNodeAParams() : NodeParams {
