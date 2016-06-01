@@ -26,6 +26,7 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.LocalDateTime
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
@@ -37,7 +38,8 @@ import kotlin.system.exitProcess
 enum class IRSDemoRole {
     NodeA,
     NodeB,
-    Trade
+    Trade,
+    Date
 }
 
 class NodeParams() {
@@ -49,6 +51,12 @@ class NodeParams() {
     var tradeWithIdentities: List<Path> = listOf()
     var uploadRates: Boolean = false
 }
+
+/*
+
+    echo "Setting demo date to ${demodate}"
+    echo "\"$demodate\"" | curl -H "Content-Type: application/json" -X PUT -d @- http://localhost:31338/api/irs/demodate
+ */
 
 fun main(args: Array<String>) {
     val parser = OptionParser()
@@ -66,6 +74,7 @@ fun main(args: Array<String>) {
     val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
 
     val tradeIdArg = parser.nonOptions("Trade ID")
+    val dateArg = parser.nonOptions("Date")
 
     val options = try {
         parser.parse(*args)
@@ -80,15 +89,23 @@ fun main(args: Array<String>) {
 
     val role = options.valueOf(roleArg)!!
     if(role == IRSDemoRole.Trade) {
-        val tradeId : String? = options.valuesOf(tradeIdArg)[0]
-        if(tradeId != null) {
-            if(runTrade(tradeId)) {
+        val tradeId: String? = options.valuesOf(tradeIdArg)[0]
+        if (tradeId != null) {
+            if (runTrade(tradeId)) {
                 exitProcess(0)
             } else {
                 exitProcess(1)
             }
         } else {
             println("Please provide a trade ID")
+            exitProcess(1)
+        }
+    } else if(role == IRSDemoRole.Date) {
+        val dateStr: String? = options.valueOf(dateArg)
+        if(dateStr != null) {
+            runDateChange(dateStr)
+        } else {
+            println("Please provide a date")
             exitProcess(1)
         }
     } else {
@@ -124,7 +141,18 @@ fun main(args: Array<String>) {
     }
 }
 
-fun runTrade(tradeId : String) : Boolean {
+fun runDateChange(date: String) : Boolean{
+    var url = URL("http://localhost:31338/api/irs/demodate")
+    if(putJson(url, "\"" + date + "\"")) {
+        println("Date changed")
+        return true
+    } else {
+        println("Date failed to change")
+        return false
+    }
+}
+
+fun runTrade(tradeId: String) : Boolean {
     println("Uploading tradeID " + tradeId)
     val fileContents = Files.readAllBytes(Paths.get("scripts/example-irs-trade.json"))
     val tradeFile = String(fileContents).replace("tradeXXX", tradeId)
@@ -174,11 +202,11 @@ fun runUploadRates() {
     })
 }
 
-fun postJson(url: URL, data: String) : Boolean {
+fun sendJson(url: URL, data: String, method: String) : Boolean {
     val connection = url.openConnection() as HttpURLConnection
     connection.doOutput = true
     connection.useCaches = false
-    connection.requestMethod = "POST"
+    connection.requestMethod = method
     connection.setRequestProperty("Connection", "Keep-Alive");
     connection.setRequestProperty("Cache-Control", "no-cache")
     connection.setRequestProperty("Content-Type", "application/json");
@@ -190,9 +218,17 @@ fun postJson(url: URL, data: String) : Boolean {
     if (connection.responseCode == 200) {
         return true
     } else {
-        println("Failed to post data. Status Code: " + connection + ". Mesage: " + connection.responseMessage)
+        println("Failed to " + method + " data. Status Code: " + connection + ". Mesage: " + connection.responseMessage)
         return false
     }
+}
+
+fun putJson(url: URL, data: String) : Boolean {
+    return sendJson(url, data, "PUT")
+}
+
+fun postJson(url: URL, data: String) : Boolean {
+    return sendJson(url, data, "POST")
 }
 
 fun uploadFile(url: URL, file: ByteArray) : Boolean {
