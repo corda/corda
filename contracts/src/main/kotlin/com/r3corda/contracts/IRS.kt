@@ -44,7 +44,7 @@ open class Event(val date: LocalDate) {
  * Top level PaymentEvent class - represents an obligation to pay an amount on a given date, which may be either in the past or the future.
  */
 abstract class PaymentEvent(date: LocalDate) : Event(date) {
-    abstract fun calculate(): Amount
+    abstract fun calculate(): Amount<Currency>
 }
 
 /**
@@ -59,22 +59,22 @@ abstract class RatePaymentEvent(date: LocalDate,
                                 val accrualEndDate: LocalDate,
                                 val dayCountBasisDay: DayCountBasisDay,
                                 val dayCountBasisYear: DayCountBasisYear,
-                                val notional: Amount,
+                                val notional: Amount<Currency>,
                                 val rate: Rate) : PaymentEvent(date) {
     companion object {
         val CSVHeader = "AccrualStartDate,AccrualEndDate,DayCountFactor,Days,Date,Ccy,Notional,Rate,Flow"
     }
 
-    override fun calculate(): Amount = flow
+    override fun calculate(): Amount<Currency> = flow
 
-    abstract val flow: Amount
+    abstract val flow: Amount<Currency>
 
     val days: Int get() = calculateDaysBetween(accrualStartDate, accrualEndDate, dayCountBasisYear, dayCountBasisDay)
 
     // TODO : Fix below (use daycount convention for division, not hardcoded 360 etc)
     val dayCountFactor: BigDecimal get() = (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)
 
-    open fun asCSV() = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.currency},${notional},$rate,$flow"
+    open fun asCSV() = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},${notional},$rate,$flow"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -104,15 +104,15 @@ class FixedRatePaymentEvent(date: LocalDate,
                             accrualEndDate: LocalDate,
                             dayCountBasisDay: DayCountBasisDay,
                             dayCountBasisYear: DayCountBasisYear,
-                            notional: Amount,
+                            notional: Amount<Currency>,
                             rate: Rate) :
         RatePaymentEvent(date, accrualStartDate, accrualEndDate, dayCountBasisDay, dayCountBasisYear, notional, rate) {
     companion object {
         val CSVHeader = RatePaymentEvent.CSVHeader
     }
 
-    override val flow: Amount get() =
-    Amount(dayCountFactor.times(BigDecimal(notional.pennies)).times(rate.ratioUnit!!.value).toLong(), notional.currency)
+    override val flow: Amount<Currency> get() =
+    Amount<Currency>(dayCountFactor.times(BigDecimal(notional.pennies)).times(rate.ratioUnit!!.value).toLong(), notional.token)
 
     override fun toString(): String =
             "FixedRatePaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate : $flow"
@@ -128,22 +128,22 @@ class FloatingRatePaymentEvent(date: LocalDate,
                                dayCountBasisDay: DayCountBasisDay,
                                dayCountBasisYear: DayCountBasisYear,
                                val fixingDate: LocalDate,
-                               notional: Amount,
+                               notional: Amount<Currency>,
                                rate: Rate) : RatePaymentEvent(date, accrualStartDate, accrualEndDate, dayCountBasisDay, dayCountBasisYear, notional, rate) {
 
     companion object {
         val CSVHeader = RatePaymentEvent.CSVHeader + ",FixingDate"
     }
 
-    override val flow: Amount get() {
+    override val flow: Amount<Currency> get() {
         // TODO: Should an uncalculated amount return a zero ? null ? etc.
-        val v = rate.ratioUnit?.value ?: return Amount(0, notional.currency)
-        return Amount(dayCountFactor.times(BigDecimal(notional.pennies)).times(v).toLong(), notional.currency)
+        val v = rate.ratioUnit?.value ?: return Amount<Currency>(0, notional.token)
+        return Amount<Currency>(dayCountFactor.times(BigDecimal(notional.pennies)).times(v).toLong(), notional.token)
     }
 
     override fun toString(): String = "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
 
-    override fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.currency},${notional},$fixingDate,$rate,$flow"
+    override fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},${notional},$fixingDate,$rate,$flow"
 
     /**
      * Used for making immutables
@@ -169,7 +169,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
              dayCountBasisDay: DayCountBasisDay = this.dayCountBasisDay,
              dayCountBasisYear: DayCountBasisYear = this.dayCountBasisYear,
              fixingDate: LocalDate = this.fixingDate,
-             notional: Amount = this.notional,
+             notional: Amount<Currency> = this.notional,
              rate: Rate = this.rate) = FloatingRatePaymentEvent(date, accrualStartDate, accrualEndDate, dayCountBasisDay, dayCountBasisYear, fixingDate, notional, rate)
 }
 
@@ -191,10 +191,10 @@ class InterestRateSwap() : Contract {
             val baseCurrency: Currency,
             val eligibleCurrency: Currency,
             val eligibleCreditSupport: String,
-            val independentAmounts: Amount,
-            val threshold: Amount,
-            val minimumTransferAmount: Amount,
-            val rounding: Amount,
+            val independentAmounts: Amount<Currency>,
+            val threshold: Amount<Currency>,
+            val minimumTransferAmount: Amount<Currency>,
+            val rounding: Amount<Currency>,
             val valuationDate: String,
             val notificationTime: String,
             val resolutionTime: String,
@@ -246,7 +246,7 @@ class InterestRateSwap() : Contract {
     }
 
     abstract class CommonLeg(
-            val notional: Amount,
+            val notional: Amount<Currency>,
             val paymentFrequency: Frequency,
             val effectiveDate: LocalDate,
             val effectiveDateAdjustment: DateRollConvention?,
@@ -296,7 +296,7 @@ class InterestRateSwap() : Contract {
 
     open class FixedLeg(
             var fixedRatePayer: Party,
-            notional: Amount,
+            notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
             effectiveDateAdjustment: DateRollConvention?,
@@ -335,7 +335,7 @@ class InterestRateSwap() : Contract {
 
         // Can't autogenerate as not a data class :-(
         fun copy(fixedRatePayer: Party = this.fixedRatePayer,
-                 notional: Amount = this.notional,
+                 notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
                  effectiveDateAdjustment: DateRollConvention? = this.effectiveDateAdjustment,
@@ -357,7 +357,7 @@ class InterestRateSwap() : Contract {
 
     open class FloatingLeg(
             var floatingRatePayer: Party,
-            notional: Amount,
+            notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
             effectiveDateAdjustment: DateRollConvention?,
@@ -415,7 +415,7 @@ class InterestRateSwap() : Contract {
 
 
         fun copy(floatingRatePayer: Party = this.floatingRatePayer,
-                 notional: Amount = this.notional,
+                 notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
                  effectiveDateAdjustment: DateRollConvention? = this.effectiveDateAdjustment,
@@ -507,7 +507,7 @@ class InterestRateSwap() : Contract {
                         "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
                         "All notionals must be non zero" by (irs.fixedLeg.notional.pennies > 0 && irs.floatingLeg.notional.pennies > 0)
                         "The fixed leg rate must be positive" by (irs.fixedLeg.fixedRate.isPositive())
-                        "The currency of the notionals must be the same" by (irs.fixedLeg.notional.currency == irs.floatingLeg.notional.currency)
+                        "The currency of the notionals must be the same" by (irs.fixedLeg.notional.token == irs.floatingLeg.notional.token)
                         "All leg notionals must be the same" by (irs.fixedLeg.notional == irs.floatingLeg.notional)
 
                         "The effective date is before the termination date for the fixed leg" by (irs.fixedLeg.effectiveDate < irs.fixedLeg.terminationDate)
@@ -553,7 +553,7 @@ class InterestRateSwap() : Contract {
                         "The changed payments dates are aligned" by (oldFloatingRatePaymentEvent.date == newFixedRatePaymentEvent.date)
                         "The new payment has the correct rate" by (newFixedRatePaymentEvent.rate.ratioUnit!!.value == fixValue.value)
                         "The fixing is for the next required date" by (prevIrs.calculation.nextFixingDate() == fixValue.of.forDay)
-                        "The fix payment has the same currency as the notional" by (newFixedRatePaymentEvent.flow.currency == irs.floatingLeg.notional.currency)
+                        "The fix payment has the same currency as the notional" by (newFixedRatePaymentEvent.flow.token == irs.floatingLeg.notional.token)
                         // "The fixing is not in the future " by (fixCommand) // The oracle should not have signed this .
                     }
                 }

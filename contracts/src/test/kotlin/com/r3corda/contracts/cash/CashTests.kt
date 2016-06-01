@@ -374,7 +374,7 @@ class CashTests {
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
-    fun makeCash(amount: Amount, corp: Party, depositRef: Byte = 1) =
+    fun makeCash(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
                     Cash.State(corp.ref(depositRef), amount, OUR_PUBKEY_1, DUMMY_NOTARY),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -387,7 +387,7 @@ class CashTests {
             makeCash(80.SWISS_FRANCS, MINI_CORP, 2)
     )
 
-    fun makeSpend(amount: Amount, dest: PublicKey): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
         val tx = TransactionBuilder()
         Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()

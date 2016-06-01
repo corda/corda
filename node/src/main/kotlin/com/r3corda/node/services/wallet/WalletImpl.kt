@@ -22,11 +22,11 @@ class WalletImpl(override val states: List<StateAndRef<ContractState>>) : Wallet
      * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
      * which we have no cash evaluate to null (not present in map), not 0.
      */
-    override val cashBalances: Map<Currency, Amount> get() = states.
+    override val cashBalances: Map<Currency, Amount<Currency>> get() = states.
             // Select the states we own which are cash, ignore the rest, take the amounts.
             mapNotNull { (it.state as? Cash.State)?.amount }.
             // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-            groupBy { it.currency }.
+            groupBy { it.token }.
             // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
             mapValues { it.value.sumOrThrow() }
 }

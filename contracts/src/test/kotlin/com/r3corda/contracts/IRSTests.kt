@@ -347,10 +347,10 @@ class IRSTests {
                 "fixedLeg.fixedRate",
                 "currentBusinessDate",
                 "calculation.floatingLegPaymentSchedule.get(currentBusinessDate)",
-                "fixedLeg.notional.currency.currencyCode",
+                "fixedLeg.notional.token.currencyCode",
                 "fixedLeg.notional.pennies * 10",
                 "fixedLeg.notional.pennies * fixedLeg.fixedRate.ratioUnit.value",
-                "(fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360 ",
+                "(fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360 ",
                 "(fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value))"
                 // "calculation.floatingLegPaymentSchedule.get(context.getDate('currentDate')).rate"
                 // "calculation.floatingLegPaymentSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value",
@@ -501,7 +501,7 @@ class IRSTests {
     @Test
     fun `ensure notional amounts are equal`() {
         val irs = singleIRS()
-        val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.pennies + 1, irs.floatingLeg.notional.currency)))
+        val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.pennies + 1, irs.floatingLeg.notional.token)))
         transaction {
             output() {
                 modifiedIRS

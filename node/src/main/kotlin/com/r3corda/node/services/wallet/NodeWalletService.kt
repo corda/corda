@@ -39,7 +39,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
      * Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
      * which we have no cash evaluate to null, not 0.
      */
-    override val cashBalances: Map<Currency, Amount> get() = mutex.locked { wallet }.cashBalances
+    override val cashBalances: Map<Currency, Amount<Currency>> get() = mutex.locked { wallet }.cashBalances
 
     /**
      * Returns a snapshot of the heads of LinearStates
@@ -143,7 +143,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
      *
      * TODO: Move this out of NodeWalletService
      */
-    fun fillWithSomeTestCash(notary: Party, howMuch: Amount, atLeastThisManyStates: Int = 3,
+    fun fillWithSomeTestCash(notary: Party, howMuch: Amount<Currency>, atLeastThisManyStates: Int = 3,
                              atMostThisManyStates: Int = 10, rng: Random = Random()) {
         val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
@@ -159,7 +159,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
 
             val issuance = TransactionBuilder()
             val freshKey = services.keyManagementService.freshKey()
-            cash.generateIssue(issuance, Amount(pennies, howMuch.currency), depositRef, freshKey.public, notary)
+            cash.generateIssue(issuance, Amount(pennies, howMuch.token), depositRef, freshKey.public, notary)
             issuance.signWith(myKey)
 
             return@map issuance.toSignedTransaction(true)
@@ -168,7 +168,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
         services.recordTransactions(transactions)
     }
 
-    private fun calculateRandomlySizedAmounts(howMuch: Amount, min: Int, max: Int, rng: Random): LongArray {
+    private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
         val numStates = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
         val amounts = LongArray(numStates)
         val baseSize = howMuch.pennies / numStates

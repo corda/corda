@@ -52,4 +52,4 @@ infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner =
 infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
 
 // Allows you to write 100.DOLLARS.CASH
-val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1, 2, 3), this, NullPublicKey, DUMMY_NOTARY)
+val Amount<Currency>.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1, 2, 3), this, NullPublicKey, DUMMY_NOTARY)

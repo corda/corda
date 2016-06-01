@@ -17,6 +17,7 @@ import com.r3corda.core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
+import java.util.Currency
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
@@ -44,7 +45,7 @@ import java.security.SignatureException
 object TwoPartyTradeProtocol {
     val TRADE_TOPIC = "platform.trade"
 
-    class UnacceptablePriceException(val givenPrice: Amount) : Exception()
+    class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception()
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
@@ -52,7 +53,7 @@ object TwoPartyTradeProtocol {
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
-            val price: Amount,
+            val price: Amount<Currency>,
             val sellerOwnerKey: PublicKey,
             val sessionID: Long
     )
@@ -63,7 +64,7 @@ object TwoPartyTradeProtocol {
     open class Seller(val otherSide: SingleMessageRecipient,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
-                      val price: Amount,
+                      val price: Amount<Currency>,
                       val myKeyPair: KeyPair,
                       val buyerSessionID: Long,
                       override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
@@ -173,7 +174,7 @@ object TwoPartyTradeProtocol {
 
     open class Buyer(val otherSide: SingleMessageRecipient,
                      val notary: Party,
-                     val acceptablePrice: Amount,
+                     val acceptablePrice: Amount<Currency>,
                      val typeToBuy: Class<out OwnableState>,
                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
 

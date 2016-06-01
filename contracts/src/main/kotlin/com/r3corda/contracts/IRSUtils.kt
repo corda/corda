@@ -3,6 +3,7 @@ package com.r3corda.contracts
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Tenor
 import java.math.BigDecimal
+import java.util.Currency
 
 
 // Things in here will move to the general utils class when we've hammered out various discussions regarding amounts, dates, oracle etc.
@@ -94,9 +95,9 @@ class ReferenceRate(val oracle: String, val tenor: Tenor, val name: String) : Fl
 }
 
 // TODO: For further discussion.
-operator fun Amount.times(other: RatioUnit): Amount = Amount((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
-//operator fun Amount.times(other: FixedRate): Amount = Amount((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
-//fun Amount.times(other: InterestRateSwap.RatioUnit): Amount = Amount((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
+operator fun Amount<Currency>.times(other: RatioUnit): Amount<Currency> = Amount<Currency>((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.token)
+//operator fun Amount<Currency>.times(other: FixedRate): Amount<Currency> = Amount<Currency>((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
+//fun Amount<Currency>.times(other: InterestRateSwap.RatioUnit): Amount<Currency> = Amount<Currency>((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
 
 operator fun kotlin.Int.times(other: FixedRate): Int = BigDecimal(this).multiply(other.ratioUnit!!.value).intValueExact()
 operator fun Int.times(other: Rate): Int = BigDecimal(this).multiply(other.ratioUnit!!.value).intValueExact()

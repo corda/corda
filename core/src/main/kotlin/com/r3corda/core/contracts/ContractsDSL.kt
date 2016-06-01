@@ -24,11 +24,11 @@ val USD = currency("USD")
 val GBP = currency("GBP")
 val CHF = currency("CHF")
 
-val Int.DOLLARS: Amount get() = Amount(this.toLong() * 100, USD)
-val Int.POUNDS: Amount get() = Amount(this.toLong() * 100, GBP)
-val Int.SWISS_FRANCS: Amount get() = Amount(this.toLong() * 100, CHF)
+val Int.DOLLARS: Amount<Currency> get() = Amount(this.toLong() * 100, USD)
+val Int.POUNDS: Amount<Currency> get() = Amount(this.toLong() * 100, GBP)
+val Int.SWISS_FRANCS: Amount<Currency> get() = Amount(this.toLong() * 100, CHF)
 
-val Double.DOLLARS: Amount get() = Amount((this * 100).toLong(), USD)
+val Double.DOLLARS: Amount<Currency> get() = Amount((this * 100).toLong(), USD)
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 

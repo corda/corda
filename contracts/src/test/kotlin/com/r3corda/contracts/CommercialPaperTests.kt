@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.time.Instant
+import java.util.Currency
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -204,7 +205,7 @@ class CommercialPaperTestsGeneric {
 
     // Generate a trade lifecycle with various parameters.
     fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
-              aliceGetsBack: Amount = 1000.DOLLARS,
+              aliceGetsBack: Amount<Currency> = 1000.DOLLARS,
               destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<ICommercialPaperState> {
         val someProfits = 1200.DOLLARS
         return transactionGroupFor() {

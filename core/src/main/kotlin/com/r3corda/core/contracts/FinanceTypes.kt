@@ -16,22 +16,24 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
- * Amount represents a positive quantity of currency, measured in pennies, which are the smallest representable units.
+ * Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
+ * representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
+ * amount used in whatever underlying thing the amount represents.
  *
- * Note that "pennies" are not necessarily 1/100ths of a currency unit, but are the actual smallest amount used in
- * whatever currency the amount represents.
- *
- * Amounts of different currencies *do not mix* and attempting to add or subtract two amounts of different currencies
+ * Amounts of different tokens *do not mix* and attempting to add or subtract two amounts of different currencies
  * will throw [IllegalArgumentException]. Amounts may not be negative. Amounts are represented internally using a signed
  * 64 bit value, therefore, the maximum expressable amount is 2^63 - 1 == Long.MAX_VALUE. Addition, subtraction and
  * multiplication are overflow checked and will throw [ArithmeticException] if the operation would have caused integer
  * overflow.
  *
- * TODO: It may make sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface
- * TODO: Should amount be abstracted to cover things like quantities of a stock, bond, commercial paper etc? Probably.
+ * TODO: It may make sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface,
+ *       in particular for use during calculations. This may also resolve...
  * TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
+ * TODO: Add either a scaling factor, or a variant for use in calculations
+ *
+ * @param T the type of the token, for example [Currency].
  */
-data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount> {
+data class Amount<T>(val pennies: Long, val token: T) : Comparable<Amount<T>> {
     init {
         // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
         // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.
@@ -39,38 +41,38 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
         require(pennies >= 0) { "Negative amounts are not allowed: $pennies" }
     }
 
-    constructor(amount: BigDecimal, currency: Currency) : this(amount.toLong(), currency)
+    constructor(amount: BigDecimal, currency: T) : this(amount.toLong(), currency)
 
-    operator fun plus(other: Amount): Amount {
+    operator fun plus(other: Amount<T>): Amount<T> {
         checkCurrency(other)
-        return Amount(Math.addExact(pennies, other.pennies), currency)
+        return Amount(Math.addExact(pennies, other.pennies), token)
     }
 
-    operator fun minus(other: Amount): Amount {
+    operator fun minus(other: Amount<T>): Amount<T> {
         checkCurrency(other)
-        return Amount(Math.subtractExact(pennies, other.pennies), currency)
+        return Amount(Math.subtractExact(pennies, other.pennies), token)
     }
 
-    private fun checkCurrency(other: Amount) {
-        require(other.currency == currency) { "Currency mismatch: ${other.currency} vs $currency" }
+    private fun checkCurrency(other: Amount<T>) {
+        require(other.token == token) { "Currency mismatch: ${other.token} vs $token" }
     }
 
-    operator fun div(other: Long): Amount = Amount(pennies / other, currency)
-    operator fun times(other: Long): Amount = Amount(Math.multiplyExact(pennies, other), currency)
-    operator fun div(other: Int): Amount = Amount(pennies / other, currency)
-    operator fun times(other: Int): Amount = Amount(Math.multiplyExact(pennies, other.toLong()), currency)
+    operator fun div(other: Long): Amount<T> = Amount(pennies / other, token)
+    operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(pennies, other), token)
+    operator fun div(other: Int): Amount<T> = Amount(pennies / other, token)
+    operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(pennies, other.toLong()), token)
     
     override fun toString(): String = (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
 
-    override fun compareTo(other: Amount): Int {
+    override fun compareTo(other: Amount<T>): Int {
         checkCurrency(other)
         return pennies.compareTo(other.pennies)
     }
 }
 
-fun Iterable<Amount>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
-fun Iterable<Amount>.sumOrThrow() = reduce { left, right -> left + right }
-fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
+fun <T> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
+fun <T> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
+fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) sumOrThrow() else Amount<T>(0, currency)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

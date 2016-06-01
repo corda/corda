@@ -11,6 +11,7 @@ import org.junit.Test
 import java.security.PublicKey
 import java.security.SecureRandom
 import java.security.SignatureException
+import java.util.Currency
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -24,17 +25,17 @@ class TransactionSerializationTests {
         }
 
         data class State(
-            val deposit: PartyAndReference,
-            val amount: Amount,
-            override val owner: PublicKey,
-            override val notary: Party) : OwnableState {
+                val deposit: PartyAndReference,
+                val amount: Amount<Currency>,
+                override val owner: PublicKey,
+                override val notary: Party) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
             override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         }
         interface Commands : CommandData {
             class Move() : TypeOnlyCommandData(), Commands
             data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
-            data class Exit(val amount: Amount) : Commands
+            data class Exit(val amount: Amount<Currency>) : Commands
         }
     }
 
