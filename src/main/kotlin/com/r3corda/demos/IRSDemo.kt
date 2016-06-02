@@ -87,8 +87,9 @@ fun main(args: Array<String>) {
 
     val role = options.valueOf(roleArg)!!
     if(role == IRSDemoRole.Trade) {
-        val tradeId: String? = options.valuesOf(tradeIdArg)[0]
-        if (tradeId != null) {
+        val args : List<String> = options.valuesOf(tradeIdArg)
+        if (args.size > 0) {
+            val tradeId = args[0]
             if (runTrade(tradeId)) {
                 exitProcess(0)
             } else {
@@ -99,8 +100,9 @@ fun main(args: Array<String>) {
             exitProcess(1)
         }
     } else if(role == IRSDemoRole.Date) {
-        val dateStr: String? = options.valueOf(dateArg)
-        if(dateStr != null) {
+        val args = options.valuesOf(dateArg)
+        if (args.size > 0) {
+            val dateStr = args[0]
             runDateChange(dateStr)
         } else {
             println("Please provide a date")
@@ -373,6 +375,6 @@ private fun createDefaultConfigFile(configFile: Path?, defaultLegalName: String)
 
 private fun printHelp() {
     println("""
-    Please refer to the documentation that doesn't yet exist to learn how to run the demo.
+    Please refer to the documentation in docs/build/index.html to learn how to run the demo.
     """.trimIndent())
 }
