@@ -26,10 +26,10 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.LocalDateTime
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
+import org.apache.commons.io.IOUtils
 
 // IRS DEMO
 //
@@ -154,9 +154,9 @@ private fun runDateChange(date: String) : Boolean{
 
 private fun runTrade(tradeId: String) : Boolean {
     println("Uploading tradeID " + tradeId)
-    val fileContents = Files.readAllBytes(Paths.get("scripts/example-irs-trade.json"))
-    val tradeFile = String(fileContents).replace("tradeXXX", tradeId)
-    var url = URL("http://localhost:31338/api/irs/deals")
+    val fileContents = IOUtils.toString(NodeParams::class.java.getResourceAsStream("example-irs-trade.json"))
+    val tradeFile = fileContents.replace("tradeXXX", tradeId)
+    val url = URL("http://localhost:31338/api/irs/deals")
     if(postJson(url, tradeFile)) {
         println("Trade sent")
         return true
@@ -185,7 +185,7 @@ private fun runNode(nodeParams : NodeParams) : Unit {
 }
 
 private fun runUploadRates() {
-    val fileContents = Files.readAllBytes(Paths.get("scripts/example.rates.txt"))
+    val fileContents = IOUtils.toString(NodeParams::class.java.getResource("example.rates.txt"))
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
@@ -207,9 +207,9 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
     connection.doOutput = true
     connection.useCaches = false
     connection.requestMethod = method
-    connection.setRequestProperty("Connection", "Keep-Alive");
+    connection.setRequestProperty("Connection", "Keep-Alive")
     connection.setRequestProperty("Cache-Control", "no-cache")
-    connection.setRequestProperty("Content-Type", "application/json");
+    connection.setRequestProperty("Content-Type", "application/json")
     connection.setRequestProperty("Content-Length", data.length.toString())
     val outStream = DataOutputStream(connection.outputStream)
     outStream.writeBytes(data)
@@ -231,18 +231,18 @@ private fun postJson(url: URL, data: String) : Boolean {
     return sendJson(url, data, "POST")
 }
 
-private fun uploadFile(url: URL, file: ByteArray) : Boolean {
-    val boundary = "===" + System.currentTimeMillis() + "===";
+private fun uploadFile(url: URL, file: String) : Boolean {
+    val boundary = "===" + System.currentTimeMillis() + "==="
     val connection = url.openConnection() as HttpURLConnection
     connection.doOutput = true
     connection.doInput = true
     connection.useCaches = false
     connection.requestMethod = "POST"
-    connection.setRequestProperty("Connection", "Keep-Alive");
+    connection.setRequestProperty("Connection", "Keep-Alive")
     connection.setRequestProperty("Cache-Control", "no-cache")
-    connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+    connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary)
     val outStream = DataOutputStream(connection.outputStream)
-    outStream.write(file)
+    outStream.writeBytes(file)
     outStream.close()
 
     if (connection.responseCode == 200) {
