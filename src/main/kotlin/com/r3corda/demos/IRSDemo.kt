@@ -46,7 +46,7 @@ enum class IRSDemoRole {
     Date
 }
 
-class NodeParams() {
+private class NodeParams() {
     var dir : Path = Paths.get("")
     var address : String = ""
     var mapAddress: String = ""
@@ -54,6 +54,7 @@ class NodeParams() {
     var tradeWithAddrs: List<String> = listOf()
     var tradeWithIdentities: List<Path> = listOf()
     var uploadRates: Boolean = false
+    var defaultLegalName: String = ""
 }
 
 fun main(args: Array<String>) {
@@ -140,7 +141,7 @@ fun main(args: Array<String>) {
     }
 }
 
-fun runDateChange(date: String) : Boolean{
+private fun runDateChange(date: String) : Boolean{
     var url = URL("http://localhost:31338/api/irs/demodate")
     if(putJson(url, "\"" + date + "\"")) {
         println("Date changed")
@@ -151,7 +152,7 @@ fun runDateChange(date: String) : Boolean{
     }
 }
 
-fun runTrade(tradeId: String) : Boolean {
+private fun runTrade(tradeId: String) : Boolean {
     println("Uploading tradeID " + tradeId)
     val fileContents = Files.readAllBytes(Paths.get("scripts/example-irs-trade.json"))
     val tradeFile = String(fileContents).replace("tradeXXX", tradeId)
@@ -165,7 +166,7 @@ fun runTrade(tradeId: String) : Boolean {
     }
 }
 
-fun runNode(nodeParams : NodeParams) : Unit {
+private fun runNode(nodeParams : NodeParams) : Unit {
     val node = startNode(nodeParams)
     // Register handlers for the demo
     AutoOfferProtocol.Handler.register(node)
@@ -183,7 +184,7 @@ fun runNode(nodeParams : NodeParams) : Unit {
     }
 }
 
-fun runUploadRates() {
+private fun runUploadRates() {
     val fileContents = Files.readAllBytes(Paths.get("scripts/example.rates.txt"))
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
@@ -201,7 +202,7 @@ fun runUploadRates() {
     })
 }
 
-fun sendJson(url: URL, data: String, method: String) : Boolean {
+private fun sendJson(url: URL, data: String, method: String) : Boolean {
     val connection = url.openConnection() as HttpURLConnection
     connection.doOutput = true
     connection.useCaches = false
@@ -214,23 +215,23 @@ fun sendJson(url: URL, data: String, method: String) : Boolean {
     outStream.writeBytes(data)
     outStream.close()
 
-    if (connection.responseCode == 200) {
+    if (connection.responseCode == 201) {
         return true
     } else {
-        println("Failed to " + method + " data. Status Code: " + connection + ". Mesage: " + connection.responseMessage)
+        println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
         return false
     }
 }
 
-fun putJson(url: URL, data: String) : Boolean {
+private fun putJson(url: URL, data: String) : Boolean {
     return sendJson(url, data, "PUT")
 }
 
-fun postJson(url: URL, data: String) : Boolean {
+private fun postJson(url: URL, data: String) : Boolean {
     return sendJson(url, data, "POST")
 }
 
-fun uploadFile(url: URL, file: ByteArray) : Boolean {
+private fun uploadFile(url: URL, file: ByteArray) : Boolean {
     val boundary = "===" + System.currentTimeMillis() + "===";
     val connection = url.openConnection() as HttpURLConnection
     connection.doOutput = true
@@ -252,32 +253,34 @@ fun uploadFile(url: URL, file: ByteArray) : Boolean {
     }
 }
 
-fun createNodeAParams() : NodeParams {
+private fun createNodeAParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeA")
     params.address = "localhost"
     params.tradeWithAddrs = listOf("localhost:31340")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeB).resolve("identity-public"))
+    params.defaultLegalName = "Bank A"
     return params
 }
 
-fun createNodeBParams() : NodeParams {
+private fun createNodeBParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeB")
     params.address = "localhost:31340"
     params.tradeWithAddrs = listOf("localhost")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeA).resolve("identity-public"))
+    params.defaultLegalName = "Bank B"
     params.uploadRates = true
     return params
 }
 
-fun startNode(params : NodeParams) : Node {
+private fun startNode(params : NodeParams) : Node {
     if (!Files.exists(params.dir)) {
         Files.createDirectory(params.dir)
     }
 
     val configFile = params.dir.resolve("config")
-    val config = loadConfigFile(configFile)
+    val config = loadConfigFile(configFile, params.defaultLegalName)
     val advertisedServices: Set<ServiceType>
     val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
     val networkMapId = if (params.mapAddress.equals(params.address)) {
@@ -315,7 +318,7 @@ fun startNode(params : NodeParams) : Node {
     return node
 }
 
-fun getRoleDir(role: IRSDemoRole) : Path {
+private fun getRoleDir(role: IRSDemoRole) : Path {
     when(role) {
         IRSDemoRole.NodeA -> return Paths.get("nodeA")
         IRSDemoRole.NodeB -> return Paths.get("nodeB")
@@ -325,7 +328,7 @@ fun getRoleDir(role: IRSDemoRole) : Path {
     }
 }
 
-fun nodeInfo(hostAndPortString: String, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
+private fun nodeInfo(hostAndPortString: String, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
     try {
         val addr = HostAndPort.fromString(hostAndPortString).withDefaultPort(Node.DEFAULT_PORT)
         val path = identityFile
@@ -337,38 +340,20 @@ fun nodeInfo(hostAndPortString: String, identityFile: Path, advertisedServices: 
     }
 }
 
-private fun loadConfigFile(configFile: Path): NodeConfiguration {
-    fun askAdminToEditConfig(configFile: Path?) {
-        println()
-        println("This is the first run, so you should edit the config file in $configFile and then start the node again.")
-        println()
-        exitProcess(1)
-    }
-
-    val defaultLegalName = "Global MegaCorp, Ltd."
-
+private fun loadConfigFile(configFile: Path, defaultLegalName: String): NodeConfiguration {
     if (!Files.exists(configFile)) {
         createDefaultConfigFile(configFile, defaultLegalName)
-        askAdminToEditConfig(configFile)
+        println("Default config created at $configFile.")
     }
 
     System.setProperty("config.file", configFile.toAbsolutePath().toString())
-    val config = NodeConfigurationFromConfig(ConfigFactory.load())
-
-    // Make sure admin did actually edit at least the legal name.
-    if (config.myLegalName == defaultLegalName)
-        askAdminToEditConfig(configFile)
-
-    return config
+    return NodeConfigurationFromConfig(ConfigFactory.load())
 }
 
-private fun createDefaultConfigFile(configFile: Path?, defaultLegalName: String) {
+private fun createDefaultConfigFile(configFile: Path?, legalName: String) {
     Files.write(configFile,
             """
-        # Node configuration: give the buyer node the name 'Bank of Zurich' (no quotes)
-        # The seller node can be named whatever you like.
-
-        myLegalName = $defaultLegalName
+        myLegalName = $legalName
         """.trimIndent().toByteArray())
 }
 
