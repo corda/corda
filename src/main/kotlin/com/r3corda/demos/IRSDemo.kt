@@ -71,8 +71,7 @@ fun main(args: Array<String>) {
     val fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withOptionalArg()
     val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
 
-    val tradeIdArg = parser.nonOptions("Trade ID")
-    val dateArg = parser.nonOptions("Date")
+    val nonOptions = parser.nonOptions().ofType(String::class.java)
 
     val options = try {
         parser.parse(*args)
@@ -87,9 +86,9 @@ fun main(args: Array<String>) {
 
     val role = options.valueOf(roleArg)!!
     if(role == IRSDemoRole.Trade) {
-        val args : List<String> = options.valuesOf(tradeIdArg)
-        if (args.size > 0) {
-            val tradeId = args[0]
+        val tradeIdArgs = options.valuesOf(nonOptions)
+        if (tradeIdArgs.size > 0) {
+            val tradeId = tradeIdArgs[0]
             if (runTrade(tradeId)) {
                 exitProcess(0)
             } else {
@@ -100,9 +99,9 @@ fun main(args: Array<String>) {
             exitProcess(1)
         }
     } else if(role == IRSDemoRole.Date) {
-        val args = options.valuesOf(dateArg)
-        if (args.size > 0) {
-            val dateStr = args[0]
+        val dateStrArgs = options.valuesOf(nonOptions)
+        if (dateStrArgs.size > 0) {
+            val dateStr = dateStrArgs[0]
             runDateChange(dateStr)
         } else {
             println("Please provide a date")
