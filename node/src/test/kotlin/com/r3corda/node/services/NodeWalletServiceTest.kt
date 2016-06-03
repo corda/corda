@@ -8,6 +8,7 @@ import com.r3corda.core.contracts.verifyToLedgerTransaction
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.testing.MockKeyManagementService
 import com.r3corda.core.node.services.testing.MockStorageService
+import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.WalletFiller
@@ -40,10 +41,11 @@ class NodeWalletServiceTest {
     @Test
     fun splits() {
         val (wallet, services) = make()
+        val ref = OpaqueBytes(ByteArray(1, {0}))
 
         kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
-        WalletFiller.fillWithSomeTestCash(services, DUMMY_NOTARY, 100.DOLLARS, 3, 3, Random(0L))
+        WalletFiller.fillWithSomeTestCash(services, DUMMY_NOTARY, 100.DOLLARS, 3, 3, Random(0L), ref)
 
         val w = wallet.currentWallet
         assertEquals(3, w.states.size)

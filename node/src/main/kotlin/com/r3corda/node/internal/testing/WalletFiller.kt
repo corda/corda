@@ -5,6 +5,7 @@ import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.serialization.OpaqueBytes
 import java.util.*
 
 object WalletFiller {
@@ -18,7 +19,8 @@ object WalletFiller {
      * the central bank, well ... that'd be a different story altogether.
      */
     fun fillWithSomeTestCash(services: ServiceHub, notary: Party, howMuch: Amount<Currency>, atLeastThisManyStates: Int = 3,
-                             atMostThisManyStates: Int = 10, rng: Random = Random()) {
+                             atMostThisManyStates: Int = 10, rng: Random = Random(),
+                             ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 0 }))) {
         val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
         val myIdentity = services.storageService.myLegalIdentity
@@ -29,7 +31,7 @@ object WalletFiller {
         val transactions = amounts.map { pennies ->
             // This line is what makes the cash self issued. We just use zero as our deposit reference: we don't need
             // this field as there's no other database or source of truth we need to sync with.
-            val depositRef = myIdentity.ref(0)
+            val depositRef = myIdentity.ref(ref)
 
             val issuance = TransactionBuilder()
             val freshKey = services.keyManagementService.freshKey()
