@@ -42,6 +42,17 @@ interface ContractState {
 interface IssuanceDefinition
 
 /**
+ * Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else that's
+ * quantifiable with integer quantities.
+ *
+ * @param P the type of product underlying the definition, for example [Currency].
+ */
+data class Issued<P>(
+        val issuer: PartyAndReference,
+        val product: P
+)
+
+/**
  * A contract state that can have a single owner.
  */
 interface OwnableState : ContractState {

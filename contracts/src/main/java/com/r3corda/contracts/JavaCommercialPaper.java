@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.security.PublicKey;
 import java.time.Instant;
+import java.util.Currency;
 import java.util.List;
 
 import static com.r3corda.core.contracts.ContractsDSLKt.requireSingleCommand;
@@ -30,14 +31,15 @@ public class JavaCommercialPaper implements Contract {
     public static class State implements ContractState, ICommercialPaperState {
         private PartyAndReference issuance;
         private PublicKey owner;
-        private Amount faceValue;
+        private Amount<Issued<Currency>> faceValue;
         private Instant maturityDate;
         private Party notary;
 
         public State() {
         }  // For serialization
 
-        public State(PartyAndReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate, Party notary) {
+        public State(PartyAndReference issuance, PublicKey owner, Amount<Issued<Currency>> faceValue,
+                     Instant maturityDate, Party notary) {
             this.issuance = issuance;
             this.owner = owner;
             this.faceValue = faceValue;
@@ -57,7 +59,7 @@ public class JavaCommercialPaper implements Contract {
             return new State(newIssuance, this.owner, this.faceValue, this.maturityDate, this.notary);
         }
 
-        public ICommercialPaperState withFaceValue(Amount newFaceValue) {
+        public ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue) {
             return new State(this.issuance, this.owner, newFaceValue, this.maturityDate, this.notary);
         }
 
@@ -73,7 +75,7 @@ public class JavaCommercialPaper implements Contract {
             return owner;
         }
 
-        public Amount getFaceValue() {
+        public Amount<Issued<Currency>> getFaceValue() {
             return faceValue;
         }
 
@@ -207,10 +209,11 @@ public class JavaCommercialPaper implements Contract {
                         throw new IllegalArgumentException("Failed Requirement: must be timestamped");
                     Instant time = timestampCommand.getBefore();
 
-                    Amount received = CashKt.sumCashBy(tx.getOutStates(), input.getOwner());
+                    Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutStates(), input.getOwner());
 
                     if (!received.equals(input.getFaceValue()))
-                        throw new IllegalStateException("Failed Requirement: received amount equals the face value");
+                        throw new IllegalStateException("Failed Requirement: received amount equals the face value: "
+                            + received + " vs " + input.getFaceValue());
                     if (time == null || time.isBefore(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the paper must have matured");
                     if (!input.getFaceValue().equals(received))
@@ -235,7 +238,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
-        new Cash().generateSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
+        new Cash().generateSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet);
         tx.addInputState(paper.getRef());
         tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getOwner()));
     }

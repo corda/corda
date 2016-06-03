@@ -26,7 +26,7 @@ class WalletImpl(override val states: List<StateAndRef<ContractState>>) : Wallet
             // Select the states we own which are cash, ignore the rest, take the amounts.
             mapNotNull { (it.state as? Cash.State)?.amount }.
             // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
-            groupBy { it.token }.
+            groupBy { it.token.product }.
             // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
-            mapValues { it.value.sumOrThrow() }
+            mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
 }

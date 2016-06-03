@@ -7,10 +7,12 @@ import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.contracts.DUMMY_PROGRAM_ID
 import com.r3corda.core.contracts.DummyContract
+import com.r3corda.core.contracts.PartyAndReference
+import com.r3corda.core.contracts.Issued
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.MINI_CORP
 import java.security.PublicKey
 import java.util.*
 
@@ -48,9 +50,21 @@ fun generateState(notary: Party = DUMMY_NOTARY) = DummyContract.State(Random().n
 // TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
 infix fun Cash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
-infix fun Cash.State.`issued by`(party: Party) = copy(deposit = deposit.copy(party = party))
+infix fun Cash.State.`issued by`(party: Party) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
+infix fun Cash.State.`issued by`(deposit: PartyAndReference) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit)))
+
 infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
 infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
 
-// Allows you to write 100.DOLLARS.CASH
-val Amount<Currency>.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1, 2, 3), this, NullPublicKey, DUMMY_NOTARY)
+infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State =
+        copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
+
+val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
+val DUMMY_CASH_ISSUER = Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).ref(1)
+/** Allows you to write 100.DOLLARS.CASH */
+val Amount<Currency>.CASH: Cash.State get() = Cash.State(
+        Amount<Issued<Currency>>(this.quantity, Issued<Currency>(DUMMY_CASH_ISSUER, this.token)),
+        NullPublicKey, DUMMY_NOTARY)
+
+val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NullPublicKey, DUMMY_NOTARY)
+

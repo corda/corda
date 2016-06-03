@@ -2,6 +2,7 @@ package com.r3corda.node.internal.testing
 
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.Amount
+import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
@@ -35,7 +36,7 @@ object WalletFiller {
 
             val issuance = TransactionBuilder()
             val freshKey = services.keyManagementService.freshKey()
-            cash.generateIssue(issuance, Amount(pennies, howMuch.token), depositRef, freshKey.public, notary)
+            cash.generateIssue(issuance, Amount(pennies, Issued(depositRef, howMuch.token)), freshKey.public, notary)
             issuance.signWith(myKey)
 
             return@map issuance.toSignedTransaction(true)

@@ -5,7 +5,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.node.services.WalletService
-import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace

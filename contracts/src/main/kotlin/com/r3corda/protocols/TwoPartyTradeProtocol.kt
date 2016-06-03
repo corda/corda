@@ -45,7 +45,7 @@ import java.util.Currency
 object TwoPartyTradeProtocol {
     val TRADE_TOPIC = "platform.trade"
 
-    class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception()
+    class UnacceptablePriceException(val givenPrice: Amount<Issued<Currency>>) : Exception()
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
@@ -53,7 +53,7 @@ object TwoPartyTradeProtocol {
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
-            val price: Amount<Currency>,
+            val price: Amount<Issued<Currency>>,
             val sellerOwnerKey: PublicKey,
             val sessionID: Long
     )
@@ -64,7 +64,7 @@ object TwoPartyTradeProtocol {
     open class Seller(val otherSide: SingleMessageRecipient,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
-                      val price: Amount<Currency>,
+                      val price: Amount<Issued<Currency>>,
                       val myKeyPair: KeyPair,
                       val buyerSessionID: Long,
                       override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
@@ -174,7 +174,7 @@ object TwoPartyTradeProtocol {
 
     open class Buyer(val otherSide: SingleMessageRecipient,
                      val notary: Party,
-                     val acceptablePrice: Amount<Currency>,
+                     val acceptablePrice: Amount<Issued<Currency>>,
                      val typeToBuy: Class<out OwnableState>,
                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
 
