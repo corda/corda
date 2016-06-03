@@ -52,7 +52,7 @@ class ConfigurationException(message: String) : Exception(message)
  * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter
  * @param clock The clock used within the node and by all protocols etc
  */
-class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
+open class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
            networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
            clock: Clock = NodeClock(),
            val clientAPIs: List<Class<*>> = listOf()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {

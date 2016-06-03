@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
+import com.r3corda.core.messaging.MessagingService
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
@@ -26,6 +27,7 @@ import com.r3corda.node.services.transactions.SimpleNotaryService
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import joptsimple.OptionSpec
+import joptsimple.OptionSpecBuilder
 import java.io.DataOutputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -33,6 +35,7 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Clock
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
@@ -83,7 +86,28 @@ private class NotSetupException: Throwable {
     constructor(message: String): super(message) {}
 }
 
+val messageNetwork = InMemoryMessagingNetwork()
+
+class DemoNode(messagingService: MessagingService, dir: Path, p2pAddr: HostAndPort, config: NodeConfiguration,
+               networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
+               clock: Clock, clientAPIs: List<Class<*>> = listOf())
+               : Node(dir, p2pAddr, config, networkMapAddress, advertisedServices, clock, clientAPIs) {
+
+    val messagingService = messagingService
+    override fun makeMessagingService(): MessagingService {
+        return messagingService
+    }
+
+    override fun startMessagingService() {
+
+    }
+}
+
 fun main(args: Array<String>) {
+    exitProcess(runIRSDemo(args))
+}
+
+fun runIRSDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): Int {
     val parser = OptionParser()
     val demoArgs = setupArgs(parser)
     val options = try {
@@ -91,7 +115,7 @@ fun main(args: Array<String>) {
     } catch (e: Exception) {
         println(e.message)
         printHelp()
-        exitProcess(1)
+        return 1
     }
 
     // Suppress the Artemis MQ noise, and activate the demo logging.
@@ -114,14 +138,12 @@ fun main(args: Array<String>) {
                 "http://localhost:" + (Node.DEFAULT_PORT + 1)
             }
 
-            if (runTrade(tradeId, host)) {
-                exitProcess(0)
-            } else {
-                exitProcess(1)
+            if (!runTrade(tradeId, host)) {
+                return 1
             }
         } else {
             println("Please provide a trade ID")
-            exitProcess(1)
+            return 1
         }
     } else if(role == IRSDemoRole.Date) {
         val dateStrArgs = options.valuesOf(demoArgs.nonOptions)
@@ -133,10 +155,12 @@ fun main(args: Array<String>) {
                 "http://localhost:" + (Node.DEFAULT_PORT + 1)
             }
 
-            runDateChange(dateStr, host)
+            if(!runDateChange(dateStr)) {
+                return 1
+            }
         } else {
             println("Please provide a date")
-            exitProcess(1)
+            return 1
         }
     } else {
         // If these directory and identity file arguments aren't specified then we can assume a default setup and
@@ -147,14 +171,14 @@ fun main(args: Array<String>) {
         }
 
         try {
-            runNode(configureNodeParams(role, demoArgs, options))
+            runNode(configureNodeParams(role, demoArgs, options), useInMemoryMessaging)
         } catch (e: NotSetupException) {
             println(e.message)
-            exitProcess(1)
+            return 1
         }
-
-        exitProcess(0)
     }
+
+    return 0
 }
 
 private fun setupArgs(parser: OptionParser): DemoArgs {
@@ -233,8 +257,11 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     return nodeParams
 }
 
-private fun runNode(nodeParams : NodeParams) : Unit {
-    val node = startNode(nodeParams)
+private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Unit {
+    val node = when(useInMemoryMessaging) {
+        true -> startDemoNode(nodeParams)
+        false -> startNode(nodeParams)
+    }
     // Register handlers for the demo
     AutoOfferProtocol.Handler.register(node)
     UpdateBusinessDayProtocol.Handler.register(node)
@@ -413,6 +440,36 @@ private fun startNode(params : NodeParams) : Node {
         val peerId = nodeInfo(hostAndPortString, identityFile)
         node.services.identityService.registerIdentity(peerId.identity)
     }
+
+    return node
+}
+
+private fun startDemoNode(params : NodeParams) : Node {
+    val config = createNodeConfig(params)
+    val advertisedServices: Set<ServiceType>
+    val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
+    val networkMapId = if (params.mapAddress.equals(params.address)) {
+        // This node provides network map and notary services
+        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
+        null
+    } else {
+        advertisedServices = setOf(NodeInterestRates.Type)
+
+        val handle = InMemoryMessagingNetwork.Handle(createNodeAParams().id, params.defaultLegalName)
+        nodeInfo(handle, params.identityFile, setOf(NetworkMapService.Type, NotaryService.Type))
+    }
+
+    val messageService = messageNetwork.createNodeWithID(false, params.id).start().get()
+    val node = logElapsedTime("Node startup") { DemoNode(messageService, params.dir, myNetAddr, config, networkMapId,
+            advertisedServices, DemoClock(),
+            listOf(InterestRateSwapAPI::class.java)).setup().start() }
+
+    // TODO: This should all be replaced by the identity service being updated
+    // as the network map changes.
+    val identityFile = params.tradeWithIdentities[0]
+    val handle = InMemoryMessagingNetwork.Handle(1 - params.id, "Other Node")
+    val peerId = nodeInfo(handle, identityFile)
+    node.services.identityService.registerIdentity(peerId.identity)
 
     return node
 }
