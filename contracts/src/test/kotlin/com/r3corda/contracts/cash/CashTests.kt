@@ -243,8 +243,8 @@ class CashTests {
         // Can't change deposit reference when splitting.
         transaction {
             input { inState }
-            output { outState.editDepositRef(0).copy(amount = inState.amount / 2) }
-            output { outState.editDepositRef(1).copy(amount = inState.amount / 2) }
+            output { outState.copy(amount = inState.amount / 2).editDepositRef(0) }
+            output { outState.copy(amount = inState.amount / 2).editDepositRef(1) }
             this `fails requirement` "for deposit [01] at issuer MegaCorp the amounts balance"
         }
         // Can't mix currencies.
