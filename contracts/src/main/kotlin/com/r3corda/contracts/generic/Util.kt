@@ -11,12 +11,12 @@ import java.util.*
 val Int.M: Long get() = this.toLong() * 1000000
 val Int.K: Long get() = this.toLong() * 1000
 
-val zero = Kontract.Zero()
+val zero = Zero()
 
-infix fun Kontract.and(kontract: Kontract) = Kontract.And( arrayOf(this, kontract) )
-infix fun Kontract.Action.or(kontract: Kontract.Action) = Kontract.Or( arrayOf(this, kontract) )
-infix fun Kontract.Or.or(kontract: Kontract.Action) = Kontract.Or( this.contracts.plusElement( kontract ) )
-infix fun Kontract.Or.or(ors: Kontract.Or) = Kontract.Or( this.contracts.plus(ors.contracts) )
+infix fun Kontract.and(kontract: Kontract) = And( arrayOf(this, kontract) )
+infix fun Action.or(kontract: Action) = Or( arrayOf(this, kontract) )
+infix fun Or.or(kontract: Action) = Or( this.contracts.plusElement( kontract ) )
+infix fun Or.or(ors: Or) = Or( this.contracts.plus(ors.contracts) )
 
 operator fun Long.times(currency: Currency) = Amount(this.toLong(), currency)
 operator fun Double.times(currency: Currency) = Amount(BigDecimal(this.toDouble()), currency)

@@ -18,10 +18,18 @@ class ZCB {
             }
 
     val transfer = kontract { wileECoyote.gives(roadRunner, 100.K*GBP) }
+    val transferWrong = kontract { wileECoyote.gives(roadRunner, 80.K*GBP) }
 
     val inState = GenericContract.State( DUMMY_NOTARY, contract )
 
     val outState = GenericContract.State( DUMMY_NOTARY, transfer )
+    val outStateWrong = GenericContract.State( DUMMY_NOTARY, transferWrong )
+
+    @Test
+    fun basic() {
+        assert( Zero().equals(Zero()))
+    }
+
 
     @Test
     fun `issue - signature`() {
@@ -60,13 +68,24 @@ class ZCB {
     }
 
     @Test
-    fun `execute - authorized`() {
+    fun `execute - not authorized`() {
         transaction {
             input { inState }
             output { outState }
 
             arg(porkPig.owningKey) { GenericContract.Commands.Action("execute") }
             this `fails requirement` "action must be authorized"
+        }
+    }
+
+    @Test
+    fun `execute - outState mismatch`() {
+        transaction {
+            input { inState }
+            output { outStateWrong }
+
+            arg(roadRunner.owningKey) { GenericContract.Commands.Action("execute") }
+            this `fails requirement` "output state must match action result state"
         }
     }
 

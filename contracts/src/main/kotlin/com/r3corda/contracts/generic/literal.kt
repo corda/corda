@@ -12,14 +12,14 @@ class Builder2 {
     val contracts = mutableListOf<Kontract>()
 
     fun Party.gives(beneficiary: Party, amount: Amount<Currency>) {
-        contracts.add( Kontract.Transfer(amount, this, beneficiary))
+        contracts.add( Transfer(amount, this, beneficiary))
     }
 
     fun final() =
             when (contracts.size) {
                 0 -> zero
                 1 -> contracts[0]
-                else -> Kontract.And(contracts.toTypedArray())
+                else -> And(contracts.toTypedArray())
             }
 }
 
@@ -28,12 +28,12 @@ interface GivenThatResolve {
 }
 
 class Builder(val actors: Array<Party>) {
-    val actions = mutableListOf<Kontract.Action>()
+    val actions = mutableListOf<Action>()
 
     fun String.givenThat(condition: Observable<Boolean>, init: Builder2.() -> Unit ) {
         val b = Builder2()
         b.init()
-        actions.add( Kontract.Action(this, condition, actors, b.final() ) )
+        actions.add( Action(this, condition, actors, b.final() ) )
     }
 
 
@@ -41,7 +41,7 @@ class Builder(val actors: Array<Party>) {
         val This = this
         return object : GivenThatResolve {
             override fun resolve(contract: Kontract) {
-                actions.add(Kontract.Action(This, condition, actors, contract))
+                actions.add(Action(This, condition, actors, contract))
             }
         }
     }
@@ -49,20 +49,20 @@ class Builder(val actors: Array<Party>) {
     fun String.anytime(init: Builder2.() -> Unit ) {
         val b = Builder2()
         b.init()
-        actions.add( Kontract.Action(this, const(true), actors, b.final() ) )
+        actions.add( Action(this, const(true), actors, b.final() ) )
     }
 }
 
-fun Party.may(init: Builder.() -> Unit) : Kontract.Or {
+fun Party.may(init: Builder.() -> Unit) : Or {
     val b = Builder(arrayOf(this))
     b.init()
-    return Kontract.Or(b.actions.toTypedArray())
+    return Or(b.actions.toTypedArray())
 }
 
-fun Array<Party>.may(init: Builder.() -> Unit) : Kontract.Or {
+fun Array<Party>.may(init: Builder.() -> Unit) : Or {
     val b = Builder(this)
     b.init()
-    return Kontract.Or(b.actions.toTypedArray())
+    return Or(b.actions.toTypedArray())
 }
 
 infix fun Party.or(party: Party) = arrayOf(this, party)

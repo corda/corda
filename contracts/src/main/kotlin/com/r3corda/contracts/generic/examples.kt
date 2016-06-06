@@ -9,12 +9,14 @@ import java.util.*
  * Created by sofusmortensen on 23/05/16.
  */
 
+class DummyObservable<T> : Observable<T>
+
 // observable of type T
 // example:
-val acmeCorporationHasDefaulted = Observable<Boolean>()
+val acmeCorporationHasDefaulted = DummyObservable<Boolean>()
 
 // example:
-val euribor3monthFixing = Observable<BigDecimal>()
+val euribor3monthFixing = DummyObservable<BigDecimal>()
 
 val roadRunner = Party("Road Runner", generateKeyPair().public)
 val wileECoyote = Party("Wile E. Coyote", generateKeyPair().public)

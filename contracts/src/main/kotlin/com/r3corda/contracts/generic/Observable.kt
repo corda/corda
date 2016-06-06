@@ -9,7 +9,7 @@ import java.util.*
  * Created by sofusmortensen on 23/05/16.
  */
 
-open class Observable<T>
+interface Observable<T>
 
 enum class Comparison {
     LT, LTE, GT, GTE
@@ -18,14 +18,14 @@ enum class Comparison {
 /**
  * Constant observable
  */
-class Const<T>(val value: T) : Observable<T>()
+data class Const<T>(val value: T) : Observable<T>
 
 fun<T> const(k: T) = Const(k)
 
 /**
  * Observable based on time
  */
-class TimeObservable(val cmp: Comparison, val instant: Instant) : Observable<Boolean>()
+data class TimeObservable(val cmp: Comparison, val instant: Instant) : Observable<Boolean>
 
 fun parseInstant(str: String) = DateFormat.getDateInstance(DateFormat.SHORT, Locale.US).parse(str).toInstant()
 
@@ -34,17 +34,17 @@ fun after(expiry: Instant) = TimeObservable(Comparison.GTE, expiry)
 fun before(expiry: String) = TimeObservable(Comparison.LTE, parseInstant(expiry))
 fun after(expiry: String) = TimeObservable(Comparison.GTE, parseInstant(expiry))
 
-class ObservableAnd(val left: Observable<Boolean>, val right: Observable<Boolean>) : Observable<Boolean>()
+data class ObservableAnd(val left: Observable<Boolean>, val right: Observable<Boolean>) : Observable<Boolean>
 infix fun Observable<Boolean>.and(obs: Observable<Boolean>) = ObservableAnd(this, obs)
 
-class ObservableOr(val left: Observable<Boolean>, val right: Observable<Boolean>) : Observable<Boolean>()
+data class ObservableOr(val left: Observable<Boolean>, val right: Observable<Boolean>) : Observable<Boolean>
 infix fun Observable<Boolean>.or(obs: Observable<Boolean>) = ObservableOr(this, obs)
 
-class CurrencyCross(val foreign: Currency, val domestic: Currency) : Observable<BigDecimal>()
+data class CurrencyCross(val foreign: Currency, val domestic: Currency) : Observable<BigDecimal>
 
 operator fun Currency.div(currency: Currency) = CurrencyCross(this, currency)
 
-class ObservableComparison<T>(val left: Observable<T>, val cmp: Comparison, val right: Observable<T>) : Observable<Boolean>()
+data class ObservableComparison<T>(val left: Observable<T>, val cmp: Comparison, val right: Observable<T>) : Observable<Boolean>
 
 infix fun Observable<BigDecimal>.lt(n: BigDecimal) = ObservableComparison<BigDecimal>(this, Comparison.LT, const(n))
 infix fun Observable<BigDecimal>.gt(n: BigDecimal) = ObservableComparison<BigDecimal>(this, Comparison.GT, const(n))
@@ -60,7 +60,7 @@ enum class Operation {
     PLUS, MINUS, TIMES, DIV
 }
 
-class ObservableOperation<T>(val left: Observable<T>, val op: Operation, val right: Observable<T>) : Observable<T>()
+data class ObservableOperation<T>(val left: Observable<T>, val op: Operation, val right: Observable<T>) : Observable<T>
 
 infix fun Observable<BigDecimal>.plus(n: BigDecimal) = ObservableOperation<BigDecimal>(this, Operation.PLUS, const(n))
 infix fun Observable<BigDecimal>.minus(n: BigDecimal) = ObservableOperation<BigDecimal>(this, Operation.MINUS, const(n))
