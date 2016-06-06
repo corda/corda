@@ -119,25 +119,7 @@ class ProgressTracker(vararg steps: Step) {
      * Writable map that lets you insert child [ProgressTracker]s for particular steps. It's OK to edit this even
      * after a progress tracker has been started.
      */
-    var childrenFor = object : HashMap<Step, ProgressTracker>() {
-        override fun put(key: Step, value: ProgressTracker): ProgressTracker? {
-            val r = super.put(key, value)
-            childSubscriptions[value] = value.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
-            value.parent = this@ProgressTracker
-            _changes.onNext(Change.Structural(this@ProgressTracker, key))
-            return r
-        }
-
-        override fun remove(key: Step): ProgressTracker? {
-            val tracker = this[key]
-            if (tracker != null) {
-                tracker.parent = null
-                childSubscriptions[tracker]?.let { it.unsubscribe(); childSubscriptions.remove(tracker) }
-            }
-            _changes.onNext(Change.Structural(this@ProgressTracker, key))
-            return super.remove(key)
-        }
-    }
+    val childrenFor: ChildrenProgressTrackers = ChildrenProgressTrackersImpl()
 
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
     var parent: ProgressTracker? = null
@@ -149,8 +131,6 @@ class ProgressTracker(vararg steps: Step) {
             while (cursor.parent != null) cursor = cursor.parent!!
             return cursor
         }
-
-    private val childSubscriptions = HashMap<ProgressTracker, Subscription>()
 
     private fun _allSteps(level: Int = 0): List<Pair<Int, Step>> {
         val result = ArrayList<Pair<Int, Step>>()
@@ -188,4 +168,37 @@ class ProgressTracker(vararg steps: Step) {
      * if a step changed its label or rendering).
      */
     val changes: Observable<Change> get() = _changes
+
+
+    // TODO remove this interface and add its three methods directly into ProgressTracker
+    interface ChildrenProgressTrackers {
+        operator fun get(step: ProgressTracker.Step): ProgressTracker?
+        operator fun set(step: ProgressTracker.Step, childProgressTracker: ProgressTracker)
+        fun remove(step: ProgressTracker.Step)
+    }
+
+    private inner class ChildrenProgressTrackersImpl : ChildrenProgressTrackers {
+
+        private val map = HashMap<Step, Pair<ProgressTracker, Subscription>>()
+
+        override fun get(step: Step): ProgressTracker? = map[step]?.first
+
+        override fun set(step: Step, childProgressTracker: ProgressTracker) {
+            val subscription = childProgressTracker.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
+            map[step] = Pair(childProgressTracker, subscription)
+            childProgressTracker.parent = this@ProgressTracker
+            _changes.onNext(Change.Structural(this@ProgressTracker, step))
+        }
+
+        override fun remove(step: Step) {
+            map.remove(step)?.let {
+                it.first.parent = null
+                it.second.unsubscribe()
+            }
+            _changes.onNext(Change.Structural(this@ProgressTracker, step))
+        }
+    }
+
 }
+
+

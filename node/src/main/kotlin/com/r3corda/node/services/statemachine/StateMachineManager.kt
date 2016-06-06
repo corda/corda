@@ -4,14 +4,13 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.codahale.metrics.Gauge
-import com.esotericsoftware.kryo.io.Input
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.abbreviate
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.serialization.*
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
@@ -24,7 +23,6 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
 import java.util.Collections.synchronizedMap
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -75,12 +73,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
     private val serializationContext = SerializeAsTokenContext(serviceHub)
 
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
-    fun <T> findStateMachines(klass: Class<out ProtocolLogic<T>>): List<Pair<ProtocolLogic<T>, ListenableFuture<T>>> {
+    fun <P : ProtocolLogic<T>, T> findStateMachines(protocolClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
         synchronized(stateMachines) {
             @Suppress("UNCHECKED_CAST")
             return stateMachines.keys
                     .map { it.logic }
-                    .filterIsInstance(klass)
+                    .filterIsInstance(protocolClass)
                     .map { it to (it.psm as ProtocolStateMachineImpl<T>).resultFuture }
         }
     }
@@ -92,59 +90,56 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
         field.get(null)
     }
 
-    companion object {
-        var restoreCheckpointsOnStart = true
-    }
-
     init {
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
             (fiber as ProtocolStateMachineImpl<*>).logger.error("Caught exception from protocol", throwable)
         }
-        if (restoreCheckpointsOnStart)
-            restoreCheckpoints()
     }
 
-    /** Reads the database map and resurrects any serialised state machines. */
-    private fun restoreCheckpoints() {
-        for (checkpoint in checkpointStorage.checkpoints) {
-            // Grab the Kryo engine configured by Quasar for its own stuff, and then do our own configuration on top
-            // so we can deserialised the nested stream that holds the fiber.
-            val psm = deserializeFiber(checkpoint.serialisedFiber)
-            initFiber(psm, checkpoint)
-            val awaitingObjectOfType = Class.forName(checkpoint.awaitingObjectOfType)
-            val topic = checkpoint.awaitingTopic
+    fun start() {
+        checkpointStorage.checkpoints.forEach { restoreCheckpoint(it) }
+    }
 
-            psm.logger.info("restored ${psm.logic} - was previously awaiting on topic $topic")
+    private fun restoreCheckpoint(checkpoint: Checkpoint) {
+        val fiber = deserializeFiber(checkpoint.serialisedFiber)
+        initFiber(fiber, checkpoint)
 
-            // And now re-wire the deserialised continuation back up to the network service.
-            serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
-                // TODO: See security note below.
-                val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
-                if (!awaitingObjectOfType.isInstance(obj))
-                    throw ClassCastException("Received message of unexpected type: ${obj.javaClass.name} vs ${awaitingObjectOfType.name}")
-                psm.logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
-                iterateStateMachine(psm, obj) {
+        val topic = checkpoint.awaitingTopic
+        if (topic != null) {
+            val awaitingPayloadType = Class.forName(checkpoint.awaitingPayloadType)
+            fiber.logger.info("Restored ${fiber.logic} - it was previously waiting for message of type ${awaitingPayloadType.name} on topic $topic")
+            iterateOnResponse(fiber, awaitingPayloadType, checkpoint.serialisedFiber, topic) {
+                try {
+                    Fiber.unparkDeserialized(fiber, scheduler)
+                } catch (e: Throwable) {
+                    logError(e, it, topic, fiber)
+                }
+            }
+        } else {
+            fiber.logger.info("Restored ${fiber.logic} - it was not waiting on any message; received payload: ${checkpoint.receivedPayload.toString().abbreviate(50)}")
+            executor.executeASAP {
+                iterateStateMachine(fiber, checkpoint.receivedPayload) {
                     try {
-                        Fiber.unparkDeserialized(it, scheduler)
-                    } catch(e: Throwable) {
-                        logError(e, obj, topic, it)
+                        Fiber.unparkDeserialized(fiber, scheduler)
+                    } catch (e: Throwable) {
+                        logError(e, it, null, fiber)
                     }
                 }
             }
         }
     }
 
-    private fun deserializeFiber(serialisedFiber: SerializedBytes<out ProtocolStateMachine<*>>): ProtocolStateMachineImpl<*> {
+    private fun deserializeFiber(serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>): ProtocolStateMachineImpl<*> {
         val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
         val kryo = createKryo(deserializer.kryo)
         // put the map of token -> tokenized into the kryo context
         SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-        return serialisedFiber.deserialize(kryo) as ProtocolStateMachineImpl<*>
+        return serialisedFiber.deserialize(kryo)
     }
 
-    private fun logError(e: Throwable, obj: Any, topic: String, psm: ProtocolStateMachineImpl<*>) {
+    private fun logError(e: Throwable, payload: Any?, topic: String?, psm: ProtocolStateMachineImpl<*>) {
         psm.logger.error("Protocol state machine ${psm.javaClass.name} threw '${Throwables.getRootCause(e)}' " +
-                "when handling a message of type ${obj.javaClass.name} on topic $topic")
+                "when handling a message of type ${payload?.javaClass?.name} on topic $topic")
         if (psm.logger.isTraceEnabled) {
             val s = StringWriter()
             Throwables.getRootCause(e).printStackTrace(PrintWriter(s))
@@ -152,11 +147,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
         }
     }
 
-    private fun initFiber(psm: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint?) {
-        stateMachines[psm] = checkpoint
-        psm.resultFuture.then(executor) {
-            psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
-            val finalCheckpoint = stateMachines.remove(psm)
+    private fun initFiber(fiber: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint?) {
+        stateMachines[fiber] = checkpoint
+        fiber.resultFuture.then(executor) {
+            fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
+            val finalCheckpoint = stateMachines.remove(fiber)
             if (finalCheckpoint != null) {
                 checkpointStorage.removeCheckpoint(finalCheckpoint)
             }
@@ -176,7 +171,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
             initFiber(fiber, null)
             executor.executeASAP {
                 iterateStateMachine(fiber, null) {
-                    it.start()
+                    fiber.start()
                 }
                 totalStartedProtocols.inc()
             }
@@ -187,9 +182,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
         }
     }
 
-    private fun replaceCheckpoint(psm: ProtocolStateMachineImpl<*>, newCheckpoint: Checkpoint) {
-        // It's OK for this to be unsynchronised, as the prev/new byte arrays are specific to a continuation instance,
-        // and the underlying map provided by the database layer is expected to be thread safe.
+    private fun updateCheckpoint(psm: ProtocolStateMachineImpl<*>,
+                                 serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
+                                 awaitingTopic: String?,
+                                 awaitingPayloadType: Class<*>?,
+                                 receivedPayload: Any?) {
+        val newCheckpoint = Checkpoint(serialisedFiber, awaitingTopic, awaitingPayloadType?.name, receivedPayload)
         val previousCheckpoint = stateMachines.put(psm, newCheckpoint)
         if (previousCheckpoint != null) {
             checkpointStorage.removeCheckpoint(previousCheckpoint)
@@ -199,81 +197,94 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, val checkpointStor
     }
 
     private fun iterateStateMachine(psm: ProtocolStateMachineImpl<*>,
-                                    obj: Any?,
-                                    resumeFunc: (ProtocolStateMachineImpl<*>) -> Unit) {
+                                    receivedPayload: Any?,
+                                    resumeAction: (Any?) -> Unit) {
         executor.checkOnThread()
-        val onSuspend = fun(request: FiberRequest, fiber: ProtocolStateMachineImpl<*>) {
-            // We have a request to do something: send, receive, or send-and-receive.
-            if (request is FiberRequest.ExpectingResponse<*>) {
-                // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
-                val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
-                val kryo = createKryo(deserializer.kryo)
-                // add the map of tokens -> tokenizedServices to the kyro context
-                SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-                val serialisedFiber = fiber.serialize(kryo)
-                // Prepare a listener on the network that runs in the background thread when we received a message.
-                checkpointAndSetupMessageHandler(psm, request, serialisedFiber)
-            }
-            // If an object to send was provided (not null), send it now.
-            request.obj?.let {
-                val topic = "${request.topic}.${request.sessionIDForSend}"
-                psm.logger.trace { "-> ${request.destination}/$topic : message of type ${it.javaClass.name}" }
-                serviceHub.networkService.send(topic, it, request.destination!!)
-            }
-            if (request is FiberRequest.NotExpectingResponse) {
-                // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-                iterateStateMachine(psm, null) {
-                    try {
-                        Fiber.unpark(it, QUASAR_UNBLOCKER)
-                    } catch(e: Throwable) {
-                        logError(e, request.obj!!, request.topic, it)
-                    }
+        psm.prepareForResumeWith(serviceHub, receivedPayload) { request, serialisedFiber ->
+            psm.logger.trace { "Suspended fiber ${psm.id} ${psm.logic}" }
+            onNextSuspend(psm, request, serialisedFiber)
+        }
+        psm.logger.trace { "Waking up fiber ${psm.id} ${psm.logic}" }
+        resumeAction(receivedPayload)
+    }
+
+    private fun onNextSuspend(psm: ProtocolStateMachineImpl<*>,
+                              request: FiberRequest,
+                              fiber: ProtocolStateMachineImpl<*>) {
+        // We have a request to do something: send, receive, or send-and-receive.
+        if (request is FiberRequest.ExpectingResponse<*>) {
+            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
+            val deserializer = Fiber.getFiberSerializer(false) as KryoSerializer
+            val kryo = createKryo(deserializer.kryo)
+            // add the map of tokens -> tokenizedServices to the kyro context
+            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
+            val serialisedFiber = fiber.serialize(kryo)
+            // Prepare a listener on the network that runs in the background thread when we receive a message.
+            checkpointOnExpectingResponse(psm, request, serialisedFiber)
+        }
+        // If a non-null payload to send was provided, send it now.
+        request.payload?.let {
+            val topic = "${request.topic}.${request.sessionIDForSend}"
+            psm.logger.trace { "Sending message of type ${it.javaClass.name} using topic $topic to ${request.destination} (${it.toString().abbreviate(50)})" }
+            serviceHub.networkService.send(topic, it, request.destination!!)
+        }
+        if (request is FiberRequest.NotExpectingResponse) {
+            // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
+            iterateStateMachine(psm, null) {
+                try {
+                    Fiber.unpark(psm, QUASAR_UNBLOCKER)
+                } catch(e: Throwable) {
+                    logError(e, request.payload, request.topic, psm)
                 }
             }
         }
-
-        psm.prepareForResumeWith(serviceHub, obj, onSuspend)
-
-        resumeFunc(psm)
     }
 
-    private fun checkpointAndSetupMessageHandler(psm: ProtocolStateMachineImpl<*>,
-                                                 request: FiberRequest.ExpectingResponse<*>,
-                                                 serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) {
+    private fun checkpointOnExpectingResponse(psm: ProtocolStateMachineImpl<*>,
+                                              request: FiberRequest.ExpectingResponse<*>,
+                                              serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) {
         executor.checkOnThread()
         val topic = "${request.topic}.${request.sessionIDForReceive}"
-        val newCheckpoint = Checkpoint(serialisedFiber, topic, request.responseType.name)
-        replaceCheckpoint(psm, newCheckpoint)
-        psm.logger.trace { "Waiting for message of type ${request.responseType.name} on $topic" }
-        val consumed = AtomicBoolean()
+        updateCheckpoint(psm, serialisedFiber, topic, request.responseType, null)
+        psm.logger.trace { "Preparing to receive message of type ${request.responseType.name} on topic $topic" }
+        iterateOnResponse(psm, request.responseType, serialisedFiber, topic) {
+            try {
+                Fiber.unpark(psm, QUASAR_UNBLOCKER)
+            } catch(e: Throwable) {
+                logError(e, it, topic, psm)
+            }
+        }
+    }
+
+    private fun iterateOnResponse(psm: ProtocolStateMachineImpl<*>,
+                                  responseType: Class<*>,
+                                  serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
+                                  topic: String,
+                                  resumeAction: (Any?) -> Unit) {
         serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
-            // Some assertions to ensure we don't execute on the wrong thread or get executed more than once.
+            // Assertion to ensure we don't execute on the wrong thread.
             executor.checkOnThread()
-            check(netMsg.topic == topic) { "Topic mismatch: ${netMsg.topic} vs $topic" }
-            check(!consumed.getAndSet(true))
             // TODO: This is insecure: we should not deserialise whatever we find and *then* check.
-            //
             // We should instead verify as we read the data that it's what we are expecting and throw as early as
             // possible. We only do it this way for convenience during the prototyping stage. Note that this means
             // we could simply not require the programmer to specify the expected return type at all, and catch it
             // at the last moment when we do the downcast. However this would make protocol code harder to read and
             // make it more difficult to migrate to a more explicit serialisation scheme later.
-            val obj: Any = THREAD_LOCAL_KRYO.get().readClassAndObject(Input(netMsg.data))
-            if (!request.responseType.isInstance(obj))
-                throw IllegalStateException("Expected message of type ${request.responseType.name} but got ${obj.javaClass.name}", request.stackTraceInCaseOfProblems)
-            iterateStateMachine(psm, obj) {
-                try {
-                    Fiber.unpark(it, QUASAR_UNBLOCKER)
-                } catch(e: Throwable) {
-                    logError(e, obj, topic, it)
-                }
-            }
+            val payload = netMsg.data.deserialize<Any>()
+            check(responseType.isInstance(payload)) { "Expected message of type ${responseType.name} but got ${payload.javaClass.name}" }
+            // Update the fiber's checkpoint so that it's no longer waiting on a response, but rather has the received payload
+            updateCheckpoint(psm, serialisedFiber, null, null, payload)
+            psm.logger.trace { "Received message of type ${payload.javaClass.name} on topic $topic (${payload.toString().abbreviate(50)})" }
+            iterateStateMachine(psm, payload, resumeAction)
         }
     }
 
     // TODO: Clean this up
-    open class FiberRequest(val topic: String, val destination: MessageRecipients?,
-                            val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
+    open class FiberRequest(val topic: String,
+                            val destination: MessageRecipients?,
+                            val sessionIDForSend: Long,
+                            val sessionIDForReceive: Long,
+                            val payload: Any?) {
         // This is used to identify where we suspended, in case of message mismatch errors and other things where we
         // don't have the original stack trace because it's in a suspended fiber.
         val stackTraceInCaseOfProblems = StackSnapshot()

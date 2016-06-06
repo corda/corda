@@ -20,9 +20,6 @@ import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
-import com.r3corda.node.services.transactions.NotaryService
-import com.r3corda.node.services.transactions.TimestampChecker
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.identity.InMemoryIdentityService
@@ -36,6 +33,9 @@ import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
+import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
+import com.r3corda.node.services.transactions.NotaryService
+import com.r3corda.node.services.transactions.TimestampChecker
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
@@ -106,6 +106,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
     lateinit var api: APIServer
+    var isPreviousCheckpointsPresent = false
+        private set
 
     /** Completes once the node has successfully registered with the network map service. Null until [start] returns. */
     @Volatile var networkMapRegistrationFuture: ListenableFuture<Unit>? = null
@@ -138,9 +140,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
-
         startMessagingService()
         networkMapRegistrationFuture = registerWithNetworkMap()
+        isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
+        smm.start()
         started = true
         return this
     }

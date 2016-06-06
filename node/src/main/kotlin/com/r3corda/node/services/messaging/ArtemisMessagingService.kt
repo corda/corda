@@ -125,9 +125,8 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
         val secManager = ActiveMQJAASSecurityManager(InVMLoginModule::class.java.name, secConfig)
         mq.setSecurityManager(secManager)
 
-        // Currently we cannot find out if something goes wrong during startup :( This is bug ARTEMIS-388 filed by me.
+        // TODO Currently we cannot find out if something goes wrong during startup :( This is bug ARTEMIS-388 filed by me.
         // The fix should be in the 1.3.0 release:
-        //
         // https://issues.apache.org/jira/browse/ARTEMIS-388
         mq.start()
 
@@ -137,12 +136,13 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
 
         // Create a queue on which to receive messages and set up the handler.
         session = clientFactory.createSession()
+
         session.createQueue(myHostPort.toString(), "inbound", false)
         inboundConsumer = session.createConsumer("inbound").setMessageHandler { message: ClientMessage ->
             // This code runs for every inbound message.
             try {
                 if (!message.containsProperty(TOPIC_PROPERTY)) {
-                    log.warn("Received message without a ${TOPIC_PROPERTY} property, ignoring")
+                    log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
                     return@setMessageHandler
                 }
                 val topic = message.getStringProperty(TOPIC_PROPERTY)
@@ -160,6 +160,8 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
 
                 deliverMessage(msg)
             } finally {
+                // TODO the message is delivered onto an executor and so we may be acking the message before we've
+                // finished processing it
                 message.acknowledge()
             }
         }
