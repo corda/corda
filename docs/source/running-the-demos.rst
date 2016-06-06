@@ -58,13 +58,13 @@ Open three terminals. In the first run:
 
 **Other**::
 
-    gradle installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
+    ./gradlew installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
 
 And in the second run:
 
 **Windows**::
 
-.\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
+    .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
 
 **Other**::
 

@@ -19,6 +19,7 @@ import com.r3corda.demos.api.InterestRateSwapAPI
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
+import com.r3corda.node.internal.AbstractNode
 import joptsimple.OptionParser
 import java.io.DataOutputStream
 import java.net.HttpURLConnection
@@ -90,7 +91,13 @@ fun main(args: Array<String>) {
         val tradeIdArgs = options.valuesOf(nonOptions)
         if (tradeIdArgs.size > 0) {
             val tradeId = tradeIdArgs[0]
-            if (runTrade(tradeId)) {
+            val host = if (options.has(networkAddressArg)) {
+                options.valueOf(networkAddressArg)
+            } else {
+                "http://localhost:" + Node.DEFAULT_PORT + 1
+            }
+
+            if (runTrade(tradeId, host)) {
                 exitProcess(0)
             } else {
                 exitProcess(1)
@@ -103,7 +110,13 @@ fun main(args: Array<String>) {
         val dateStrArgs = options.valuesOf(nonOptions)
         if (dateStrArgs.size > 0) {
             val dateStr = dateStrArgs[0]
-            runDateChange(dateStr)
+            val host = if (options.has(networkAddressArg)) {
+                options.valueOf(networkAddressArg)
+            } else {
+                "http://localhost:" + Node.DEFAULT_PORT + 1
+            }
+
+            runDateChange(dateStr, host)
         } else {
             println("Please provide a date")
             exitProcess(1)
@@ -141,8 +154,8 @@ fun main(args: Array<String>) {
     }
 }
 
-private fun runDateChange(date: String) : Boolean{
-    var url = URL("http://localhost:31338/api/irs/demodate")
+private fun runDateChange(date: String, host: String) : Boolean {
+    val url = URL(host + "/api/irs/demodate")
     if(putJson(url, "\"" + date + "\"")) {
         println("Date changed")
         return true
@@ -152,11 +165,11 @@ private fun runDateChange(date: String) : Boolean{
     }
 }
 
-private fun runTrade(tradeId: String) : Boolean {
+private fun runTrade(tradeId: String, host: String) : Boolean {
     println("Uploading tradeID " + tradeId)
     val fileContents = IOUtils.toString(NodeParams::class.java.getResourceAsStream("example-irs-trade.json"))
     val tradeFile = fileContents.replace("tradeXXX", tradeId)
-    val url = URL("http://localhost:31338/api/irs/deals")
+    val url = URL(host + "/api/irs/deals")
     if(postJson(url, tradeFile)) {
         println("Trade sent")
         return true
