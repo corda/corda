@@ -277,7 +277,7 @@ private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Un
     }
 }
 
-private fun runUploadRates(host) {
+private fun runUploadRates(host: String) {
     val fileContents = IOUtils.toString(NodeParams::class.java.getResource("example.rates.txt"))
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
