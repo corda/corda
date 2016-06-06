@@ -34,6 +34,7 @@ private fun setupNodeA(dir: Path) {
 private fun setupNodeB(dir: Path) {
     runIRSDemo(arrayOf("--role", "SetupNodeB", "--dir", dir.toString()))
 }
+
 private fun startNodeA(dir: Path) {
     thread(true, false, null, "NodeA", -1, { runIRSDemo(arrayOf("--role", "NodeA", "--dir", dir.toString()), true) })
     Thread.sleep(15000)

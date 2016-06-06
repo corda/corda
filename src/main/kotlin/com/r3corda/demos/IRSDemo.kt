@@ -153,7 +153,7 @@ fun runIRSDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): Int 
                 "http://localhost:" + (Node.DEFAULT_PORT + 1)
             }
 
-            if(!runDateChange(dateStr)) {
+            if(!runDateChange(dateStr, host)) {
                 return 1
             }
         } else {
@@ -267,7 +267,7 @@ private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Un
     ExitServerProtocol.Handler.register(node)
 
     if(nodeParams.uploadRates) {
-        runUploadRates()
+        runUploadRates("http://localhost:31341")
     }
 
     try {
@@ -277,12 +277,12 @@ private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Un
     }
 }
 
-private fun runUploadRates() {
+private fun runUploadRates(host) {
     val fileContents = IOUtils.toString(NodeParams::class.java.getResource("example.rates.txt"))
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
-            val url = URL("http://localhost:31341/upload/interest-rates")
+            val url = URL(host + "/upload/interest-rates")
             if(uploadFile(url, fileContents)) {
                 timer!!.cancel()
                 println("Rates uploaded successfully")
