@@ -200,6 +200,7 @@ private fun setup(params: NodeParams) {
 }
 
 private fun runDateChange(date: String, host: String) : Boolean {
+    println("Changing date to " + date)
     val url = URL(host + "/api/irs/demodate")
     if(putJson(url, "\"" + date + "\"")) {
         println("Date changed")
