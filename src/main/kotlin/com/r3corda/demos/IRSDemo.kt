@@ -98,9 +98,7 @@ class DemoNode(messagingService: MessagingService, dir: Path, p2pAddr: HostAndPo
         return messagingService
     }
 
-    override fun startMessagingService() {
-
-    }
+    override fun startMessagingService() = Unit
 }
 
 fun main(args: Array<String>) {
@@ -276,7 +274,6 @@ private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Un
     } catch(e: InterruptedException) {
         node.stop()
     }
-    exitProcess(0)
 }
 
 private fun runUploadRates() {
@@ -467,6 +464,8 @@ private fun startDemoNode(params : NodeParams) : Node {
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
     val identityFile = params.tradeWithIdentities[0]
+    // Since in integration tests there are only two nodes with IDs 0 and 1, this hack will work
+    // TODO: Get Artemis working with two nodes in the same process or come up with a better solution
     val handle = InMemoryMessagingNetwork.Handle(1 - params.id, "Other Node")
     val peerId = nodeInfo(handle, identityFile)
     node.services.identityService.registerIdentity(peerId.identity)
