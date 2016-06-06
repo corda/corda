@@ -20,6 +20,9 @@ Trader demo
 
 Open two terminals, and in the first run:
 
+.. note:: If you are planning to use non-default configuration you will need to run with --role=SetupA and --role=SetupB
+   beforehand with the same parameters you plan to supply to the respective nodes.
+
 **Windows**::
 
     gradlew.bat & .\build\install\r3prototyping\bin\trader-demo --role=BUYER

@@ -36,6 +36,7 @@ import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
 import org.apache.commons.io.IOUtils
+import java.io.FileNotFoundException
 
 // IRS DEMO
 //
@@ -75,6 +76,10 @@ private class DemoArgs() {
     lateinit var fakeTradeWithAddr: OptionSpec<String>
     lateinit var fakeTradeWithIdentityFile: OptionSpec<String>
     lateinit var nonOptions: OptionSpec<String>
+}
+
+private class NotSetupException: Throwable {
+    constructor(message: String): super(message) {}
 }
 
 fun main(args: Array<String>) {
@@ -133,13 +138,20 @@ fun main(args: Array<String>) {
             exitProcess(1)
         }
     } else {
-        // If the directories are default assume both will be and ensure all config is created
-        if(!options.has(demoArgs.dirArg)) {
+        // If these directory and identity file arguments aren't specified then we can assume a default setup and
+        // create everything that is needed without needing to run setup.
+        if(!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
             createNodeConfig(createNodeAParams());
             createNodeConfig(createNodeBParams());
         }
 
-        runNode(configureNodeParams(role, demoArgs, options))
+        try {
+            runNode(configureNodeParams(role, demoArgs, options))
+        } catch (e: NotSetupException) {
+            println(e.message)
+            exitProcess(1)
+        }
+
         exitProcess(0)
     }
 }
@@ -351,8 +363,21 @@ private fun createNodeConfig(params: NodeParams) : NodeConfiguration {
     return config
 }
 
+private fun getNodeConfig(params: NodeParams): NodeConfiguration {
+    if(!Files.exists(params.dir)) {
+        throw NotSetupException("Missing config directory. Please run node setup before running the node")
+    }
+
+    if(!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
+        throw NotSetupException("Missing identity file. Please run node setup before running the node")
+    }
+
+    val configFile = params.dir.resolve("config").toFile()
+    return loadConfigFile(configFile, params.defaultLegalName)
+}
+
 private fun startNode(params : NodeParams) : Node {
-    val config = createNodeConfig(params)
+    val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
     val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
     val networkMapId = if (params.mapAddress.equals(params.address)) {
