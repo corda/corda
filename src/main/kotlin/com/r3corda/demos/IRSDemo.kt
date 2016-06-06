@@ -133,8 +133,13 @@ fun main(args: Array<String>) {
             exitProcess(1)
         }
     } else {
-        val nodeParams = configureNodeParams(role, demoArgs, options)
-        runNode(nodeParams)
+        // If the directories are default assume both will be and ensure all config is created
+        if(!options.has(demoArgs.dirArg)) {
+            createNodeConfig(createNodeAParams());
+            createNodeConfig(createNodeBParams());
+        }
+
+        runNode(configureNodeParams(role, demoArgs, options))
         exitProcess(0)
     }
 }
