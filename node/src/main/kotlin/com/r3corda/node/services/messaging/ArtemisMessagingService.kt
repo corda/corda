@@ -4,8 +4,9 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.messaging.*
-import com.r3corda.node.internal.Node
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.internal.Node
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.*
@@ -52,7 +53,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
-                              val defaultExecutor: Executor = RunOnCallerThread) : MessagingService {
+                              val defaultExecutor: Executor = RunOnCallerThread) : SingletonSerializeAsToken(), MessagingService {
     // In future: can contain onion routing info, etc.
     private data class Address(val hostAndPort: HostAndPort) : SingleMessageRecipient
 

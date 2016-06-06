@@ -8,6 +8,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.node.services.WalletService
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
@@ -21,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe
  * states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.
  */
 @ThreadSafe
-class NodeWalletService(private val services: ServiceHubInternal) : WalletService {
+class NodeWalletService(private val services: ServiceHubInternal) : SingletonSerializeAsToken(), WalletService {
     private val log = loggerFor<NodeWalletService>()
 
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're

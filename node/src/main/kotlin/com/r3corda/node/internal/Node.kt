@@ -7,6 +7,7 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.api.APIServer
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.servlets.AttachmentDownloadServlet
@@ -52,7 +53,7 @@ class ConfigurationException(message: String) : Exception(message)
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
            networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
-           clock: Clock = Clock.systemUTC(),
+           clock: Clock = NodeClock(),
            val clientAPIs: List<Class<*>> = listOf()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */

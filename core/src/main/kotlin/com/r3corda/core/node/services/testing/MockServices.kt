@@ -10,6 +10,7 @@ import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.node.services.IdentityService
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.StorageService
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.RecordingMap
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
@@ -36,7 +37,7 @@ class MockIdentityService(val identities: List<Party>) : IdentityService {
 }
 
 
-class MockKeyManagementService(vararg initialKeys: KeyPair) : KeyManagementService {
+class MockKeyManagementService(vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
     override val keys: MutableMap<PublicKey, PrivateKey>
 
     init {
@@ -88,7 +89,7 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
                          override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
 // This parameter is for unit tests that want to observe operation details.
                          val recordingAs: (String) -> String = { tableName -> "" })
-: StorageService {
+: SingletonSerializeAsToken(), StorageService {
     protected val tables = HashMap<String, MutableMap<*, *>>()
 
     private fun <K, V> getMapOriginal(tableName: String): MutableMap<K, V> {

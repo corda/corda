@@ -284,6 +284,8 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // This ensures a SerializedBytes<Foo> wrapper is written out as just a byte array.
         register(SerializedBytes::class.java, SerializedBytesSerializer)
+
+        addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
     }
 }
 

@@ -12,9 +12,8 @@ import java.time.Clock
  * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
  * functionality and you don't want to hard-code which types in the interface.
  *
- * All services exposed to protocols (public view) need to implement [SerializeAsToken] or similar to avoid being serialized in checkpoints.
- *
- * TODO: Split into a public (to contracts etc) and private (to node) view
+ * Any services exposed to protocols (public view) need to implement [SerializeAsToken] or similar to avoid their internal
+ * state from being serialized in checkpoints.
  */
 interface ServiceHub {
     val walletService: WalletService

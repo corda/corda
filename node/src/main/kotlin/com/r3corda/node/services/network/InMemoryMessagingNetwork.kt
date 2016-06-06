@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.messaging.*
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import org.slf4j.LoggerFactory
@@ -28,7 +29,7 @@ import kotlin.concurrent.thread
  * testing).
  */
 @ThreadSafe
-class InMemoryMessagingNetwork {
+class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
     companion object {
         val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
@@ -167,7 +168,7 @@ class InMemoryMessagingNetwork {
      * An instance can be obtained by creating a builder and then using the start method.
      */
     @ThreadSafe
-    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : MessagingService {
+    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), MessagingService {
         inner class Handler(val executor: Executor?, val topic: String,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 

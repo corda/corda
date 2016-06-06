@@ -3,17 +3,11 @@ package com.r3corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.messaging.MessageRecipients
-import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
-import com.r3corda.core.serialization.SerializedBytes
-import com.r3corda.core.serialization.createKryo
-import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.node.services.api.ServiceHubInternal
 import org.slf4j.Logger
@@ -30,7 +24,7 @@ import org.slf4j.LoggerFactory
 class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, val loggerName: String) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) -> Unit)? = null
+    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, fiber: ProtocolStateMachineImpl<*>) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
     @Transient lateinit override var serviceHub: ServiceHubInternal
 
@@ -59,7 +53,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
 
     fun prepareForResumeWith(serviceHub: ServiceHubInternal,
                              withObject: Any?,
-                             suspendAction: (StateMachineManager.FiberRequest, SerializedBytes<ProtocolStateMachineImpl<*>>) -> Unit) {
+                             suspendAction: (StateMachineManager.FiberRequest, ProtocolStateMachineImpl<*>) -> Unit) {
         this.suspendAction = suspendAction
         this.resumeWithObject = withObject
         this.serviceHub = serviceHub
@@ -108,10 +102,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     @Suspendable
     private fun suspend(with: StateMachineManager.FiberRequest) {
         parkAndSerialize { fiber, serializer ->
-            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
-            val deserializer = getFiberSerializer(false) as KryoSerializer
-            val kryo = createKryo(deserializer.kryo)
-            suspendAction!!(with, this.serialize(kryo))
+            suspendAction!!(with, this)
         }
     }
 
