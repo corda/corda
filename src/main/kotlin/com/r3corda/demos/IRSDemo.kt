@@ -40,7 +40,11 @@ import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
 import org.apache.commons.io.IOUtils
+import org.glassfish.jersey.client.JerseyClientBuilder
+import org.glassfish.jersey.client.JerseyWebTarget
 import java.io.FileNotFoundException
+import javax.ws.rs.client.Entity
+import javax.ws.rs.client.Invocation
 
 // IRS DEMO
 //
@@ -311,7 +315,7 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
     outStream.writeBytes(data)
     outStream.close()
 
-    return when(connection.responseCode) {
+    return when (connection.responseCode) {
         200 -> true
         201 -> true
         else -> {
