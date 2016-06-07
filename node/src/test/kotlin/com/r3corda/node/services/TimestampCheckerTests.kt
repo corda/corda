@@ -1,8 +1,8 @@
 package com.r3corda.node.services
 
 import com.r3corda.core.contracts.TimestampCommand
+import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.seconds
-import com.r3corda.node.services.transactions.TimestampChecker
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant

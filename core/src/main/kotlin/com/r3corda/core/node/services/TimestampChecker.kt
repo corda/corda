@@ -1,4 +1,4 @@
-package com.r3corda.node.services.transactions
+package com.r3corda.core.node.services
 
 import com.r3corda.core.contracts.TimestampCommand
 import com.r3corda.core.seconds
@@ -9,7 +9,7 @@ import java.time.Duration
 /**
  * Checks if the given timestamp falls within the allowed tolerance interval
  */
-class TimestampChecker(val clock: Clock = Clock.systemDefaultZone(),
+class TimestampChecker(val clock: Clock = Clock.systemUTC(),
                        val tolerance: Duration = 30.seconds) {
     fun isValid(timestampCommand: TimestampCommand): Boolean {
         val before = timestampCommand.before
