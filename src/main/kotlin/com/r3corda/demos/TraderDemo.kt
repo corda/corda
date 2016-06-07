@@ -24,6 +24,7 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -122,6 +123,19 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
         NodeConfigurationFromConfig(override.withFallback(ConfigFactory.load()))
     }
 
+    val peerId: Int;
+    val id: Int
+    when (role) {
+        Role.BUYER -> {
+            peerId = 1
+            id = 0
+        }
+        Role.SELLER -> {
+            peerId = 0
+            id = 1
+        }
+    }
+
     // Which services will this instance of the node provide to the network?
     val advertisedServices: Set<ServiceType>
 
@@ -142,11 +156,13 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
         advertisedServices = emptySet()
         cashIssuer = party
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
-    }
 
-    val id = when(role) {
-        Role.BUYER -> 0
-        Role.SELLER -> 1
+        if(useInMemoryMessaging) {
+            val handle = InMemoryMessagingNetwork.Handle(peerId, "Other Node")
+            NodeInfo(handle, party, setOf(NetworkMapService.Type))
+        } else {
+            NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
+        }
     }
     val messageService = messageNetwork.createNodeWithID(false, id).start().get()
     // And now construct then start the node object. It takes a little while.
@@ -169,8 +185,6 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
     }
 
     return 0
-}
-
 }
 
 private fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
