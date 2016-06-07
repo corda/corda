@@ -40,11 +40,7 @@ import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
 import org.apache.commons.io.IOUtils
-import org.glassfish.jersey.client.JerseyClientBuilder
-import org.glassfish.jersey.client.JerseyWebTarget
-import java.io.FileNotFoundException
-import javax.ws.rs.client.Entity
-import javax.ws.rs.client.Invocation
+import java.net.SocketTimeoutException
 
 // IRS DEMO
 //
@@ -306,22 +302,28 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
     connection.useCaches = false
     connection.requestMethod = method
     connection.connectTimeout = 5000
-    connection.readTimeout = 5000
+    connection.readTimeout = 10000
     connection.setRequestProperty("Connection", "Keep-Alive")
     connection.setRequestProperty("Cache-Control", "no-cache")
     connection.setRequestProperty("Content-Type", "application/json")
     connection.setRequestProperty("Content-Length", data.length.toString())
-    val outStream = DataOutputStream(connection.outputStream)
-    outStream.writeBytes(data)
-    outStream.close()
 
-    return when (connection.responseCode) {
-        200 -> true
-        201 -> true
-        else -> {
-            println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
-            false
+    try {
+        val outStream = DataOutputStream(connection.outputStream)
+        outStream.writeBytes(data)
+        outStream.close()
+
+        return when (connection.responseCode) {
+            200 -> true
+            201 -> true
+            else -> {
+                println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
+                false
+            }
         }
+    } catch(e: SocketTimeoutException) {
+        println("Server took too long to respond")
+        return false
     }
 }
 
