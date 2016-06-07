@@ -1,24 +1,24 @@
 package com.r3corda.demos
 
 import com.google.common.net.HostAndPort
-import com.typesafe.config.ConfigFactory
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
-import com.r3corda.node.internal.Node
-import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.clientapi.NodeInterestRates
-import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.demos.api.InterestRateSwapAPI
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
+import com.r3corda.node.internal.Node
+import com.r3corda.node.services.clientapi.NodeInterestRates
+import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
@@ -65,12 +65,12 @@ fun main(args: Array<String>) {
 
     val networkMapId = if (options.valueOf(networkMapNetAddr).equals(options.valueOf(networkAddressArg))) {
         // This node provides network map and notary services
-        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
+        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
     } else {
         advertisedServices = setOf(NodeInterestRates.Type)
         try {
-            nodeInfo(options.valueOf(networkMapNetAddr), options.valueOf(networkMapIdentityFile), setOf(NetworkMapService.Type, NotaryService.Type))
+            nodeInfo(options.valueOf(networkMapNetAddr), options.valueOf(networkMapIdentityFile), setOf(NetworkMapService.Type, SimpleNotaryService.Type))
         } catch (e: Exception) {
             null
         }

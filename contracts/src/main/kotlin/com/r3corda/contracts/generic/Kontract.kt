@@ -19,7 +19,7 @@ data class Zero(val dummy: Int = 0) : Kontract
 
 // should be replaced with something that uses Corda assets and/or cash
 data class Transfer(val amount: Observable<Long>, val currency: Currency, val from: Party, val to: Party) : Kontract {
-    constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(amount.pennies), amount.token, from, to)
+    constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(amount.quantity), amount.token, from, to)
 }
 
 data class And(val kontracts: Set<Kontract>) : Kontract

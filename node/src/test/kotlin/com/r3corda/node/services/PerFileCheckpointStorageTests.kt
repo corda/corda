@@ -93,6 +93,6 @@ class PerFileCheckpointStorageTests {
     }
 
     private var checkpointCount = 1
-    private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)), "topic", "javaType")
+    private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)), "topic", "javaType", null)
 
 }

@@ -2,8 +2,8 @@
   "fixedLeg": {
     "fixedRatePayer": "Bank A",
     "notional": {
-      "pennies": 2500000000,
-      "currency": "USD"
+      "quantity": 2500000000,
+      "token": "USD"
     },
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
@@ -27,8 +27,8 @@
   "floatingLeg": {
     "floatingRatePayer": "Bank B",
     "notional": {
-      "pennies": 2500000000,
-      "currency": "USD"
+      "quantity": 2500000000,
+      "token": "USD"
     },
     "paymentFrequency": "Quarterly",
     "effectiveDate": "2016-03-11",
@@ -56,7 +56,7 @@
     }
   },
   "calculation": {
-    "expression": "( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.pennies * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
+    "expression": "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
     "floatingLegPaymentSchedule": {
     },
     "fixedLegPaymentSchedule": {
@@ -67,20 +67,20 @@
     "eligibleCurrency": "EUR",
     "eligibleCreditSupport": "Cash in an Eligible Currency",
     "independentAmounts": {
-      "pennies": 0,
-      "currency": "EUR"
+      "quantity": 0,
+      "token": "EUR"
     },
     "threshold": {
-      "pennies": 0,
-      "currency": "EUR"
+      "quantity": 0,
+      "token": "EUR"
     },
     "minimumTransferAmount": {
-      "pennies": 25000000,
-      "currency": "EUR"
+      "quantity": 25000000,
+      "token": "EUR"
     },
     "rounding": {
-      "pennies": 1000000,
-      "currency": "EUR"
+      "quantity": 1000000,
+      "token": "EUR"
     },
     "valuationDate": "Every Local Business Day",
     "notificationTime": "2:00pm London",
@@ -96,7 +96,7 @@
     "addressForTransfers": "",
     "exposure": {},
     "localBusinessDay": [ "London" , "NewYork" ],
-    "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360",
+    "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
     "tradeID": "tradeXXX",
     "hashLegalDocs": "put hash here"
   },

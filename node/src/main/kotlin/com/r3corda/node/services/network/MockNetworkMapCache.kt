@@ -1,15 +1,8 @@
-/*
- * Copyright 2016 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
- * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
- * set forth therein.
- *
- * All other rights reserved.
- */
 package com.r3corda.node.services.network
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.DummyPublicKey
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 

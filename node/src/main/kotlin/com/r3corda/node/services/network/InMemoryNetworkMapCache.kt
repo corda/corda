@@ -15,6 +15,7 @@ import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TOPIC_DEFAULT_POSTFIX
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.services.api.RegulatorService
@@ -30,7 +31,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache() : NetworkMapCache {
+open class InMemoryNetworkMapCache() : SingletonSerializeAsToken(), NetworkMapCache {
     override val networkMapNodes: List<NodeInfo>
         get() = get(NetworkMapService.Type)
     override val regulators: List<NodeInfo>
@@ -46,7 +47,7 @@ open class InMemoryNetworkMapCache() : NetworkMapCache {
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
 
     override fun get() = registeredNodes.map { it.value }
-    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.contains(serviceType) }.map { it.value }
+    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.isSubTypeOf(serviceType) } }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
     override fun getNodeByLegalName(name: String) = get().singleOrNull { it.identity.name == name }
     override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull { it.identity.owningKey == publicKey }

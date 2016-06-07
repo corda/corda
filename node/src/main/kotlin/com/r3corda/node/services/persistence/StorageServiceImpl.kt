@@ -1,10 +1,11 @@
 package com.r3corda.node.services.persistence
 
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.node.services.StorageService
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.RecordingMap
 import org.slf4j.LoggerFactory
 import java.security.KeyPair
@@ -15,7 +16,7 @@ open class StorageServiceImpl(override val attachments: AttachmentStorage,
                               override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
                               // This parameter is for unit tests that want to observe operation details.
                               val recordingAs: (String) -> String = { tableName -> "" })
-: StorageService {
+: SingletonSerializeAsToken(), StorageService {
     protected val tables = HashMap<String, MutableMap<*, *>>()
 
     private fun <K, V> getMapOriginal(tableName: String): MutableMap<K, V> {

@@ -8,6 +8,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.node.services.WalletService
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
@@ -21,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe
  * states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.
  */
 @ThreadSafe
-class NodeWalletService(private val services: ServiceHubInternal) : WalletService {
+class NodeWalletService(private val services: ServiceHubInternal) : SingletonSerializeAsToken(), WalletService {
     private val log = loggerFor<NodeWalletService>()
 
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
@@ -129,7 +130,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
                 m.register("WalletBalances.${balance.key}Pennies", newMetric)
                 newMetric
             }
-            metric.pennies = balance.value.pennies
+            metric.pennies = balance.value.quantity
         }
     }
 
@@ -171,7 +172,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
     private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
         val numStates = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
         val amounts = LongArray(numStates)
-        val baseSize = howMuch.pennies / numStates
+        val baseSize = howMuch.quantity / numStates
         var filledSoFar = 0L
         for (i in 0..numStates - 1) {
             if (i < numStates - 1) {
@@ -180,7 +181,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : WalletServic
                 filledSoFar += baseSize
             } else {
                 // Handle inexact rounding.
-                amounts[i] = howMuch.pennies - filledSoFar
+                amounts[i] = howMuch.quantity - filledSoFar
             }
         }
         return amounts

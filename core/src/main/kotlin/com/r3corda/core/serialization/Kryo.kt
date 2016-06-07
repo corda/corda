@@ -3,12 +3,14 @@ package com.r3corda.core.serialization
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.Kryo.DefaultInstantiatorStrategy
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.sha256
@@ -17,6 +19,8 @@ import com.r3corda.core.node.services.AttachmentStorage
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -252,7 +256,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         isRegistrationRequired = false
         // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
         // no-arg constructor available.
-        instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(StdInstantiatorStrategy())
+        instantiatorStrategy = DefaultInstantiatorStrategy(StdInstantiatorStrategy())
 
         register(Arrays.asList("").javaClass, ArraysAsListSerializer());
 
@@ -262,18 +266,16 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         register(Kryo::class.java, object : Serializer<Kryo>() {
             override fun write(kryo: Kryo, output: Output, obj: Kryo) {
             }
-
             override fun read(kryo: Kryo, input: Input, type: Class<Kryo>): Kryo {
                 return createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo)
             }
         })
 
         // Some things where the JRE provides an efficient custom serialisation.
-        val ser = JavaSerializer()
         val keyPair = generateKeyPair()
-        register(keyPair.public.javaClass, ser)
-        register(keyPair.private.javaClass, ser)
-        register(Instant::class.java, ser)
+        register(keyPair.public.javaClass, ReferencesAwareJavaSerializer)
+        register(keyPair.private.javaClass, ReferencesAwareJavaSerializer)
+        register(Instant::class.java, ReferencesAwareJavaSerializer)
 
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
@@ -284,6 +286,71 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // This ensures a SerializedBytes<Foo> wrapper is written out as just a byte array.
         register(SerializedBytes::class.java, SerializedBytesSerializer)
+
+        addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
+
+        // This is required to make all the unit tests pass
+        register(Party::class.java)
+
+        noReferencesWithin<WireTransaction>()
+    }
+}
+
+/**
+ * Use this method to mark any types which can have the same instance within it more than once. This will make sure
+ * the serialised form is stable across multiple serialise-deserialise cycles. Using this on a type with internal cyclic
+ * references will throw a stack overflow exception during serialisation.
+ */
+inline fun <reified T : Any> Kryo.noReferencesWithin() {
+    register(T::class.java, NoReferencesSerializer(getSerializer(T::class.java)))
+}
+
+class NoReferencesSerializer<T>(val baseSerializer: Serializer<T>) : Serializer<T>() {
+
+    override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
+        val previousValue = kryo.setReferences(false)
+        try {
+            return baseSerializer.read(kryo, input, type)
+        } finally {
+            kryo.references = previousValue
+        }
+    }
+
+    override fun write(kryo: Kryo, output: Output, obj: T) {
+        val previousValue = kryo.setReferences(false)
+        try {
+            baseSerializer.write(kryo, output, obj)
+        } finally {
+            kryo.references = previousValue
+        }
+    }
+}
+
+/**
+ * Improvement to the builtin JavaSerializer by honouring the [Kryo.getReferences] setting.
+ */
+object ReferencesAwareJavaSerializer : JavaSerializer() {
+
+    override fun write(kryo: Kryo, output: Output, obj: Any) {
+        if (kryo.references) {
+            super.write(kryo, output, obj)
+        }
+        else {
+            ObjectOutputStream(output).use {
+                it.writeObject(obj)
+            }
+        }
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any {
+        return if (kryo.references) {
+            super.read(kryo, input, type)
+        }
+        else {
+            ObjectInputStream(input).use {
+                it.readObject()
+            }
+        }
     }
 }
 

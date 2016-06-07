@@ -30,6 +30,8 @@ val Double.bd: BigDecimal get() = BigDecimal(this)
 val String.bd: BigDecimal get() = BigDecimal(this)
 val Long.bd: BigDecimal get() = BigDecimal(this)
 
+fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
+
 /**
  * Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to
  * avoid potential bugs where the value is used in a context where negative numbers are not expected.

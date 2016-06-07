@@ -3,6 +3,7 @@ package com.r3corda.node.services.keys
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.services.KeyManagementService
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -21,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe
  * etc
  */
 @ThreadSafe
-class E2ETestKeyManagementService : KeyManagementService {
+class E2ETestKeyManagementService() : SingletonSerializeAsToken(), KeyManagementService {
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
     }

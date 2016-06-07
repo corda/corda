@@ -28,11 +28,11 @@ import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.services.wallet.WalletImpl
+import com.r3corda.protocols.TwoPartyTradeProtocol
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import com.r3corda.protocols.TwoPartyTradeProtocol
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -218,6 +218,9 @@ class TwoPartyTradeProtocolTests {
             assertEquals(bobFuture.get(), aliceFuture.get())
 
             assertThat(bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java)).isEmpty()
+
+            assertThat(bobNode.checkpointStorage.checkpoints).isEmpty()
+            assertThat(aliceNode.checkpointStorage.checkpoints).isEmpty()
         }
     }
 
@@ -347,7 +350,7 @@ class TwoPartyTradeProtocolTests {
     @Test
     fun `dependency with error on buyer side`() {
         transactionGroupFor<ContractState> {
-            runWithError(true, false, "at least one cash input")
+            runWithError(true, false, "at least one asset input")
         }
     }
 

@@ -3,17 +3,11 @@ package com.r3corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.messaging.MessageRecipients
-import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
-import com.r3corda.core.serialization.SerializedBytes
-import com.r3corda.core.serialization.createKryo
-import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.node.services.api.ServiceHubInternal
 import org.slf4j.Logger
@@ -27,11 +21,11 @@ import org.slf4j.LoggerFactory
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, val loggerName: String) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
+class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, private val loggerName: String) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) -> Unit)? = null
-    @Transient private var resumeWithObject: Any? = null
+    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, fiber: ProtocolStateMachineImpl<*>) -> Unit)? = null
+    @Transient private var receivedPayload: Any? = null
     @Transient lateinit override var serviceHub: ServiceHubInternal
 
     @Transient private var _logger: Logger? = null
@@ -58,11 +52,11 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     }
 
     fun prepareForResumeWith(serviceHub: ServiceHubInternal,
-                             withObject: Any?,
-                             suspendAction: (StateMachineManager.FiberRequest, SerializedBytes<ProtocolStateMachineImpl<*>>) -> Unit) {
-        this.suspendAction = suspendAction
-        this.resumeWithObject = withObject
+                             receivedPayload: Any?,
+                             suspendAction: (StateMachineManager.FiberRequest, ProtocolStateMachineImpl<*>) -> Unit) {
         this.serviceHub = serviceHub
+        this.receivedPayload = receivedPayload
+        this.suspendAction = suspendAction
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
@@ -81,9 +75,10 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     @Suspendable @Suppress("UNCHECKED_CAST")
     private fun <T : Any> suspendAndExpectReceive(with: StateMachineManager.FiberRequest): UntrustworthyData<T> {
         suspend(with)
-        val tmp = resumeWithObject ?: throw IllegalStateException("Expected to receive something")
-        resumeWithObject = null
-        return UntrustworthyData(tmp as T)
+        check(receivedPayload != null) { "Expected to receive something" }
+        val untrustworthy = UntrustworthyData(receivedPayload as T)
+        receivedPayload = null
+        return untrustworthy
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
@@ -108,10 +103,13 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     @Suspendable
     private fun suspend(with: StateMachineManager.FiberRequest) {
         parkAndSerialize { fiber, serializer ->
-            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
-            val deserializer = getFiberSerializer(false) as KryoSerializer
-            val kryo = createKryo(deserializer.kryo)
-            suspendAction!!(with, this.serialize(kryo))
+            try {
+                suspendAction!!(with, this)
+            } catch (t: Throwable) {
+                logger.warn("Captured exception which was swallowed by Quasar", t)
+                // TODO to throw or not to throw, that is the question
+                throw t
+            }
         }
     }
 

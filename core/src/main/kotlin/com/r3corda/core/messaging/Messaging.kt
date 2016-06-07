@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.serialization.serialize
 import java.time.Instant
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -68,14 +69,17 @@ interface MessagingService {
  * take the registration object, unlike the callback to [MessagingService.addMessageHandler].
  */
 fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = null, callback: (Message) -> Unit) {
+    val consumed = AtomicBoolean()
     addMessageHandler(topic, executor) { msg, reg ->
         removeMessageHandler(reg)
+        check(!consumed.getAndSet(true)) { "Called more than once" }
+        check(msg.topic == topic) { "Topic mismatch: ${msg.topic} vs $topic" }
         callback(msg)
     }
 }
 
-fun MessagingService.send(topic: String, obj: Any, to: MessageRecipients) {
-    send(createMessage(topic, obj.serialize().bits), to)
+fun MessagingService.send(topic: String, payload: Any, to: MessageRecipients) {
+    send(createMessage(topic, payload.serialize().bits), to)
 }
 
 /**

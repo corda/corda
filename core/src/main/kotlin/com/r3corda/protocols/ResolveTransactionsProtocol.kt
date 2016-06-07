@@ -1,7 +1,6 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.messaging.SingleMessageRecipient

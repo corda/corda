@@ -24,8 +24,7 @@ import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.transactions.NotaryService
+import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.NotaryProtocol
@@ -115,7 +114,7 @@ fun main(args: Array<String>) {
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
     val networkMapId = if (role == Role.BUYER) {
-        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
+        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
     } else {
         // In a real system, the identity file of the network map would be shipped with the server software, and there'd
@@ -127,9 +126,6 @@ fun main(args: Array<String>) {
         advertisedServices = emptySet()
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
-
-    // TODO: Remove this once checkpoint resume works.
-    StateMachineManager.restoreCheckpointsOnStart = false
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
@@ -175,10 +171,18 @@ fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
         }
     }
 
-    val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
-    val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
-    ANSIProgressRenderer.progressTracker = seller.progressTracker
-    node.smm.add("demo.seller", seller).get()
+    if (node.isPreviousCheckpointsPresent) {
+        node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).forEach {
+            ANSIProgressRenderer.progressTracker = it.first.progressTracker
+            it.second.get()
+        }
+    } else {
+        val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
+        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
+        ANSIProgressRenderer.progressTracker = seller.progressTracker
+        node.smm.add("demo.seller", seller).get()
+    }
+
     node.stop()
 }
 
@@ -190,11 +194,18 @@ fun runBuyer(node: Node) {
         it.storePath
     }
 
-    // We use a simple scenario-specific wrapper protocol to make things happen.
-    val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
-    ANSIProgressRenderer.progressTracker = buyer.progressTracker
-    // This thread will halt forever here.
-    node.smm.add("demo.buyer", buyer).get()
+    val future = if (node.isPreviousCheckpointsPresent) {
+        val (buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
+        ANSIProgressRenderer.progressTracker = buyer.progressTracker  //TODO the SMM will soon be able to wire up the ANSIProgressRenderer automatially
+        future
+    } else {
+        // We use a simple scenario-specific wrapper protocol to make things happen.
+        val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
+        ANSIProgressRenderer.progressTracker = buyer.progressTracker
+        node.smm.add("demo.buyer", buyer)
+    }
+
+    future.get()   // This thread will halt forever here.
 }
 
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
@@ -339,7 +350,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             tx.signWith(keyPair)
 
             // Get the notary to sign it, thus committing the outputs.
-            val notarySig = subProtocol(NotaryProtocol(tx.toWireTransaction()))
+            val notarySig = subProtocol(NotaryProtocol.Client(tx.toWireTransaction()))
             tx.addSignatureUnchecked(notarySig)
 
             // Commit it to local storage.
@@ -354,7 +365,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             val builder = TransactionBuilder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
-            builder.addSignatureUnchecked(subProtocol(NotaryProtocol(builder.toWireTransaction())))
+            builder.addSignatureUnchecked(subProtocol(NotaryProtocol.Client(builder.toWireTransaction())))
             val tx = builder.toSignedTransaction(true)
             serviceHub.recordTransactions(listOf(tx))
             tx

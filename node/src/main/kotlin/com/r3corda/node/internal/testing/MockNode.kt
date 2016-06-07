@@ -12,16 +12,16 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.NotaryService
+import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AffinityExecutor
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
-import java.time.Clock
 import java.util.*
 
 /**
@@ -66,7 +66,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
-                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, Clock.systemUTC()) {
+                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, NodeClock()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -149,12 +149,12 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, NetworkMapService.Type, NotaryService.Type),
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, NetworkMapService.Type, SimpleNotaryService.Type),
                 createNode(nodes[0].info, -1, nodeFactory, true, null)
         )
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, NetworkMapService.Type, NotaryService.Type)
+    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, NetworkMapService.Type, SimpleNotaryService.Type)
     fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
 
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
