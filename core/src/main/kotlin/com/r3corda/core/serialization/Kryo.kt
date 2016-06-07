@@ -232,6 +232,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.attachments)
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
+        kryo.writeClassAndObject(output, obj.type)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -258,10 +259,11 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         } else javaClass.classLoader
 
         kryo.useClassLoader(classLoader) {
-            val outputs = kryo.readClassAndObject(input) as List<ContractState>
+            val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
+            val transactionType = kryo.readClassAndObject(input) as TransactionType
 
-            return WireTransaction(inputs, attachmentHashes, outputs, commands)
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, transactionType)
         }
     }
 }
@@ -343,6 +345,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // Work around a bug in Kryo handling nested generics
         register(Issued::class.java, ImmutableClassSerializer(Issued::class))
+        register(TransactionState::class.java, ImmutableClassSerializer(TransactionState::class))
 
         noReferencesWithin<WireTransaction>()
     }

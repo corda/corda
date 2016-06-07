@@ -92,7 +92,7 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: Stri
  */
 @Throws(IllegalArgumentException::class)
 // TODO: Can we have a common Move command for all contracts and avoid the reified type parameter here?
-inline fun <reified T : CommandData> verifyMoveCommands(inputs: List<OwnableState>, tx: TransactionForVerification) {
+inline fun <reified T : CommandData> verifyMoveCommands(inputs: List<OwnableState>, tx: TransactionForContract) {
     // Now check the digital signatures on the move command. Every input has an owning public key, and we must
     // see a signature from each of those keys. The actual signatures have been verified against the transaction
     // data by the platform before execution.

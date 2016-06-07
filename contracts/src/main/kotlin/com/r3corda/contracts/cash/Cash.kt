@@ -49,12 +49,10 @@ class Cash : FungibleAsset<Currency>() {
             override val amount: Amount<Issued<Currency>>,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
-            override val owner: PublicKey,
-
-            override val notary: Party
+            override val owner: PublicKey
     ) : FungibleAsset.State<Currency> {
-        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey, notary: Party)
-            : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner, notary)
+        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
+            : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
         override val deposit: PartyAndReference
             get() = amount.token.issuer
         override val contract = CASH_PROGRAM_ID
@@ -66,7 +64,6 @@ class Cash : FungibleAsset<Currency>() {
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
-        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
     }
 
     // Just for grouping
@@ -97,9 +94,9 @@ class Cash : FungibleAsset<Currency>() {
      */
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: PublicKey, notary: Party) {
         check(tx.inputStates().isEmpty())
-        check(tx.outputStates().sumCashOrNull() == null)
+        check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
         val at = amount.token.issuer
-        tx.addOutputState(Cash.State(amount, owner, notary))
+        tx.addOutputState(TransactionState(Cash.State(amount, owner), notary))
         tx.addCommand(Cash.Commands.Issue(), at.party.owningKey)
     }
 
@@ -146,9 +143,9 @@ class Cash : FungibleAsset<Currency>() {
 
         val currency = amount.token
         val acceptableCoins = run {
-            val ofCurrency = cashStates.filter { it.state.amount.token.product == currency }
+            val ofCurrency = cashStates.filter { it.state.data.amount.token.product == currency }
             if (onlyFromParties != null)
-                ofCurrency.filter { it.state.deposit.party in onlyFromParties }
+                ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
             else
                 ofCurrency
         }
@@ -159,7 +156,7 @@ class Cash : FungibleAsset<Currency>() {
         for (c in acceptableCoins) {
             if (gatheredAmount >= amount) break
             gathered.add(c)
-            gatheredAmount += Amount(c.state.amount.quantity, currency)
+            gatheredAmount += Amount(c.state.data.amount.quantity, currency)
             takeChangeFrom = c
         }
 
@@ -167,30 +164,30 @@ class Cash : FungibleAsset<Currency>() {
             throw InsufficientBalanceException(amount - gatheredAmount)
 
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.issuanceDef)
+            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.state.issuanceDef)
         } else {
             null
         }
-        val keysUsed = gathered.map { it.state.owner }.toSet()
+        val keysUsed = gathered.map { it.state.data.owner }.toSet()
 
-        val states = gathered.groupBy { it.state.deposit }.map {
+        val states = gathered.groupBy { it.state.data.deposit }.map {
             val (deposit, coins) = it
-            val totalAmount = coins.map { it.state.amount }.sumOrThrow()
-            State(totalAmount, to, coins.first().state.notary)
+            val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
+            TransactionState(State(totalAmount, to), coins.first().state.notary)
         }
 
         val outputs = if (change != null) {
             // Just copy a key across as the change key. In real life of course, this works but leaks private data.
             // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
             // value flows through the transaction graph.
-            val changeKey = gathered.first().state.owner
+            val changeKey = gathered.first().state.data.owner
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
-                    states.last().let { it.copy(amount = it.amount - change) } +
-                    State(change, changeKey, gathered.last().state.notary)
+                    states.last().let { TransactionState(it.data.copy(amount = it.data.amount - change), it.notary) } +
+                    TransactionState(State(change, changeKey), gathered.last().state.notary)
         } else states
 
-        for (state in gathered) tx.addInputState(state.ref)
+        for (state in gathered) tx.addInputState(state)
         for (state in outputs) tx.addOutputState(state)
         // What if we already have a move command with the right keys? Filter it out here or in platform code?
         val keysList = keysUsed.toList()

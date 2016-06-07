@@ -1,6 +1,5 @@
 package com.r3corda.node.services
 
-import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.node.services.api.AbstractNodeService
@@ -41,12 +40,13 @@ class NotaryChangeService(net: MessagingService, val smm: StateMachineManager) :
      * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
      */
     private fun checkProposal(proposal: NotaryChangeProtocol.Proposal): Boolean {
-        val state = smm.serviceHub.loadState(proposal.stateRef)
-        if (state is Cash.State) return false // TODO: delete this example check
-
         val newNotary = proposal.newNotary
         val isNotary = smm.serviceHub.networkMapCache.notaryNodes.any { it.identity == newNotary }
         require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
+
+        // An example requirement
+        val blacklist = listOf("Evil Notary")
+        require(!blacklist.contains(newNotary.name))
 
         return true
     }

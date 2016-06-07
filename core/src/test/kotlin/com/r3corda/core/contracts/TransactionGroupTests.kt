@@ -15,24 +15,22 @@ import kotlin.test.assertNotEquals
 val TEST_PROGRAM_ID = TransactionGroupTests.TestCash()
 
 class TransactionGroupTests {
-    val A_THOUSAND_POUNDS = TestCash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY, DUMMY_NOTARY)
+    val A_THOUSAND_POUNDS = TestCash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY)
 
     class TestCash : Contract {
         override val legalContractReference = SecureHash.sha256("TestCash")
 
-        override fun verify(tx: TransactionForVerification) {
+        override fun verify(tx: TransactionForContract) {
         }
 
         data class State(
                 val deposit: PartyAndReference,
                 val amount: Amount<Currency>,
-                override val owner: PublicKey,
-                override val notary: Party) : OwnableState {
+                override val owner: PublicKey) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
             override val participants: List<PublicKey>
                 get() = listOf(owner)
 
-            override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
             override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         }
 
@@ -44,12 +42,13 @@ class TransactionGroupTests {
     }
 
     infix fun TestCash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
+    infix fun TestCash.State.`with notary`(notary: Party) = TransactionState(this, notary)
 
     @Test
     fun success() {
         transactionGroup {
             roots {
-                transaction(A_THOUSAND_POUNDS label "£1000")
+                transaction(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY label "£1000")
             }
 
             transaction {
@@ -122,17 +121,17 @@ class TransactionGroupTests {
 
         // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
         // points nowhere.
-        val input = generateStateRef()
+        val input = StateAndRef(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY, generateStateRef())
         tg.txns += TransactionBuilder().apply {
             addInputState(input)
-            addOutputState(A_THOUSAND_POUNDS)
+            addOutputState(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY)
             addCommand(TestCash.Commands.Move(), BOB_PUBKEY)
         }.toWireTransaction()
 
         val e = assertFailsWith(TransactionResolutionException::class) {
             tg.verify()
         }
-        assertEquals(e.hash, input.txhash)
+        assertEquals(e.hash, input.ref.txhash)
     }
 
     @Test
@@ -140,7 +139,7 @@ class TransactionGroupTests {
         // Check that a transaction cannot refer to the same input more than once.
         transactionGroup {
             roots {
-                transaction(A_THOUSAND_POUNDS label "£1000")
+                transaction(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY label "£1000")
             }
 
             transaction {

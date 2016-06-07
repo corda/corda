@@ -37,7 +37,6 @@ abstract class FungibleAsset<T> : Contract {
         override val amount: Amount<Issued<T>>
         /** There must be a MoveCommand signed by this key to claim the amount */
         override val owner: PublicKey
-        override val notary: Party
     }
 
     // Just for grouping
@@ -58,7 +57,7 @@ abstract class FungibleAsset<T> : Contract {
     }
 
     /** This is the function EVERYONE runs */
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
         // Each group is a set of input/output states with distinct issuance definitions. These assets are not fungible
         // and must be kept separated for bookkeeping purposes.
         val groups = tx.groupStates() { it: FungibleAsset.State<T> -> it.issuanceDef }
@@ -97,7 +96,7 @@ abstract class FungibleAsset<T> : Contract {
 
     private fun verifyIssueCommand(inputs: List<State<T>>,
                                    outputs: List<State<T>>,
-                                   tx: TransactionForVerification,
+                                   tx: TransactionForContract,
                                    issueCommand: AuthenticatedObject<Commands.Issue>,
                                    token: Issued<T>,
                                    issuer: Party) {

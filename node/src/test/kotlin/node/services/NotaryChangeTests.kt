@@ -1,14 +1,12 @@
 package node.services
 
 import com.r3corda.contracts.DummyContract
-import com.r3corda.core.contracts.StateAndRef
-import com.r3corda.core.contracts.StateRef
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.*
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.node.internal.testing.issueState
 import com.r3corda.node.services.transactions.NotaryService
-import com.r3corda.node.testutils.issueState
 import org.junit.Before
 import org.junit.Test
 import protocols.NotaryChangeProtocol
@@ -35,12 +33,12 @@ class NotaryChangeTests {
 
     @Test
     fun `should change notary for a state with single participant`() {
-        val state = issueState(clientNodeA, DUMMY_NOTARY)
-        val ref = clientNodeA.services.loadState(state)
+        val ref = issueState(clientNodeA, DUMMY_NOTARY).ref
+        val state = clientNodeA.services.loadState(ref)
 
         val newNotary = newNotaryNode.info.identity
 
-        val protocol = Instigator(StateAndRef(ref, state), newNotary)
+        val protocol = Instigator(StateAndRef(state, ref), newNotary)
         val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC_CHANGE, protocol)
 
         net.runNetwork()
@@ -51,11 +49,10 @@ class NotaryChangeTests {
 
     @Test
     fun `should change notary for a state with multiple participants`() {
-        val state = DummyContract.MultiOwnerState(0,
-                listOf(clientNodeA.info.identity.owningKey, clientNodeB.info.identity.owningKey),
-                DUMMY_NOTARY)
+        val state = TransactionState(DummyContract.MultiOwnerState(0,
+                listOf(clientNodeA.info.identity.owningKey, clientNodeB.info.identity.owningKey)), DUMMY_NOTARY)
 
-        val tx = TransactionBuilder().withItems(state)
+        val tx = TransactionBuilder(type = TransactionType.NotaryChange()).withItems(state)
         tx.signWith(clientNodeA.storage.myLegalIdentityKey)
         tx.signWith(clientNodeB.storage.myLegalIdentityKey)
         tx.signWith(DUMMY_NOTARY_KEY)

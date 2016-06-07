@@ -1,10 +1,7 @@
 package com.r3corda.node.api
 
+import com.r3corda.core.contracts.*
 import com.r3corda.node.api.StatesQuery
-import com.r3corda.core.contracts.ContractState
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.StateRef
-import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.SerializedBytes
@@ -43,7 +40,7 @@ interface APIServer {
      */
     fun queryStates(query: StatesQuery): List<StateRef>
 
-    fun fetchStates(states: List<StateRef>): Map<StateRef, ContractState?>
+    fun fetchStates(states: List<StateRef>): Map<StateRef, TransactionState<ContractState>?>
 
     /**
      * Query for immutable transactions (results can be cached indefinitely by their id/hash).

@@ -17,7 +17,7 @@ import com.r3corda.core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
-import java.util.Currency
+import java.util.*
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
@@ -129,7 +129,7 @@ object TwoPartyTradeProtocol {
                 // This verifies that the transaction is contract-valid, even though it is missing signatures.
                 serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments))
 
-                if (wtx.outputs.sumCashBy(myKeyPair.public) != price)
+                if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public) != price)
                     throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
 
                 // There are all sorts of funny games a malicious secondary might play here, we should fix them:
@@ -221,7 +221,7 @@ object TwoPartyTradeProtocol {
             progressTracker.currentStep = VERIFYING
             maybeTradeRequest.validate {
                 // What is the seller trying to sell us?
-                val asset = it.assetForSale.state
+                val asset = it.assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
                 logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
@@ -272,15 +272,15 @@ object TwoPartyTradeProtocol {
             val cashStates = wallet.statesOfType<Cash.State>()
             val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
             // Add inputs/outputs/a command for the movement of the asset.
-            ptx.addInputState(tradeRequest.assetForSale.ref)
+            ptx.addInputState(tradeRequest.assetForSale)
             // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
             // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.withNewOwner(freshKey.public)
-            ptx.addOutputState(state)
-            ptx.addCommand(command, tradeRequest.assetForSale.state.owner)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
+            ptx.addOutputState(TransactionState(state, tradeRequest.assetForSale.state.notary))
+            ptx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.

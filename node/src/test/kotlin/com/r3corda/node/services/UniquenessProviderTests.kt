@@ -1,6 +1,8 @@
 package com.r3corda.node.services
 
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.node.services.UniquenessException
 import com.r3corda.core.testing.MEGA_CORP
 import com.r3corda.core.testing.generateStateRef
@@ -15,7 +17,8 @@ class UniquenessProviderTests {
     @Test fun `should commit a transaction with unused inputs without exception`() {
         val provider = InMemoryUniquenessProvider()
         val inputState = generateStateRef()
-        val tx = TransactionBuilder().withItems(inputState).toWireTransaction()
+        val tx = buildTransaction(inputState)
+
         provider.commit(tx, identity)
     }
 
@@ -23,10 +26,10 @@ class UniquenessProviderTests {
         val provider = InMemoryUniquenessProvider()
         val inputState = generateStateRef()
 
-        val tx1 = TransactionBuilder().withItems(inputState).toWireTransaction()
+        val tx1 = buildTransaction(inputState)
         provider.commit(tx1, identity)
 
-        val tx2 = TransactionBuilder().withItems(inputState).toWireTransaction()
+        val tx2 = buildTransaction(inputState)
         val ex = assertFailsWith<UniquenessException> { provider.commit(tx2, identity) }
 
         val consumingTx = ex.error.stateHistory[inputState]!!
@@ -34,4 +37,6 @@ class UniquenessProviderTests {
         assertEquals(consumingTx.inputIndex, tx1.inputs.indexOf(inputState))
         assertEquals(consumingTx.requestingParty, identity)
     }
+
+    private fun buildTransaction(inputState: StateRef) = WireTransaction(listOf(inputState), emptyList(), emptyList(), emptyList(), TransactionType.Business())
 }

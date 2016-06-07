@@ -468,7 +468,7 @@ class TwoPartyTradeProtocolTests {
                                                                    attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
         val ap = transaction {
             output("alice's paper") {
-                CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days, notary)
+                CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
             arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)

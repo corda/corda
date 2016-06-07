@@ -102,7 +102,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
-    lateinit var notaryChangeService: NotaryChangeService
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeNotaryService: NotaryService? = null
     lateinit var identity: IdentityService
@@ -130,9 +129,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net = makeMessagingService()
         wallet = NodeWalletService(services)
         makeInterestRatesOracleService()
-        api = APIServerImpl(this)
-        notaryChangeService = NotaryChangeService(net, smm)
-
         identity = makeIdentityService()
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
@@ -144,6 +140,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
+        NotaryChangeService(net, smm)
 
         buildAdvertisedServices()
 

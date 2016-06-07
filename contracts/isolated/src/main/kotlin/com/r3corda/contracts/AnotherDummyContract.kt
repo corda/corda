@@ -18,19 +18,17 @@ import java.security.PublicKey
 val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 
 class AnotherDummyContract : Contract, com.r3corda.core.node.DummyContractBackdoor {
-    data class State(val magicNumber: Int = 0, override val notary: Party) : ContractState {
+    data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
         override val participants: List<PublicKey>
             get() = emptyList()
-
-        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
     }
 
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
         // Always accepts.
     }
 
@@ -38,7 +36,7 @@ class AnotherDummyContract : Contract, com.r3corda.core.node.DummyContractBackdo
     override val legalContractReference: SecureHash = SecureHash.sha256("https://anotherdummy.org")
 
     override fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
-        val state = State(magicNumber, notary)
+        val state = TransactionState(State(magicNumber), notary)
         return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 

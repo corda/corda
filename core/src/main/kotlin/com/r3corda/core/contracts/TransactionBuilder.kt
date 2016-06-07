@@ -1,8 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.WireTransaction
-import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -22,8 +19,9 @@ import java.util.*
  */
 class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf(),
                          private val attachments: MutableList<SecureHash> = arrayListOf(),
-                         private val outputs: MutableList<ContractState> = arrayListOf(),
-                         private val commands: MutableList<Command> = arrayListOf()) {
+                         private val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+                         private val commands: MutableList<Command> = arrayListOf(),
+                         private val type: TransactionType = TransactionType.Business()) {
 
     val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
 
@@ -49,8 +47,8 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
             when (t) {
-                is StateRef -> addInputState(t)
-                is ContractState -> addOutputState(t)
+                is StateAndRef<*> -> addInputState(t)
+                is TransactionState<*> -> addOutputState(t)
                 is Command -> addCommand(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
@@ -96,7 +94,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands))
+            ArrayList(outputs), ArrayList(commands), type)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
@@ -109,9 +107,15 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
-    fun addInputState(ref: StateRef) {
+    fun addInputState(stateAndRef: StateAndRef<*>) {
         check(currentSigs.isEmpty())
-        inputs.add(ref)
+
+        val notaryKey = stateAndRef.state.notary.owningKey
+        if (commands.none { it.signers.contains(notaryKey) }) {
+            commands.add(Command(NotaryCommand(), notaryKey))
+        }
+
+        inputs.add(stateAndRef.ref)
     }
 
     fun addAttachment(attachment: Attachment) {
@@ -119,7 +123,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         attachments.add(attachment.id)
     }
 
-    fun addOutputState(state: ContractState) {
+    fun addOutputState(state: TransactionState<*>) {
         check(currentSigs.isEmpty())
         outputs.add(state)
     }
@@ -136,7 +140,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
-    fun outputStates(): List<ContractState> = ArrayList(outputs)
+    fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
     fun commands(): List<Command> = ArrayList(commands)
     fun attachments(): List<SecureHash> = ArrayList(attachments)
 }

@@ -27,17 +27,20 @@ interface ContractState {
     /** Contract by which the state belongs */
     val contract: Contract
 
-    /** Identity of the notary that ensures this state is not used as an input to a transaction more than once */
-    val notary: Party
-
     /** List of public keys for each party that can consume this state in a valid transaction. */
     val participants: List<PublicKey>
+}
 
+/** A wrapper for [ContractState] containing additional platform-level state information. This is the state */
+data class TransactionState<out T : ContractState>(
+        val data: T,
+        /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
+        val notary: Party) {
     /**
-     * Copies the underlying data structure, replacing the notary field with the new value.
-     * To replace the notary, we need an approval (signature) from _all_ participants.
+     * Copies the underlying state, replacing the notary field with the new value.
+     * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState]
      */
-    fun withNewNotary(newNotary: Party): ContractState
+    fun withNewNotary(newNotary: Party) = TransactionState(this.data, newNotary)
 }
 
 /**
@@ -105,7 +108,7 @@ interface DealState : LinearState {
      * TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
      * Contract instance from a ContractState are imminent, at which point we can move this out of here
      */
-    fun generateAgreement(): TransactionBuilder
+    fun generateAgreement(notary: Party): TransactionBuilder
 }
 
 /**
@@ -125,7 +128,7 @@ interface FixableDealState : DealState {
      * TODO: This would also likely move to methods on the Contract once the changes to reference
      * the Contract from the ContractState are in
      */
-    fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix)
+    fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix)
 }
 
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
@@ -140,11 +143,11 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 }
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
-data class StateAndRef<out T : ContractState>(val state: T, val ref: StateRef)
+data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
-    return mapNotNull { if (it.state is T) StateAndRef(it.state, it.ref) else null }
+    return mapNotNull { if (it.state.data is T) StateAndRef(TransactionState(it.state.data, it.state.notary), it.ref) else null }
 }
 
 /**
@@ -166,6 +169,9 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 data class Command(val value: CommandData, val signers: List<PublicKey>) {
+    init {
+        require(signers.isNotEmpty())
+    }
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
@@ -198,10 +204,13 @@ data class TimestampCommand(val after: Instant?, val before: Instant?) : Command
 }
 
 /**
- * Indicates that the transaction is only used for changing the Notary for a state. If present in a transaction,
- * the contract code is not run, and special platform-level validation logic is used instead
+ * Command that has to be signed by all participants of the states in the transaction
+ * in order to perform a notary change
  */
 class ChangeNotary : TypeOnlyCommandData()
+
+/** Command that indicates the requirement of a Notary signature for the input states */
+class NotaryCommand : TypeOnlyCommandData()
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
@@ -217,7 +226,7 @@ interface Contract {
      * existing contract code.
      */
     @Throws(IllegalArgumentException::class)
-    fun verify(tx: TransactionForVerification)
+    fun verify(tx: TransactionForContract)
 
     /**
      * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of

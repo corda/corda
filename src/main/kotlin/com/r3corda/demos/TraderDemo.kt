@@ -356,7 +356,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             // Sign it as ourselves.
             tx.signWith(keyPair)
 
-            // Get the notary to sign it, thus committing the outputs.
+            // Get the notary to sign the timestamp
             val notarySig = subProtocol(NotaryProtocol.Client(tx.toWireTransaction()))
             tx.addSignatureUnchecked(notarySig)
 

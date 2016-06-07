@@ -55,18 +55,13 @@ object NotaryChangeProtocol {
 
             progressTracker.currentStep = SIGNING
 
-            val signatures = mutableListOf<DigitalSignature.WithKey>()
-
             val myKey = serviceHub.storageService.myLegalIdentity.owningKey
             val me = listOf(myKey)
 
-            if (participants == me) {
-                signatures.add(getNotarySignature(stx.tx))
+            val signatures = if (participants == me) {
+                listOf(getNotarySignature(stx.tx))
             } else {
-                val participantSessions = collectSignatures(participants - me, signatures, stx)
-                signatures.add(getNotarySignature(stx.tx))
-
-                participantSessions.forEach { send(TOPIC_CHANGE, it.first.address, it.second, signatures) }
+                collectSignatures(participants - me, stx)
             }
 
             val finalTx = stx + signatures
@@ -77,9 +72,9 @@ object NotaryChangeProtocol {
         private fun assembleTx(): Pair<SignedTransaction, List<PublicKey>> {
             val state = originalState.state
             val newState = state.withNewNotary(newNotary)
-            val participants = state.participants
+            val participants = state.data.participants
             val cmd = Command(ChangeNotary(), participants)
-            val tx = TransactionBuilder().withItems(originalState.ref, newState, cmd)
+            val tx = TransactionBuilder(type = TransactionType.NotaryChange()).withItems(originalState, newState, cmd)
             tx.signWith(serviceHub.storageService.myLegalIdentityKey)
 
             val stx = tx.toSignedTransaction(false)
@@ -87,21 +82,22 @@ object NotaryChangeProtocol {
         }
 
         @Suspendable
-        private fun collectSignatures(participants: List<PublicKey>, signatures: MutableCollection<DigitalSignature.WithKey>,
-                                      stx: SignedTransaction): MutableList<Pair<NodeInfo, Long>> {
-            val participantSessions = mutableListOf<Pair<NodeInfo, Long>>()
+        private fun collectSignatures(participants: List<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
+            val sessions = mutableMapOf<NodeInfo, Long>()
 
-            participants.forEach {
+            val participantSignatures = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByPublicKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
                 val sessionIdForSend = random63BitValue()
-                val participantSignature = getParticipantSignature(participantNode, stx, sessionIdForSend)
-                signatures.add(participantSignature)
+                sessions[participantNode] = sessionIdForSend
 
-                participantSessions.add(participantNode to sessionIdForSend)
+                getParticipantSignature(participantNode, stx, sessionIdForSend)
             }
 
-            return participantSessions
+            val allSignatures = participantSignatures + getNotarySignature(stx.tx)
+            sessions.forEach { send(TOPIC_CHANGE, it.key.address, it.value, allSignatures) }
+
+            return allSignatures
         }
 
         @Suspendable
@@ -125,7 +121,7 @@ object NotaryChangeProtocol {
         @Suspendable
         private fun getNotarySignature(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
             progressTracker.currentStep = NOTARY
-            return subProtocol(NotaryProtocol(wtx))
+            return subProtocol(NotaryProtocol.Client(wtx))
         }
     }
 
@@ -153,19 +149,20 @@ object NotaryChangeProtocol {
             val mySignature = sign(proposedTx)
             val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(TOPIC_CHANGE, otherSide, sessionIdForSend, sessionIdForReceive, mySignature)
 
-            val allSignatures = swapSignatures.validate {
-                it.forEach { it.verifyWithECDSA(proposedTx.txBits) }
-                it
+            val allSignatures = swapSignatures.validate { signatures ->
+                signatures.forEach { it.verifyWithECDSA(proposedTx.txBits) }
+                signatures
             }
 
             val finalTx = proposedTx + allSignatures
+            finalTx.verify()
             serviceHub.recordTransactions(listOf(finalTx))
         }
 
         @Suspendable
         private fun validateTx(stx: SignedTransaction): SignedTransaction {
             checkDependenciesValid(stx)
-            checkContractValid(stx)
+            checkValid(stx)
             checkCommand(stx.tx)
             return stx
         }
@@ -184,7 +181,7 @@ object NotaryChangeProtocol {
             subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
         }
 
-        private fun checkContractValid(stx: SignedTransaction) {
+        private fun checkValid(stx: SignedTransaction) {
             val ltx = stx.tx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
             serviceHub.verifyTransaction(ltx)
         }

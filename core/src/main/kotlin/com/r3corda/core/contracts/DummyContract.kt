@@ -9,30 +9,33 @@ import java.security.PublicKey
 val DUMMY_PROGRAM_ID = DummyContract()
 
 class DummyContract : Contract {
-    data class State(val magicNumber: Int = 0,
-                     override val notary: Party) : ContractState {
+    data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<PublicKey>
             get() = emptyList()
+    }
 
-        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
+    data class SingleOwnerState(val magicNumber: Int = 0, override val owner: PublicKey) : OwnableState {
+        override val contract = DUMMY_PROGRAM_ID
+        override val participants: List<PublicKey>
+            get() = listOf(owner)
+
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
     data class MultiOwnerState(val magicNumber: Int = 0,
-                               val owners: List<PublicKey>,
-                               override val notary: Party) : ContractState {
+                               val owners: List<PublicKey>) : ContractState {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<PublicKey>
             get() = owners
-
-        override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
     }
 
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
+        class Move : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
         // Always accepts.
     }
 
@@ -40,7 +43,7 @@ class DummyContract : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("")
 
     fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
-        val state = State(magicNumber, notary)
+        val state = TransactionState(SingleOwnerState(magicNumber, owner.party.owningKey), notary)
         return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 }

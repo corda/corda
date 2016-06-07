@@ -51,7 +51,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : SingletonSer
      */
     override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
         get() = mutex.locked { wallet }.let { wallet ->
-            wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.thread }.mapValues { it.value }
+            wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.data.thread }.mapValues { it.value }
         }
 
     override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
@@ -103,8 +103,8 @@ class NodeWalletService(private val services: ServiceHubInternal) : SingletonSer
 
     private fun Wallet.update(tx: WireTransaction, ourKeys: Set<PublicKey>): Pair<Wallet, Wallet.Update> {
         val ourNewStates = tx.outputs.
-                filter { isRelevant(it, ourKeys) }.
-                map { tx.outRef<ContractState>(it) }
+                filter { isRelevant(it.data, ourKeys) }.
+                map { tx.outRef<ContractState>(it.data) }
 
         // Now calculate the states that are being spent by this transaction.
         val consumed: Set<StateRef> = states.map { it.ref }.intersect(tx.inputs)

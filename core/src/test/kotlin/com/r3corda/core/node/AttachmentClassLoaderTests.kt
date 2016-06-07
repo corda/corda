@@ -33,20 +33,17 @@ class AttachmentClassLoaderTests {
     }
 
     class AttachmentDummyContract : Contract {
-        data class State(val magicNumber: Int = 0,
-                         override val notary: Party) : ContractState {
+        data class State(val magicNumber: Int = 0) : ContractState {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
             override val participants: List<PublicKey>
                 get() = listOf()
-
-            override fun withNewNotary(newNotary: Party) = copy(notary = newNotary)
         }
 
         interface Commands : CommandData {
             class Create : TypeOnlyCommandData(), Commands
         }
 
-        override fun verify(tx: TransactionForVerification) {
+        override fun verify(tx: TransactionForContract) {
             // Always accepts.
         }
 
@@ -54,7 +51,7 @@ class AttachmentClassLoaderTests {
         override val legalContractReference: SecureHash = SecureHash.sha256("")
 
         fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
-            val state = State(magicNumber, notary)
+            val state = TransactionState(State(magicNumber), notary)
             return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
         }
     }
@@ -220,7 +217,7 @@ class AttachmentClassLoaderTests {
         val copiedWireTransaction = bytes.deserialize()
 
         assertEquals(1, copiedWireTransaction.outputs.size)
-        assertEquals(42, (copiedWireTransaction.outputs[0] as AttachmentDummyContract.State).magicNumber)
+        assertEquals(42, (copiedWireTransaction.outputs[0].data as AttachmentDummyContract.State).magicNumber)
     }
 
     @Test
@@ -250,8 +247,8 @@ class AttachmentClassLoaderTests {
         val copiedWireTransaction = bytes.deserialize(kryo2)
 
         assertEquals(1, copiedWireTransaction.outputs.size)
-        val contract2 = copiedWireTransaction.outputs[0].contract as DummyContractBackdoor
-        assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0]))
+        val contract2 = copiedWireTransaction.outputs[0].data.contract as DummyContractBackdoor
+        assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0].data))
     }
 
     @Test
