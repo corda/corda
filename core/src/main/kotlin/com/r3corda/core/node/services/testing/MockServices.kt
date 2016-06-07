@@ -25,7 +25,7 @@ import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 
 @ThreadSafe
-class MockIdentityService(val identities: List<Party>) : IdentityService {
+class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {
     private val keyToParties: Map<PublicKey, Party>
         get() = synchronized(identities) { identities.associateBy { it.owningKey } }
     private val nameToParties: Map<String, Party>

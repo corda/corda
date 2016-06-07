@@ -126,12 +126,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         storage = storageServices.first
         checkpointStorage = storageServices.second
         net = makeMessagingService()
-        smm = StateMachineManager(services, checkpointStorage, serverThread)
         wallet = NodeWalletService(services)
         keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
-        api = APIServerImpl(this)
         identity = makeIdentityService()
+        api = APIServerImpl(this)
+        smm = StateMachineManager(services, listOf(storage, net, wallet, keyManagement, identity, platformClock), checkpointStorage, serverThread)
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
