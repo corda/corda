@@ -19,7 +19,7 @@ class ContractBuilder {
             when (contracts.size) {
                 0 -> zero
                 1 -> contracts[0]
-                else -> And(contracts.toTypedArray())
+                else -> And(contracts.toSet())
             }
 }
 

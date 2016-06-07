@@ -18,6 +18,13 @@ class FXSwap {
                 }
             }
 
+    val transfer1 = kontract { wileECoyote.gives(roadRunner, 1200.K*USD) }
+    val transfer2 = kontract { roadRunner.gives(wileECoyote, 1.M*EUR) }
+
+    val outState1 = GenericContract.State( DUMMY_NOTARY, transfer1 )
+    val outState2 = GenericContract.State( DUMMY_NOTARY, transfer2 )
+
+
     val inState = GenericContract.State( DUMMY_NOTARY, contract)
 
     @Test
@@ -43,4 +50,21 @@ class FXSwap {
         }
     }
 
+    @Test
+    fun `execute`() {
+        transaction {
+            input { inState }
+            output { outState1 }
+            output { outState2 }
+
+            tweak {
+                arg(wileECoyote.owningKey) { GenericContract.Commands.Action("some undefined name") }
+                this `fails requirement` "action must be defined"
+            }
+
+            arg(wileECoyote.owningKey) { GenericContract.Commands.Action("execute") }
+
+            this.accepts()
+        }
+    }
 }

@@ -22,7 +22,7 @@ data class Transfer(val amount: Observable<Long>, val currency: Currency, val fr
     constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(amount.pennies), amount.token, from, to)
 }
 
-data class And(val kontracts: Array<Kontract>) : Kontract
+data class And(val kontracts: Set<Kontract>) : Kontract
 
 
 //

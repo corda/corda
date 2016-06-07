@@ -13,7 +13,7 @@ val Int.K: Long get() = this.toLong() * 1000
 
 val zero = Zero()
 
-infix fun Kontract.and(kontract: Kontract) = And( arrayOf(this, kontract) )
+infix fun Kontract.and(kontract: Kontract) = And( setOf(this, kontract) )
 infix fun Action.or(kontract: Action) = Or( arrayOf(this, kontract) )
 infix fun Or.or(kontract: Action) = Or( this.contracts.plusElement( kontract ) )
 infix fun Or.or(ors: Or) = Or( this.contracts.plus(ors.contracts) )

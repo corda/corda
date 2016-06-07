@@ -38,22 +38,40 @@ class GenericContract : Contract {
 
         val cmd = tx.commands.requireSingleCommand<GenericContract.Commands>()
 
-        val outState = tx.outStates.single() as State
-
         val value = cmd.value
 
         when (value) {
             is Commands.Action -> {
                 val inState = tx.inStates.single() as State
                 val actions = actions(inState.details)
+
                 requireThat {
                     "action must be defined" by ( actions.containsKey(value.name) )
                     "action must be authorized" by ( cmd.signers.any { actions[ value.name ]!!.actors.any { party -> party.owningKey == it } } )
-                    "output state must match action result state" by ( actions[ value.name ]!!.kontract.equals(outState.details))
                     "condition must be met" by ( true ) // todo
+                }
+
+                when (tx.outStates.size) {
+                    1 -> {
+                        val outState = tx.outStates.single() as State
+                        requireThat {
+                            "output state must match action result state" by (actions[value.name]!!.kontract.equals(outState.details))
+                        }
+                    }
+                    0 -> throw IllegalArgumentException("must have at least one out state")
+                    else -> {
+
+                        var allContracts = And( tx.outStates.map { (it as State).details }.toSet() )
+
+                        requireThat {
+                            "output states must match action result state" by (actions[value.name]!!.kontract.equals(allContracts))
+                        }
+
+                    }
                 }
             }
             is Commands.Issue -> {
+                val outState = tx.outStates.single() as State
                 requireThat {
                     "the transaction is signed by all involved parties" by ( liableParties(outState.details).all { it in cmd.signers } )
                     "the transaction has no input states" by tx.inStates.isEmpty()
