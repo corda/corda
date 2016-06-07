@@ -6,8 +6,6 @@ import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.testing.MOCK_IDENTITY_SERVICE
 import com.r3corda.node.serialization.NodeClock
-import com.r3corda.node.services.api.Checkpoint
-import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.network.MockNetworkMapCache
@@ -15,23 +13,6 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.DataVendingService
 import com.r3corda.node.services.wallet.NodeWalletService
 import java.time.Clock
-import java.util.concurrent.ConcurrentLinkedQueue
-
-class MockCheckpointStorage : CheckpointStorage {
-
-    private val _checkpoints = ConcurrentLinkedQueue<Checkpoint>()
-    override val checkpoints: Iterable<Checkpoint>
-        get() = _checkpoints.toList()
-
-    override fun addCheckpoint(checkpoint: Checkpoint) {
-        _checkpoints.add(checkpoint)
-    }
-
-    override fun removeCheckpoint(checkpoint: Checkpoint) {
-        require(_checkpoints.remove(checkpoint))
-    }
-}
-
 
 class MockServices(
         customWallet: WalletService? = null,

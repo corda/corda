@@ -3,7 +3,7 @@ package com.r3corda.core.node.services
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.AttachmentStorage
+import com.r3corda.core.node.services.TransactionStorage
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -123,7 +123,7 @@ interface StorageService {
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
      * the transaction data to other nodes that need it.
      */
-    val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+    val validatedTransactions: TransactionStorage
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage

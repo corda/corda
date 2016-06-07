@@ -1,11 +1,10 @@
-package com.r3corda.node.services
+package com.r3corda.node.services.persistence
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.primitives.Ints
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.services.api.Checkpoint
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After

@@ -1,8 +1,8 @@
 package com.r3corda.node.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.testing.CASH
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
@@ -14,16 +14,17 @@ import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
-import com.r3corda.core.utilities.RecordingMap
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.NodeAttachmentService
+import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.wallet.NodeWalletService
@@ -38,13 +39,12 @@ import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.util.Currency
+import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -186,15 +186,15 @@ class TwoPartyTradeProtocolTests {
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             assertThat(bobNode.checkpointStorage.checkpoints).hasSize(1)
 
-            // TODO: remove once validated transactions are persisted to disk
-            val recordedTransactions = bobNode.storage.validatedTransactions
+            val bobTransactionsBeforeCrash = (bobNode.storage.validatedTransactions as PerFileTransactionStorage).transactions
+            assertThat(bobTransactionsBeforeCrash).isNotEmpty()
 
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
             bobNode.stop()
 
             // Alice doesn't know that and carries on: she wants to know about the cash transactions he's trying to use.
             // She will wait around until Bob comes back.
-            assertNotNull(pumpAlice())
+            assertThat(pumpAlice()).isNotNull()
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
@@ -205,9 +205,6 @@ class TwoPartyTradeProtocolTests {
                 }
             }, true, BOB.name, BOB_KEY)
 
-            // TODO: remove once validated transactions are persisted to disk
-            bobNode.storage.validatedTransactions.putAll(recordedTransactions)
-
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java).single().second
 
@@ -215,12 +212,15 @@ class TwoPartyTradeProtocolTests {
             net.runNetwork()
 
             // Bob is now finished and has the same transaction as Alice.
-            assertEquals(bobFuture.get(), aliceFuture.get())
+            assertThat(bobFuture.get()).isEqualTo(aliceFuture.get())
 
             assertThat(bobNode.smm.findStateMachines(TwoPartyTradeProtocol.Buyer::class.java)).isEmpty()
 
             assertThat(bobNode.checkpointStorage.checkpoints).isEmpty()
             assertThat(aliceNode.checkpointStorage.checkpoints).isEmpty()
+
+            val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
+            assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
         }
     }
 
@@ -233,9 +233,11 @@ class TwoPartyTradeProtocolTests {
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     // That constructs the storage service object in a customised way ...
-                    override fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party): StorageServiceImpl {
-                        // To use RecordingMaps instead of ordinary HashMaps.
-                        return StorageServiceImpl(attachments, keypair, identity, { tableName -> name })
+                    override fun constructStorageService(attachments: NodeAttachmentService,
+                                                         transactionStorage: TransactionStorage,
+                                                         keypair: KeyPair,
+                                                         identity: Party): StorageServiceImpl {
+                        return StorageServiceImpl(attachments, RecordingTransactionStorage(transactionStorage), keypair, identity)
                     }
                 }
             }
@@ -243,7 +245,7 @@ class TwoPartyTradeProtocolTests {
     }
 
     @Test
-    fun checkDependenciesOfSaleAssetAreResolved() {
+    fun `check dependencies of sale asset are resolved`() {
         transactionGroupFor<ContractState> {
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
@@ -289,22 +291,21 @@ class TwoPartyTradeProtocolTests {
             net.runNetwork()
 
             run {
-                val records = (bobNode.storage.validatedTransactions as RecordingMap).records
+                val records = (bobNode.storage.validatedTransactions as RecordingTransactionStorage).records
                 // Check Bobs's database accesses as Bob's cash transactions are downloaded by Alice.
-                val expected = listOf(
+                assertThat(records).containsExactly(
                         // Buyer Bob is told about Alice's commercial paper, but doesn't know it ..
-                        RecordingMap.Get(alicesFakePaper[0].id),
+                        TxRecord.Get(alicesFakePaper[0].id),
                         // He asks and gets the tx, validates it, sees it's a self issue with no dependencies, stores.
-                        RecordingMap.Put(alicesFakePaper[0].id, alicesSignedTxns.values.first()),
+                        TxRecord.Add(alicesSignedTxns.values.first()),
                         // Alice gets Bob's proposed transaction and doesn't know his two cash states. She asks, Bob answers.
-                        RecordingMap.Get(bobsFakeCash[1].id),
-                        RecordingMap.Get(bobsFakeCash[2].id),
+                        TxRecord.Get(bobsFakeCash[1].id),
+                        TxRecord.Get(bobsFakeCash[2].id),
                         // Alice notices that Bob's cash txns depend on a third tx she also doesn't know. She asks, Bob answers.
-                        RecordingMap.Get(bobsFakeCash[0].id),
+                        TxRecord.Get(bobsFakeCash[0].id),
                         // Bob wants to verify that the tx has been signed by the correct Notary, which requires looking up an input state
-                        RecordingMap.Get(bobsFakeCash[1].id)
+                        TxRecord.Get(bobsFakeCash[1].id)
                 )
-                assertEquals(expected, records)
 
                 // Bob has downloaded the attachment.
                 bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
@@ -316,33 +317,32 @@ class TwoPartyTradeProtocolTests {
 
             // And from Alice's perspective ...
             run {
-                val records = (aliceNode.storage.validatedTransactions as RecordingMap).records
-                val expected = listOf(
+                val records = (aliceNode.storage.validatedTransactions as RecordingTransactionStorage).records
+                assertThat(records).containsExactly(
                         // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
                         // He requests, Alice looks up in her DB to send the tx to Bob
-                        RecordingMap.Get(alicesFakePaper[0].id),
+                        TxRecord.Get(alicesFakePaper[0].id),
                         // Seller Alice gets a proposed tx which depends on Bob's two cash txns and her own tx.
-                        RecordingMap.Get(bobsFakeCash[1].id),
-                        RecordingMap.Get(bobsFakeCash[2].id),
-                        RecordingMap.Get(alicesFakePaper[0].id),
+                        TxRecord.Get(bobsFakeCash[1].id),
+                        TxRecord.Get(bobsFakeCash[2].id),
+                        TxRecord.Get(alicesFakePaper[0].id),
                         // Alice notices that Bob's cash txns depend on a third tx she also doesn't know.
-                        RecordingMap.Get(bobsFakeCash[0].id),
+                        TxRecord.Get(bobsFakeCash[0].id),
                         // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
                         // Bob's transactions are valid, so she commits to the database
-                        RecordingMap.Put(bobsFakeCash[1].id, bobsSignedTxns[bobsFakeCash[1].id]),
-                        RecordingMap.Put(bobsFakeCash[2].id, bobsSignedTxns[bobsFakeCash[2].id]),
-                        RecordingMap.Put(bobsFakeCash[0].id, bobsSignedTxns[bobsFakeCash[0].id]),
+                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!),
+                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!),
+                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!),
                         // Now she verifies the transaction is contract-valid (not signature valid) which means
                         // looking up the states again.
-                        RecordingMap.Get(bobsFakeCash[1].id),
-                        RecordingMap.Get(bobsFakeCash[2].id),
-                        RecordingMap.Get(alicesFakePaper[0].id),
+                        TxRecord.Get(bobsFakeCash[1].id),
+                        TxRecord.Get(bobsFakeCash[2].id),
+                        TxRecord.Get(alicesFakePaper[0].id),
                         // Alice needs to look up the input states to find out which Notary they point to
-                        RecordingMap.Get(bobsFakeCash[1].id),
-                        RecordingMap.Get(bobsFakeCash[2].id),
-                        RecordingMap.Get(alicesFakePaper[0].id)
+                        TxRecord.Get(bobsFakeCash[1].id),
+                        TxRecord.Get(bobsFakeCash[2].id),
+                        TxRecord.Get(alicesFakePaper[0].id)
                 )
-                assertEquals(expected, records)
             }
         }
     }
@@ -415,7 +415,11 @@ class TwoPartyTradeProtocolTests {
                                                                           services: ServiceHub,
                                                                           vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
         val signed: List<SignedTransaction> = signAll(wtxToSign, *extraKeys)
-        services.recordTransactions(signed, skipRecordingMap = true)
+        services.recordTransactions(signed)
+        val validatedTransactions = services.storageService.validatedTransactions
+        if (validatedTransactions is RecordingTransactionStorage) {
+            validatedTransactions.records.clear()
+        }
         return signed.associateBy { it.id }
     }
 
@@ -465,4 +469,27 @@ class TwoPartyTradeProtocolTests {
         val wallet = WalletImpl(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))
         return Pair(wallet, listOf(ap))
     }
+
+
+    class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {
+
+        val records = Collections.synchronizedList(ArrayList<TxRecord>())
+
+        override fun addTransaction(transaction: SignedTransaction) {
+            records.add(TxRecord.Add(transaction))
+            delegate.addTransaction(transaction)
+        }
+
+        override fun getTransaction(id: SecureHash): SignedTransaction? {
+            records.add(TxRecord.Get(id))
+            return delegate.getTransaction(id)
+        }
+    }
+
+    interface TxRecord {
+        data class Add(val transaction: SignedTransaction) : TxRecord
+        data class Get(val id: SecureHash): TxRecord
+    }
+
+
 }

@@ -3,8 +3,8 @@ package com.r3corda.node.services.persistence
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.StorageService
-import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.protocols.FetchAttachmentsProtocol
 import com.r3corda.protocols.FetchDataProtocol
 import com.r3corda.protocols.FetchTransactionsProtocol
@@ -43,7 +43,7 @@ class DataVendingService(net: MessagingService, private val storage: StorageServ
     private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {
         require(req.hashes.isNotEmpty())
         return req.hashes.map {
-            val tx = storage.validatedTransactions[it]
+            val tx = storage.validatedTransactions.getTransaction(it)
             if (tx == null)
                 logger.info("Got request for unknown tx $it")
             tx

@@ -28,10 +28,7 @@ import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NodeRegistration
-import com.r3corda.node.services.persistence.DataVendingService
-import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
-import com.r3corda.node.services.persistence.StorageServiceImpl
+import com.r3corda.node.services.persistence.*
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.NotaryService
@@ -257,13 +254,17 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     protected open fun initialiseStorageService(dir: Path): Pair<StorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
+        val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return Pair(constructStorageService(attachments, keypair, identity), checkpointStorage)
+        return Pair(constructStorageService(attachments, transactionStorage, keypair, identity),checkpointStorage)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party) =
-            StorageServiceImpl(attachments, keypair, identity)
+    protected open fun constructStorageService(attachments: NodeAttachmentService,
+                                               transactionStorage: TransactionStorage,
+                                               keypair: KeyPair,
+                                               identity: Party) =
+            StorageServiceImpl(attachments, transactionStorage, keypair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that

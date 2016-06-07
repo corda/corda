@@ -36,7 +36,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
             tx.signWith(seller.storage.myLegalIdentityKey)
             tx.toSignedTransaction(true)
         }
-        seller.services.storageService.validatedTransactions[issuance.id] = issuance
+        seller.services.storageService.validatedTransactions.addTransaction(issuance)
 
         val sessionID = random63BitValue()
         val buyerProtocol = TwoPartyTradeProtocol.Buyer(seller.net.myAddress, notary.info.identity,
