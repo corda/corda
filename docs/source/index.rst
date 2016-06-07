@@ -26,6 +26,7 @@ Read on to learn:
    inthebox
    getting-set-up
    data-model
+   transaction-data-types
    consensus
    messaging
    running-the-demos
