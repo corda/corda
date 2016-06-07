@@ -1,3 +1,11 @@
+/*
+ * Copyright 2016 Distributed Ledger Group LLC.  Distributed as Licensed Company IP to DLG Group Members
+ * pursuant to the August 7, 2015 Advisory Services Agreement and subject to the Company IP License terms
+ * set forth therein.
+ *
+ * All other rights reserved.
+ */
+
 package com.r3corda.core.node.services
 
 /**
@@ -15,13 +23,11 @@ abstract class ServiceType(val id: String) {
     }
 
     override operator fun equals(other: Any?): Boolean =
-            if (other is ServiceType) {
-                id == other.id
-            } else {
-                false
-            }
-
-    fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
+        if (other is ServiceType) {
+            id == other.id
+        } else {
+            false
+        }
 
     override fun hashCode(): Int = id.hashCode()
     override fun toString(): String = id.toString()

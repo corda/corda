@@ -9,11 +9,11 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.SimpleNotaryService
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -82,7 +82,7 @@ abstract class Simulation(val runAsync: Boolean,
     object NotaryNodeFactory : MockNetwork.Factory {
         override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(SimpleNotaryService.Type))
+            require(advertisedServices.contains(NotaryService.Type))
             val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Notary Service"
                 override val exportJMXto: String = ""
@@ -134,7 +134,7 @@ abstract class Simulation(val runAsync: Boolean,
     val networkMap: SimulatedNode
             = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(networkMap.info, nodeFactory = NotaryNodeFactory, advertisedServices = SimpleNotaryService.Type) as SimulatedNode
+            = network.createNode(networkMap.info, nodeFactory = NotaryNodeFactory, advertisedServices = NotaryService.Type) as SimulatedNode
     val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
             = network.createNode(networkMap.info, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode

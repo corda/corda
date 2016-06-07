@@ -47,7 +47,7 @@ open class InMemoryNetworkMapCache() : SingletonSerializeAsToken(), NetworkMapCa
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
 
     override fun get() = registeredNodes.map { it.value }
-    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.any { it.isSubTypeOf(serviceType) } }.map { it.value }
+    override fun get(serviceType: ServiceType) = registeredNodes.filterValues { it.advertisedServices.contains(serviceType) }.map { it.value }
     override fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = get(type).firstOrNull()
     override fun getNodeByLegalName(name: String) = get().singleOrNull { it.identity.name == name }
     override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull { it.identity.owningKey == publicKey }

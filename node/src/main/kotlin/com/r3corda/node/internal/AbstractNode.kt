@@ -35,8 +35,7 @@ import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.NotaryService
-import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.services.transactions.TimestampChecker
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
@@ -131,14 +130,16 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
         api = APIServerImpl(this)
+
+        // Build services we're advertising
+        if (NetworkMapService.Type in info.advertisedServices) makeNetworkMapService()
+        if (NotaryService.Type in info.advertisedServices) makeNotaryService()
+
         identity = makeIdentityService()
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
-
-        buildAdvertisedServices()
-
         startMessagingService()
         networkMapRegistrationFuture = registerWithNetworkMap()
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
@@ -146,15 +147,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         started = true
         return this
     }
-
-    private fun buildAdvertisedServices() {
-        val serviceTypes = info.advertisedServices
-        if (NetworkMapService.Type in serviceTypes) makeNetworkMapService()
-
-        val notaryServiceType = serviceTypes.singleOrNull { it.isSubTypeOf(NotaryService.Type) }
-        if (notaryServiceType != null) makeNotaryService(notaryServiceType)
-    }
-
     /**
      * Register this node with the network map cache, and load network map from a remote service (and register for
      * updates) if one has been supplied.
@@ -208,15 +200,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }
 
-    open protected fun makeNotaryService(type: ServiceType) {
+    open protected fun makeNotaryService() {
         val uniquenessProvider = InMemoryUniquenessProvider()
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
-
-        inNodeNotaryService = when (type) {
-            is SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider)
-            is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider)
-            else -> null
-        }
+        inNodeNotaryService = NotaryService(net, storage.myLegalIdentity, storage.myLegalIdentityKey, uniquenessProvider, timestampChecker)
     }
 
     lateinit var interestRatesService: NodeInterestRates.Service
@@ -259,7 +246,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return Pair(constructStorageService(attachments, keypair, identity), checkpointStorage)
+        return Pair(constructStorageService(attachments, keypair, identity),checkpointStorage)
     }
 
     protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party) =

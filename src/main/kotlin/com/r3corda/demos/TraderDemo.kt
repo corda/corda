@@ -24,7 +24,7 @@ import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.NotaryProtocol
@@ -114,7 +114,7 @@ fun main(args: Array<String>) {
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
     val networkMapId = if (role == Role.BUYER) {
-        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
+        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
         null
     } else {
         // In a real system, the identity file of the network map would be shipped with the server software, and there'd
@@ -350,7 +350,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             tx.signWith(keyPair)
 
             // Get the notary to sign it, thus committing the outputs.
-            val notarySig = subProtocol(NotaryProtocol.Client(tx.toWireTransaction()))
+            val notarySig = subProtocol(NotaryProtocol(tx.toWireTransaction()))
             tx.addSignatureUnchecked(notarySig)
 
             // Commit it to local storage.
@@ -365,7 +365,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             val builder = TransactionBuilder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
-            builder.addSignatureUnchecked(subProtocol(NotaryProtocol.Client(builder.toWireTransaction())))
+            builder.addSignatureUnchecked(subProtocol(NotaryProtocol(builder.toWireTransaction())))
             val tx = builder.toSignedTransaction(true)
             serviceHub.recordTransactions(listOf(tx))
             tx

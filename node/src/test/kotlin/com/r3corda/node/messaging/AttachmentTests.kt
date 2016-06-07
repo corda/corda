@@ -12,11 +12,11 @@ import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.protocols.FetchAttachmentsProtocol
-import com.r3corda.protocols.FetchDataProtocol
+import com.r3corda.node.services.transactions.NotaryService
 import org.junit.Before
 import org.junit.Test
+import com.r3corda.protocols.FetchAttachmentsProtocol
+import com.r3corda.protocols.FetchDataProtocol
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
@@ -100,7 +100,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, true, null, null, NetworkMapService.Type, SimpleNotaryService.Type)
+        }, true, null, null, NetworkMapService.Type, NotaryService.Type)
         val n1 = network.createNode(n0.info)
 
         // Insert an attachment into node zero's store directly.

@@ -97,7 +97,7 @@ object TwoPartyTradeProtocol {
         @Suspendable
         private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
             progressTracker.currentStep = NOTARY
-            return subProtocol(NotaryProtocol.Client(stx.tx))
+            return subProtocol(NotaryProtocol(stx.tx))
         }
 
         @Suspendable
