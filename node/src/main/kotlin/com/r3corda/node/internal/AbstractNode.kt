@@ -88,7 +88,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-        override val clock: Clock get() = platformClock
+        override val clock: Clock = platformClock
     }
 
     val info: NodeInfo by lazy {
