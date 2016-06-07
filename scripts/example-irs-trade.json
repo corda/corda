@@ -3,7 +3,7 @@
     "fixedRatePayer": "Bank A",
     "notional": {
       "quantity": 2500000000,
-      "currency": "USD"
+      "token": "USD"
     },
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
@@ -28,7 +28,7 @@
     "floatingRatePayer": "Bank B",
     "notional": {
       "quantity": 2500000000,
-      "currency": "USD"
+      "token": "USD"
     },
     "paymentFrequency": "Quarterly",
     "effectiveDate": "2016-03-11",
@@ -68,19 +68,19 @@
     "eligibleCreditSupport": "Cash in an Eligible Currency",
     "independentAmounts": {
       "quantity": 0,
-      "currency": "EUR"
+      "token": "EUR"
     },
     "threshold": {
       "quantity": 0,
-      "currency": "EUR"
+      "token": "EUR"
     },
     "minimumTransferAmount": {
       "quantity": 25000000,
-      "currency": "EUR"
+      "token": "EUR"
     },
     "rounding": {
       "quantity": 1000000,
-      "currency": "EUR"
+      "token": "EUR"
     },
     "valuationDate": "Every Local Business Day",
     "notificationTime": "2:00pm London",
@@ -96,7 +96,7 @@
     "addressForTransfers": "",
     "exposure": {},
     "localBusinessDay": [ "London" , "NewYork" ],
-    "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360",
+    "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
     "tradeID": "tradeXXX",
     "hashLegalDocs": "put hash here"
   },
