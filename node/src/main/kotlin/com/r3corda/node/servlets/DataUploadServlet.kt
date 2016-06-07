@@ -35,6 +35,13 @@ class DataUploadServlet : HttpServlet() {
         val upload = ServletFileUpload()
         val iterator = upload.getItemIterator(req)
         val messages = ArrayList<String>()
+
+        if(!iterator.hasNext())
+        {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Got an upload request with no files")
+            return
+        }
+
         while (iterator.hasNext()) {
             val item = iterator.next()
             if (item.name != null && !acceptor.acceptableFileExtensions.any { item.name.endsWith(it) }) {
