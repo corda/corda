@@ -46,11 +46,11 @@ class GenericContract : Contract {
             is Commands.Action -> {
                 val inState = tx.inStates.single() as State
                 val actions = actions(inState.details)
-                val actions2 = actions2(inState.details)
                 requireThat {
-                    "action must be defined" by ( actions2.containsKey(value.name) )
-                    "action must be authorized" by ( cmd.signers.any { actions[ value.name ]!!.contains(it) } )
-                    "output state must match action result state" by ( actions2[ value.name ]!!.kontract.equals(outState.details))
+                    "action must be defined" by ( actions.containsKey(value.name) )
+                    "action must be authorized" by ( cmd.signers.any { actions[ value.name ]!!.actors.any { party -> party.owningKey == it } } )
+                    "output state must match action result state" by ( actions[ value.name ]!!.kontract.equals(outState.details))
+                    "condition must be met" by ( true ) // todo
                 }
             }
             is Commands.Issue -> {

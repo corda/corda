@@ -57,19 +57,7 @@ fun liableParties(contract: Kontract) : Set<PublicKey> {
     return visit(contract);
 }
 
-fun actions(contract: Kontract) : Map<String, Set<PublicKey>> {
-
-    when (contract) {
-        is Zero -> return mapOf()
-        is Transfer -> return mapOf()
-        is Action -> return mapOf( contract.name to contract.actors.map { it.owningKey }.toSet() )
-        is Or -> return contract.contracts.map { it.name to it.actors.map { it.owningKey }.toSet() }.toMap()
-    }
-
-    throw IllegalArgumentException()
-}
-
-fun actions2(contract: Kontract) : Map<String, Action> {
+fun actions(contract: Kontract) : Map<String, Action> {
 
     when (contract) {
         is Zero -> return mapOf()

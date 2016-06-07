@@ -8,7 +8,7 @@ import java.util.*
  * Created by sofusmortensen on 23/05/16.
  */
 
-class Builder2 {
+class ContractBuilder {
     val contracts = mutableListOf<Kontract>()
 
     fun Party.gives(beneficiary: Party, amount: Amount<Currency>) {
@@ -27,15 +27,14 @@ interface GivenThatResolve {
     fun resolve(contract: Kontract)
 }
 
-class Builder(val actors: Array<Party>) {
+class ActionBuilder(val actors: Array<Party>) {
     val actions = mutableListOf<Action>()
 
-    fun String.givenThat(condition: Observable<Boolean>, init: Builder2.() -> Unit ) {
-        val b = Builder2()
+    fun String.givenThat(condition: Observable<Boolean>, init: ContractBuilder.() -> Unit ) {
+        val b = ContractBuilder()
         b.init()
         actions.add( Action(this, condition, actors, b.final() ) )
     }
-
 
     fun String.givenThat(condition: Observable<Boolean> ) : GivenThatResolve {
         val This = this
@@ -46,21 +45,21 @@ class Builder(val actors: Array<Party>) {
         }
     }
 
-    fun String.anytime(init: Builder2.() -> Unit ) {
-        val b = Builder2()
+    fun String.anytime(init: ContractBuilder.() -> Unit ) {
+        val b = ContractBuilder()
         b.init()
         actions.add( Action(this, const(true), actors, b.final() ) )
     }
 }
 
-fun Party.may(init: Builder.() -> Unit) : Or {
-    val b = Builder(arrayOf(this))
+fun Party.may(init: ActionBuilder.() -> Unit) : Or {
+    val b = ActionBuilder(arrayOf(this))
     b.init()
     return Or(b.actions.toTypedArray())
 }
 
-fun Array<Party>.may(init: Builder.() -> Unit) : Or {
-    val b = Builder(this)
+fun Array<Party>.may(init: ActionBuilder.() -> Unit) : Or {
+    val b = ActionBuilder(this)
     b.init()
     return Or(b.actions.toTypedArray())
 }
@@ -68,8 +67,8 @@ fun Array<Party>.may(init: Builder.() -> Unit) : Or {
 infix fun Party.or(party: Party) = arrayOf(this, party)
 infix fun Array<Party>.or(party: Party) = this.plus(party)
 
-fun kontract(init: Builder2.() -> Unit ) : Kontract {
-    val b = Builder2()
+fun kontract(init: ContractBuilder.() -> Unit ) : Kontract {
+    val b = ContractBuilder()
     b.init()
     return b.final();
 }

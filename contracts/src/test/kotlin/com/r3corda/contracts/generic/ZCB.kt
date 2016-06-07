@@ -73,7 +73,7 @@ class ZCB {
             input { inState }
             output { outState }
 
-            arg(porkPig.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(porkyPig.owningKey) { GenericContract.Commands.Action("execute") }
             this `fails requirement` "action must be authorized"
         }
     }
