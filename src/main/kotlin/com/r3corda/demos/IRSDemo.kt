@@ -86,21 +86,6 @@ private class NotSetupException: Throwable {
     constructor(message: String): super(message) {}
 }
 
-val messageNetwork = InMemoryMessagingNetwork()
-
-class DemoNode(messagingService: MessagingService, dir: Path, p2pAddr: HostAndPort, config: NodeConfiguration,
-               networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
-               clock: Clock, clientAPIs: List<Class<*>> = listOf())
-               : Node(dir, p2pAddr, config, networkMapAddress, advertisedServices, clock, clientAPIs) {
-
-    val messagingService = messagingService
-    override fun makeMessagingService(): MessagingService {
-        return messagingService
-    }
-
-    override fun startMessagingService() = Unit
-}
-
 fun main(args: Array<String>) {
     exitProcess(runIRSDemo(args))
 }

@@ -68,13 +68,27 @@ enum class Role {
 val DIRNAME = "trader-demo"
 
 fun main(args: Array<String>) {
+    exitProcess(runTraderDemo(args))
+}
+
+fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): Int {
+    val cashIssuerKey = generateKeyPair()
+    val cashIssuer = Party("Trusted cash issuer", cashIssuerKey.public)
+    val amount = 1000.DOLLARS `issued by` cashIssuer.ref(1)
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
     val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
     val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
 
-    val options = parseOptions(args, parser)
+    val options = try {
+        parser.parse(*args)
+    } catch (e: Exception) {
+        println(e.message)
+        println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
+        return 1
+    }
+
     val role = options.valueOf(roleArg)!!
 
     val myNetAddr = HostAndPort.fromString(options.valueOf(myNetworkAddress)).withDefaultPort(
@@ -130,6 +144,11 @@ fun main(args: Array<String>) {
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
 
+    val id = when(role) {
+        Role.BUYER -> 0
+        Role.SELLER -> 1
+    }
+    val messageService = messageNetwork.createNodeWithID(false, id).start().get()
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
         Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
@@ -148,19 +167,13 @@ fun main(args: Array<String>) {
     } else {
         runSeller(myNetAddr, node, theirNetAddr, amount)
     }
+
+    return 0
 }
 
-fun parseOptions(args: Array<String>, parser: OptionParser): OptionSet {
-    try {
-        return parser.parse(*args)
-    } catch (e: Exception) {
-        println(e.message)
-        println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
-        exitProcess(1)
-    }
 }
 
-fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort, amount: Amount<Issued<Currency>>) {
+private fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -187,7 +200,7 @@ fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort, amo
     node.stop()
 }
 
-fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
+private fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
     // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
     // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
     val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
@@ -211,7 +224,7 @@ fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
 
 val DEMO_TOPIC = "initiate.demo.trade"
 
-class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
+private class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
                               val notary: Party,
                               val amount: Amount<Issued<Currency>>) : ProtocolLogic<Unit>() {
     companion object {
@@ -289,7 +302,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
     }
 }
 
-class TraderDemoProtocolSeller(val myAddress: HostAndPort,
+private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
                                val otherSide: SingleMessageRecipient,
                                val amount: Amount<Issued<Currency>>,
                                override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
