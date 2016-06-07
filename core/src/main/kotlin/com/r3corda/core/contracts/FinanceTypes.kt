@@ -33,40 +33,40 @@ import java.util.*
  *
  * @param T the type of the token, for example [Currency].
  */
-data class Amount<T>(val pennies: Long, val token: T) : Comparable<Amount<T>> {
+data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     init {
         // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
         // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.
         // If you want to express a negative amount, for now, use a long.
-        require(pennies >= 0) { "Negative amounts are not allowed: $pennies" }
+        require(quantity >= 0) { "Negative amounts are not allowed: $quantity" }
     }
 
     constructor(amount: BigDecimal, currency: T) : this(amount.toLong(), currency)
 
     operator fun plus(other: Amount<T>): Amount<T> {
         checkCurrency(other)
-        return Amount(Math.addExact(pennies, other.pennies), token)
+        return Amount(Math.addExact(quantity, other.quantity), token)
     }
 
     operator fun minus(other: Amount<T>): Amount<T> {
         checkCurrency(other)
-        return Amount(Math.subtractExact(pennies, other.pennies), token)
+        return Amount(Math.subtractExact(quantity, other.quantity), token)
     }
 
     private fun checkCurrency(other: Amount<T>) {
         require(other.token == token) { "Currency mismatch: ${other.token} vs $token" }
     }
 
-    operator fun div(other: Long): Amount<T> = Amount(pennies / other, token)
-    operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(pennies, other), token)
-    operator fun div(other: Int): Amount<T> = Amount(pennies / other, token)
-    operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(pennies, other.toLong()), token)
+    operator fun div(other: Long): Amount<T> = Amount(quantity / other, token)
+    operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(quantity, other), token)
+    operator fun div(other: Int): Amount<T> = Amount(quantity / other, token)
+    operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), token)
     
-    override fun toString(): String = (BigDecimal(pennies).divide(BigDecimal(100))).setScale(2).toPlainString()
+    override fun toString(): String = (BigDecimal(quantity).divide(BigDecimal(100))).setScale(2).toPlainString()
 
     override fun compareTo(other: Amount<T>): Int {
         checkCurrency(other)
-        return pennies.compareTo(other.pennies)
+        return quantity.compareTo(other.quantity)
     }
 }
 

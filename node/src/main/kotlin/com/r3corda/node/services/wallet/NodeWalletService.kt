@@ -130,7 +130,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : SingletonSer
                 m.register("WalletBalances.${balance.key}Pennies", newMetric)
                 newMetric
             }
-            metric.pennies = balance.value.pennies
+            metric.pennies = balance.value.quantity
         }
     }
 
@@ -172,7 +172,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : SingletonSer
     private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
         val numStates = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
         val amounts = LongArray(numStates)
-        val baseSize = howMuch.pennies / numStates
+        val baseSize = howMuch.quantity / numStates
         var filledSoFar = 0L
         for (i in 0..numStates - 1) {
             if (i < numStates - 1) {
@@ -181,7 +181,7 @@ class NodeWalletService(private val services: ServiceHubInternal) : SingletonSer
                 filledSoFar += baseSize
             } else {
                 // Handle inexact rounding.
-                amounts[i] = howMuch.pennies - filledSoFar
+                amounts[i] = howMuch.quantity - filledSoFar
             }
         }
         return amounts

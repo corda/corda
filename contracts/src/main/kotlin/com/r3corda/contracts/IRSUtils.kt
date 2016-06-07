@@ -95,7 +95,7 @@ class ReferenceRate(val oracle: String, val tenor: Tenor, val name: String) : Fl
 }
 
 // TODO: For further discussion.
-operator fun Amount<Currency>.times(other: RatioUnit): Amount<Currency> = Amount<Currency>((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.token)
+operator fun Amount<Currency>.times(other: RatioUnit): Amount<Currency> = Amount<Currency>((BigDecimal(this.quantity).multiply(other.value)).longValueExact(), this.token)
 //operator fun Amount<Currency>.times(other: FixedRate): Amount<Currency> = Amount<Currency>((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
 //fun Amount<Currency>.times(other: InterestRateSwap.RatioUnit): Amount<Currency> = Amount<Currency>((BigDecimal(this.pennies).multiply(other.value)).longValueExact(), this.currency)
 

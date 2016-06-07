@@ -88,7 +88,7 @@ class CrowdFund : Contract {
                     "there is no input state" by tx.inStates.filterIsInstance<State>().isEmpty()
                     "the transaction is signed by the owner of the crowdsourcing" by (command.signers.contains(outputCrowdFund.campaign.owner))
                     "the output registration is empty of pledges" by (outputCrowdFund.pledges.isEmpty())
-                    "the output registration has a non-zero target" by (outputCrowdFund.campaign.target.pennies > 0)
+                    "the output registration has a non-zero target" by (outputCrowdFund.campaign.target.quantity > 0)
                     "the output registration has a name" by (outputCrowdFund.campaign.name.isNotBlank())
                     "the output registration has a closing time in the future" by (time < outputCrowdFund.campaign.closingTime)
                     "the output registration has an open state" by (!outputCrowdFund.closed)

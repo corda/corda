@@ -112,7 +112,7 @@ class FixedRatePaymentEvent(date: LocalDate,
     }
 
     override val flow: Amount<Currency> get() =
-    Amount<Currency>(dayCountFactor.times(BigDecimal(notional.pennies)).times(rate.ratioUnit!!.value).toLong(), notional.token)
+    Amount<Currency>(dayCountFactor.times(BigDecimal(notional.quantity)).times(rate.ratioUnit!!.value).toLong(), notional.token)
 
     override fun toString(): String =
             "FixedRatePaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate : $flow"
@@ -138,7 +138,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
     override val flow: Amount<Currency> get() {
         // TODO: Should an uncalculated amount return a zero ? null ? etc.
         val v = rate.ratioUnit?.value ?: return Amount<Currency>(0, notional.token)
-        return Amount<Currency>(dayCountFactor.times(BigDecimal(notional.pennies)).times(v).toLong(), notional.token)
+        return Amount<Currency>(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
     }
 
     override fun toString(): String = "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
@@ -456,7 +456,7 @@ class InterestRateSwap() : Contract {
 
     fun checkLegAmounts(legs: Array<CommonLeg>) {
         requireThat {
-            "The notional is non zero" by legs.any { it.notional.pennies > (0).toLong() }
+            "The notional is non zero" by legs.any { it.notional.quantity > (0).toLong() }
             "The notional for all legs must be the same" by legs.all { it.notional == legs[0].notional }
         }
         for (leg: CommonLeg in legs) {
@@ -505,7 +505,7 @@ class InterestRateSwap() : Contract {
                         "There are no in states for an agreement" by inputs.isEmpty()
                         "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
                         "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
-                        "All notionals must be non zero" by (irs.fixedLeg.notional.pennies > 0 && irs.floatingLeg.notional.pennies > 0)
+                        "All notionals must be non zero" by (irs.fixedLeg.notional.quantity > 0 && irs.floatingLeg.notional.quantity > 0)
                         "The fixed leg rate must be positive" by (irs.fixedLeg.fixedRate.isPositive())
                         "The currency of the notionals must be the same" by (irs.fixedLeg.notional.token == irs.floatingLeg.notional.token)
                         "All leg notionals must be the same" by (irs.fixedLeg.notional == irs.floatingLeg.notional)
