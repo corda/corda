@@ -22,6 +22,7 @@ import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.node.services.transactions.SimpleNotaryService
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import joptsimple.OptionSpec
@@ -284,11 +285,13 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
     outStream.writeBytes(data)
     outStream.close()
 
-    if (connection.responseCode == 201) {
-        return true
-    } else {
-        println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
-        return false
+    return when(connection.responseCode) {
+        200 -> true
+        201 -> false
+        else -> {
+            println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
+            false
+        }
     }
 }
 
