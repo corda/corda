@@ -1,10 +1,9 @@
 package com.r3corda.core.testing
 
+import com.r3corda.demos.DemoConfig
 import com.r3corda.demos.runTraderDemo
 import org.junit.Test
-import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class TraderDemoTest {
@@ -19,13 +18,14 @@ class TraderDemoTest {
 }
 
 private fun runBuyer() {
-    thread(true, false, null, "Buyer", -1, { runTraderDemo(arrayOf("--role", "BUYER"), true) })
-    Thread.sleep(15000)
+    val config = DemoConfig(true)
+    runTraderDemo(arrayOf("--role", "BUYER"), config)
+    config.nodeReady.await()
 }
 
 private fun runSeller() {
-    println("Running Seller")
-    assertEquals(runTraderDemo(arrayOf("--role", "SELLER"), true), 0)
+    val config = DemoConfig(true)
+    assertEquals(runTraderDemo(arrayOf("--role", "SELLER"), config), 0)
 }
 
 private fun cleanup() {

@@ -10,6 +10,7 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import java.nio.file.Path
 import java.time.Clock
+import java.util.concurrent.CountDownLatch
 
 val messageNetwork = InMemoryMessagingNetwork()
 
@@ -24,4 +25,9 @@ class DemoNode(messagingService: MessagingService, dir: Path, p2pAddr: HostAndPo
     }
 
     override fun startMessagingService() = Unit
+}
+
+class DemoConfig(useInMemoryMessaging: Boolean = false) {
+    val inMemory = useInMemoryMessaging
+    val nodeReady = CountDownLatch(1)
 }

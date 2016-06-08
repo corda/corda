@@ -4,7 +4,6 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
@@ -35,7 +34,6 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Clock
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
@@ -90,7 +88,7 @@ fun main(args: Array<String>) {
     exitProcess(runIRSDemo(args))
 }
 
-fun runIRSDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): Int {
+fun runIRSDemo(args: Array<String>, demoNodeConfig: DemoConfig = DemoConfig()): Int {
     val parser = OptionParser()
     val demoArgs = setupArgs(parser)
     val options = try {
@@ -154,7 +152,7 @@ fun runIRSDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): Int 
         }
 
         try {
-            runNode(configureNodeParams(role, demoArgs, options), useInMemoryMessaging)
+            runNode(configureNodeParams(role, demoArgs, options), demoNodeConfig)
         } catch (e: NotSetupException) {
             println(e.message)
             return 1
@@ -241,8 +239,8 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     return nodeParams
 }
 
-private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Unit {
-    val node = when(useInMemoryMessaging) {
+private fun runNode(nodeParams : NodeParams, demoNodeConfig: DemoConfig) : Unit {
+    val node = when(demoNodeConfig.inMemory) {
         true -> startDemoNode(nodeParams)
         false -> startNode(nodeParams)
     }
@@ -255,6 +253,7 @@ private fun runNode(nodeParams : NodeParams, useInMemoryMessaging: Boolean) : Un
         runUploadRates("http://localhost:31341")
     }
 
+    demoNodeConfig.nodeReady.countDown()
     try {
         while (true) Thread.sleep(Long.MAX_VALUE)
     } catch(e: InterruptedException) {

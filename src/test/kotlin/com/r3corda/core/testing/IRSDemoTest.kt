@@ -1,5 +1,6 @@
 package com.r3corda.core.testing
 
+import com.r3corda.demos.DemoConfig
 import com.r3corda.demos.runIRSDemo
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
@@ -12,14 +13,12 @@ class IRSDemoTest {
         val dirA = Paths.get("./nodeA")
         val dirB = Paths.get("./nodeB")
         try {
-            setupNodeA(dirA)
-            setupNodeB(dirB)
-            startNodeA(dirA)
-            startNodeB(dirB)
+            setupNode(dirA, "NodeA")
+            setupNode(dirB, "NodeB")
+            startNode(dirA, "NodeA")
+            startNode(dirB, "NodeB")
             runTrade()
             runDateChange()
-            stopNodeA()
-            stopNodeB()
         } finally {
             cleanup(dirA)
             cleanup(dirB)
@@ -27,30 +26,21 @@ class IRSDemoTest {
     }
 }
 
-private fun setupNodeA(dir: Path) {
-    runIRSDemo(arrayOf("--role", "SetupNodeA", "--dir", dir.toString()))
+private fun setupNode(dir: Path, nodeType: String) {
+    runIRSDemo(arrayOf("--role", "Setup" + nodeType, "--dir", dir.toString()))
 }
 
-private fun setupNodeB(dir: Path) {
-    runIRSDemo(arrayOf("--role", "SetupNodeB", "--dir", dir.toString()))
-}
-
-private fun startNodeA(dir: Path) {
-    thread(true, false, null, "NodeA", -1, { runIRSDemo(arrayOf("--role", "NodeA", "--dir", dir.toString()), true) })
-    Thread.sleep(15000)
-}
-
-private fun startNodeB(dir: Path) {
-    thread(true, false, null, "NodeB", -1, { runIRSDemo(arrayOf("--role", "NodeB", "--dir", dir.toString()), true) })
-    Thread.sleep(15000)
-}
-
-private fun stopNodeA() {
-
-}
-
-private fun stopNodeB() {
-
+private fun startNode(dir: Path, nodeType: String) {
+    val config = DemoConfig(true)
+    thread(true, false, null, nodeType, -1, {
+        try {
+            runIRSDemo(arrayOf("--role", nodeType, "--dir", dir.toString()), config)
+        } finally {
+            // Will only reach here during error or after node is stopped, so ensure lock is unlocked.
+            config.nodeReady.countDown()
+        }
+    })
+    config.nodeReady.await()
 }
 
 private fun runTrade() {

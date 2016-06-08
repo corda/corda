@@ -32,7 +32,6 @@ import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
-import joptsimple.OptionSet
 import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -78,7 +77,7 @@ fun main(args: Array<String>) {
     exitProcess(runTraderDemo(args))
 }
 
-fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): Int {
+fun runTraderDemo(args: Array<String>, demoNodeConfig: DemoConfig = DemoConfig()): Int {
     val cashIssuerKey = generateKeyPair()
     val cashIssuer = Party("Trusted cash issuer", cashIssuerKey.public)
     val amount = 1000.DOLLARS `issued by` cashIssuer.ref(1)
@@ -163,7 +162,7 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
         cashIssuer = party
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
 
-        if(useInMemoryMessaging) {
+        if(demoNodeConfig.inMemory) {
             val handle = InMemoryMessagingNetwork.Handle(peerId, "Other Node")
             NodeInfo(handle, party, setOf(NetworkMapService.Type))
         } else {
@@ -173,7 +172,11 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
     val messageService = messageNetwork.createNodeWithID(false, id).start().get()
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
-        Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+        if(demoNodeConfig.inMemory) {
+            DemoNode(messageService, directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+        } else {
+            Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+        }
     }
 
     // TODO: Replace with a separate trusted cash issuer
@@ -190,7 +193,7 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
         val dest: Destination
         val recipient: SingleMessageRecipient
 
-        if(useInMemoryMessaging) {
+        if(demoNodeConfig.inMemory) {
             recipient = InMemoryMessagingNetwork.Handle(peerId, "Other Node")
             dest = Destination(InMemoryMessagingNetwork.Handle(id, role.toString()), true)
         } else {
