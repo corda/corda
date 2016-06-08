@@ -287,7 +287,7 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
 
     return when(connection.responseCode) {
         200 -> true
-        201 -> false
+        201 -> true
         else -> {
             println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
             false
@@ -306,6 +306,9 @@ private fun postJson(url: URL, data: String) : Boolean {
 // Todo: Use a simpler library function for this and handle timeout exceptions
 private fun uploadFile(url: URL, file: String) : Boolean {
     val boundary = "===" + System.currentTimeMillis() + "==="
+    val hyphens = "--"
+    val clrf = "\r\n"
+
     val connection = url.openConnection() as HttpURLConnection
     connection.doOutput = true
     connection.doInput = true
@@ -317,9 +320,13 @@ private fun uploadFile(url: URL, file: String) : Boolean {
     connection.setRequestProperty("Cache-Control", "no-cache")
     connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary)
 
-    val outStream = DataOutputStream(connection.outputStream)
-    outStream.writeBytes(file)
-    outStream.close()
+    val request = DataOutputStream(connection.outputStream)
+    request.writeBytes(hyphens + boundary + clrf)
+    request.writeBytes("Content-Disposition: form-data; name=\"rates\" filename=\"example.rates.txt\"" + clrf)
+    request.writeBytes(clrf)
+    request.writeBytes(file)
+    request.writeBytes(clrf)
+    request.writeBytes(hyphens + boundary + hyphens + clrf)
 
     if (connection.responseCode == 200) {
         return true
@@ -385,7 +392,7 @@ private fun startNode(params : NodeParams) : Node {
     val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
     val networkMapId = if (params.mapAddress.equals(params.address)) {
         // This node provides network map and notary services
-        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
+        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
     } else {
         advertisedServices = setOf(NodeInterestRates.Type)
@@ -454,7 +461,7 @@ private fun loadConfigFile(configFile: File, defaultLegalName: String): NodeConf
 
 private fun createIdentities(params: NodeParams, nodeConf: NodeConfiguration) {
     val mockNetwork = MockNetwork(false)
-    val node = MockNetwork.MockNode(params.dir, nodeConf, mockNetwork, null, setOf(NetworkMapService.Type, NotaryService.Type), params.id, null)
+    val node = MockNetwork.MockNode(params.dir, nodeConf, mockNetwork, null, setOf(NetworkMapService.Type, SimpleNotaryService.Type), params.id, null)
     node.start()
     node.stop()
 }
