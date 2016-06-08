@@ -214,7 +214,8 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    val networkInitialisationFinished: ListenableFuture<Unit> = Futures.transform(Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture }), Function { })
+    val networkInitialisationFinished: ListenableFuture<Unit> =
+            Futures.transform(Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture }), Function { })
 
     fun start(): ListenableFuture<Unit> {
         network.startNodes()
