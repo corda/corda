@@ -255,7 +255,6 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         private fun pumpInternal(block: Boolean): MessageTransfer? {
             val q = getQueueForHandle(handle)
             val transfer = (if (block) q.take() else q.poll()) ?: return null
-            System.err.println("T " + transfer.hashCode())
             val deliverTo = state.locked {
                 val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
 
