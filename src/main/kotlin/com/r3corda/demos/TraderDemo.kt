@@ -33,6 +33,7 @@ import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.OptionSet
+import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -62,6 +63,11 @@ import kotlin.test.assertEquals
 enum class Role {
     BUYER,
     SELLER
+}
+
+private class Destination constructor(addr: Any, inMemory: Boolean): Serializable {
+    val inMemory = inMemory
+    val addr = addr
 }
 
 // And this is the directory under the current working directory where each node will create its own server directory,
@@ -105,6 +111,19 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
             }
     )
 
+    val peerId: Int;
+    val id: Int
+    when (role) {
+        Role.BUYER -> {
+            peerId = 1
+            id = 0
+        }
+        Role.SELLER -> {
+            peerId = 0
+            id = 1
+        }
+    }
+
     // Suppress the Artemis MQ noise, and activate the demo logging.
     //
     // The first two strings correspond to the first argument to StateMachineManager.add() but the way we handle logging
@@ -121,19 +140,6 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
         }
         val override = ConfigFactory.parseString("myLegalName = $myLegalName")
         NodeConfigurationFromConfig(override.withFallback(ConfigFactory.load()))
-    }
-
-    val peerId: Int;
-    val id: Int
-    when (role) {
-        Role.BUYER -> {
-            peerId = 1
-            id = 0
-        }
-        Role.SELLER -> {
-            peerId = 0
-            id = 1
-        }
     }
 
     // Which services will this instance of the node provide to the network?
@@ -181,13 +187,24 @@ fun runTraderDemo(args: Array<String>, useInMemoryMessaging: Boolean = false): I
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
-        runSeller(myNetAddr, node, theirNetAddr, amount)
+        val dest: Destination
+        val recipient: SingleMessageRecipient
+
+        if(useInMemoryMessaging) {
+            recipient = InMemoryMessagingNetwork.Handle(peerId, "Other Node")
+            dest = Destination(InMemoryMessagingNetwork.Handle(id, role.toString()), true)
+        } else {
+           recipient = ArtemisMessagingService.makeRecipient(theirNetAddr)
+            dest = Destination(myNetAddr, false)
+        }
+
+        runSeller(dest, node, recipient, amount))
     }
 
     return 0
 }
 
-private fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
+private fun runSeller(myAddr: Destination, node: Node, recipient: SingleMessageRecipient) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -206,8 +223,7 @@ private fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndP
             it.second.get()
         }
     } else {
-        val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
-        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide, amount)
+        val seller = TraderDemoProtocolSeller(myAddr, recipient, amount)
         node.smm.add("demo.seller", seller).get()
     }
 
@@ -264,16 +280,20 @@ private class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
             // As the seller initiates the two-party trade protocol, here, we will be the buyer.
             try {
                 progressTracker.currentStep = WAITING_FOR_SELLER_TO_CONNECT
-                val hostname = receive<HostAndPort>(DEMO_TOPIC, 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
-                val newPartnerAddr = ArtemisMessagingService.makeRecipient(hostname)
+                val origin: Destination =  receive<Destination>(DEMO_TOPIC, 0).validate { it }
+                val recipient: SingleMessageRecipient = if(origin.inMemory) {
+                    origin.addr as InMemoryMessagingNetwork.Handle
+                } else {
+                    ArtemisMessagingService.makeRecipient(origin.addr as HostAndPort)
+                }
 
                 // The session ID disambiguates the test trade.
                 val sessionID = random63BitValue()
                 progressTracker.currentStep = STARTING_BUY
-                send(DEMO_TOPIC, newPartnerAddr, 0, sessionID)
+                send(DEMO_TOPIC, recipient, 0, sessionID)
 
                 val notary = serviceHub.networkMapCache.notaryNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, notary.identity, amount,
+                val buyer = TwoPartyTradeProtocol.Buyer(recipient, notary.identity, amount,
                         CommercialPaper.State::class.java, sessionID)
 
                 // This invokes the trading protocol and out pops our finished transaction.
@@ -316,7 +336,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
     }
 }
 
-private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
+private class TraderDemoProtocolSeller(val myAddr: Destination,
                                val otherSide: SingleMessageRecipient,
                                val amount: Amount<Issued<Currency>>,
                                override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
@@ -392,7 +412,7 @@ private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionType.General.Builder()
+            val builder = TransactionBuilder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
             val notarySignature = subProtocol(NotaryProtocol.Client(builder.toSignedTransaction(false)))

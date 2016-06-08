@@ -20,10 +20,11 @@ class TraderDemoTest {
 
 private fun runBuyer() {
     thread(true, false, null, "Buyer", -1, { runTraderDemo(arrayOf("--role", "BUYER"), true) })
-    Thread.sleep(5000)
+    Thread.sleep(15000)
 }
 
 private fun runSeller() {
+    println("Running Seller")
     assertEquals(runTraderDemo(arrayOf("--role", "SELLER"), true), 0)
 }
 
