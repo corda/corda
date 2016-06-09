@@ -263,12 +263,12 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
         check(obj.params.equals(ed25519Curve))
-        output.writeInt(obj.seed.size)
+        output.writeInt(obj.seed.size, true)
         output.writeBytes(obj.seed)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
-        val seedSize = input.readInt()
+        val seedSize = input.readInt(true)
         val seed = input.readBytes(seedSize)
         return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, ed25519Curve))
     }
@@ -281,12 +281,12 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
         check(obj.params.equals(ed25519Curve))
-        output.writeInt(obj.abyte.size)
+        output.writeInt(obj.abyte.size, true)
         output.writeBytes(obj.abyte)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
-        val ASize = input.readInt()
+        val ASize = input.readInt(true)
         val A = input.readBytes(ASize)
         return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
     }
