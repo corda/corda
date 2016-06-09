@@ -286,7 +286,7 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
     connection.useCaches = false
     connection.requestMethod = method
     connection.connectTimeout = 5000
-    connection.readTimeout = 10000
+    connection.readTimeout = 15000
     connection.setRequestProperty("Connection", "Keep-Alive")
     connection.setRequestProperty("Cache-Control", "no-cache")
     connection.setRequestProperty("Content-Type", "application/json")
@@ -438,13 +438,13 @@ private fun startDemoNode(params : NodeParams) : Node {
     val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
     val networkMapId = if (params.mapAddress.equals(params.address)) {
         // This node provides network map and notary services
-        advertisedServices = setOf(NetworkMapService.Type, NotaryService.Type)
+        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
     } else {
         advertisedServices = setOf(NodeInterestRates.Type)
 
         val handle = InMemoryMessagingNetwork.Handle(createNodeAParams().id, params.defaultLegalName)
-        nodeInfo(handle, params.identityFile, setOf(NetworkMapService.Type, NotaryService.Type))
+        nodeInfo(handle, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
     }
 
     val messageService = messageNetwork.createNodeWithID(false, params.id).start().get()
