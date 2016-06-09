@@ -15,10 +15,12 @@ class IRSDemoTest {
         try {
             setupNode(dirA, "NodeA")
             setupNode(dirB, "NodeB")
-            startNode(dirA, "NodeA")
-            startNode(dirB, "NodeB")
+            val threadA = startNode(dirA, "NodeA")
+            val threadB = startNode(dirB, "NodeB")
             runTrade()
             runDateChange()
+            stopNode(threadA)
+            stopNode(threadB)
         } finally {
             cleanup(dirA)
             cleanup(dirB)
@@ -30,9 +32,9 @@ private fun setupNode(dir: Path, nodeType: String) {
     runIRSDemo(arrayOf("--role", "Setup" + nodeType, "--dir", dir.toString()))
 }
 
-private fun startNode(dir: Path, nodeType: String) {
+private fun startNode(dir: Path, nodeType: String): Thread {
     val config = DemoConfig(true)
-    thread(true, false, null, nodeType, -1, {
+    val nodeThread = thread(true, false, null, nodeType, -1, {
         try {
             runIRSDemo(arrayOf("--role", nodeType, "--dir", dir.toString()), config)
         } finally {
@@ -41,6 +43,7 @@ private fun startNode(dir: Path, nodeType: String) {
         }
     })
     config.nodeReady.await()
+    return nodeThread
 }
 
 private fun runTrade() {
@@ -49,6 +52,11 @@ private fun runTrade() {
 
 private fun runDateChange() {
     assertEquals(runIRSDemo(arrayOf("--role", "Date", "2017-01-02")), 0)
+}
+
+private fun stopNode(nodeThread: Thread) {
+    // The demo is designed to exit on interrupt
+    nodeThread.interrupt()
 }
 
 private fun cleanup(dir: Path) {
