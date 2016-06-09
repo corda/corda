@@ -10,12 +10,21 @@ import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.api.*
 import java.time.LocalDateTime
 import java.util.*
+import javax.ws.rs.core.Response
 import kotlin.reflect.KParameter
 import kotlin.reflect.jvm.javaType
 
 class APIServerImpl(val node: AbstractNode) : APIServer {
 
     override fun serverTime(): LocalDateTime = LocalDateTime.now(node.services.clock)
+
+    override fun status(): Response {
+        return if(node.started) {
+            Response.ok("started").build()
+        } else {
+            Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("not started").build()
+        }
+    }
 
     override fun queryStates(query: StatesQuery): List<StateRef> {
         // We're going to hard code two options here for now and assume that all LinearStates are deals
