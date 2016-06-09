@@ -12,7 +12,7 @@ Here are changes in git master that haven't yet made it to a snapshot release:
 * Amount class is now generic, to support non-currency types (such as assets, or currency with additional information).
 * Refactored the Cash contract to have a new FungibleAsset superclass, to model all countable assets that can be merged
   and split (currency, barrels of oil, etc.)
-
+* Switched to the ed25519 elliptic curve from secp256r1. Note that this introduces a new external lib dependency.
 
 Milestone 0
 -----------
