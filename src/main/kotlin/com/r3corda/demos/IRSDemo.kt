@@ -103,60 +103,71 @@ fun runIRSDemo(args: Array<String>, demoNodeConfig: DemoConfig = DemoConfig()): 
     BriefLogFormatter.initVerbose("+demo.irsdemo", "+api-call", "+platform.deal", "-org.apache.activemq")
 
     val role = options.valueOf(demoArgs.roleArg)!!
-    if(role == IRSDemoRole.SetupNodeA) {
-        val nodeParams = configureNodeParams(IRSDemoRole.NodeA, demoArgs, options)
-        setup(nodeParams)
-    } else if(role == IRSDemoRole.SetupNodeB) {
-        val nodeParams = configureNodeParams(IRSDemoRole.NodeB, demoArgs, options)
-        setup(nodeParams)
-    } else if(role == IRSDemoRole.Trade) {
-        val tradeIdArgs = options.valuesOf(demoArgs.nonOptions)
-        if (tradeIdArgs.size > 0) {
-            val tradeId = tradeIdArgs[0]
-            val host = if (options.has(demoArgs.networkAddressArg)) {
-                options.valueOf(demoArgs.networkAddressArg)
-            } else {
-                "http://localhost:" + (Node.DEFAULT_PORT + 1)
-            }
+    return when (role) {
+        IRSDemoRole.SetupNodeA -> setup(configureNodeParams(IRSDemoRole.NodeA, demoArgs, options))
+        IRSDemoRole.SetupNodeB -> setup(configureNodeParams(IRSDemoRole.NodeB, demoArgs, options))
+        IRSDemoRole.NodeA -> runNode(role, demoArgs, options, demoNodeConfig)
+        IRSDemoRole.NodeB -> runNode(role, demoArgs, options, demoNodeConfig)
+        IRSDemoRole.Trade -> runTrade(demoArgs, options)
+        IRSDemoRole.Date -> runDateChange(demoArgs, options)
+    }
+}
 
-            if (!runTrade(tradeId, host)) {
-                return 1
-            }
+private fun runTrade(demoArgs: DemoArgs, options: OptionSet): Int {
+    val tradeIdArgs = options.valuesOf(demoArgs.nonOptions)
+    if (tradeIdArgs.size > 0) {
+        val tradeId = tradeIdArgs[0]
+        val host = if (options.has(demoArgs.networkAddressArg)) {
+            options.valueOf(demoArgs.networkAddressArg)
         } else {
-            println("Please provide a trade ID")
-            return 1
+            "http://localhost:" + (Node.DEFAULT_PORT + 1)
         }
-    } else if(role == IRSDemoRole.Date) {
-        val dateStrArgs = options.valuesOf(demoArgs.nonOptions)
-        if (dateStrArgs.size > 0) {
-            val dateStr = dateStrArgs[0]
-            val host = if (options.has(demoArgs.networkAddressArg)) {
-                options.valueOf(demoArgs.networkAddressArg)
-            } else {
-                "http://localhost:" + (Node.DEFAULT_PORT + 1)
-            }
 
-            if(!runDateChange(dateStr, host)) {
-                return 1
-            }
-        } else {
-            println("Please provide a date")
+        if (!uploadTrade(tradeId, host)) {
             return 1
         }
     } else {
-        // If these directory and identity file arguments aren't specified then we can assume a default setup and
-        // create everything that is needed without needing to run setup.
-        if(!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
-            createNodeConfig(createNodeAParams());
-            createNodeConfig(createNodeBParams());
+        println("Please provide a trade ID")
+        return 1
+    }
+
+    return 0
+}
+
+private fun runDateChange(demoArgs: DemoArgs, options: OptionSet): Int {
+    val dateStrArgs = options.valuesOf(demoArgs.nonOptions)
+    if (dateStrArgs.size > 0) {
+        val dateStr = dateStrArgs[0]
+        val host = if (options.has(demoArgs.networkAddressArg)) {
+            options.valueOf(demoArgs.networkAddressArg)
+        } else {
+            "http://localhost:" + (Node.DEFAULT_PORT + 1)
         }
 
-        try {
-            runNode(configureNodeParams(role, demoArgs, options), demoNodeConfig)
-        } catch (e: NotSetupException) {
-            println(e.message)
+        if(!changeDate(dateStr, host)) {
             return 1
         }
+    } else {
+        println("Please provide a date")
+        return 1
+    }
+
+    return 0
+}
+
+private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet, demoNodeConfig: DemoConfig): Int {
+    // If these directory and identity file arguments aren't specified then we can assume a default setup and
+    // create everything that is needed without needing to run setup.
+    if(!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
+        createNodeConfig(createNodeAParams());
+        createNodeConfig(createNodeBParams());
+    }
+
+    try {
+        runNode(configureNodeParams(role, demoArgs, options), demoNodeConfig)
+    } catch (e: NotSetupException) {
+        println(e.message)
+        return 1
     }
 
     return 0
@@ -178,11 +189,12 @@ private fun setupArgs(parser: OptionParser): DemoArgs {
     return args
 }
 
-private fun setup(params: NodeParams) {
+private fun setup(params: NodeParams): Int {
     createNodeConfig(params)
+    return 0
 }
 
-private fun runDateChange(date: String, host: String) : Boolean {
+private fun changeDate(date: String, host: String) : Boolean {
     println("Changing date to " + date)
     val url = URL(host + "/api/irs/demodate")
     if(putJson(url, "\"" + date + "\"")) {
@@ -194,7 +206,7 @@ private fun runDateChange(date: String, host: String) : Boolean {
     }
 }
 
-private fun runTrade(tradeId: String, host: String) : Boolean {
+private fun uploadTrade(tradeId: String, host: String) : Boolean {
     println("Uploading tradeID " + tradeId)
     val fileContents = IOUtils.toString(NodeParams::class.java.getResourceAsStream("example-irs-trade.json"))
     val tradeFile = fileContents.replace("tradeXXX", tradeId)
