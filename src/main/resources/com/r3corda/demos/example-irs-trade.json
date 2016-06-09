@@ -3,7 +3,7 @@
     "fixedRatePayer": "Bank A",
     "notional": {
       "quantity": 2500000000,
-      "token": "USD"
+      "token": "EUR"
     },
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
@@ -28,7 +28,7 @@
     "floatingRatePayer": "Bank B",
     "notional": {
       "quantity": 2500000000,
-      "token": "USD"
+      "token": "EUR"
     },
     "paymentFrequency": "Quarterly",
     "effectiveDate": "2016-03-11",
