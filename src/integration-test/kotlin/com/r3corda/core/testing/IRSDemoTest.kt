@@ -2,8 +2,16 @@ package com.r3corda.core.testing
 
 import kotlin.test.assertEquals
 import org.junit.Test
+import java.io.InputStreamReader
+import java.net.ConnectException
+import java.net.HttpURLConnection
+import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
+
+private class NodeDidNotStartException: Throwable {
+    constructor(message: String): super(message) {}
+}
 
 class IRSDemoTest {
     @Test fun `runs IRS demo`() {
@@ -14,8 +22,8 @@ class IRSDemoTest {
         try {
             setupNode(dirA, "NodeA")
             setupNode(dirB, "NodeB")
-            procA = startNode(dirA, "NodeA")
-            procB = startNode(dirB, "NodeB")
+            procA = startNode(dirA, "NodeA", "http://localhost:31338")
+            procB = startNode(dirB, "NodeB", "http://localhost:31341")
             runTrade()
             runDateChange()
         } finally {
@@ -33,11 +41,35 @@ private fun setupNode(dir: Path, nodeType: String) {
     assertEquals(proc.exitValue(), 0)
 }
 
-private fun startNode(dir: Path, nodeType: String): Process {
+private fun startNode(dir: Path, nodeType: String, nodeAddr: String): Process {
     val args = listOf("--role", nodeType, "--dir", dir.toString())
     val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
-    Thread.sleep(15000)
+    waitForNode(nodeAddr)
     return proc
+}
+
+// Todo: Move this to a library and use it in the trade demo
+private fun waitForNode(nodeAddr: String) {
+    var retries = 0
+    var respCode: Int = 404
+    do {
+        retries++
+        val url = URL(nodeAddr + "/api/status")
+        val err = try {
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            respCode = conn.responseCode
+            InputStreamReader(conn.inputStream).readLines().joinToString { it }
+        } catch(e: ConnectException) {
+            // This is to be expected while it loads up
+            respCode = 404
+            "Node hasn't started"
+        }
+
+        if(retries > 200) {
+            throw NodeDidNotStartException("The node did not start: " + err)
+        }
+    } while (respCode != 200)
 }
 
 private fun runTrade() {
