@@ -260,15 +260,15 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
 @ThreadSafe
 object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
     val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-    val seedSize = 64
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
         check(obj.params.equals(ed25519Curve))
-        check(obj.seed.size == seedSize)
+        output.writeInt(obj.seed.size)
         output.writeBytes(obj.seed)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
+        val seedSize = input.readInt()
         val seed = input.readBytes(seedSize)
         return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, ed25519Curve))
     }
@@ -278,15 +278,15 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
 @ThreadSafe
 object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-    val ASize = 32
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
         check(obj.params.equals(ed25519Curve))
-        check(obj.abyte.size == ASize)
+        output.writeInt(obj.abyte.size)
         output.writeBytes(obj.abyte)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
+        val ASize = input.readInt()
         val A = input.readBytes(ASize)
         return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
     }
