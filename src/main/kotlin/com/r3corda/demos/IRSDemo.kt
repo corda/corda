@@ -253,9 +253,9 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
 }
 
 private fun runNode(nodeParams: NodeParams, demoNodeConfig: DemoConfig) : Unit {
-    val networkMap = createRecipient(nodeParams.mapAddress, nodeParams, demoNodeConfig.inMemory)
+    val networkMap = createRecipient(nodeParams.mapAddress, demoNodeConfig.inMemory)
     val destinations = nodeParams.tradeWithAddrs.map({
-        createRecipient(it, nodeParams, demoNodeConfig.inMemory)
+        createRecipient(it, demoNodeConfig.inMemory)
     })
 
     val node = startNode(nodeParams, networkMap, destinations, demoNodeConfig.inMemory)
@@ -276,7 +276,7 @@ private fun runNode(nodeParams: NodeParams, demoNodeConfig: DemoConfig) : Unit {
     }
 }
 
-private fun createRecipient(addr: String, params: NodeParams, inMemory: Boolean) : SingleMessageRecipient {
+private fun createRecipient(addr: String, inMemory: Boolean) : SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
     return if(inMemory) {
         // Assumption here is that all nodes run in memory and thus cannot share a port number.
@@ -284,6 +284,55 @@ private fun createRecipient(addr: String, params: NodeParams, inMemory: Boolean)
         InMemoryMessagingNetwork.Handle(id, "Node " + id)
     } else {
         ArtemisMessagingService.makeRecipient(hostAndPort)
+    }
+}
+
+private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>, inMemory: Boolean) : Node {
+    val config = getNodeConfig(params)
+    val advertisedServices: Set<ServiceType>
+    val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
+    val networkMapId = if (params.mapAddress.equals(params.address)) {
+        // This node provides network map and notary services
+        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
+        null
+    } else {
+        advertisedServices = setOf(NodeInterestRates.Type)
+        nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
+    }
+
+    val node = if(inMemory) {
+        // Port is ID for in memory since we assume in memory is all on the same machine, thus ports are unique.
+        val messageService = messageNetwork.createNodeWithID(false, myNetAddr.port).start().get()
+        logElapsedTime("Node startup") { DemoNode(messageService, params.dir, myNetAddr, config, networkMapId,
+                advertisedServices, DemoClock(),
+                listOf(InterestRateSwapAPI::class.java)).start() }
+    } else {
+        logElapsedTime("Node startup") {  Node(params.dir, myNetAddr, config, networkMapId,
+                advertisedServices, DemoClock(),
+                listOf(InterestRateSwapAPI::class.java)).start() }
+    }
+
+    // TODO: This should all be replaced by the identity service being updated
+    // as the network map changes.
+    if (params.tradeWithAddrs.size != params.tradeWithIdentities.size) {
+        throw IllegalArgumentException("Different number of peer addresses (${params.tradeWithAddrs.size}) and identities (${params.tradeWithIdentities.size})")
+    }
+    for ((recipient, identityFile) in recipients.zip(params.tradeWithIdentities)) {
+        val peerId = nodeInfo(recipient, identityFile)
+        node.services.identityService.registerIdentity(peerId.identity)
+    }
+
+    return node
+}
+
+private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
+    try {
+        val path = identityFile
+        val party = Files.readAllBytes(path).deserialize<Party>()
+        return NodeInfo(recipient, party, advertisedServices)
+    } catch (e: Exception) {
+        println("Could not find identify file $identityFile.")
+        throw e
     }
 }
 
@@ -426,44 +475,6 @@ private fun getNodeConfig(params: NodeParams): NodeConfiguration {
     return loadConfigFile(configFile, params.defaultLegalName)
 }
 
-private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>, inMemory: Boolean) : Node {
-    val config = getNodeConfig(params)
-    val advertisedServices: Set<ServiceType>
-    val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
-    val networkMapId = if (params.mapAddress.equals(params.address)) {
-        // This node provides network map and notary services
-        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
-        null
-    } else {
-        advertisedServices = setOf(NodeInterestRates.Type)
-        nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
-    }
-
-    val node = if(inMemory) {
-        // Port is ID for in memory since we assume in memory is all on the same machine, thus ports are unique.
-        val messageService = messageNetwork.createNodeWithID(false, myNetAddr.port).start().get()
-        logElapsedTime("Node startup") { DemoNode(messageService, params.dir, myNetAddr, config, networkMapId,
-                advertisedServices, DemoClock(),
-                listOf(InterestRateSwapAPI::class.java)).start() }
-    } else {
-        logElapsedTime("Node startup") {  Node(params.dir, myNetAddr, config, networkMapId,
-                advertisedServices, DemoClock(),
-                listOf(InterestRateSwapAPI::class.java)).setup().start() }
-    }
-
-    // TODO: This should all be replaced by the identity service being updated
-    // as the network map changes.
-    if (params.tradeWithAddrs.size != params.tradeWithIdentities.size) {
-        throw IllegalArgumentException("Different number of peer addresses (${params.tradeWithAddrs.size}) and identities (${params.tradeWithIdentities.size})")
-    }
-    for ((recipient, identityFile) in recipients.zip(params.tradeWithIdentities)) {
-        val peerId = nodeInfo(recipient, identityFile)
-        node.services.identityService.registerIdentity(peerId.identity)
-    }
-
-    return node
-}
-
 private fun getRoleDir(role: IRSDemoRole) : Path {
     when(role) {
         IRSDemoRole.NodeA -> return Paths.get("nodeA")
@@ -471,17 +482,6 @@ private fun getRoleDir(role: IRSDemoRole) : Path {
         else -> {
             throw IllegalArgumentException()
         }
-    }
-}
-
-private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
-    try {
-        val path = identityFile
-        val party = Files.readAllBytes(path).deserialize<Party>()
-        return NodeInfo(recipient, party, advertisedServices)
-    } catch (e: Exception) {
-        println("Could not find identify file $identityFile.")
-        throw e
     }
 }
 
