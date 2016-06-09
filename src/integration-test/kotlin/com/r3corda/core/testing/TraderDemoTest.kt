@@ -1,39 +1,34 @@
 package com.r3corda.core.testing
 
-import com.r3corda.demos.DemoConfig
-import com.r3corda.demos.runTraderDemo
 import org.junit.Test
 import java.nio.file.Paths
-import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
+        var nodeProc: Process? = null
         try {
-            runBuyer()
+            nodeProc = runBuyer()
             runSeller()
         } finally {
+            nodeProc?.destroy()
             cleanup()
         }
     }
 }
 
-private fun runBuyer() {
-    val config = DemoConfig(true)
-    thread(true, false, null, "Buyer", -1, {
-        try {
-            runTraderDemo(arrayOf("--role", "BUYER"), config)
-        } finally {
-            // Will only reach here during error or after node is stopped, so ensure lock is unlocked.
-            config.nodeReady.countDown()
-        }
-    })
-    config.nodeReady.await()
+private fun runBuyer(): Process {
+    val args = listOf("--role", "BUYER")
+    val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
+    Thread.sleep(15000)
+    return proc
 }
 
 private fun runSeller() {
-    val config = DemoConfig(true)
-    assertEquals(runTraderDemo(arrayOf("--role", "SELLER"), config), 0)
+    val args = listOf("--role", "SELLER")
+    val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
+    proc.waitFor();
+    assertEquals(proc.exitValue(), 0)
 }
 
 private fun cleanup() {

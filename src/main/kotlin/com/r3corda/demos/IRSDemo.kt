@@ -89,7 +89,7 @@ fun main(args: Array<String>) {
     exitProcess(runIRSDemo(args))
 }
 
-fun runIRSDemo(args: Array<String>, demoNodeConfig: DemoConfig = DemoConfig()): Int {
+fun runIRSDemo(args: Array<String>): Int {
     val parser = OptionParser()
     val demoArgs = setupArgs(parser)
     val options = try {
@@ -107,8 +107,8 @@ fun runIRSDemo(args: Array<String>, demoNodeConfig: DemoConfig = DemoConfig()): 
     return when (role) {
         IRSDemoRole.SetupNodeA -> setup(configureNodeParams(IRSDemoRole.NodeA, demoArgs, options))
         IRSDemoRole.SetupNodeB -> setup(configureNodeParams(IRSDemoRole.NodeB, demoArgs, options))
-        IRSDemoRole.NodeA -> runNode(role, demoArgs, options, demoNodeConfig)
-        IRSDemoRole.NodeB -> runNode(role, demoArgs, options, demoNodeConfig)
+        IRSDemoRole.NodeA -> runNode(role, demoArgs, options)
+        IRSDemoRole.NodeB -> runNode(role, demoArgs, options)
         IRSDemoRole.Trade -> runTrade(demoArgs, options)
         IRSDemoRole.Date -> runDateChange(demoArgs, options)
     }
@@ -156,7 +156,7 @@ private fun runDateChange(demoArgs: DemoArgs, options: OptionSet): Int {
     return 0
 }
 
-private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet, demoNodeConfig: DemoConfig): Int {
+private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet): Int {
     // If these directory and identity file arguments aren't specified then we can assume a default setup and
     // create everything that is needed without needing to run setup.
     if(!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
@@ -165,7 +165,7 @@ private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet, d
     }
 
     try {
-        runNode(configureNodeParams(role, demoArgs, options), demoNodeConfig)
+        runNode(configureNodeParams(role, demoArgs, options))
     } catch (e: NotSetupException) {
         println(e.message)
         return 1
@@ -252,13 +252,13 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     return nodeParams
 }
 
-private fun runNode(nodeParams: NodeParams, demoNodeConfig: DemoConfig) : Unit {
-    val networkMap = createRecipient(nodeParams.mapAddress, demoNodeConfig.inMemory)
+private fun runNode(nodeParams: NodeParams) : Unit {
+    val networkMap = createRecipient(nodeParams.mapAddress)
     val destinations = nodeParams.tradeWithAddrs.map({
-        createRecipient(it, demoNodeConfig.inMemory)
+        createRecipient(it)
     })
 
-    val node = startNode(nodeParams, networkMap, destinations, demoNodeConfig.inMemory)
+    val node = startNode(nodeParams, networkMap, destinations)
     // Register handlers for the demo
     AutoOfferProtocol.Handler.register(node)
     UpdateBusinessDayProtocol.Handler.register(node)
@@ -268,7 +268,6 @@ private fun runNode(nodeParams: NodeParams, demoNodeConfig: DemoConfig) : Unit {
         runUploadRates("http://localhost:31341")
     }
 
-    demoNodeConfig.nodeReady.countDown()
     try {
         while (true) Thread.sleep(Long.MAX_VALUE)
     } catch(e: InterruptedException) {
@@ -276,18 +275,12 @@ private fun runNode(nodeParams: NodeParams, demoNodeConfig: DemoConfig) : Unit {
     }
 }
 
-private fun createRecipient(addr: String, inMemory: Boolean) : SingleMessageRecipient {
+private fun createRecipient(addr: String) : SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
-    return if(inMemory) {
-        // Assumption here is that all nodes run in memory and thus cannot share a port number.
-        val id = hostAndPort.port
-        InMemoryMessagingNetwork.Handle(id, "Node " + id)
-    } else {
-        ArtemisMessagingService.makeRecipient(hostAndPort)
-    }
+    return ArtemisMessagingService.makeRecipient(hostAndPort)
 }
 
-private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>, inMemory: Boolean) : Node {
+private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
     val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
@@ -300,17 +293,9 @@ private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, r
         nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
     }
 
-    val node = if(inMemory) {
-        // Port is ID for in memory since we assume in memory is all on the same machine, thus ports are unique.
-        val messageService = messageNetwork.createNodeWithID(false, myNetAddr.port).start().get()
-        logElapsedTime("Node startup") { DemoNode(messageService, params.dir, myNetAddr, config, networkMapId,
-                advertisedServices, DemoClock(),
-                listOf(InterestRateSwapAPI::class.java)).start() }
-    } else {
-        logElapsedTime("Node startup") {  Node(params.dir, myNetAddr, config, networkMapId,
-                advertisedServices, DemoClock(),
-                listOf(InterestRateSwapAPI::class.java)).start() }
-    }
+    val node = logElapsedTime("Node startup") {  Node(params.dir, myNetAddr, config, networkMapId,
+            advertisedServices, DemoClock(),
+            listOf(InterestRateSwapAPI::class.java)).start() }
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
