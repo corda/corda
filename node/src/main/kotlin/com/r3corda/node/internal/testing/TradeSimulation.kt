@@ -9,7 +9,6 @@ import com.r3corda.core.days
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
-import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import java.time.Instant
 
@@ -27,7 +26,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val buyer = banks[buyerBankIndex]
         val seller = banks[sellerBankIndex]
 
-        (buyer.services.walletService as NodeWalletService).fillWithSomeTestCash(notary.info.identity, 1500.DOLLARS)
+        WalletFiller.fillWithSomeTestCash(buyer.services, notary.info.identity, 1500.DOLLARS)
 
         val issuance = run {
             val tx = CommercialPaper().generateIssue(seller.info.identity.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days, notary.info.identity)

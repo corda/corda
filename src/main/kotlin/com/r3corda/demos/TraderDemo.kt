@@ -20,12 +20,13 @@ import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
+import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
@@ -221,7 +222,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Par
         // Self issue some cash.
         //
         // TODO: At some point this demo should be extended to have a central bank node.
-        (serviceHub.walletService as NodeWalletService).fillWithSomeTestCash(notary, 3000.DOLLARS)
+        WalletFiller.fillWithSomeTestCash(serviceHub, notary, 3000.DOLLARS)
 
         while (true) {
             // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
