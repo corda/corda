@@ -11,8 +11,9 @@ a type used to define the underlying asset, for example a ``TokenDefinition``, o
 such as an obligation contract issuance definition (which in turn contains a token definition for whatever the obligation
 is to be settled in).
 
-.. note:: Fungible means that instances of an asset is interchangeable for any other identical instance, for example a
-£5 note can reasonably be exchanged for any other £5 note.
+.. note:: Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
+and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
+£10 note can be exchanged for two £5 notes, or vice-versa.
 
 Contract State
 --------------
@@ -35,7 +36,7 @@ Things (such as attachments) which are identified by their hash should implement
 which standardises how the ID is extracted.
 
 FungibleAssets and Cash
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 There is a common ``FungibleAsset`` superclass for contracts which model fungible assets, with ``Cash`` being the obvious
 example. This is intended to be readily extensible to cover other assets, for example commodities could be modelled by
@@ -51,7 +52,7 @@ signatures or attachments is represented using the ``WireTransaction`` class, wh
 with valid signatures are encapsulated in the ``AuthenticatedObject`` type.
 
 Party and PublicKey
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 Identities of parties involved in signing a transaction can be represented simply by their ``PublicKey``, or by further
 information (such as name) using the ``Party`` class. An ``AuthenticatedObject`` contains a list of the public keys
