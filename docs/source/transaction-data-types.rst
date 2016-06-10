@@ -81,6 +81,9 @@ Identities of parties involved in signing a transaction can be represented simpl
 information (such as name) using the ``Party`` class. An ``AuthenticatedObject`` contains a list of the public keys
 for signatures present on the transaction, as well as list of parties for those public keys (where known).
 
+.. note:: These types are provisional and are likely to change in future, for example to add additional information to
+          ``Party``.
+
 Date Support
 ------------
 
