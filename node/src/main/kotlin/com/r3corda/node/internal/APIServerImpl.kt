@@ -8,7 +8,6 @@ import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.api.*
-import com.r3corda.node.utilities.*
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.reflect.KParameter
@@ -89,7 +88,6 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
                     }
                     // If we get here then we matched every parameter
                     val protocol = constructor.callBy(params) as ProtocolLogic<*>
-                    ANSIProgressRenderer.progressTracker = protocol.progressTracker
                     val future = node.smm.add("api-call", protocol)
                     return future
                 }

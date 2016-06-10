@@ -35,6 +35,7 @@ import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.utilities.ANSIProgressObserver
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import org.slf4j.Logger
@@ -135,6 +136,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         DataVendingService(net, storage)
 
         buildAdvertisedServices()
+
+        // TODO: this model might change but for now it provides some de-coupling
+        // Add SMM observers
+        ANSIProgressObserver(smm)
 
         startMessagingService()
         networkMapRegistrationFuture = registerWithNetworkMap()
