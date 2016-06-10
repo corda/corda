@@ -37,11 +37,11 @@ class FXSwap {
 
             tweak {
                 arg(roadRunner.owningKey) { GenericContract.Commands.Issue() }
-                this `fails requirement` "the transaction is signed by all involved parties"
+                this `fails requirement` "the transaction is signed by all liable parties"
             }
             tweak {
                 arg(wileECoyote.owningKey) { GenericContract.Commands.Issue() }
-                this `fails requirement` "the transaction is signed by all involved parties"
+                this `fails requirement` "the transaction is signed by all liable parties"
             }
 
             arg(wileECoyote.owningKey, roadRunner.owningKey) { GenericContract.Commands.Issue() }

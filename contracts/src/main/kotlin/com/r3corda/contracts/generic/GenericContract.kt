@@ -24,7 +24,7 @@ class GenericContract : Contract {
 
         // replace parties
         // must be signed by all parties present in contract before and after command
-        class Move : TypeOnlyCommandData(), Commands
+        class Move(val from: Party, val to: Party) : TypeOnlyCommandData(), Commands
 
         // must be signed by all parties present in contract
         class Issue : TypeOnlyCommandData(), Commands
@@ -73,8 +73,18 @@ class GenericContract : Contract {
             is Commands.Issue -> {
                 val outState = tx.outStates.single() as State
                 requireThat {
-                    "the transaction is signed by all involved parties" by ( liableParties(outState.details).all { it in cmd.signers } )
+                    "the transaction is signed by all liable parties" by ( liableParties(outState.details).all { it in cmd.signers } )
                     "the transaction has no input states" by tx.inStates.isEmpty()
+                }
+            }
+            is Commands.Move -> {
+                val inState = tx.inStates.single() as State
+                val outState = tx.outStates.single() as State
+                requireThat {
+                    // todo:
+                    // - check actual state output
+                    "the transaction is signed by all liable parties" by ( liableParties(outState.details).all { it in cmd.signers } )
+                    "output state does not reflect move command" by (replaceParty(inState.details, value.from, value.to).equals(outState.details))
                 }
             }
             else -> throw IllegalArgumentException("Unrecognised command")

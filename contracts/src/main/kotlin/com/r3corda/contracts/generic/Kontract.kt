@@ -34,7 +34,7 @@ data class Action(val name: String, val condition: Observable<Boolean>,
 // only actions can be or'ed together
 data class Or(val contracts: Set<Action>) : Kontract
 
-/** returns list of involved parties for a given contract */
+/** returns list of potentially liable parties for a given contract */
 fun liableParties(contract: Kontract) : Set<PublicKey> {
 
     fun visit(contract: Kontract) : ImmutableSet<PublicKey> {
@@ -56,6 +56,45 @@ fun liableParties(contract: Kontract) : Set<PublicKey> {
     }
 
     return visit(contract);
+}
+
+/** returns list of involved parties for a given contract */
+fun involvedParties(contract: Kontract) : Set<PublicKey> {
+
+    fun visit(contract: Kontract) : ImmutableSet<PublicKey> {
+        return when (contract) {
+            is Zero -> ImmutableSet.of<PublicKey>()
+            is Transfer -> ImmutableSet.of(contract.from.owningKey)
+            is Action -> Sets.union( visit(contract.kontract), contract.actors.map { it.owningKey }.toSet() ).immutableCopy()
+            is And ->
+                contract.kontracts.fold( ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll( visit(k)) } ).build()
+            is Or ->
+                contract.contracts.fold( ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll( visit(k)) } ).build()
+            else -> throw IllegalArgumentException()
+        }
+    }
+
+    return visit(contract);
+}
+
+fun replaceParty(action: Action, from: Party, to: Party) : Action {
+    if (action.actors.contains(from)) {
+        return Action( action.name, action.condition, action.actors - from + to, replaceParty(action.kontract, from, to))
+    }
+    return Action( action.name, action.condition, action.actors, replaceParty(action.kontract, from, to))
+}
+
+fun replaceParty(contract: Kontract, from: Party, to: Party) : Kontract {
+    return when (contract) {
+        is Zero -> contract
+        is Transfer -> Transfer( contract.amount, contract.currency,
+                                 if (contract.from == from) to else contract.from,
+                                 if (contract.to == from) to else contract.to )
+        is Action -> replaceParty(contract, from, to)
+        is And -> And( contract.kontracts.map { replaceParty(it, from, to) }.toSet() )
+        is Or -> Or( contract.contracts.map { replaceParty(it, from, to) }.toSet() )
+        else -> throw IllegalArgumentException()
+    }
 }
 
 fun actions(contract: Kontract) : Map<String, Action> {
