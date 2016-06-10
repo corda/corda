@@ -26,7 +26,6 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.wallet.NodeWalletService
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
@@ -173,13 +172,11 @@ fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
 
     if (node.isPreviousCheckpointsPresent) {
         node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).forEach {
-            ANSIProgressRenderer.progressTracker = it.first.progressTracker
             it.second.get()
         }
     } else {
         val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
         val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
-        ANSIProgressRenderer.progressTracker = seller.progressTracker
         node.smm.add("demo.seller", seller).get()
     }
 
@@ -196,12 +193,10 @@ fun runBuyer(node: Node) {
 
     val future = if (node.isPreviousCheckpointsPresent) {
         val (buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
-        ANSIProgressRenderer.progressTracker = buyer.progressTracker  //TODO the SMM will soon be able to wire up the ANSIProgressRenderer automatially
         future
     } else {
         // We use a simple scenario-specific wrapper protocol to make things happen.
         val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
-        ANSIProgressRenderer.progressTracker = buyer.progressTracker
         node.smm.add("demo.buyer", buyer)
     }
 

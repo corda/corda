@@ -4,15 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.node.internal.Node
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.node.internal.Node
 import com.r3corda.protocols.TwoPartyDealProtocol
 
 /**
@@ -50,7 +49,6 @@ object AutoOfferProtocol {
         fun register(node: Node) {
             node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
                 val progressTracker = tracker()
-                ANSIProgressRenderer.progressTracker = progressTracker
                 progressTracker.currentStep = RECEIVED
                 val autoOfferMessage = msg.data.deserialize<AutoOfferMessage>()
                 // Put the deal onto the ledger

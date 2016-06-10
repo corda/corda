@@ -12,13 +12,12 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.demos.api.InterestRateSwapAPI
-import joptsimple.OptionParser
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
-import com.r3corda.node.utilities.*
 import com.r3corda.protocols.RatesFixProtocol
+import joptsimple.OptionParser
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -89,7 +88,6 @@ fun main(args: Array<String>) {
     val tx = TransactionBuilder()
     tx.addOutputState(Cash.State(node.storage.myLegalIdentity.ref(1), 1500.DOLLARS, node.keyManagement.freshKey().public, notary.identity))
     val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance)
-    ANSIProgressRenderer.progressTracker = protocol.progressTracker
     node.smm.add("demo.ratefix", protocol).get()
     node.stop()
 

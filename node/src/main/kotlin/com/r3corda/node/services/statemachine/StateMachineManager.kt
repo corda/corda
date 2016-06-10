@@ -19,7 +19,10 @@ import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.Checkpoint
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
@@ -57,7 +60,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
-    private val stateMachines = synchronizedMap(HashMap<ProtocolStateMachineImpl<*>, Checkpoint>())
+    private val stateMachines = synchronizedMap(LinkedHashMap<ProtocolStateMachineImpl<*>, Checkpoint>())
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -82,6 +85,18 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                     .filterIsInstance(protocolClass)
                     .map { it to (it.psm as ProtocolStateMachineImpl<T>).resultFuture }
         }
+    }
+
+    val allStateMachines: List<ProtocolLogic<*>>
+        get() = stateMachines.keys.map { it.logic }
+
+    private val _changesPublisher = PublishSubject.create<Pair<ProtocolLogic<*>, AddOrRemove>>()
+
+    val changes: Observable<Pair<ProtocolLogic<*>, AddOrRemove>>
+        get() = _changesPublisher
+
+    private fun notifyChangeObservers(psm: ProtocolStateMachineImpl<*>, change: AddOrRemove) {
+        _changesPublisher.onNext(Pair(psm.logic, change))
     }
 
     // Used to work around a small limitation in Quasar.
@@ -130,6 +145,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
     }
 
+    private fun serializeFiber(fiber: ProtocolStateMachineImpl<*>): SerializedBytes<ProtocolStateMachineImpl<*>> {
+        // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
+        val kryo = quasarKryo()
+        // add the map of tokens -> tokenizedServices to the kyro context
+        SerializeAsTokenSerializer.setContext(kryo, serializationContext)
+        return fiber.serialize(kryo)
+    }
+
     private fun deserializeFiber(serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>): ProtocolStateMachineImpl<*> {
         val kryo = quasarKryo()
         // put the map of token -> tokenized into the kryo context
@@ -152,15 +175,17 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
     }
 
-    private fun initFiber(fiber: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint?) {
-        stateMachines[fiber] = checkpoint
-        fiber.resultFuture.then(executor) {
-            fiber.logic.progressTracker?.currentStep = ProgressTracker.DONE
-            val finalCheckpoint = stateMachines.remove(fiber)
+    private fun initFiber(psm: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint?) {
+        stateMachines[psm] = checkpoint
+        notifyChangeObservers(psm, AddOrRemove.ADD)
+        psm.resultFuture.then(executor) {
+            psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
+            val finalCheckpoint = stateMachines.remove(psm)
             if (finalCheckpoint != null) {
                 checkpointStorage.removeCheckpoint(finalCheckpoint)
             }
             totalFinishedProtocols.inc()
+            notifyChangeObservers(psm, AddOrRemove.REMOVE)
         }
     }
 
@@ -173,6 +198,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         try {
             val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
             // Need to add before iterating in case of immediate completion
+            // TODO: create an initial checkpoint here
             initFiber(fiber, null)
             executor.executeASAP {
                 iterateStateMachine(fiber, null) {
@@ -218,13 +244,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                               fiber: ProtocolStateMachineImpl<*>) {
         // We have a request to do something: send, receive, or send-and-receive.
         if (request is FiberRequest.ExpectingResponse<*>) {
-            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
-            val kryo = quasarKryo()
-            // add the map of tokens -> tokenizedServices to the kyro context
-            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-            val serialisedFiber = fiber.serialize(kryo)
             // Prepare a listener on the network that runs in the background thread when we receive a message.
-            checkpointOnExpectingResponse(psm, request, serialisedFiber)
+            checkpointOnExpectingResponse(psm, request, serializeFiber(fiber))
         }
         // If a non-null payload to send was provided, send it now.
         request.payload?.let {

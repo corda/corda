@@ -10,7 +10,6 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.demos.DemoClock
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.network.MockNetworkMapCache
@@ -129,7 +128,6 @@ object UpdateBusinessDayProtocol {
                 val updateBusinessDayMessage = msg.data.deserialize<UpdateBusinessDayMessage>()
                 if ((node.services.clock as DemoClock).updateDate(updateBusinessDayMessage.date)) {
                     val participant = Updater(updateBusinessDayMessage.date, updateBusinessDayMessage.sessionID)
-                    ANSIProgressRenderer.progressTracker = participant.progressTracker
                     node.smm.add("update.business.day", participant)
                 }
             }

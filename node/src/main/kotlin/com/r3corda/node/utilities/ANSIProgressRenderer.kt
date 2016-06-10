@@ -70,6 +70,10 @@ object ANSIProgressRenderer {
                 installedYet = true
             }
 
+            // Reset the state when a new tracker is wired up.
+            prevMessagePrinted = null
+            prevLinesDrawn = 0
+            draw(true)
             subscription = value?.changes?.subscribe { draw(true) }
         }
 
