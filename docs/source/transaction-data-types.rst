@@ -12,25 +12,46 @@ such as an obligation contract issuance definition (which in turn contains a tok
 is to be settled in).
 
 .. note:: Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
-and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
-£10 note can be exchanged for two £5 notes, or vice-versa.
+          and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
+          £10 note can be exchanged for two £5 notes, or vice-versa.
+
+Where a contract refers directly to an amount of something, ``Amount`` should wrap ``TokenDefinition``, which in
+turn can refer to a ``Currency`` (GBP, USD, CHF, etc.), or any other class. Future work in this area will include
+introducing classes to represent non-currency things (such as commodities) that TokenDefinition can wrap. For more
+complex amounts, ``Amount`` can wrap other types, for example to represent a number of Obligation contracts to be
+delivered (themselves referring to a currency), an ``Amount`` such as the following would used:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      Amount<Obligation.State<Currency>>
 
 Contract State
 --------------
 
 A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
 the details of the contract (see :doc:`data-model` for further detail). States essentially convert the generic template
-(code and legal prose) into a specific
-instance. In a ``WireTransaction``, outputs are provided as ``ContractState`` implementations, while the inputs are
-references to the outputs of a previous transaction. These references are then stored as ``StateRef`` objects, which are
-converted to ``StateAndRef`` on demand.
+(code and legal prose) into a specific instance. In a ``WireTransaction``, outputs are provided as ``ContractState``
+implementations, while the inputs are references to the outputs of a previous transaction. These references are then
+stored as ``StateRef`` objects, which are converted to ``StateAndRef`` on demand.
 
 A number of interfaces then extend ``ContractState``, representing standardised functionality for states:
 
-* ``OwnableState``
-* ``LinearState``
-* ``DealState``
-* ``FixableDealState``
+  ``OwnableState``
+    A state which has an owner (represented as a ``PublicKey``, discussed later). Exposes the owner and a function for
+    replacing the owner.
+
+  ``LinearState``
+    A state which links back to its previous state, creating a thread of states over time. Intended to simplify tracking
+    state versions.
+
+  ``DealState``
+    A state representing an agreement between two or more parties. Intended to simplify implementing generic protocols
+    that manipulate many agreement types.
+
+  ``FixableDealState``
+    A deal state, with further functions exposed to support fixing of interest rates.
 
 Things (such as attachments) which are identified by their hash should implement the ``NamedByHash`` interface,
 which standardises how the ID is extracted.
