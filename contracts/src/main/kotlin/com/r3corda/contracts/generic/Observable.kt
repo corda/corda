@@ -46,15 +46,15 @@ operator fun Currency.div(currency: Currency) = CurrencyCross(this, currency)
 
 data class ObservableComparison<T>(val left: Observable<T>, val cmp: Comparison, val right: Observable<T>) : Observable<Boolean>
 
-infix fun Observable<BigDecimal>.lt(n: BigDecimal) = ObservableComparison<BigDecimal>(this, Comparison.LT, const(n))
-infix fun Observable<BigDecimal>.gt(n: BigDecimal) = ObservableComparison<BigDecimal>(this, Comparison.GT, const(n))
-infix fun Observable<BigDecimal>.lt(n: Double) = ObservableComparison<BigDecimal>(this, Comparison.LT, const( BigDecimal(n) ))
-infix fun Observable<BigDecimal>.gt(n: Double) = ObservableComparison<BigDecimal>(this, Comparison.GT, const( BigDecimal(n) ))
+infix fun Observable<BigDecimal>.lt(n: BigDecimal) = ObservableComparison(this, Comparison.LT, const(n))
+infix fun Observable<BigDecimal>.gt(n: BigDecimal) = ObservableComparison(this, Comparison.GT, const(n))
+infix fun Observable<BigDecimal>.lt(n: Double) = ObservableComparison(this, Comparison.LT, const( BigDecimal(n) ))
+infix fun Observable<BigDecimal>.gt(n: Double) = ObservableComparison(this, Comparison.GT, const( BigDecimal(n) ))
 
-infix fun Observable<BigDecimal>.lte(n: BigDecimal) = ObservableComparison<BigDecimal>(this, Comparison.LTE, const(n))
-infix fun Observable<BigDecimal>.gte(n: BigDecimal) = ObservableComparison<BigDecimal>(this, Comparison.GTE, const(n))
-infix fun Observable<BigDecimal>.lte(n: Double) = ObservableComparison<BigDecimal>(this, Comparison.LTE, const( BigDecimal(n) ))
-infix fun Observable<BigDecimal>.gte(n: Double) = ObservableComparison<BigDecimal>(this, Comparison.GTE, const( BigDecimal(n) ))
+infix fun Observable<BigDecimal>.lte(n: BigDecimal) = ObservableComparison(this, Comparison.LTE, const(n))
+infix fun Observable<BigDecimal>.gte(n: BigDecimal) = ObservableComparison(this, Comparison.GTE, const(n))
+infix fun Observable<BigDecimal>.lte(n: Double) = ObservableComparison(this, Comparison.LTE, const( BigDecimal(n) ))
+infix fun Observable<BigDecimal>.gte(n: Double) = ObservableComparison(this, Comparison.GTE, const( BigDecimal(n) ))
 
 enum class Operation {
     PLUS, MINUS, TIMES, DIV
@@ -62,7 +62,7 @@ enum class Operation {
 
 data class ObservableOperation<T>(val left: Observable<T>, val op: Operation, val right: Observable<T>) : Observable<T>
 
-infix fun Observable<BigDecimal>.plus(n: BigDecimal) = ObservableOperation<BigDecimal>(this, Operation.PLUS, const(n))
-infix fun Observable<BigDecimal>.minus(n: BigDecimal) = ObservableOperation<BigDecimal>(this, Operation.MINUS, const(n))
-infix fun Observable<BigDecimal>.times(n: BigDecimal) = ObservableOperation<BigDecimal>(this, Operation.TIMES, const(n))
-infix fun Observable<BigDecimal>.div(n: BigDecimal) = ObservableOperation<BigDecimal>(this, Operation.DIV, const(n))
+infix fun Observable<BigDecimal>.plus(n: BigDecimal) = ObservableOperation(this, Operation.PLUS, const(n))
+infix fun Observable<BigDecimal>.minus(n: BigDecimal) = ObservableOperation(this, Operation.MINUS, const(n))
+infix fun Observable<BigDecimal>.times(n: BigDecimal) = ObservableOperation(this, Operation.TIMES, const(n))
+infix fun Observable<BigDecimal>.div(n: BigDecimal) = ObservableOperation(this, Operation.DIV, const(n))

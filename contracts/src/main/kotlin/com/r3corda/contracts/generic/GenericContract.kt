@@ -81,15 +81,14 @@ class GenericContract : Contract {
                 val inState = tx.inStates.single() as State
                 val outState = tx.outStates.single() as State
                 requireThat {
-                    // todo:
-                    // - check actual state output
-                    "the transaction is signed by all liable parties" by ( liableParties(outState.details).all { it in cmd.signers } )
-                    "output state does not reflect move command" by (replaceParty(inState.details, value.from, value.to).equals(outState.details))
+                    "the transaction is signed by all liable parties" by
+                            ( liableParties(outState.details).all { it in cmd.signers } )
+                    "output state does not reflect move command" by
+                            (replaceParty(inState.details, value.from, value.to).equals(outState.details))
                 }
             }
             else -> throw IllegalArgumentException("Unrecognised command")
         }
-
     }
 
     override val legalContractReference: SecureHash

@@ -18,7 +18,8 @@ What is proposed here is an intermediate layer in between by creating a highly c
 The last point is important because banks will need to integrate smart contract into their existing systems. Most banks already have _script_ representation of trades in order to have somewhat generic pricing and risk infrastructure.
 
 ### Inspiration
-The representation is inspired by _composing contracts_ by Simon Peyton Jones, Jean-Marc Eber and Julian Seward. The two most important differences from _composing contracts_ is:
+The representation is inspired by _composing contracts_ by Simon Peyton Jones, Jean-Marc Eber and Julian Seward. The two most important differences from _composing contracts_ are:
+
  - No implicit contract holder and writer. A contract can have an arbitrary number of parties (although less than two does not make sense).
  - Handling and timing of an event is a responsibility of the beneficiary of the event.
 
