@@ -38,9 +38,10 @@ which standardises how the ID is extracted.
 FungibleAssets and Cash
 -----------------------
 
-There is a common ``FungibleAsset`` superclass for contracts which model fungible assets, with ``Cash`` being the obvious
-example. This is intended to be readily extensible to cover other assets, for example commodities could be modelled by
-using a state object that included further details such as location of the commodity.
+There is a common ``FungibleAsset`` superclass for contracts which model fungible assets, which also provides a standard
+interface for its subclasses' state objects to implement. The clear use-case is ``Cash``, however ``FungibleAsset`` is
+intended to be readily extensible to cover other assets, for example commodities could be modelled by using a subclass
+whose state objects include further details (location of the commodity, origin, grade, etc.) as needed.
 
 Transaction Types
 -----------------
