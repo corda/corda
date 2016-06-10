@@ -8,6 +8,11 @@ import java.util.*
  * Created by sofusmortensen on 23/05/16.
  */
 
+val Int.M: Long get() = this.toLong() * 1000000
+val Int.K: Long get() = this.toLong() * 1000
+
+val zero = Zero()
+
 class ContractBuilder {
     val contracts = mutableListOf<Kontract>()
 
@@ -27,7 +32,7 @@ interface GivenThatResolve {
     fun resolve(contract: Kontract)
 }
 
-class ActionBuilder(val actors: Array<Party>) {
+class ActionBuilder(val actors: Set<Party>) {
     val actions = mutableListOf<Action>()
 
     fun String.givenThat(condition: Observable<Boolean>, init: ContractBuilder.() -> Unit ) {
@@ -53,25 +58,27 @@ class ActionBuilder(val actors: Array<Party>) {
 }
 
 fun Party.may(init: ActionBuilder.() -> Unit) : Or {
-    val b = ActionBuilder(arrayOf(this))
+    val b = ActionBuilder(setOf(this))
     b.init()
-    return Or(b.actions.toTypedArray())
+    return Or(b.actions.toSet())
 }
 
-fun Array<Party>.may(init: ActionBuilder.() -> Unit) : Or {
+fun Set<Party>.may(init: ActionBuilder.() -> Unit) : Or {
     val b = ActionBuilder(this)
     b.init()
-    return Or(b.actions.toTypedArray())
+    return Or(b.actions.toSet())
 }
 
-infix fun Party.or(party: Party) = arrayOf(this, party)
-infix fun Array<Party>.or(party: Party) = this.plus(party)
+infix fun Party.or(party: Party) = setOf(this, party)
+infix fun Set<Party>.or(party: Party) = this.plus(party)
 
 fun kontract(init: ContractBuilder.() -> Unit ) : Kontract {
     val b = ContractBuilder()
     b.init()
     return b.final();
 }
+
+
 
 /*
 val my_cds_contract =

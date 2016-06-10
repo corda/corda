@@ -2,9 +2,30 @@
  
 This is a demonstration of how to build generic contracts or higher order contracts on top of Corda.
 
-## Observables
+## Overview
 
-An observable is a state that can be observed and measured at a given time. Examples of observables could be Libor interest rate, default of a company or an FX fixing.
+### Motivation and Layers of smart contracts
+Currently when discussing smart contracts we have two levels of contracts. At the lowest layer we have _Corda smart contracts_ written in JVM bytecode. At the highest level we something like _Smart Contract Templates_ where a contract is created by picking an existing template and filling in required parameters suitable for non-developer end users.
+
+At the highest level in order to support a new kind of contract a novel new contract type may be required to be developed at the lowest level.
+Currently a lot of work is needed to write a smart contract at this level, which obviously takes time to write but more importantly takes considerable time to review and verify (which contract participant should do). Having re-usable components will arguably reduce this time.
+
+What is proposed here is an intermediate layer in between by creating a highly customizable smart contract covering a large family of OTC contracts by having a simple yet expressive representation of contract semantics in the contract state. The objectives are:
+
+ - writing a new contract requires lines of code and not pages of code.
+ - a contract format suitable for automatic transformation and inspection.
+
+The last point is important because banks will need to integrate smart contract into their existing systems. Most banks already have _script_ representation of trades in order to have somewhat generic pricing and risk infrastructure.
+
+### Inspiration
+The representation is inspired by _composing contracts_ by Simon Peyton Jones, Jean-Marc Eber and Julian Seward. The two most important differences from _composing contracts_ is:
+ - No implicit contract holder and writer. A contract can have an arbitrary number of parties (although less than two does not make sense).
+ - Handling and timing of an event is a responsibility of the beneficiary of the event.
+
+## Components
+### Observables
+
+An observable is a state that can be observed and measured at a given time. Examples of observables could be LIBOR interest rate, default of a company or an FX fixing.
 
 An observable has a underlying type - a fixing will be a numeric type, whereas default status for a company may be a boolean value.
 
@@ -12,30 +33,31 @@ Observables can be based on time. A typical boolean observable on time could be 
 
 Simple expressions on observables can be formed. For example ``EURUSD > 1.2``is a boolean observable, whereas the EURUSD fixing itself is a numeric observable.
 
+### Building blocks
 
-## Building blocks
-
-##### ``Zero``
+#### ``Zero``
 A base contract with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
 
-##### ``Transfer amount, currency, fromParty, toParty``
+#### ``Transfer amount, currency, fromParty, toParty``
 A base contract representing immediate transfer of Cash - X amount of currency CCY from party A to party B. X is an observable of type BigDecimal.
 
-##### ``And contract1 ... contractN``
+#### ``And contract1 ... contractN``
 A combinator over a list of contracts. Each contract in list will create a separate independent contract state. The ``And`` combinator cannot be root in a contract.
 
-##### ``Action name, condition, actors, contract``
+#### ``Action name, condition, actors, contract``
 An action combinator. This declares a named action that can be taken by anyone of the actors given that _condition_ is met. If the action is performed the contract state transitions into the specificed contract.
 
-##### ``Or action1 ... actionN``
+#### ``Or action1 ... actionN``
 A combinator that can only be used on action contracts. This means only one of the action can be executed. Should any one action be executed, all other actions are discarded.
 
-#### No schedulers
+### Comments
+
+## No schedulers
 The ``Action`` combinator removes the need for an integral scheduler. The responsibility for triggering an event always with the beneficiary. The beneficiary may want a scheduler for making sure fixing and other events are taken advantages of, but it would be an optional additional layer.
 
-#### Examples
+## Examples
 
-##### CDS contract
+### CDS contract
 Simple example of a credit default swap written by 'Wile E Coyote' paying 1,000,000 USD to beneficiary 'Road Runner' in the event of a default of 'ACME Corporation'.
 
 ```
@@ -56,7 +78,7 @@ exercised).
 Note that it is always the task of the beneficiary of an event to trigger the event. This way a scheduler is not needed as a core component of Corda (but may be a convenient addition on top of Corda).
 
 
-##### FX call option
+### FX call option
 Example of a european FX vanilla call option:
 ```
 val my_fx_option =
@@ -77,6 +99,22 @@ val my_fx_option =
 
 There are two actors. The contract holder _exercise_ at anytime, resulting in the contract being transformed into an FX swap contract, where both parties at anytime after the delivery date can trigger cash flow exchange. The writer of the contract can anytime after maturity _expire_ the contract effectively transforming the contract into void. Notice again that all scheduling is left to the parties of the contract.
 
-### TODO
+## TODO
 
--  Fixings and other state variables
+- Fixings and other state variables
+
+- Date shift, date rolling, according to holiday calendar
+
+- Underlying conventions for contracts
+
+- For convenience - automatic roll out of date sequences
+
+- Think about how to handle classic FX barrier events. Maybe an Oracle can issue proof of an event? Would there be a problem if beneficiary did not raise the event immediately?
+
+## Questions
+
+- How to integrate with Cash on ledger, or more generally assets on ledger?
+
+- For integration with other contracts (Cash and Assets in general), I suspect changes need to be made to those contracts. Ie. how can you create the transaction in future without requiring signature of the payer?
+
+- Discuss Oracle. How to add proof of observable event?

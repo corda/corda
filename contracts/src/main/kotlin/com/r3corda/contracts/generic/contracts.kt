@@ -9,18 +9,24 @@ import java.util.*
  */
 
 fun swap(partyA: Party, amountA: Amount<Currency>, partyB: Party, amountB: Amount<Currency>) =
-        Transfer(amountA, partyA, partyB) and Transfer(amountB, partyB, partyA)
+    kontract {
+        partyA.gives(partyB, amountA)
+        partyB.gives(partyA, amountB)
+    }
 
 fun fx_swap(expiry: String, notional: Long, strike: Double,
             foreignCurrency: Currency, domesticCurrency: Currency,
             partyA: Party, partyB: Party) =
-        Action("execute", after(expiry), arrayOf(partyA, partyB),
-                Transfer(notional * strike * domesticCurrency, partyA, partyB)
-                        and Transfer(notional * foreignCurrency, partyB, partyA))
+
+        (partyA or partyB).may {
+            "execute".givenThat( after(expiry) ) {
+                swap(partyA, notional * strike * domesticCurrency, partyB, notional * foreignCurrency)
+            }
+        }
 
 // building an fx swap using abstract swap
 fun fx_swap2(expiry: String, notional: Long, strike: Double,
              foreignCurrency: Currency, domesticCurrency: Currency,
              partyA: Party, partyB: Party) =
-        Action("execute", after(expiry), arrayOf(partyA, partyB),
+        Action("execute", after(expiry), setOf(partyA, partyB),
                 swap(partyA, notional * strike * domesticCurrency, partyB, notional * foreignCurrency))

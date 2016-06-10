@@ -9,27 +9,6 @@ import java.util.*
  * Created by sofusmortensen on 23/05/16.
  */
 
-class DummyObservable<T> : Observable<T>
-
-// observable of type T
-// example:
-val acmeCorporationHasDefaulted = DummyObservable<Boolean>()
-
-// example:
-val euribor3monthFixing = DummyObservable<BigDecimal>()
-
-// Test parties
-val roadRunner = Party("Road Runner", generateKeyPair().public)
-val wileECoyote = Party("Wile E. Coyote", generateKeyPair().public)
-val porkyPig = Party("Porky Pig", generateKeyPair().public)
-
-//
-// Example:
-
-    val USD = Currency.getInstance("USD")
-    val GBP = Currency.getInstance("GBP")
-    val EUR = Currency.getInstance("EUR")
-    val KRW = Currency.getInstance("KRW")
 /**
     val cds_contract = Kontract.Action("payout", acmeCorporationHasDefaulted and before("2017-09-01"),
             roadRunner,

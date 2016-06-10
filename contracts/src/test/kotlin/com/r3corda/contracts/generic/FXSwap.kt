@@ -67,4 +67,27 @@ class FXSwap {
             this.accepts()
         }
     }
+
+    @Test
+    fun `execute - not authorized`() {
+        transaction {
+            input { inState }
+            output { outState1 }
+            output { outState2 }
+
+            arg(porkyPig.owningKey) { GenericContract.Commands.Action("execute") }
+            this `fails requirement` "action must be authorized"
+        }
+    }
+
+    @Test
+    fun `execute - outState mismatch`() {
+        transaction {
+            input { inState }
+            output { outState1 }
+
+            arg(roadRunner.owningKey) { GenericContract.Commands.Action("execute") }
+            this `fails requirement` "output state must match action result state"
+        }
+    }
 }

@@ -26,12 +26,13 @@ data class And(val kontracts: Set<Kontract>) : Kontract
 
 
 //
-data class Action(val name: String, val condition: Observable<Boolean>, val actors: Array<Party>, val kontract: Kontract) : Kontract {
-    constructor(name: String, condition: Observable<Boolean>, actor: Party, kontract: Kontract) : this(name, condition, arrayOf(actor), kontract)
+data class Action(val name: String, val condition: Observable<Boolean>,
+                  val actors: Set<Party>, val kontract: Kontract) : Kontract {
+    constructor(name: String, condition: Observable<Boolean>, actor: Party, kontract: Kontract) : this(name, condition, setOf(actor), kontract)
 }
 
 // only actions can be or'ed together
-data class Or(val contracts: Array<Action>) : Kontract
+data class Or(val contracts: Set<Action>) : Kontract
 
 /** returns list of involved parties for a given contract */
 fun liableParties(contract: Kontract) : Set<PublicKey> {
