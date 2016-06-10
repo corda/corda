@@ -67,9 +67,6 @@ etc., it's desirable to allow conversion of these terms to their equivalent dead
 before a deadline, such as 3 days, etc., while ``DateRollConvention`` describes how deadlines are modified to take
 into account bank holidays or other events that modify normal working days.
 
-Business Calendar
-~~~~~~~~~~~~~~~~~
-
 Calculating the rollover of a deadline based on working days requires information on the bank holidays involved
 (and where a contract's parties are in different countries, for example, this can involve multiple separate sets of
 bank holidays). The ``BusinessCalendar`` class models these calendars of business holidays; currently it loads these
