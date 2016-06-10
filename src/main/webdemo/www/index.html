@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Standard Meta -->
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- Site Properties -->
+  <title>IRS Demo Viewer</title>
+  <link rel="stylesheet" type="text/css" href="./semantic/semantic.css">
+
+  <script src="./semantic/semantic.js"></script>
+
+</head>
+<body>
+<div class="ui inverted menu">
+    <span class="header item"><a href="./">Home</a></span>
+</div>
+<div class="ui container">
+    <div class="ui secondary menu">
+        <div class="left item">
+            <div class="ui left labeled button">
+                <span class="ui basic label">2016</span>
+                <button class="ui icon button"><i class="plus icon"></i></button>
+            </div>
+            <div class="ui left labeled button">
+                <span class="ui basic label">01</span>
+                <button class="ui icon button"><i class="plus icon"></i></button>
+            </div>
+            <div class="ui left labeled button">
+                <span class="ui basic label">01</span>
+                <button class="ui icon button"><i class="plus icon"></i></button>
+            </div>
+        </div>
+        <div class="right item">
+            <a class="ui primary button" href="create-deal.html">Create Deal</a>
+        </div>
+    </div>
+    <div class="ui main">
+
+        <h3 class="ui header">Recent deals</h3>
+
+        <table class="ui striped table">
+            <thead>
+                <tr class="center aligned">
+                    <th>Trade Id</th>
+                    <th>Fixed Leg Payer</th>
+                    <th>Amount</th>
+                    <th>Floating Rate Payer</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="center aligned">
+                    <td><a href="./deal.html">1</a></td>
+                    <td class="single line"><a href="party.html">Big Bank</a></td>
+                    <td class="single line">500 GBP</td>
+                    <td class="single line"><a href="party.html">Little Bank</a></td>
+                    <td class="single line">10 GBP</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
