@@ -1,5 +1,7 @@
 package com.r3corda.core.testing
 
+import com.r3corda.core.testing.utilities.spawn
+import com.r3corda.core.testing.utilities.waitForNodeStartup
 import org.junit.Test
 import java.nio.file.Paths
 import kotlin.test.assertEquals
@@ -20,7 +22,7 @@ class TraderDemoTest {
 private fun runBuyer(): Process {
     val args = listOf("--role", "BUYER")
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
-    Thread.sleep(15000)
+    waitForNodeStartup("http://localhost:31338")
     return proc
 }
 

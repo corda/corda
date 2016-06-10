@@ -1,4 +1,4 @@
-package com.r3corda.core.testing
+package com.r3corda.core.testing.utilities
 
 import java.nio.file.Paths
 
