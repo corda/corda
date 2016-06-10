@@ -67,11 +67,12 @@ whose state objects include further details (location of the commodity, origin, 
 Transaction Types
 -----------------
 
-The core of a transaction (see :doc:`data-model` for detailed discussion of the transaction data model) without
-signatures or attachments is represented using the ``WireTransaction`` class, which once signed is encapsulated in the
+The ``WireTransaction`` class contains the core of a transaction without signatures, and with references to attachments
+in place of the attachments themselves (see also :doc:`data-model`). Once signed these are encapsulated in the
 ``SignedTransaction`` class. For processing a transaction (i.e. to verify it) it is first converted to a
-``LedgerTransaction``, which involves verifying the signatures and attaching them to the relevant command(s). Commands
-with valid signatures are encapsulated in the ``AuthenticatedObject`` type.
+``LedgerTransaction``, which involves verifying the signatures and associating them to the relevant command(s), and
+resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
+``AuthenticatedObject`` type.
 
 Party and PublicKey
 -------------------
