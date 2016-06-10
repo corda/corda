@@ -31,7 +31,6 @@ import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
-import java.io.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -61,7 +60,6 @@ import kotlin.test.assertEquals
 enum class Role {
     BUYER,
     SELLER
-}
 }
 
 // And this is the directory under the current working directory where each node will create its own server directory,
@@ -145,7 +143,9 @@ fun runTraderDemo(args: Array<String>): Int {
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
     // And now construct then start the node object. It takes a little while.
-    val node = logElapsedTime("Node startup") { Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start() }
+    val node = logElapsedTime("Node startup") {
+        Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+    }
 
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
     // will contact the buyer and actually make something happen.
@@ -160,7 +160,7 @@ fun runTraderDemo(args: Array<String>): Int {
     return 0
 }
 
-private fun runSeller(myAddr: HostAndPort, node: Node, recipient: SingleMessageRecipient) {
+private fun runSeller(myNetAddr: HostAndPort, node: Node, recipient: SingleMessageRecipient) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -288,7 +288,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
     }
 }
 
-private class TraderDemoProtocolSeller(val myAddr: HostAndPort,
+private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
                                val otherSide: SingleMessageRecipient,
                                val amount: Amount<Issued<Currency>>,
                                override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
@@ -313,7 +313,7 @@ private class TraderDemoProtocolSeller(val myAddr: HostAndPort,
     override fun call() {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>(DEMO_TOPIC, otherSide, 0, 0, myAddr).validate { it }
+        val sessionID = sendAndReceive<Long>(DEMO_TOPIC, otherSide, 0, 0, myAddress).validate { it }
 
         progressTracker.currentStep = SELF_ISSUING
 
