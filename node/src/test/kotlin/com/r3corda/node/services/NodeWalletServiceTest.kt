@@ -10,6 +10,7 @@ import com.r3corda.core.node.services.testing.MockKeyManagementService
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.wallet.NodeWalletService
 import org.junit.After
 import org.junit.Before
@@ -42,7 +43,7 @@ class NodeWalletServiceTest {
 
         kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
-        wallet.fillWithSomeTestCash(DUMMY_NOTARY, 100.DOLLARS, 3, 3, Random(0L))
+        WalletFiller.fillWithSomeTestCash(services, DUMMY_NOTARY, 100.DOLLARS, 3, 3, Random(0L))
 
         val w = wallet.currentWallet
         assertEquals(3, w.states.size)

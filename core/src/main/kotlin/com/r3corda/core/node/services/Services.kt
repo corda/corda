@@ -3,7 +3,6 @@ package com.r3corda.core.node.services
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.TransactionStorage
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -38,6 +37,37 @@ abstract class Wallet {
      * which we have no cash evaluate to null (not present in map), not 0.
      */
     abstract val cashBalances: Map<Currency, Amount<Currency>>
+
+    /**
+     * Represents an update observed by the Wallet that will be notified to observers.  Include the [StateRef]s of
+     * transaction outputs that were consumed (inputs) and the [ContractState]s produced (outputs) to/by the transaction
+     * or transactions observed and the Wallet.
+     *
+     * If the Wallet observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
+     * other transactions observed, then the changes are observed "net" of those.
+     */
+    data class Update(val consumed: Set<StateRef>, val produced: Set<StateAndRef<ContractState>>) {
+
+        /**
+         * Combine two updates into a single update with the combined inputs and outputs of the two updates but net
+         * any outputs of the left-hand-side (this) that are consumed by the inputs of the right-hand-side (rhs).
+         *
+         * i.e. the net effect in terms of state live-ness of receiving the combined update is the same as receiving this followed by rhs.
+         */
+        operator fun plus(rhs: Update): Update {
+            val previouslyProduced = produced.map { it.ref }
+            val previouslyConsumed = consumed
+            val combined = Wallet.Update(
+                    previouslyConsumed + (rhs.consumed - previouslyProduced),
+                    rhs.produced + produced.filter { it.ref !in rhs.consumed })
+            return combined
+        }
+    }
+
+    companion object {
+        val NoUpdate = Update(emptySet(), emptySet())
+    }
+
 }
 
 /**
@@ -89,6 +119,12 @@ interface WalletService {
 
     /** Same as notifyAll but with a single transaction. */
     fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
+
+    /**
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
+     * the update.
+     */
+    val updates: rx.Observable<Wallet.Update>
 }
 
 inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)

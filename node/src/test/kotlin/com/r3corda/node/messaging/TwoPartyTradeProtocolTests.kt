@@ -21,13 +21,13 @@ import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.services.wallet.WalletImpl
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import org.assertj.core.api.Assertions.assertThat
@@ -93,7 +93,7 @@ class TwoPartyTradeProtocolTests {
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
             val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
 
-            (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(DUMMY_NOTARY, 2000.DOLLARS)
+            WalletFiller.fillWithSomeTestCash(bobNode.services, DUMMY_NOTARY, 2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     notaryNode.info.identity, null).second
 
@@ -144,7 +144,7 @@ class TwoPartyTradeProtocolTests {
 
             net.runNetwork() // Clear network map registration messages
 
-            (bobNode.wallet as NodeWalletService).fillWithSomeTestCash(DUMMY_NOTARY, 2000.DOLLARS)
+            WalletFiller.fillWithSomeTestCash(bobNode.services, DUMMY_NOTARY, 2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     notaryNode.info.identity, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)

@@ -34,6 +34,7 @@ import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.services.wallet.CashBalanceAsMetricsObserver
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.ANSIProgressObserver
 import com.r3corda.node.utilities.AddOrRemove
@@ -140,6 +141,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // TODO: this model might change but for now it provides some de-coupling
         // Add SMM observers
         ANSIProgressObserver(smm)
+        // Add wallet observers
+        CashBalanceAsMetricsObserver(services)
 
         startMessagingService()
         networkMapRegistrationFuture = registerWithNetworkMap()
