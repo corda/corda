@@ -17,8 +17,9 @@ is to be settled in).
 Contract State
 --------------
 
-A Corda contract is composed of three parts; the executable code, the legal prose, and the state object that represents
-the details of the contract. States essentially convert the generic template (code and legal prose) into a specific
+A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
+the details of the contract (see :doc:`data-model` for further detail). States essentially convert the generic template
+(code and legal prose) into a specific
 instance. In a ``WireTransaction``, outputs are provided as ``ContractState`` implementations, while the inputs are
 references to the outputs of a previous transaction. These references are then stored as ``StateRef`` objects, which are
 converted to ``StateAndRef`` on demand.
