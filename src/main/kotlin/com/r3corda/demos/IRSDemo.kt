@@ -37,6 +37,8 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
+import org.apache.commons.io.IOUtils
+import com.r3corda.demos.utilities.*
 
 // IRS DEMO
 //
@@ -421,77 +423,6 @@ private fun runUploadRates(host: HostAndPort) {
     })
 }
 
-// Todo: Use a simpler library function for this and handle timeout exceptions
-private fun sendJson(url: URL, data: String, method: String) : Boolean {
-    val connection = url.openConnection() as HttpURLConnection
-    connection.doOutput = true
-    connection.useCaches = false
-    connection.requestMethod = method
-    connection.connectTimeout = 5000
-    connection.readTimeout = 60000
-    connection.setRequestProperty("Connection", "Keep-Alive")
-    connection.setRequestProperty("Cache-Control", "no-cache")
-    connection.setRequestProperty("Content-Type", "application/json")
-    connection.setRequestProperty("Content-Length", data.length.toString())
-
-    try {
-        val outStream = DataOutputStream(connection.outputStream)
-        outStream.writeBytes(data)
-        outStream.close()
-
-        return when (connection.responseCode) {
-            200 -> true
-            201 -> true
-            else -> {
-                println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Message: " + connection.responseMessage)
-                false
-            }
-        }
-    } catch(e: SocketTimeoutException) {
-        println("Server took too long to respond")
-        return false
-    }
-}
-
-private fun putJson(url: URL, data: String) : Boolean {
-    return sendJson(url, data, "PUT")
-}
-
-private fun postJson(url: URL, data: String) : Boolean {
-    return sendJson(url, data, "POST")
-}
-
-// Todo: Use a simpler library function for this and handle timeout exceptions
-private fun uploadFile(url: URL, file: String) : Boolean {
-    val boundary = "===" + System.currentTimeMillis() + "==="
-    val hyphens = "--"
-    val clrf = "\r\n"
-
-    val connection = url.openConnection() as HttpURLConnection
-    connection.doOutput = true
-    connection.doInput = true
-    connection.useCaches = false
-    connection.requestMethod = "POST"
-    connection.connectTimeout = 5000
-    connection.readTimeout = 60000
-    connection.setRequestProperty("Connection", "Keep-Alive")
-    connection.setRequestProperty("Cache-Control", "no-cache")
-    connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary)
-
-    val request = DataOutputStream(connection.outputStream)
-    request.writeBytes(hyphens + boundary + clrf)
-    request.writeBytes("Content-Disposition: form-data; name=\"rates\" filename=\"example.rates.txt\"$clrf")
-    request.writeBytes(clrf)
-    request.writeBytes(file)
-    request.writeBytes(clrf)
-    request.writeBytes(hyphens + boundary + hyphens + clrf)
-
-    if (connection.responseCode == 200) {
-        return true
-    } else {
-        println("Could not upload file. Status Code: " + connection + ". Message: " + connection.responseMessage)
-        return false
-    }
 }
 
 private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
