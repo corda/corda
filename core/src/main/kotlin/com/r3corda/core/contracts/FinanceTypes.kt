@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.r3corda.core.contracts.CommandData
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -267,6 +266,9 @@ enum class Frequency(val annualCompoundCount: Int) {
     },
     BiWeekly(26) {
         override fun offset(d: LocalDate) = d.plusWeeks(2)
+    },
+    Daily(365) {
+        override fun offset(d: LocalDate) = d.plusDays(1)
     };
 
     abstract fun offset(d: LocalDate): LocalDate
@@ -317,11 +319,9 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
             var currentDate = startDate
 
             while (true) {
-                currentDate = period.offset(currentDate)
-                val scheduleDate = calendar.applyRollConvention(currentDate, dateRollConvention)
-
+                currentDate = getOffsetDate(currentDate, period)
                 if (periodOffset == null || periodOffset <= ctr)
-                    ret.add(scheduleDate)
+                    ret.add(calendar.applyRollConvention(currentDate, dateRollConvention))
                 ctr += 1
                 // TODO: Fix addl period logic
                 if ((ctr > noOfAdditionalPeriods ) || (currentDate >= endDate ?: currentDate ))
@@ -329,7 +329,16 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
             }
             return ret
         }
+
+        fun getOffsetDate(startDate: LocalDate, period: Frequency, howMany: Int = 1): LocalDate {
+            if (howMany == 0) return startDate
+            var nextDate = startDate
+            repeat(howMany) { nextDate = period.offset(nextDate) }
+            return nextDate
+        }
     }
+
+
 
     override fun equals(other: Any?): Boolean = if (other is BusinessCalendar) {
         /** Note this comparison is OK as we ensure they are sorted in getInstance() */
