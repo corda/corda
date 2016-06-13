@@ -81,7 +81,8 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
 
     private val _allMessages = PublishSubject.create<MessageTransfer>()
     /** A stream of (sender, message, recipients) triples */
-    val allMessages: Observable<MessageTransfer> = _allMessages
+    val allMessages: Observable<MessageTransfer>
+        get() = _allMessages
 
     interface LatencyCalculator {
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
