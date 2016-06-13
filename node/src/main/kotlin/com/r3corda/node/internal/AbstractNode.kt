@@ -113,9 +113,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         private set
 
     /** Completes once the node has successfully registered with the network map service */
-    private val _networkMapRegistrationSettableFuture: SettableFuture<Unit> = SettableFuture.create()
+    private val _networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create()
     val networkMapRegistrationFuture: ListenableFuture<Unit>
-        get() = _networkMapRegistrationSettableFuture
+        get() = _networkMapRegistrationFuture
 
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
@@ -149,7 +149,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         CashBalanceAsMetricsObserver(services)
 
         startMessagingService()
-        _networkMapRegistrationSettableFuture.setFuture(registerWithNetworkMap())
+        _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
         smm.start()
         started = true
