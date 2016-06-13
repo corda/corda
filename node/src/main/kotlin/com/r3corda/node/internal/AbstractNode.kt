@@ -1,6 +1,8 @@
 package com.r3corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.JdkFutureAdapters
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
@@ -47,6 +49,7 @@ import java.security.KeyPair
 import java.time.Clock
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -109,9 +112,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     var isPreviousCheckpointsPresent = false
         private set
 
-    /** Completes once the node has successfully registered with the network map service. Null until [start] returns. */
-    @Volatile var networkMapRegistrationFuture: ListenableFuture<Unit>? = null
-        private set
+    /** Completes once the node has successfully registered with the network map service */
+    private val _networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create()
+    val networkMapRegistrationFuture: ListenableFuture<Unit>
+        get() = _networkMapRegistrationFuture
 
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
@@ -145,7 +149,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         CashBalanceAsMetricsObserver(services)
 
         startMessagingService()
-        networkMapRegistrationFuture = registerWithNetworkMap()
+        _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
         smm.start()
         started = true

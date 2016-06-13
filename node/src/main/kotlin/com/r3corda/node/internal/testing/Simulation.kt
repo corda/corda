@@ -1,5 +1,6 @@
 package com.r3corda.node.internal.testing
 
+import com.google.common.base.Function
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.node.CityDatabase
@@ -212,6 +213,9 @@ abstract class Simulation(val runAsync: Boolean,
             }
         }
     }
+
+    val networkInitialisationFinished: ListenableFuture<*> =
+            Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
 
     fun start(): ListenableFuture<Unit> {
         network.startNodes()

@@ -81,7 +81,8 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
 
     private val _allMessages = PublishSubject.create<MessageTransfer>()
     /** A stream of (sender, message, recipients) triples */
-    val allMessages: Observable<MessageTransfer> = _allMessages
+    val allMessages: Observable<MessageTransfer>
+        get() = _allMessages
 
     interface LatencyCalculator {
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
@@ -104,7 +105,6 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         } else {
             msgSendInternal(transfer)
         }
-        _allMessages.onNext(MessageTransfer(from, message, recipients))
     }
 
     private fun msgSendInternal(transfer: MessageTransfer) {
@@ -256,7 +256,6 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         private fun pumpInternal(block: Boolean): MessageTransfer? {
             val q = getQueueForHandle(handle)
             val transfer = (if (block) q.take() else q.poll()) ?: return null
-
             val deliverTo = state.locked {
                 val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
 
@@ -277,6 +276,7 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
                 // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.
                 (handler.executor ?: MoreExecutors.directExecutor()).execute {
                     try {
+                        _allMessages.onNext(transfer)
                         handler.callback(transfer.message, handler)
                     } catch(e: Exception) {
                         loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topic}", e)
