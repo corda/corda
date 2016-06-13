@@ -30,6 +30,10 @@ class ContractBuilder {
         contracts.add( Transfer(amount, this, beneficiary))
     }
 
+    fun Party.gives(beneficiary: Party, amount: Observable<Long>, currency: Currency) {
+        contracts.add( Transfer(amount, currency, this, beneficiary))
+    }
+
     fun final() =
             when (contracts.size) {
                 0 -> zero

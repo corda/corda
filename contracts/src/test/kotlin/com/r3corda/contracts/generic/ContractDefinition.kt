@@ -21,7 +21,6 @@ val acmeCorporationHasDefaulted = DummyObservable<Boolean>()
 // example:
 val euribor3M = DummyObservable<BigDecimal>()
 
-
 // Test parties
 val roadRunner = Party("Road Runner", generateKeyPair().public)
 val wileECoyote = Party("Wile E. Coyote", generateKeyPair().public)

@@ -58,6 +58,18 @@ The ``Action`` combinator removes the need for an integral scheduler. The respon
 
 ## Examples
 
+### Zero coupon bond
+Example of a zero coupon bond:
+```
+    val zero_coupon_bond =
+
+            (roadRunner or wileECoyote).may {
+                "execute".givenThat(after("01/09/2017")) {
+                    wileECoyote.gives(roadRunner, 100.K*GBP)
+                }
+            }
+```
+
 ### CDS contract
 Simple example of a credit default swap written by 'Wile E Coyote' paying 1,000,000 USD to beneficiary 'Road Runner' in the event of a default of 'ACME Corporation'.
 
@@ -78,13 +90,12 @@ exercised).
 
 Note that it is always the task of the beneficiary of an event to trigger the event. This way a scheduler is not needed as a core component of Corda (but may be a convenient addition on top of Corda).
 
-
 ### FX call option
 Example of a european FX vanilla call option:
 ```
 val my_fx_option =
 
-        (roadRunner).may {
+        roadRunner.may {
             "exercise".anytime {
                 (roadRunner or wileECoyote).may {
                     "execute".givenThat(after("2017-09-01")) {
@@ -106,7 +117,7 @@ There are two actors. The contract holder _exercise_ at anytime, resulting in th
 
 - Date shift, date rolling, according to holiday calendar
 
-- Underlying conventions for contracts
+- Underlying conventions for contracts (important to avoid cluttering)
 
 - For convenience - automatic roll out of date sequences
 
