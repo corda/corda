@@ -18,7 +18,7 @@ fun WireTransaction.toLedgerTransaction(identityService: IdentityService,
     val attachments = attachments.map {
         attachmentStorage.openAttachment(it) ?: throw FileNotFoundException(it.toString())
     }
-    return LedgerTransaction(inputs, attachments, outputs, authenticatedArgs, id, type)
+    return LedgerTransaction(inputs, attachments, outputs, authenticatedArgs, id, signers, type)
 }
 
 /**

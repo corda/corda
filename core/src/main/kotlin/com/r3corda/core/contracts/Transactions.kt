@@ -45,6 +45,7 @@ data class WireTransaction(val inputs: List<StateRef>,
                            val attachments: List<SecureHash>,
                            val outputs: List<TransactionState<ContractState>>,
                            val commands: List<Command>,
+                           val signers: List<PublicKey>,
                            val type: TransactionType) : NamedByHash {
 
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
@@ -110,7 +111,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
     /**
      * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
-     * the set of pubkeys in the commands. If any signatures are missing, either throws an exception (by default) or
+     * the set of pubkeys in the signers list. If any signatures are missing, either throws an exception (by default) or
      * returns the list of keys that have missing signatures, depending on the parameter.
      *
      * @throws SignatureException if a signature is invalid, does not match or if any signature is missing.
@@ -141,11 +142,10 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
-     * Returns the set of missing signatures - a signature must be present for every command pub key
-     * and the Notary (if it is specified)
+     * Returns the set of missing signatures - a signature must be present for each signer public key
      */
     fun getMissingSignatures(): Set<PublicKey> {
-        val requiredKeys = tx.commands.flatMap { it.signers }.toSet()
+        val requiredKeys = tx.signers.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
 
         if (sigKeys.containsAll(requiredKeys)) return emptySet()
@@ -171,6 +171,7 @@ data class LedgerTransaction(
         val commands: List<AuthenticatedObject<CommandData>>,
         /** The hash of the original serialised WireTransaction */
         override val id: SecureHash,
+        val signers: List<PublicKey>,
         val type: TransactionType
 ) : NamedByHash {
     @Suppress("UNCHECKED_CAST")

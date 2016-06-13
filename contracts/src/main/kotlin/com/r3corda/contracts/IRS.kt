@@ -620,7 +620,6 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        // TODO: pass a notary
         override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {

@@ -2,6 +2,7 @@ package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import java.security.PublicKey
 import java.util.*
 
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
@@ -41,7 +42,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
                 // Look up the output in that transaction by index.
                 inputs.add(ltx.outputs[ref.index])
             }
-            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.id, tx.type))
+            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.id, tx.signers, tx.type))
         }
 
         for (tx in resolved)
@@ -56,6 +57,7 @@ data class TransactionForVerification(val inStates: List<TransactionState<Contra
                                       val attachments: List<Attachment>,
                                       val commands: List<AuthenticatedObject<CommandData>>,
                                       val origHash: SecureHash,
+                                      val signers: List<PublicKey>,
                                       val type: TransactionType) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
@@ -162,6 +164,6 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
 sealed class TransactionVerificationException(val tx: TransactionForVerification, cause: Throwable?) : Exception(cause) {
     class ContractRejection(tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
-    class NotaryMissing(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
+    class SignersMissing(tx: TransactionForVerification, missing: List<PublicKey>) : TransactionVerificationException(tx, null)
     class InvalidNotaryChange(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
 }

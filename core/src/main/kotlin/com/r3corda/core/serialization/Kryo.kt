@@ -29,6 +29,7 @@ import java.io.ObjectOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -232,6 +233,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.attachments)
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
+        kryo.writeClassAndObject(output, obj.signers)
         kryo.writeClassAndObject(output, obj.type)
     }
 
@@ -261,9 +263,10 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.useClassLoader(classLoader) {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
+            val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
 
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, transactionType)
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, signers, transactionType)
         }
     }
 }

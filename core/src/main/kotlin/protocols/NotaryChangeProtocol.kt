@@ -73,8 +73,7 @@ object NotaryChangeProtocol {
             val state = originalState.state
             val newState = state.withNewNotary(newNotary)
             val participants = state.data.participants
-            val cmd = Command(ChangeNotary(), participants)
-            val tx = TransactionBuilder(type = TransactionType.NotaryChange()).withItems(originalState, newState, cmd)
+            val tx = TransactionType.NotaryChange.Builder().withItems(originalState, newState)
             tx.signWith(serviceHub.storageService.myLegalIdentityKey)
 
             val stx = tx.toSignedTransaction(false)
@@ -161,18 +160,16 @@ object NotaryChangeProtocol {
 
         @Suspendable
         private fun validateTx(stx: SignedTransaction): SignedTransaction {
+            checkMySignatureRequired(stx.tx)
             checkDependenciesValid(stx)
             checkValid(stx)
-            checkCommand(stx.tx)
             return stx
         }
 
-        private fun checkCommand(tx: WireTransaction) {
-            val command = tx.commands.single { it.value is ChangeNotary }
-            val myKey = serviceHub.storageService.myLegalIdentityKey.public
-            val myIdentity = serviceHub.storageService.myLegalIdentity
-            val state = tx.inputs.first()
-            require(command.signers.contains(myKey)) { "Party $myIdentity is not a participant for the state: $state" }
+        private fun checkMySignatureRequired(tx: WireTransaction) {
+            // TODO: use keys from the keyManagementService instead
+            val myKey = serviceHub.storageService.myLegalIdentity.owningKey
+            require(tx.signers.contains(myKey)) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
         }
 
         @Suspendable

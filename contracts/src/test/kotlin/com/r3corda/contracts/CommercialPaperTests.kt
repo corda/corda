@@ -140,7 +140,7 @@ class CommercialPaperTestsGeneric {
     }
 
     fun <T : ContractState> cashOutputsToWallet(vararg outputs: TransactionState<T>): Pair<LedgerTransaction, List<StateAndRef<T>>> {
-        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*outputs), emptyList(), SecureHash.randomSHA256(), TransactionType.Business())
+        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*outputs), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.Business())
         return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 

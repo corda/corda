@@ -1,9 +1,6 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.*
 import com.r3corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
@@ -17,11 +14,12 @@ import java.util.*
  * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
  * multiple parties.
  */
-class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf(),
-                         private val attachments: MutableList<SecureHash> = arrayListOf(),
-                         private val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-                         private val commands: MutableList<Command> = arrayListOf(),
-                         private val type: TransactionType = TransactionType.Business()) {
+open class TransactionBuilder(protected val inputs: MutableList<StateRef> = arrayListOf(),
+                              protected val attachments: MutableList<SecureHash> = arrayListOf(),
+                              protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+                              protected val commands: MutableList<Command> = arrayListOf(),
+                              protected val signers: MutableSet<PublicKey> = mutableSetOf(),
+                              protected val type: TransactionType = TransactionType.Business()) {
 
     val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
 
@@ -57,7 +55,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     }
 
     /** The signatures that have been collected so far - might be incomplete! */
-    private val currentSigs = arrayListOf<DigitalSignature.WithKey>()
+    protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
     fun signWith(key: KeyPair) {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
@@ -94,26 +92,23 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), type)
+            ArrayList(outputs), ArrayList(commands), signers.toList(), type)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            for (command in commands) {
-                if (!gotKeys.containsAll(command.signers))
-                    throw IllegalStateException("Missing signatures on the transaction for a ${command.value.javaClass.canonicalName} command")
-            }
+            val missing = signers - gotKeys
+            if (missing.isNotEmpty())
+                throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.map { it.toStringShort() }}")
         }
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
-    fun addInputState(stateAndRef: StateAndRef<*>) {
+    open fun addInputState(stateAndRef: StateAndRef<*>) {
         check(currentSigs.isEmpty())
 
         val notaryKey = stateAndRef.state.notary.owningKey
-        if (commands.none { it.signers.contains(notaryKey) }) {
-            commands.add(Command(NotaryCommand(), notaryKey))
-        }
+        signers.add(notaryKey)
 
         inputs.add(stateAndRef.ref)
     }
@@ -130,7 +125,8 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
 
     fun addCommand(arg: Command) {
         check(currentSigs.isEmpty())
-        // We should probably merge the lists of pubkeys for identical commands here.
+        // TODO: replace pubkeys in commands with 'pointers' to keys in signers
+        signers.addAll(arg.signers)
         commands.add(arg)
     }
 

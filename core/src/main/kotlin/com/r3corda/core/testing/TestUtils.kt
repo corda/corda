@@ -108,11 +108,8 @@ abstract class AbstractTransactionForTest {
     protected val attachments = ArrayList<SecureHash>()
     protected val outStates = ArrayList<LabeledOutput>()
     protected val commands = ArrayList<Command>()
+    protected val signers = LinkedHashSet<PublicKey>()
     protected val type = TransactionType.Business()
-
-    init {
-        arg(DUMMY_NOTARY.owningKey) { NotaryCommand() }
-    }
 
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, TransactionState(s(), DUMMY_NOTARY)).apply { outStates.add(this) }
 
@@ -126,7 +123,7 @@ abstract class AbstractTransactionForTest {
 
     fun arg(vararg key: PublicKey, c: () -> CommandData) {
         val keys = listOf(*key)
-        commands.add(Command(c(), keys))
+        addCommand(Command(c(), keys))
     }
 
     fun timestamp(time: Instant) {
@@ -135,7 +132,12 @@ abstract class AbstractTransactionForTest {
     }
 
     fun timestamp(data: TimestampCommand) {
-        commands.add(Command(data, DUMMY_NOTARY.owningKey))
+        addCommand(Command(data, DUMMY_NOTARY.owningKey))
+    }
+
+    fun addCommand(cmd: Command) {
+        signers.addAll(cmd.signers)
+        commands.add(cmd)
     }
 
     // Forbid patterns like:  transaction { ... transaction { ... } }
@@ -156,11 +158,14 @@ sealed class LastLineShouldTestForAcceptOrFailure {
 // Corresponds to the args to Contract.verify
 open class TransactionForTest : AbstractTransactionForTest() {
     private val inStates = arrayListOf<TransactionState<ContractState>>()
-    fun input(s: () -> ContractState) = inStates.add(TransactionState(s(), DUMMY_NOTARY))
+    fun input(s: () -> ContractState) {
+        signers.add(DUMMY_NOTARY.owningKey)
+        inStates.add(TransactionState(s(), DUMMY_NOTARY))
+    }
 
     protected fun runCommandsAndVerify(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
-        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.Companion.randomSHA256(), type)
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.Companion.randomSHA256(), signers.toList(), type)
         tx.verify()
     }
 
@@ -215,6 +220,9 @@ open class TransactionForTest : AbstractTransactionForTest() {
         tx.inStates.addAll(inStates)
         tx.outStates.addAll(outStates)
         tx.commands.addAll(commands)
+
+        tx.signers.addAll(tx.inStates.map { it.notary.owningKey })
+        tx.signers.addAll(commands.flatMap { it.signers })
         return tx.body()
     }
 
@@ -246,11 +254,11 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
 
         fun input(label: String) {
             val notaryKey = label.output.notary.owningKey
-            if (commands.none { it.signers.contains(notaryKey) }) commands.add(Command(NotaryCommand(), notaryKey))
+            signers.add(notaryKey)
             inStates.add(label.outputRef)
         }
 
-        fun toWireTransaction() = WireTransaction(inStates, attachments, outStates.map { it.state }, commands, type)
+        fun toWireTransaction() = WireTransaction(inStates, attachments, outStates.map { it.state }, commands, signers.toList(), type)
     }
 
     val String.output: TransactionState<T>
@@ -290,7 +298,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     inner class Roots {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
-            val wtx = WireTransaction(emptyList(), emptyList(), outs, emptyList(), TransactionType.Business())
+            val wtx = WireTransaction(emptyList(), emptyList(), outs, emptyList(), emptyList(), TransactionType.Business())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
                 labelToRefs[label] = StateRef(wtx.id, index)
@@ -370,7 +378,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
 
     fun signAll(txnsToSign: List<WireTransaction> = txns, vararg extraKeys: KeyPair): List<SignedTransaction> {
         return txnsToSign.map { wtx ->
-            val allPubKeys = wtx.commands.flatMap { it.signers }.toMutableSet()
+            val allPubKeys = wtx.signers.toMutableSet()
             val bits = wtx.serialize()
             require(bits == wtx.serialized)
             val sigs = ArrayList<DigitalSignature.WithKey>()

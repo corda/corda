@@ -204,15 +204,6 @@ data class TimestampCommand(val after: Instant?, val before: Instant?) : Command
 }
 
 /**
- * Command that has to be signed by all participants of the states in the transaction
- * in order to perform a notary change
- */
-class ChangeNotary : TypeOnlyCommandData()
-
-/** Command that indicates the requirement of a Notary signature for the input states */
-class NotaryCommand : TypeOnlyCommandData()
-
-/**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted

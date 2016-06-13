@@ -163,7 +163,7 @@ object NotaryProtocol {
 
         private fun commitInputStates(tx: WireTransaction, reqIdentity: Party) {
             try {
-                uniquenessProvider.commit(tx, reqIdentity)
+                uniquenessProvider.commit(tx.inputs, tx.id, reqIdentity)
             } catch (e: UniquenessException) {
                 val conflictData = e.error.serialize()
                 val signedConflict = SignedData(conflictData, sign(conflictData))
