@@ -113,7 +113,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         private set
 
     /** Completes once the node has successfully registered with the network map service */
-    val networkMapRegistrationSettableFuture: SettableFuture<Unit> = SettableFuture.create()
+    private val networkMapRegistrationSettableFuture: SettableFuture<Unit> = SettableFuture.create()
     val networkMapRegistrationFuture: ListenableFuture<Unit> = networkMapRegistrationSettableFuture
 
     /** Set to true once [start] has been successfully called. */
