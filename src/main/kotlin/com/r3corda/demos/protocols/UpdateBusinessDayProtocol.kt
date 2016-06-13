@@ -94,7 +94,7 @@ object UpdateBusinessDayProtocol {
 
         @Suspendable
         private fun nextFixingFloatingLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: NodeInfo, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
-            progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Primary.tracker()
+            progressTracker.setChildProgressTracker(FIXING, TwoPartyDealProtocol.Primary.tracker())
             progressTracker.currentStep = FIXING
 
             val myName = serviceHub.storageService.myLegalIdentity.name
@@ -103,17 +103,22 @@ object UpdateBusinessDayProtocol {
             val keyPair = serviceHub.keyManagementService.toKeyPair(myOldParty.owningKey)
             val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.notaryNodes[0], dealStateAndRef,
                     keyPair,
-                    sessionID, progressTracker.childrenFor[FIXING]!!)
+                    sessionID, progressTracker.getChildProgressTracker(FIXING)!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
 
         @Suspendable
         private fun nextFixingFixedLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: NodeInfo, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
-            progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Secondary.tracker()
+            progressTracker.setChildProgressTracker(FIXING, TwoPartyDealProtocol.Secondary.tracker())
             progressTracker.currentStep = FIXING
 
-            val participant = TwoPartyDealProtocol.Fixer(party.address, serviceHub.networkMapCache.notaryNodes[0].identity, dealStateAndRef, sessionID, progressTracker.childrenFor[FIXING]!!)
+            val participant = TwoPartyDealProtocol.Fixer(
+                    party.address,
+                    serviceHub.networkMapCache.notaryNodes[0].identity,
+                    dealStateAndRef,
+                    sessionID,
+                    progressTracker.getChildProgressTracker(FIXING)!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
@@ -139,11 +144,11 @@ object UpdateBusinessDayProtocol {
 
         companion object {
             object NOTIFYING : ProgressTracker.Step("Notifying peer")
-            object LOCAL : ProgressTracker.Step("Updating locally")
-
-            fun tracker() = ProgressTracker(NOTIFYING, LOCAL).apply {
-                childrenFor[LOCAL] = Updater.tracker()
+            object LOCAL : ProgressTracker.Step("Updating locally") {
+                override fun childProgressTracker(): ProgressTracker = Updater.tracker()
             }
+
+            fun tracker() = ProgressTracker(NOTIFYING, LOCAL)
         }
 
         @Suspendable
@@ -156,7 +161,7 @@ object UpdateBusinessDayProtocol {
             }
             if ((serviceHub.clock as DemoClock).updateDate(message.date)) {
                 progressTracker.currentStep = LOCAL
-                subProtocol(Updater(message.date, message.sessionID, progressTracker.childrenFor[LOCAL]!!))
+                subProtocol(Updater(message.date, message.sessionID, progressTracker.getChildProgressTracker(LOCAL)!!))
             }
             return true
         }

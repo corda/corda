@@ -26,7 +26,6 @@ import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
@@ -293,14 +292,14 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         object SELF_ISSUING : ProgressTracker.Step("Got session ID back, issuing and timestamping some commercial paper")
 
-        object TRADING : ProgressTracker.Step("Starting the trade protocol")
+        object TRADING : ProgressTracker.Step("Starting the trade protocol") {
+            override fun childProgressTracker(): ProgressTracker = TwoPartyTradeProtocol.Seller.tracker()
+        }
 
         // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
         // point: by setting up the tracker in advance, the user can see what's coming in more detail, instead of being
         // surprised when it appears as a new set of tasks below the current one.
-        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING).apply {
-            childrenFor[TRADING] = TwoPartyTradeProtocol.Seller.tracker()
-        }
+        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING)
     }
 
     @Suspendable
@@ -318,7 +317,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
         progressTracker.currentStep = TRADING
 
         val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, commercialPaper, 1000.DOLLARS, cpOwnerKey,
-                sessionID, progressTracker.childrenFor[TRADING]!!)
+                sessionID, progressTracker.getChildProgressTracker(TRADING)!!)
         val tradeTX: SignedTransaction = subProtocol(seller)
         serviceHub.recordTransactions(listOf(tradeTX))
 

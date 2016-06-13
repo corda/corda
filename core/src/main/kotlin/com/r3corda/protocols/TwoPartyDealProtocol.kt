@@ -341,7 +341,7 @@ object TwoPartyDealProtocol {
         override val progressTracker: ProgressTracker = replacementProgressTracker ?: createTracker()
 
         fun createTracker(): ProgressTracker = Secondary.tracker().apply {
-            childrenFor[SIGNING] = ratesFixTracker
+            setChildProgressTracker(SIGNING, ratesFixTracker)
         }
 
         override fun validateHandshake(handshake: Handshake<StateRef>): Handshake<StateRef> {

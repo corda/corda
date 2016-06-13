@@ -69,7 +69,7 @@ abstract class ProtocolLogic<T> {
         val ours = progressTracker
         val theirs = subLogic.progressTracker
         if (ours != null && theirs != null)
-            ours.childrenFor[ours.currentStep] = theirs
+            ours.setChildProgressTracker(ours.currentStep, theirs)
     }
 
     /**

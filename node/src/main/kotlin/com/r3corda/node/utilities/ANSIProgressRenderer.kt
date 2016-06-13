@@ -146,7 +146,7 @@ object ANSIProgressRenderer {
                 newline()
                 lines++
 
-                val child = childrenFor[step]
+                val child = getChildProgressTracker(step)
                 if (child != null)
                     lines += child.renderLevel(ansi, indent + 1, allSteps)
             }
