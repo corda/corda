@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.core.node.services.testing</a>&nbsp;/&nbsp;<a href=".">MockKeyManagementService</a><br/>
 <br/>
 <h1>MockKeyManagementService</h1>
-<code><span class="keyword">class </span><span class="identifier">MockKeyManagementService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></code><br/>
+<code><span class="keyword">class </span><span class="identifier">MockKeyManagementService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></code><br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -65,6 +65,12 @@
 <a href="../../com.r3corda.core.node.services/-key-management-service/to-private.html">toPrivate</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toPrivate</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.KeyManagementService$toPrivate(java.security.PublicKey)/publicKey">publicKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PrivateKey.html"><span class="identifier">PrivateKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
 </tr>
 </tbody>
 </table>

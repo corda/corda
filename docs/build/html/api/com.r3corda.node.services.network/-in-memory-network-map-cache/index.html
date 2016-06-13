@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.node.services.network</a>&nbsp;/&nbsp;<a href=".">InMemoryNetworkMapCache</a><br/>
 <br/>
 <h1>InMemoryNetworkMapCache</h1>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryNetworkMapCache</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryNetworkMapCache</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code><br/>
 <p>Extremely simple in-memory cache of the network map.</p>
 <br/>
 <br/>
@@ -139,6 +139,17 @@ or the appropriate oracle for a contract.</p>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">removeNode</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$removeNode(com.r3corda.core.node.NodeInfo)/node">node</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Removes a node from the local cache</p>
 </td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
 </tr>
 </tbody>
 </table>

@@ -21,7 +21,7 @@ consumed by someone else first</p>
 <td>
 <a href="cash-balances.html">cashBalances</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&gt;</span></code><p>Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
 which we have no cash evaluate to null, not 0.</p>
 </td>
 </tr>
@@ -38,6 +38,14 @@ keys in this wallet, you must inform the wallet service so it can update its int
 <a href="linear-heads.html">linearHeads</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">linearHeads</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of the heads of LinearStates</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="updates.html">updates</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-wallet/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
+the update.</p>
 </td>
 </tr>
 </tbody>
@@ -93,7 +101,7 @@ new states that they create. You should only insert transactions that have been 
 <td>
 <a href="../../com.r3corda.node.services.wallet/-node-wallet-service/index.html">NodeWalletService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">WalletService</span></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">WalletService</span></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
 method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
 states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
 </td>

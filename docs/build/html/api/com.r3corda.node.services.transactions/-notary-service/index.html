@@ -7,11 +7,12 @@
 <a href="../index.html">com.r3corda.node.services.transactions</a>&nbsp;/&nbsp;<a href=".">NotaryService</a><br/>
 <br/>
 <h1>NotaryService</h1>
-<code><span class="keyword">class </span><span class="identifier">NotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><br/>
 <p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
 <ul><li><p>The (optional) timestamp of the transaction is valid</p>
 </li><li><p>None of the referenced input states have previously been consumed by a transaction signed by this Notary</p>
-</li></ul><p>A transaction has to be signed by a Notary to be considered valid (except for output-only transactions w/o a timestamp)</p>
+</li></ul><p>A transaction has to be signed by a Notary to be considered valid (except for output-only transactions without a timestamp).</p>
+<p>This is the base implementation that can be customised with specific Notary transaction commit protocol</p>
 <br/>
 <br/>
 <br/>
@@ -34,7 +35,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">NotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, java.security.KeyPair, com.r3corda.core.node.services.UniquenessProvider, com.r3corda.node.services.transactions.TimestampChecker)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, java.security.KeyPair, com.r3corda.core.node.services.UniquenessProvider, com.r3corda.node.services.transactions.TimestampChecker)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, java.security.KeyPair, com.r3corda.core.node.services.UniquenessProvider, com.r3corda.node.services.transactions.TimestampChecker)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, java.security.KeyPair, com.r3corda.core.node.services.UniquenessProvider, com.r3corda.node.services.transactions.TimestampChecker)/uniquenessProvider">uniquenessProvider</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, java.security.KeyPair, com.r3corda.core.node.services.UniquenessProvider, com.r3corda.node.services.transactions.TimestampChecker)/timestampChecker">timestampChecker</span><span class="symbol">:</span>&nbsp;<a href="../-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a><span class="symbol">)</span></code><p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
+<code><span class="identifier">NotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.statemachine.StateMachineManager, com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/smm">smm</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.statemachine/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.statemachine.StateMachineManager, com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.statemachine.StateMachineManager, com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/timestampChecker">timestampChecker</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$<init>(com.r3corda.node.services.statemachine.StateMachineManager, com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.services.TimestampChecker, com.r3corda.core.node.services.UniquenessProvider)/uniquenessProvider">uniquenessProvider</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">)</span></code><p>A Notary service acts as the final signer of a transaction ensuring two things:</p>
 </td>
 </tr>
 </tbody>
@@ -44,21 +45,28 @@
 <tbody>
 <tr>
 <td>
-<a href="identity.html">identity</a></td>
+<a href="logger.html">logger</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="signing-key.html">signingKey</a></td>
+<a href="protocol-factory.html">protocolFactory</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">signingKey</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">protocolFactory</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-factory/index.html"><span class="identifier">Factory</span></a></code><p>Implement a factory that specifies the transaction commit protocol for the notary service to use</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="smm.html">smm</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">smm</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.statemachine/-state-machine-manager/index.html"><span class="identifier">StateMachineManager</span></a></code></td>
 </tr>
 <tr>
 <td>
 <a href="timestamp-checker.html">timestampChecker</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">timestampChecker</span><span class="symbol">: </span><a href="../-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">timestampChecker</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-timestamp-checker/index.html"><span class="identifier">TimestampChecker</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -79,19 +87,6 @@
 </tr>
 </tbody>
 </table>
-<h3>Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="process-request.html">processRequest</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">processRequest</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$processRequest(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.contracts.WireTransaction)), com.r3corda.core.crypto.Party)/txBits">txBits</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.transactions.NotaryService$processRequest(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.contracts.WireTransaction)), com.r3corda.core.crypto.Party)/reqIdentity">reqIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.protocols/-notary-protocol/-result/index.html"><span class="identifier">Result</span></a></code><p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
-if any of the input states have been previously committed</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3>Inherited Functions</h3>
 <table>
 <tbody>
@@ -103,6 +98,25 @@ if any of the input states have been previously committed</p>
 common boilerplate code. Exceptions are caught and passed to the provided consumer.</p>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
 common boilerplate code. Exceptions are propagated to the messaging layer.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-simple-notary-service/index.html">SimpleNotaryService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SimpleNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NotaryService</span></code><p>A simple Notary service that does not perform transaction validation</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-validating-notary-service/index.html">ValidatingNotaryService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ValidatingNotaryService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NotaryService</span></code><p>A Notary service that validates the transaction chain of he submitted transaction before committing it</p>
 </td>
 </tr>
 </tbody>

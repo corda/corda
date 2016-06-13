@@ -17,6 +17,20 @@ about new transactions from our peers and generate new transactions that consume
 <br/>
 <br/>
 <br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-update/index.html">Update</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Update</span></code><p>Represents an update observed by the Wallet that will be notified to observers.  Include the <a href="../../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a>s of
+transaction outputs that were consumed (inputs) and the <a href="../../com.r3corda.core.contracts/-contract-state/index.html">ContractState</a>s produced (outputs) to/by the transaction
+or transactions observed and the Wallet.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -39,7 +53,7 @@ about new transactions from our peers and generate new transactions that consume
 <td>
 <a href="cash-balances.html">cashBalances</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
 which we have no cash evaluate to null (not present in map), not 0.</p>
 </td>
 </tr>
@@ -59,6 +73,17 @@ which we have no cash evaluate to null (not present in map), not 0.</p>
 <a href="states-of-type.html">statesOfType</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span> <span class="identifier">statesOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-no-update.html">NoUpdate</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">NoUpdate</span><span class="symbol">: </span><a href="-update/index.html"><span class="identifier">Update</span></a></code></td>
 </tr>
 </tbody>
 </table>

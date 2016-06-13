@@ -9,6 +9,14 @@
 <tbody>
 <tr>
 <td>
+<a href="../com.r3corda.node.utilities/-a-n-s-i-progress-observer/index.html">com.r3corda.node.utilities.ANSIProgressObserver</a></td>
+<td>
+<p>This observes the <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s until they complete in the order
+they are added to the <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.utilities/-a-n-s-i-progress-renderer/index.html">com.r3corda.node.utilities.ANSIProgressRenderer</a></td>
 <td>
 <p>Knows how to render a <a href="../com.r3corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
@@ -99,7 +107,9 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 <td>
 <a href="../com.r3corda.core.contracts/-amount/index.html">com.r3corda.core.contracts.Amount</a></td>
 <td>
-<p>Amount represents a positive quantity of currency, measured in pennies, which are the smallest representable units.</p>
+<p>Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
+representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
+amount used in whatever underlying thing the amount represents.</p>
 </td>
 </tr>
 <tr>
@@ -110,6 +120,14 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
 with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
 as well.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.cash/-asset-issuance-definition/index.html">com.r3corda.contracts.cash.AssetIssuanceDefinition</a></td>
+<td>
+<p>Subset of cash-like contract state, containing the issuance definition. If these definitions match for two
+contracts states, those states can be aggregated.</p>
 </td>
 </tr>
 <tr>
@@ -191,7 +209,7 @@ no staff are around to handle problems.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-cash/index.html">com.r3corda.contracts.Cash</a></td>
+<a href="../com.r3corda.contracts.cash/-cash/index.html">com.r3corda.contracts.cash.Cash</a></td>
 <td>
 <p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
 input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
@@ -201,10 +219,9 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts.cash/-cash-issuance-definition/index.html">com.r3corda.contracts.cash.CashIssuanceDefinition</a></td>
+<a href="../com.r3corda.node.services.wallet/-cash-balance-as-metrics-observer/index.html">com.r3corda.node.services.wallet.CashBalanceAsMetricsObserver</a></td>
 <td>
-<p>Subset of cash-like contract state, containing the issuance definition. If these definitions match for two
-contracts states, those states can be aggregated.</p>
+<p>This class observes the wallet and reflect current cash balances as exposed metrics in the monitoring service.</p>
 </td>
 </tr>
 <tr>
@@ -229,6 +246,12 @@ contracts states, those states can be aggregated.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.utilities/java.time.-clock/index.html">java.time.Clock</a> (extensions in package com.r3corda.node.utilities)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-command/index.html">com.r3corda.core.contracts.Command</a></td>
 <td>
 <p>Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes</p>
@@ -245,13 +268,6 @@ contracts states, those states can be aggregated.</p>
 <td>
 <a href="../com.r3corda.contracts/-commercial-paper/index.html">com.r3corda.contracts.CommercialPaper</a></td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts.cash/-common-cash-state/index.html">com.r3corda.contracts.cash.CommonCashState</a></td>
-<td>
-<p>Common elements of cash contract states.</p>
 </td>
 </tr>
 <tr>
@@ -304,15 +320,6 @@ timestamp attached to the transaction itself i.e. it is NOT necessarily the curr
 <p>A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
 file that the program can use to persist data across transactions. States are immutable: once created they are never
 updated, instead, any changes must generate a new successor state.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts/-crowd-fund/index.html">com.r3corda.contracts.CrowdFund</a></td>
-<td>
-<p>This is a basic crowd funding contract. It allows a party to create a funding opportunity, then for others to
-pledge during the funding period , and then for the party to either accept the funding (if the target has been reached)
-return the funds to the pledge-makers (if the target has not been reached).</p>
 </td>
 </tr>
 <tr>
@@ -416,7 +423,7 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-dummy-contract/index.html">com.r3corda.contracts.DummyContract</a></td>
+<a href="../com.r3corda.core.contracts/-dummy-contract/index.html">com.r3corda.core.contracts.DummyContract</a></td>
 <td>
 </td>
 </tr>
@@ -496,6 +503,13 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.utilities/-fiber-box/index.html">com.r3corda.node.utilities.FiberBox</a></td>
+<td>
+<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../com.r3corda.node.utilities/-mutable-clock/index.html">MutableClock</a>s</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-fix/index.html">com.r3corda.core.contracts.Fix</a></td>
 <td>
 <p>A <a href="../com.r3corda.core.contracts/-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
@@ -551,6 +565,31 @@ If the rate is null returns a zero payment. // TODO: Is this the desired behavio
 <td>
 <p>Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
 that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.cash/-fungible-asset/index.html">com.r3corda.contracts.cash.FungibleAsset</a></td>
+<td>
+<p>Superclass for contracts representing assets which are fungible, countable and issued by a specific party. States
+contain assets which are equivalent (such as cash of the same currency), so records of their existence can
+be merged or split as needed where the issuer is the same. For instance, dollars issued by the Fed are fungible and
+countable (in cents), barrels of West Texas crude are fungible and countable (oil from two small containers
+can be poured into one large container), shares of the same class in a specific company are fungible and
+countable, and so on.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.cash/-fungible-asset-state/index.html">com.r3corda.contracts.cash.FungibleAssetState</a></td>
+<td>
+<p>Common elements of cash contract states.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.demos/-i-r-s-demo-role/index.html">com.r3corda.demos.IRSDemoRole</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -617,7 +656,7 @@ testing).</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/-insufficient-balance-exception/index.html">com.r3corda.contracts.InsufficientBalanceException</a></td>
+<a href="../com.r3corda.contracts.cash/-insufficient-balance-exception/index.html">com.r3corda.contracts.cash.InsufficientBalanceException</a></td>
 <td>
 </td>
 </tr>
@@ -691,7 +730,7 @@ from which the state object is initialised.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.contracts/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package com.r3corda.contracts)</td>
+<a href="../com.r3corda.contracts.cash/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package com.r3corda.contracts.cash)</td>
 <td>
 </td>
 </tr>
@@ -864,10 +903,24 @@ Components that do IO are either swapped out for mocks, or pointed to a <a href=
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node.services.testing/-mock-transaction-storage/index.html">com.r3corda.core.node.services.testing.MockTransactionStorage</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.api/-monitoring-service/index.html">com.r3corda.node.services.api.MonitoringService</a></td>
 <td>
 <p>Provides access to various metrics and ways to notify monitoring services of things, for sysadmin purposes.
 This is not an interface because it is too lightweight to bother mocking out.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.utilities/-mutable-clock/index.html">com.r3corda.node.utilities.MutableClock</a></td>
+<td>
+<p>An abstract class with helper methods for a type of Clock that might have its concept of "now"
+adjusted externally.</p>
 </td>
 </tr>
 <tr>
@@ -905,6 +958,12 @@ replace each other based on a serial number present in the change.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.serialization/-no-references-serializer/index.html">com.r3corda.core.serialization.NoReferencesSerializer</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.internal/-node/index.html">com.r3corda.node.internal.Node</a></td>
 <td>
 <p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="#">ServiceHub</a>,
@@ -916,6 +975,13 @@ loads important data off disk and starts listening for connections.</p>
 <a href="../com.r3corda.node.services.persistence/-node-attachment-service/index.html">com.r3corda.node.services.persistence.NodeAttachmentService</a></td>
 <td>
 <p>Stores attachments in the specified local directory, which must exist. Doesnt allow new attachments to be uploaded.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.serialization/-node-clock/index.html">com.r3corda.node.serialization.NodeClock</a></td>
+<td>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that tokenizes itself when serialized, and delegates to an underlying <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> implementation.</p>
 </td>
 </tr>
 <tr>
@@ -969,6 +1035,14 @@ states relevant to us into a database and once such a wallet is implemented, thi
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.utilities/-non-empty-set/index.html">com.r3corda.core.utilities.NonEmptySet</a></td>
+<td>
+<p>A set which is constrained to ensure it can never be empty. An initial value must be provided at
+construction, and attempting to remove the last element will cause an IllegalStateException.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.protocols/-notary-error/index.html">com.r3corda.protocols.NotaryError</a></td>
 <td>
 </td>
@@ -983,8 +1057,6 @@ states relevant to us into a database and once such a wallet is implemented, thi
 <td>
 <a href="../com.r3corda.protocols/-notary-protocol/index.html">com.r3corda.protocols.NotaryProtocol</a></td>
 <td>
-<p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
-timestamp is correct and none of its inputs have been used in another completed transaction</p>
 </td>
 </tr>
 <tr>
@@ -1056,6 +1128,13 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 <a href="../com.r3corda.node.services.persistence/-per-file-checkpoint-storage/index.html">com.r3corda.node.services.persistence.PerFileCheckpointStorage</a></td>
 <td>
 <p>File-based checkpoint storage, storing checkpoints per file.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.persistence/-per-file-transaction-storage/index.html">com.r3corda.node.services.persistence.PerFileTransactionStorage</a></td>
+<td>
+<p>File-based transaction storage, storing transactions per file.</p>
 </td>
 </tr>
 <tr>
@@ -1204,6 +1283,13 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.serialization/-references-aware-java-serializer/index.html">com.r3corda.core.serialization.ReferencesAwareJavaSerializer</a></td>
+<td>
+<p>Improvement to the builtin JavaSerializer by honouring the <a href="#">Kryo.getReferences</a> setting.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.api/-regulator-service/index.html">com.r3corda.node.services.api.RegulatorService</a></td>
 <td>
 <p>Placeholder interface for regulator services.</p>
@@ -1233,6 +1319,14 @@ all the transactions have been successfully verified and inserted into the local
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core/-retryable-exception/index.html">com.r3corda.core.RetryableException</a></td>
+<td>
+<p>This represents a transient exception or condition that might no longer be thrown if the operation is re-run or called
+again.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.demos/-role/index.html">com.r3corda.demos.Role</a></td>
 <td>
 </td>
@@ -1252,18 +1346,17 @@ all the transactions have been successfully verified and inserted into the local
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.serialization/-serialize-as-string-token/index.html">com.r3corda.core.serialization.SerializeAsStringToken</a></td>
-<td>
-<p>A base class for implementing large objects / components / services that need to serialize themselves to a string token
-to indicate which instance the token is a serialized form of.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.serialization/-serialize-as-token/index.html">com.r3corda.core.serialization.SerializeAsToken</a></td>
 <td>
 <p>This interface should be implemented by classes that want to substitute a token representation of themselves if
 they are serialized because they have a lot of internal state that does not serialize (well).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.serialization/-serialize-as-token-context/index.html">com.r3corda.core.serialization.SerializeAsTokenContext</a></td>
+<td>
+<p>A context for mapping SerializationTokens to/from SerializeAsTokens.</p>
 </td>
 </tr>
 <tr>
@@ -1330,6 +1423,13 @@ contained within.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.services.transactions/-simple-notary-service/index.html">com.r3corda.node.services.transactions.SimpleNotaryService</a></td>
+<td>
+<p>A simple Notary service that does not perform transaction validation</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.internal.testing/-simulation/index.html">com.r3corda.node.internal.testing.Simulation</a></td>
 <td>
 <p>Base class for network simulations that are based on the unit test / mock environment.</p>
@@ -1340,6 +1440,22 @@ contained within.</p>
 <a href="../com.r3corda.core.messaging/-single-message-recipient.html">com.r3corda.core.messaging.SingleMessageRecipient</a></td>
 <td>
 <p>A base class for the case of point-to-point messages</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.serialization/-singleton-serialization-token/index.html">com.r3corda.core.serialization.SingletonSerializationToken</a></td>
+<td>
+<p>A class representing a <a href="../com.r3corda.core.serialization/-serialization-token/index.html">SerializationToken</a> for some object that is not serializable but can be looked up
+(when deserialized) via just the class name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html">com.r3corda.core.serialization.SingletonSerializeAsToken</a></td>
+<td>
+<p>A base class for implementing large objects / components / services that need to serialize themselves to a string token
+to indicate which instance the token is a serialized form of.</p>
 </td>
 </tr>
 <tr>
@@ -1367,7 +1483,7 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 <td>
 <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">com.r3corda.node.services.statemachine.StateMachineManager</a></td>
 <td>
-<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../com.r3corda.core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
+<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="#">ProtocolStateMachine</a> objects.
 Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
 </td>
 </tr>
@@ -1428,6 +1544,13 @@ anything like that, this interface is only big enough to support the prototyping
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.internal.testing/-test-clock/index.html">com.r3corda.node.internal.testing.TestClock</a></td>
+<td>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the time advanced for use in testing</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.testing/-test-utils/index.html">com.r3corda.core.testing.TestUtils</a></td>
 <td>
 </td>
@@ -1444,7 +1567,7 @@ way that ensures itll be released if theres an exception.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.transactions/-timestamp-checker/index.html">com.r3corda.node.services.transactions.TimestampChecker</a></td>
+<a href="../com.r3corda.core.node.services/-timestamp-checker/index.html">com.r3corda.core.node.services.TimestampChecker</a></td>
 <td>
 <p>Checks if the given timestamp falls within the allowed tolerance interval</p>
 </td>
@@ -1551,6 +1674,13 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node.services/-transaction-storage/index.html">com.r3corda.core.node.services.TransactionStorage</a></td>
+<td>
+<p>Thread-safe storage of transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-transaction-verification-exception/index.html">com.r3corda.core.contracts.TransactionVerificationException</a></td>
 <td>
 </td>
@@ -1625,12 +1755,35 @@ intended as the way things will necessarily be done longer term</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.protocols/-validating-notary-protocol/index.html">com.r3corda.protocols.ValidatingNotaryProtocol</a></td>
+<td>
+<p>A notary commit protocol that makes sure a given transaction is valid before committing it. This does mean that the calling
+party has to reveal the whole transaction history; however, we avoid complex conflict resolution logic where a party
+has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
+indeed valid</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.transactions/-validating-notary-service/index.html">com.r3corda.node.services.transactions.ValidatingNotaryService</a></td>
+<td>
+<p>A Notary service that validates the transaction chain of he submitted transaction before committing it</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node.services/-wallet/index.html">com.r3corda.core.node.services.Wallet</a></td>
 <td>
 <p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
 change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
 about new transactions from our peers and generate new transactions that consume states ourselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.internal.testing/-wallet-filler/index.html">com.r3corda.node.internal.testing.WalletFiller</a></td>
+<td>
 </td>
 </tr>
 <tr>

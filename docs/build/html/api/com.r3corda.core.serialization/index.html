@@ -20,11 +20,24 @@ set via the constructor and the class is immutable.</p>
 </tr>
 <tr>
 <td>
+<a href="-no-references-serializer/index.html">NoReferencesSerializer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NoReferencesSerializer</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-opaque-bytes/index.html">OpaqueBytes</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">OpaqueBytes</span></code><p>A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect.
 In an ideal JVM this would be a value type and be completely overhead free. Project Valhalla is adding such
 functionality to Java, but it wont arrive for a few years yet</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-references-aware-java-serializer/index.html">ReferencesAwareJavaSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">ReferencesAwareJavaSerializer</span></code><p>Improvement to the builtin JavaSerializer by honouring the <a href="#">Kryo.getReferences</a> setting.</p>
 </td>
 </tr>
 <tr>
@@ -36,18 +49,17 @@ functionality to Java, but it wont arrive for a few years yet</p>
 </tr>
 <tr>
 <td>
-<a href="-serialize-as-string-token/index.html">SerializeAsStringToken</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">SerializeAsStringToken</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A base class for implementing large objects / components / services that need to serialize themselves to a string token
-to indicate which instance the token is a serialized form of.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="-serialize-as-token/index.html">SerializeAsToken</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">SerializeAsToken</span></code><p>This interface should be implemented by classes that want to substitute a token representation of themselves if
 they are serialized because they have a lot of internal state that does not serialize (well).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-serialize-as-token-context/index.html">SerializeAsTokenContext</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SerializeAsTokenContext</span></code><p>A context for mapping SerializationTokens to/from SerializeAsTokens.</p>
 </td>
 </tr>
 <tr>
@@ -71,6 +83,22 @@ to get the original object back.</p>
 <td>
 <code><span class="keyword">object </span><span class="identifier">SerializedBytesSerializer</span></code><p>A serialiser that avoids writing the wrapper class to the byte stream, thus ensuring <a href="-serialized-bytes/index.html">SerializedBytes</a> is a pure
 type safety hack.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-singleton-serialization-token/index.html">SingletonSerializationToken</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SingletonSerializationToken</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code><p>A class representing a <a href="-serialization-token/index.html">SerializationToken</a> for some object that is not serializable but can be looked up
+(when deserialized) via just the class name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-singleton-serialize-as-token/index.html">SingletonSerializeAsToken</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">SingletonSerializeAsToken</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A base class for implementing large objects / components / services that need to serialize themselves to a string token
+to indicate which instance the token is a serialized form of.</p>
 </td>
 </tr>
 <tr>
@@ -146,6 +174,15 @@ simple, totally non-extensible binary (sub)format.</p>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$deserialize(com.r3corda.core.serialization.OpaqueBytes, )/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><br/>
 <code><span class="keyword">fun </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$deserialize(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.contracts.WireTransaction)), )/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><br/>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$deserialize(com.r3corda.core.serialization.SerializedBytes((com.r3corda.core.serialization.deserialize.T)), )/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="no-references-within.html">noReferencesWithin</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">noReferencesWithin</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Use this method to mark any types which can have the same instance within it more than once. This will make sure
+the serialised form is stable across multiple serialise-deserialise cycles. Using this on a type with internal cyclic
+references will throw a stack overflow exception during serialisation.</p>
+</td>
 </tr>
 <tr>
 <td>

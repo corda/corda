@@ -47,34 +47,27 @@ existing contract code.</p>
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts/-cash/index.html">Cash</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
-input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
-(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
-the same transaction.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.contracts/-commercial-paper/index.html">CommercialPaper</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts/-crowd-fund/index.html">CrowdFund</a></td>
+<a href="../-dummy-contract/index.html">DummyContract</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">CrowdFund</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>This is a basic crowd funding contract. It allows a party to create a funding opportunity, then for others to
-pledge during the funding period , and then for the party to either accept the funding (if the target has been reached)
-return the funds to the pledge-makers (if the target has not been reached).</p>
-</td>
+<code><span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts/-dummy-contract/index.html">DummyContract</a></td>
+<a href="../../com.r3corda.contracts.cash/-fungible-asset/index.html">FungibleAsset</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>Superclass for contracts representing assets which are fungible, countable and issued by a specific party. States
+contain assets which are equivalent (such as cash of the same currency), so records of their existence can
+be merged or split as needed where the issuer is the same. For instance, dollars issued by the Fed are fungible and
+countable (in cents), barrels of West Texas crude are fungible and countable (oil from two small containers
+can be poured into one large container), shares of the same class in a specific company are fungible and
+countable, and so on.</p>
+</td>
 </tr>
 <tr>
 <td>

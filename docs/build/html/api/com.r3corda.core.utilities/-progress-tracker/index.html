@@ -100,14 +100,6 @@ if a step changed its label or rendering).</p>
 </tr>
 <tr>
 <td>
-<a href="children-for.html">childrenFor</a></td>
-<td>
-<code><span class="keyword">var </span><span class="identifier">childrenFor</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/HashMap.html"><span class="identifier">HashMap</span></a><span class="symbol">&lt;</span><a href="-step/index.html"><span class="identifier">Step</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">ProgressTracker</span><span class="symbol">&gt;</span></code><p>Writable map that lets you insert child ProgressTrackers for particular steps. Its OK to edit this even
-after a progress tracker has been started.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="current-step.html">currentStep</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">currentStep</span><span class="symbol">: </span><a href="-step/index.html"><span class="identifier">Step</span></a></code><p>Reading returns the value of steps<a href="step-index.html">stepIndex</a>, writing moves the position of the current tracker. Once moved to
@@ -156,11 +148,23 @@ the <a href="-d-o-n-e/index.html">DONE</a> state, this tracker is finished and t
 <tbody>
 <tr>
 <td>
+<a href="get-child-progress-tracker.html">getChildProgressTracker</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getChildProgressTracker</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.utilities.ProgressTracker$getChildProgressTracker(com.r3corda.core.utilities.ProgressTracker.Step)/step">step</span><span class="symbol">:</span>&nbsp;<a href="-step/index.html"><span class="identifier">Step</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ProgressTracker</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="next-step.html">nextStep</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">nextStep</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-step/index.html"><span class="identifier">Step</span></a></code><p>Iterates the progress tracker. If the current step has a child, the child is iterated instead (recursively).
 Returns the latest step at the bottom of the step tree.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="set-child-progress-tracker.html">setChildProgressTracker</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">setChildProgressTracker</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.utilities.ProgressTracker$setChildProgressTracker(com.r3corda.core.utilities.ProgressTracker.Step, com.r3corda.core.utilities.ProgressTracker)/step">step</span><span class="symbol">:</span>&nbsp;<a href="-step/index.html"><span class="identifier">Step</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.utilities.ProgressTracker$setChildProgressTracker(com.r3corda.core.utilities.ProgressTracker.Step, com.r3corda.core.utilities.ProgressTracker)/childProgressTracker">childProgressTracker</span><span class="symbol">:</span>&nbsp;<span class="identifier">ProgressTracker</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>
