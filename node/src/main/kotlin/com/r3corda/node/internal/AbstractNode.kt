@@ -121,6 +121,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         require(!started) { "Node has already been started" }
         log.info("Node starting up ...")
 
+        createNodeDir()
+
         val storageServices = initialiseStorageService(dir)
         storage = storageServices.first
         checkpointStorage = storageServices.second
@@ -315,5 +317,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         } catch (e: FileAlreadyExistsException) {
         }
         return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
+    }
+
+    private fun createNodeDir() {
+        if (!Files.exists(dir)) {
+            Files.createDirectories(dir)
+        }
     }
 }

@@ -95,7 +95,7 @@ fun main(args: Array<String>) {
     // for protocols will change in future.
     BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
-    val directory = setupDirectory(role)
+    val directory = Paths.get(DIRNAME, role.name.toLowerCase())
 
     // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
@@ -139,12 +139,6 @@ fun main(args: Array<String>) {
     } else {
         runSeller(myNetAddr, node, theirNetAddr)
     }
-}
-
-fun setupDirectory(mode: Role): Path {
-    val directory = Paths.get(DIRNAME, mode.name.toLowerCase())
-    Files.createDirectories(directory)
-    return directory
 }
 
 fun parseOptions(args: Array<String>, parser: OptionParser): OptionSet {
