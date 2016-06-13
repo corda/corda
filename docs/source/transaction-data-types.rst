@@ -7,17 +7,17 @@ Amount
 ------
 
 The ``Amount`` class is used to represent an amount of some fungible asset. It is a generic class which wraps around
-a type used to define the underlying asset, for example a ``TokenDefinition``, or this can be a more complex type
-such as an obligation contract issuance definition (which in turn contains a token definition for whatever the obligation
-is to be settled in).
+a type used to define the underlying product, generally represented by an ``Issued`` instance, or this can be a more
+complex type such as an obligation contract issuance definition (which in turn contains a token definition for whatever
+the obligation is to be settled in).
 
 .. note:: Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
           and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
           £10 note can be exchanged for two £5 notes, or vice-versa.
 
-Where a contract refers directly to an amount of something, ``Amount`` should wrap ``TokenDefinition``, which in
+Where a contract refers directly to an amount of something, ``Amount`` should wrap ``Issued``, which in
 turn can refer to a ``Currency`` (GBP, USD, CHF, etc.), or any other class. Future work in this area will include
-introducing classes to represent non-currency things (such as commodities) that TokenDefinition can wrap. For more
+introducing classes to represent non-currency things (such as commodities) that Issued can wrap. For more
 complex amounts, ``Amount`` can wrap other types, for example to represent a number of Obligation contracts to be
 delivered (themselves referring to a currency), an ``Amount`` such as the following would used:
 
