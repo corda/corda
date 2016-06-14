@@ -367,9 +367,8 @@ object TwoPartyDealProtocol {
 
             @Suppress("UNCHECKED_CAST")
             val newDeal = deal
-            val oldRef = dealToFix.ref
 
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0], fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {

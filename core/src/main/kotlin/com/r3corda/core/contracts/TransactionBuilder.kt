@@ -14,12 +14,13 @@ import java.util.*
  * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
  * multiple parties.
  */
-open class TransactionBuilder(protected val inputs: MutableList<StateRef> = arrayListOf(),
-                              protected val attachments: MutableList<SecureHash> = arrayListOf(),
-                              protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-                              protected val commands: MutableList<Command> = arrayListOf(),
-                              protected val signers: MutableSet<PublicKey> = mutableSetOf(),
-                              protected val type: TransactionType = TransactionType.Business()) {
+abstract class TransactionBuilder(protected val type: TransactionType = TransactionType.General(),
+                                  protected val notary: Party? = null) {
+    protected val inputs: MutableList<StateRef> = arrayListOf()
+    protected val attachments: MutableList<SecureHash> = arrayListOf()
+    protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf()
+    protected val commands: MutableList<Command> = arrayListOf()
+    protected val signers: MutableSet<PublicKey> = mutableSetOf()
 
     val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
 
@@ -47,6 +48,7 @@ open class TransactionBuilder(protected val inputs: MutableList<StateRef> = arra
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
                 is TransactionState<*> -> addOutputState(t)
+                is ContractState -> addOutputState(t)
                 is Command -> addCommand(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
@@ -121,6 +123,13 @@ open class TransactionBuilder(protected val inputs: MutableList<StateRef> = arra
     fun addOutputState(state: TransactionState<*>) {
         check(currentSigs.isEmpty())
         outputs.add(state)
+    }
+
+    fun addOutputState(state: ContractState, notary: Party) = addOutputState(TransactionState(state, notary))
+
+    fun addOutputState(state: ContractState) {
+        checkNotNull(notary) { "Need to specify a Notary for the state, or set a default one on TransactionBuilder initialisation" }
+        addOutputState(state, notary!!)
     }
 
     fun addCommand(arg: Command) {

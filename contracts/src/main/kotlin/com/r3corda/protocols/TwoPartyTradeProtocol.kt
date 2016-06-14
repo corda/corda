@@ -266,7 +266,7 @@ object TwoPartyTradeProtocol {
         }
 
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
             val wallet = serviceHub.walletService.currentWallet
             val cashStates = wallet.statesOfType<Cash.State>()
@@ -279,7 +279,7 @@ object TwoPartyTradeProtocol {
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
             val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
-            ptx.addOutputState(TransactionState(state, tradeRequest.assetForSale.state.notary))
+            ptx.addOutputState(state, tradeRequest.assetForSale.state.notary)
             ptx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt

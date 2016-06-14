@@ -1,6 +1,6 @@
 package com.r3corda.node.services
 
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.node.internal.testing.MockNetwork
@@ -34,7 +34,7 @@ class ValidatingNotaryServiceTests {
 
     @Test fun `should report error for invalid transaction dependency`() {
         val inputState = issueInvalidState(clientNode)
-        val wtx = TransactionBuilder().withItems(inputState).toWireTransaction()
+        val wtx = TransactionType.General.Builder().withItems(inputState).toWireTransaction()
 
         val protocol = NotaryProtocol.Client(wtx)
         val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)

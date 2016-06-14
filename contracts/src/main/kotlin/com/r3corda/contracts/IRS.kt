@@ -717,8 +717,8 @@ class InterestRateSwap() : Contract {
         val newCalculation = Calculation(calculation.expression, floatingLegPaymentSchedule, fixedLegPaymentSchedule)
 
         // Put all the above into a new State object.
-        val state = TransactionState(State(fixedLeg, floatingLeg, newCalculation, common), notary)
-        return TransactionBuilder().withItems(state, Command(Commands.Agree(), listOf(state.data.floatingLeg.floatingRatePayer.owningKey, state.data.fixedLeg.fixedRatePayer.owningKey)))
+        val state = State(fixedLeg, floatingLeg, newCalculation, common)
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 
     private fun calcFixingDate(date: LocalDate, fixingPeriod: DateOffset, calendar: BusinessCalendar): LocalDate {
@@ -733,9 +733,9 @@ class InterestRateSwap() : Contract {
     fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Pair<LocalDate, Rate>) {
         tx.addInputState(irs)
         tx.addOutputState(
-                TransactionState(
-                        irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.first, FixedRate(fixing.second))),
-                        irs.state.notary))
+                irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.first, FixedRate(fixing.second))),
+                irs.state.notary
+        )
         tx.addCommand(Commands.Fix(), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))
     }
 }

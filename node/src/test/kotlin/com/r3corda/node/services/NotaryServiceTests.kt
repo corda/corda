@@ -1,7 +1,7 @@
 package com.r3corda.node.services
 
 import com.r3corda.core.contracts.TimestampCommand
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.DUMMY_NOTARY_KEY
@@ -38,7 +38,7 @@ class NotaryServiceTests {
 
     @Test fun `should sign a unique transaction with a valid timestamp`() {
         val inputState = issueState(clientNode)
-        val tx = TransactionBuilder().withItems(inputState)
+        val tx = TransactionType.General.Builder().withItems(inputState)
         tx.setTime(Instant.now(), DUMMY_NOTARY, 30.seconds)
         val wtx = tx.toWireTransaction()
 
@@ -52,7 +52,7 @@ class NotaryServiceTests {
 
     @Test fun `should sign a unique transaction without a timestamp`() {
         val inputState = issueState(clientNode)
-        val wtx = TransactionBuilder().withItems(inputState).toWireTransaction()
+        val wtx = TransactionType.General.Builder().withItems(inputState).toWireTransaction()
 
         val protocol = NotaryProtocol.Client(wtx)
         val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
@@ -64,7 +64,7 @@ class NotaryServiceTests {
 
     @Test fun `should report error for transaction with an invalid timestamp`() {
         val inputState = issueState(clientNode)
-        val tx = TransactionBuilder().withItems(inputState)
+        val tx = TransactionType.General.Builder().withItems(inputState)
         tx.setTime(Instant.now().plusSeconds(3600), DUMMY_NOTARY, 30.seconds)
         val wtx = tx.toWireTransaction()
 
@@ -79,7 +79,7 @@ class NotaryServiceTests {
 
     @Test fun `should report error for transaction with more than one timestamp`() {
         val inputState = issueState(clientNode)
-        val tx = TransactionBuilder().withItems(inputState)
+        val tx = TransactionType.General.Builder().withItems(inputState)
         val timestamp = TimestampCommand(Instant.now(), 30.seconds)
         tx.addCommand(timestamp, DUMMY_NOTARY.owningKey)
         tx.addCommand(timestamp, DUMMY_NOTARY.owningKey)
@@ -96,7 +96,7 @@ class NotaryServiceTests {
 
     @Test fun `should report conflict for a duplicate transaction`() {
         val inputState = issueState(clientNode)
-        val wtx = TransactionBuilder().withItems(inputState).toWireTransaction()
+        val wtx = TransactionType.General.Builder().withItems(inputState).toWireTransaction()
 
         val firstSpend = NotaryProtocol.Client(wtx)
         val secondSpend = NotaryProtocol.Client(wtx)

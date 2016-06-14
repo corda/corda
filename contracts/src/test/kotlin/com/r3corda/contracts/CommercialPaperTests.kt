@@ -140,7 +140,7 @@ class CommercialPaperTestsGeneric {
     }
 
     fun <T : ContractState> cashOutputsToWallet(vararg outputs: TransactionState<T>): Pair<LedgerTransaction, List<StateAndRef<T>>> {
-        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*outputs), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.Business())
+        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*outputs), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.General())
         return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 
@@ -165,7 +165,7 @@ class CommercialPaperTestsGeneric {
 
         // Alice pays $9000 to MiniCorp to own some of their debt.
         val moveTX: LedgerTransaction = run {
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             Cash().generateSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
             CommercialPaper().generateMove(ptx, issueTX.outRef(0), ALICE_PUBKEY)
             ptx.signWith(MINI_CORP_KEY)
@@ -181,7 +181,7 @@ class CommercialPaperTestsGeneric {
         )
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             ptx.setTime(time, DUMMY_NOTARY, 30.seconds)
             CommercialPaper().generateRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)

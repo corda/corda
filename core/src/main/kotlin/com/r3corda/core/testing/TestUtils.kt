@@ -109,7 +109,7 @@ abstract class AbstractTransactionForTest {
     protected val outStates = ArrayList<LabeledOutput>()
     protected val commands = ArrayList<Command>()
     protected val signers = LinkedHashSet<PublicKey>()
-    protected val type = TransactionType.Business()
+    protected val type = TransactionType.General()
 
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, TransactionState(s(), DUMMY_NOTARY)).apply { outStates.add(this) }
 
@@ -298,7 +298,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     inner class Roots {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
-            val wtx = WireTransaction(emptyList(), emptyList(), outs, emptyList(), emptyList(), TransactionType.Business())
+            val wtx = WireTransaction(emptyList(), emptyList(), outs, emptyList(), emptyList(), TransactionType.General())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
                 labelToRefs[label] = StateRef(wtx.id, index)

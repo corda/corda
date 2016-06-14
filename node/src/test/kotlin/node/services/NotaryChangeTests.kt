@@ -1,7 +1,10 @@
 package node.services
 
 import com.r3corda.contracts.DummyContract
-import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.TransactionState
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.node.internal.testing.MockNetwork
@@ -52,7 +55,7 @@ class NotaryChangeTests {
         val state = TransactionState(DummyContract.MultiOwnerState(0,
                 listOf(clientNodeA.info.identity.owningKey, clientNodeB.info.identity.owningKey)), DUMMY_NOTARY)
 
-        val tx = TransactionBuilder(type = TransactionType.NotaryChange()).withItems(state)
+        val tx = TransactionType.NotaryChange.Builder().withItems(state)
         tx.signWith(clientNodeA.storage.myLegalIdentityKey)
         tx.signWith(clientNodeB.storage.myLegalIdentityKey)
         tx.signWith(DUMMY_NOTARY_KEY)

@@ -7,7 +7,7 @@ import com.r3corda.core.testing.*
 import org.junit.Test
 import java.security.PublicKey
 import java.security.SecureRandom
-import java.util.Currency
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -122,7 +122,7 @@ class TransactionGroupTests {
         // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
         // points nowhere.
         val input = StateAndRef(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY, generateStateRef())
-        tg.txns += TransactionBuilder().apply {
+        tg.txns += TransactionType.General.Builder().apply {
             addInputState(input)
             addOutputState(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY)
             addCommand(TestCash.Commands.Move(), BOB_PUBKEY)

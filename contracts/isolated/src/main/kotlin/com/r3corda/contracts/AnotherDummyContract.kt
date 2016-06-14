@@ -36,8 +36,8 @@ class AnotherDummyContract : Contract, com.r3corda.core.node.DummyContractBackdo
     override val legalContractReference: SecureHash = SecureHash.sha256("https://anotherdummy.org")
 
     override fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
-        val state = TransactionState(State(magicNumber), notary)
-        return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
+        val state = State(magicNumber)
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 
     override fun inspectState(state: ContractState): Int = (state as State).magicNumber

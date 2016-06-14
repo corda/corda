@@ -97,7 +97,7 @@ class CashTests {
         }
 
         // Test generation works.
-        val ptx = TransactionBuilder()
+        val ptx = TransactionType.General.Builder()
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0].data as Cash.State
@@ -109,7 +109,7 @@ class CashTests {
 
         // Test issuance from the issuance definition
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
-        val templatePtx = TransactionBuilder()
+        val templatePtx = TransactionType.General.Builder()
         Cash().generateIssue(templatePtx, amount, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(templatePtx.inputStates().isEmpty())
         assertEquals(ptx.outputStates()[0], templatePtx.outputStates()[0])
@@ -176,14 +176,14 @@ class CashTests {
     @Test(expected = IllegalStateException::class)
     fun `reject issuance with inputs`() {
         // Issue some cash
-        var ptx = TransactionBuilder()
+        var ptx = TransactionType.General.Builder()
 
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
         ptx.signWith(MINI_CORP_KEY)
         val tx = ptx.toSignedTransaction()
 
         // Include the previously issued cash in a new issuance command
-        ptx = TransactionBuilder()
+        ptx = TransactionType.General.Builder()
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
         Cash().generateIssue(ptx, 100.DOLLARS `issued by`  MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
     }
@@ -386,7 +386,7 @@ class CashTests {
     )
 
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey, corp: Party, depositRef: OpaqueBytes = defaultRef): WireTransaction {
-        val tx = TransactionBuilder()
+        val tx = TransactionType.General.Builder()
         Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
     }
@@ -401,7 +401,7 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithParties() {
-        val tx = TransactionBuilder()
+        val tx = TransactionType.General.Builder()
         Cash().generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, WALLET, setOf(MINI_CORP))
         assertEquals(WALLET[2].ref, tx.inputStates()[0])
     }

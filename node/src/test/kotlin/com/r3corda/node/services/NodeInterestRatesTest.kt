@@ -8,9 +8,9 @@ import com.r3corda.contracts.testing.`with notary`
 import com.r3corda.core.bd
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.Fix
-import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.testing.ALICE_PUBKEY
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
@@ -104,7 +104,7 @@ class NodeInterestRatesTest {
         val (n1, n2) = net.createTwoNodes()
         n2.interestRatesService.oracle.knownFixes = TEST_DATA
 
-        val tx = TransactionBuilder()
+        val tx = TransactionType.General.Builder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val protocol = RatesFixProtocol(tx, n2.info, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
@@ -119,5 +119,5 @@ class NodeInterestRatesTest {
         assertEquals("0.678".bd, fix.value)
     }
 
-    private fun makeTX() = TransactionBuilder(outputs = mutableListOf(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY))
+    private fun makeTX() =  TransactionType.General.Builder().withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY)
 }

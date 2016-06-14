@@ -311,7 +311,7 @@ class IRSTests {
             val nextFixingDate = currentIRS.calculation.nextFixingDate() ?: break
             println("\n\n\n ***** Applying a fixing to $nextFixingDate \n\n\n")
             var fixTX: LedgerTransaction = run {
-                val tx = TransactionBuilder()
+                val tx = TransactionType.General.Builder()
                 val fixing = Pair(nextFixingDate, FixedRate("0.052".percent))
                 InterestRateSwap().generateFix(tx, previousTXN.outRef(0), fixing)
                 with(tx) {

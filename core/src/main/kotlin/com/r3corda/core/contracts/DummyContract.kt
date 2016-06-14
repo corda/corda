@@ -43,7 +43,7 @@ class DummyContract : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("")
 
     fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
-        val state = TransactionState(SingleOwnerState(magicNumber, owner.party.owningKey), notary)
-        return TransactionBuilder().withItems(state, Command(Commands.Create(), owner.party.owningKey))
+        val state = SingleOwnerState(magicNumber, owner.party.owningKey)
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
     }
 }

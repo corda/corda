@@ -10,7 +10,7 @@ import org.junit.Test
 import java.security.PublicKey
 import java.security.SecureRandom
 import java.security.SignatureException
-import java.util.Currency
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -53,7 +53,7 @@ class TransactionSerializationTests {
 
     @Before
     fun setup() {
-        tx = TransactionBuilder().withItems(
+        tx = TransactionType.General.Builder().withItems(
                 inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
@@ -92,7 +92,7 @@ class TransactionSerializationTests {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = TransactionBuilder().withItems(inputState, outputState, changeState,
+            val tx2 = TransactionType.General.Builder().withItems(inputState, outputState, changeState,
                     Command(TestCash.Commands.Move(), TestUtils.keypair2.public))
             tx2.signWith(DUMMY_NOTARY_KEY)
             tx2.signWith(TestUtils.keypair2)

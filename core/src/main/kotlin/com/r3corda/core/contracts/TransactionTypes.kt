@@ -1,5 +1,6 @@
 package com.r3corda.core.contracts
 
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.noneOrSingle
 import java.security.PublicKey
 
@@ -45,8 +46,10 @@ sealed class TransactionType {
     /** Implement type specific transaction validation logic */
     abstract fun verifyTransaction(tx: TransactionForVerification)
 
-    /** A general type used for business transactions, where transaction validity is determined by custom contract code */
-    class Business : TransactionType() {
+    /** A general transaction type where transaction validity is determined by custom contract code */
+    class General : TransactionType() {
+        class Builder(notary: Party? = null) : TransactionBuilder(General(), notary) {}
+
         /**
          * Check the transaction is contract-valid by running the verify() for each input and output state contract.
          * If any contract fails to verify, the whole transaction is considered to be invalid
@@ -80,7 +83,7 @@ sealed class TransactionType {
          * A transaction builder that automatically sets the transaction type to [NotaryChange]
          * and adds the list of participants to the signers set for every input state.
          */
-        class Builder() : TransactionBuilder(type = NotaryChange()) {
+        class Builder(notary: Party? = null) : TransactionBuilder(NotaryChange(), notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
                 signers.addAll(stateAndRef.state.data.participants)
                 super.addInputState(stateAndRef)
