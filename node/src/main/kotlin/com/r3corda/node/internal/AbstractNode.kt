@@ -121,8 +121,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         require(!started) { "Node has already been started" }
         log.info("Node starting up ...")
 
-        createNodeDir()
-
         val storageServices = initialiseStorageService(dir)
         storage = storageServices.first
         checkpointStorage = storageServices.second
@@ -151,6 +149,14 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
         smm.start()
         started = true
+        return this
+    }
+
+    /**
+     * Run any tasks that are needed to ensure the node is in a correct state before running start()
+     */
+    open fun setup(): AbstractNode {
+        createNodeDir()
         return this
     }
 
@@ -319,7 +325,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
     }
 
-    private fun createNodeDir() {
+    protected fun createNodeDir() {
         if (!Files.exists(dir)) {
             Files.createDirectories(dir)
         }

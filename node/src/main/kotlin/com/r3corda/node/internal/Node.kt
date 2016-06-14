@@ -153,6 +153,11 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         return this
     }
 
+    override fun setup(): Node {
+        super.setup()
+        return this
+    }
+
     override fun stop() {
         webServer.stop()
         super.stop()
@@ -165,24 +170,23 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
-        if(Files.exists(dir)) {
-            val pidPath = dir.resolve("process-id")
-            val file = pidPath.toFile()
-            if (!file.exists()) {
-                file.createNewFile()
-            }
-            file.deleteOnExit()
-            val f = RandomAccessFile(file, "rw")
-            val l = f.channel.tryLock()
-            if (l == null) {
-                println("It appears there is already a node running with the specified data directory $dir")
-                println("Shut that other node down and try again. It may have process ID ${file.readText()}")
-                System.exit(1)
-            }
-            nodeFileLock = l
-            val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
-            f.setLength(0)
-            f.write(ourProcessID.toByteArray())
+        val pidPath = dir.resolve("process-id")
+        val file = pidPath.toFile()
+        if (!file.exists()) {
+            file.createNewFile()
         }
+        file.deleteOnExit()
+        val f = RandomAccessFile(file, "rw")
+        val l = f.channel.tryLock()
+        if (l == null) {
+            println("It appears there is already a node running with the specified data directory $dir")
+            println("Shut that other node down and try again. It may have process ID ${file.readText()}")
+            System.exit(1)
+        }
+
+        nodeFileLock = l
+        val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
+        f.setLength(0)
+        f.write(ourProcessID.toByteArray())
      }
 }

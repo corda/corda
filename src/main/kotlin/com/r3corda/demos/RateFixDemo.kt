@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
             advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).start() }
+            listOf(InterestRateSwapAPI::class.java)).setup().start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 
