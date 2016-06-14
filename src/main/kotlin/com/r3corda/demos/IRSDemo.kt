@@ -256,7 +256,7 @@ fun runIRSDemo(args: Array<String>): Int {
         CliParams.parse(CliParamsSpec.parser.parse(*args))
     } catch (e: Exception) {
         println(e)
-        printHelp()
+        printHelp(CliParamsSpec.parser)
         return 1
     }
 
@@ -462,8 +462,10 @@ private fun createDefaultConfigFile(configFile: File, legalName: String) {
         """.trimIndent().toByteArray())
 }
 
-private fun printHelp() {
+private fun printHelp(parser: OptionParser) {
     println("""
-    Please refer to the documentation in docs/build/index.html to learn how to run the demo.
+    Usage: irsdemo --role [NodeA|NodeB|Trade|Date] [<TradeName>|<DateValue>] [options]
+    Please refer to the documentation in docs/build/index.html for more info.
+
     """.trimIndent())
 }
