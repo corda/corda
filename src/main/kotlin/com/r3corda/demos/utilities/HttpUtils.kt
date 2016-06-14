@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
  */
 private val client = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS).build();
+        .readTimeout(60, TimeUnit.SECONDS).build();
 
 fun putJson(url: URL, data: String) : Boolean {
     val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
