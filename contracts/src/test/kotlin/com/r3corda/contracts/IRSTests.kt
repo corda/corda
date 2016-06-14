@@ -27,7 +27,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     rollConvention = DateRollConvention.ModifiedFollowing,
                     dayInMonth = 10,
                     paymentRule = PaymentRule.InArrears,
-                    paymentDelay = 0,
+                    paymentDelay = 3,
                     paymentCalendar = BusinessCalendar.getInstance("London", "NewYork"),
                     interestPeriodAdjustment = AccrualAdjustment.Adjusted
             )
@@ -47,7 +47,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dayInMonth = 10,
                     resetDayInMonth = 10,
                     paymentRule = PaymentRule.InArrears,
-                    paymentDelay = 0,
+                    paymentDelay = 3,
                     paymentCalendar = BusinessCalendar.getInstance("London", "NewYork"),
                     interestPeriodAdjustment = AccrualAdjustment.Adjusted,
                     fixingPeriod = DateOffset.TWODAYS,
@@ -360,7 +360,7 @@ class IRSTests {
 
         for (i in stuffToPrint) {
             println(i)
-            var z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 12), Expression(i))
+            var z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 15), Expression(i))
             println(z.javaClass)
             println(z)
             println("-----------")

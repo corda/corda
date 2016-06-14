@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.r3corda.core.contracts.CommandData
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -251,25 +250,28 @@ enum class DateOffset {
  */
 enum class Frequency(val annualCompoundCount: Int) {
     Annual(1) {
-        override fun offset(d: LocalDate) = d.plusYears(1)
+        override fun offset(d: LocalDate, n: Long) = d.plusYears(1 * n)
     },
     SemiAnnual(2) {
-        override fun offset(d: LocalDate) = d.plusMonths(6)
+        override fun offset(d: LocalDate, n: Long) = d.plusMonths(6 * n)
     },
     Quarterly(4) {
-        override fun offset(d: LocalDate) = d.plusMonths(3)
+        override fun offset(d: LocalDate, n: Long) = d.plusMonths(3 * n)
     },
     Monthly(12) {
-        override fun offset(d: LocalDate) = d.plusMonths(1)
+        override fun offset(d: LocalDate, n: Long) = d.plusMonths(1 * n)
     },
     Weekly(52) {
-        override fun offset(d: LocalDate) = d.plusWeeks(1)
+        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(1 * n)
     },
     BiWeekly(26) {
-        override fun offset(d: LocalDate) = d.plusWeeks(2)
+        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(2 * n)
+    },
+    Daily(365) {
+        override fun offset(d: LocalDate, n: Long) = d.plusDays(1 * n)
     };
 
-    abstract fun offset(d: LocalDate): LocalDate
+    abstract fun offset(d: LocalDate, n: Long = 1): LocalDate
     // Daily() // Let's not worry about this for now.
 }
 
@@ -317,17 +319,23 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
             var currentDate = startDate
 
             while (true) {
-                currentDate = period.offset(currentDate)
-                val scheduleDate = calendar.applyRollConvention(currentDate, dateRollConvention)
-
+                currentDate = getOffsetDate(currentDate, period)
                 if (periodOffset == null || periodOffset <= ctr)
-                    ret.add(scheduleDate)
+                    ret.add(calendar.applyRollConvention(currentDate, dateRollConvention))
                 ctr += 1
                 // TODO: Fix addl period logic
-                if ((ctr > noOfAdditionalPeriods ) || (currentDate >= endDate ?: currentDate ))
+                if ((ctr > noOfAdditionalPeriods) || (currentDate >= endDate ?: currentDate))
                     break
             }
             return ret
+        }
+
+        /** Calculates the date from @startDate moving forward @steps of time size @period. Does not apply calendar
+         * logic / roll conventions.
+         */
+        fun getOffsetDate(startDate: LocalDate, period: Frequency, steps: Int = 1): LocalDate {
+            if (steps == 0) return startDate
+            return period.offset(startDate, steps.toLong())
         }
     }
 

@@ -1,6 +1,5 @@
 package com.r3corda.contracts
 
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -672,15 +671,17 @@ class InterestRateSwap() : Contract {
 
         // Create a schedule for the fixed payments
         for (periodEndDate in dates) {
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, fixedLeg.paymentDelay)
             val paymentEvent = FixedRatePaymentEvent(
-                    // TODO: We are assuming the payment date is the end date of the accrual period.
-                    periodEndDate, periodStartDate, periodEndDate,
+                    paymentDate,
+                    periodStartDate,
+                    periodEndDate,
                     fixedLeg.dayCountBasisDay,
                     fixedLeg.dayCountBasisYear,
                     fixedLeg.notional,
                     fixedLeg.fixedRate
             )
-            fixedLegPaymentSchedule[periodEndDate] = paymentEvent
+            fixedLegPaymentSchedule[paymentDate] = paymentEvent
             periodStartDate = periodEndDate
         }
 
@@ -695,8 +696,9 @@ class InterestRateSwap() : Contract {
 
         // Now create a schedule for the floating and fixes.
         for (periodEndDate in dates) {
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, floatingLeg.paymentDelay) 
             val paymentEvent = FloatingRatePaymentEvent(
-                    periodEndDate,
+                    paymentDate,
                     periodStartDate,
                     periodEndDate,
                     floatingLeg.dayCountBasisDay,
@@ -706,7 +708,7 @@ class InterestRateSwap() : Contract {
                     ReferenceRate(floatingLeg.indexSource, floatingLeg.indexTenor, floatingLeg.index)
             )
 
-            floatingLegPaymentSchedule.put(periodEndDate, paymentEvent)
+            floatingLegPaymentSchedule[paymentDate] = paymentEvent
             periodStartDate = periodEndDate
         }
 
