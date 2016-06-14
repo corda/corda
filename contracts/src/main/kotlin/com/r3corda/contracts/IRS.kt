@@ -671,7 +671,7 @@ class InterestRateSwap() : Contract {
 
         // Create a schedule for the fixed payments
         for (periodEndDate in dates) {
-            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, fixedLeg.paymentDelay)  //  + fixedLeg.paymentDelay
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, fixedLeg.paymentDelay)
             val paymentEvent = FixedRatePaymentEvent(
                     paymentDate,
                     periodStartDate,
@@ -696,7 +696,7 @@ class InterestRateSwap() : Contract {
 
         // Now create a schedule for the floating and fixes.
         for (periodEndDate in dates) {
-            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, floatingLeg.paymentDelay)  //  + fixedLeg.paymentDelay
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, floatingLeg.paymentDelay) 
             val paymentEvent = FloatingRatePaymentEvent(
                     paymentDate,
                     periodStartDate,
