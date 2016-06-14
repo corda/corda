@@ -673,7 +673,6 @@ class InterestRateSwap() : Contract {
         for (periodEndDate in dates) {
             val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, fixedLeg.paymentDelay)  //  + fixedLeg.paymentDelay
             val paymentEvent = FixedRatePaymentEvent(
-                    // TODO: We are assuming the payment date is the end date of the accrual period.
                     paymentDate,
                     periodStartDate,
                     periodEndDate,
