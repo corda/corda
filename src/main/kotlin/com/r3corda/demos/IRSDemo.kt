@@ -346,7 +346,7 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
     connection.useCaches = false
     connection.requestMethod = method
     connection.connectTimeout = 5000
-    connection.readTimeout = 15000
+    connection.readTimeout = 60000
     connection.setRequestProperty("Connection", "Keep-Alive")
     connection.setRequestProperty("Cache-Control", "no-cache")
     connection.setRequestProperty("Content-Type", "application/json")
@@ -391,7 +391,7 @@ private fun uploadFile(url: URL, file: String) : Boolean {
     connection.useCaches = false
     connection.requestMethod = "POST"
     connection.connectTimeout = 5000
-    connection.readTimeout = 5000
+    connection.readTimeout = 60000
     connection.setRequestProperty("Connection", "Keep-Alive")
     connection.setRequestProperty("Cache-Control", "no-cache")
     connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary)
