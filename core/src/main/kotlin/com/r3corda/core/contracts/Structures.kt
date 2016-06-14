@@ -27,7 +27,17 @@ interface ContractState {
     /** Contract by which the state belongs */
     val contract: Contract
 
-    /** List of public keys for each party that can consume this state in a valid transaction. */
+    /**
+     * A _participant_ is any party that is able to consume this state in a valid transaction.
+     *
+     * The list of participants is required for certain types of transactions. For example, when changing the notary
+     * for this state ([TransactionType.NotaryChange]), every participants has to be involved and approve the transaction
+     * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
+     * they possess, since someone consumed that state during the notary change process.
+     *
+     * The participants list should normally be derived from the contents of the state. E.g. for [Cash] the participants
+     * list should just contain the owner.
+     */
     val participants: List<PublicKey>
 }
 
@@ -172,6 +182,7 @@ data class Command(val value: CommandData, val signers: List<PublicKey>) {
     init {
         require(signers.isNotEmpty())
     }
+
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }

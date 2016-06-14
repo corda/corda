@@ -4,7 +4,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.noneOrSingle
 import java.security.PublicKey
 
-/** Defines transaction validation rules for a specific transaction type */
+/** Defines transaction build & validation logic for a specific transaction type */
 sealed class TransactionType {
     override fun equals(other: Any?) = other?.javaClass == javaClass
     override fun hashCode() = javaClass.name.hashCode()
@@ -48,6 +48,7 @@ sealed class TransactionType {
 
     /** A general transaction type where transaction validity is determined by custom contract code */
     class General : TransactionType() {
+        /** Just uses the default [TransactionBuilder] with no special logic */
         class Builder(notary: Party? = null) : TransactionBuilder(General(), notary) {}
 
         /**

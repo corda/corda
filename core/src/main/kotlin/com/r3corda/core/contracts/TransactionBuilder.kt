@@ -10,9 +10,11 @@ import java.util.*
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
- * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
- * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
- * multiple parties.
+ * intended to be passed around contracts that may edit it by adding new states/commands. Then once the states
+ * and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.
+ *
+ * The builder can be customised for specific transaction types, e.g. where additional processing is needed
+ * before adding a state/command.
  */
 abstract class TransactionBuilder(protected val type: TransactionType = TransactionType.General(),
                                   protected val notary: Party? = null) {

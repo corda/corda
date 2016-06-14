@@ -164,7 +164,7 @@ class Cash : FungibleAsset<Currency>() {
             throw InsufficientBalanceException(amount - gatheredAmount)
 
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.state.issuanceDef)
+            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
         } else {
             null
         }

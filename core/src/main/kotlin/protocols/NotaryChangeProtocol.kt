@@ -30,10 +30,9 @@ object NotaryChangeProtocol {
 
     data class Proposal(val stateRef: StateRef,
                         val newNotary: Party,
-                        val sessionIdForSend: Long,
-                        val sessionIdForReceive: Long)
+                        val stx: SignedTransaction)
 
-    class Handshake(val payload: Proposal,
+    class Handshake(val sessionIdForSend: Long,
                     replyTo: SingleMessageRecipient,
                     replySessionId: Long) : AbstractRequestMessage(replyTo, replySessionId)
 
@@ -102,18 +101,21 @@ object NotaryChangeProtocol {
         @Suspendable
         private fun getParticipantSignature(node: NodeInfo, stx: SignedTransaction, sessionIdForSend: Long): DigitalSignature.WithKey {
             val sessionIdForReceive = random63BitValue()
-            val proposal = Proposal(originalState.ref, newNotary, sessionIdForSend, sessionIdForReceive)
+            val proposal = Proposal(originalState.ref, newNotary, stx)
 
-            val handshake = Handshake(proposal, serviceHub.networkService.myAddress, sessionIdForReceive)
-            val protocolInitiated = sendAndReceive<Boolean>(TOPIC_INITIATE, node.address, 0, sessionIdForReceive, handshake).validate { it }
-            if (!protocolInitiated) throw Refused(node.identity, originalState)
+            val handshake = Handshake(sessionIdForSend, serviceHub.networkService.myAddress, sessionIdForReceive)
+            sendAndReceive<Unit>(TOPIC_INITIATE, node.address, 0, sessionIdForReceive, handshake)
 
-            val response = sendAndReceive<DigitalSignature.WithKey>(TOPIC_CHANGE, node.address, sessionIdForSend, sessionIdForReceive, stx)
+            val response = sendAndReceive<Result>(TOPIC_CHANGE, node.address, sessionIdForSend, sessionIdForReceive, proposal)
             val participantSignature = response.validate {
-                check(it.by == node.identity.owningKey) { "Not signed by the required participant" }
-                it.verifyWithECDSA(stx.txBits)
-                it
+                if (it.sig == null) throw NotaryChangeException(it.error!!)
+                else {
+                    check(it.sig.by == node.identity.owningKey) { "Not signed by the required participant" }
+                    it.sig.verifyWithECDSA(stx.txBits)
+                    it.sig
+                }
             }
+
             return participantSignature
         }
 
@@ -132,38 +134,88 @@ object NotaryChangeProtocol {
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying Notary change proposal")
 
-            object SIGNING : ProgressTracker.Step("Signing Notary change transaction")
+            object APPROVING : ProgressTracker.Step("Notary change approved")
 
-            fun tracker() = ProgressTracker(VERIFYING, SIGNING)
+            object REJECTING : ProgressTracker.Step("Notary change rejected")
+
+            fun tracker() = ProgressTracker(VERIFYING, APPROVING, REJECTING)
         }
 
         @Suspendable
         override fun call() {
             progressTracker.currentStep = VERIFYING
+            val proposal = receive<Proposal>(TOPIC_CHANGE, sessionIdForReceive).validate { it }
 
-            val proposedTx = receive<SignedTransaction>(TOPIC_CHANGE, sessionIdForReceive).validate { validateTx(it) }
+            try {
+                verifyProposal(proposal)
+                verifyTx(proposal.stx)
+            } catch(e: Exception) {
+                // TODO: catch only specific exceptions. However, there are numerous validation exceptions
+                //       that might occur (tx validation/resolution, invalid proposal). Need to rethink how
+                //       we manage exceptions and maybe introduce some platform exception hierarchy
+                val myIdentity = serviceHub.storageService.myLegalIdentity
+                val state = proposal.stateRef
+                val reason = NotaryChangeRefused(myIdentity, state, e.message)
 
-            progressTracker.currentStep = SIGNING
+                reject(reason)
+                return
+            }
 
-            val mySignature = sign(proposedTx)
-            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(TOPIC_CHANGE, otherSide, sessionIdForSend, sessionIdForReceive, mySignature)
+            approve(proposal.stx)
+        }
+
+        @Suspendable
+        private fun approve(stx: SignedTransaction) {
+            progressTracker.currentStep = APPROVING
+
+            val mySignature = sign(stx)
+            val response = Result.noError(mySignature)
+            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(TOPIC_CHANGE, otherSide, sessionIdForSend, sessionIdForReceive, response)
 
             val allSignatures = swapSignatures.validate { signatures ->
-                signatures.forEach { it.verifyWithECDSA(proposedTx.txBits) }
+                signatures.forEach { it.verifyWithECDSA(stx.txBits) }
                 signatures
             }
 
-            val finalTx = proposedTx + allSignatures
+            val finalTx = stx + allSignatures
             finalTx.verify()
             serviceHub.recordTransactions(listOf(finalTx))
         }
 
         @Suspendable
-        private fun validateTx(stx: SignedTransaction): SignedTransaction {
+        private fun reject(e: NotaryChangeRefused) {
+            progressTracker.currentStep = REJECTING
+            val response = Result.withError(e)
+            send(TOPIC_CHANGE, otherSide, sessionIdForSend, response)
+        }
+
+        /**
+         * Check the notary change proposal.
+         *
+         * For example, if the proposed new notary has the same behaviour (e.g. both are non-validating)
+         * and is also in a geographically convenient location we can just automatically approve the change.
+         * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
+         */
+        @Suspendable
+        private fun verifyProposal(proposal: NotaryChangeProtocol.Proposal) {
+            val newNotary = proposal.newNotary
+            val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.identity == newNotary }
+            require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
+
+            val state = proposal.stateRef
+            val proposedTx = proposal.stx.tx
+            require(proposedTx.inputs.contains(state)) { "The proposed state $state is not in the proposed transaction inputs" }
+
+            // An example requirement
+            val blacklist = listOf("Evil Notary")
+            require(!blacklist.contains(newNotary.name)) { "The proposed new notary $newNotary is not trusted by the party" }
+        }
+
+        @Suspendable
+        private fun verifyTx(stx: SignedTransaction) {
             checkMySignatureRequired(stx.tx)
             checkDependenciesValid(stx)
             checkValid(stx)
-            return stx
         }
 
         private fun checkMySignatureRequired(tx: WireTransaction) {
@@ -189,8 +241,20 @@ object NotaryChangeProtocol {
         }
     }
 
-    /** Thrown when a participant refuses to change the notary of the state */
-    class Refused(val identity: Party, val originalState: StateAndRef<*>) : Exception() {
-        override fun toString() = "A participant $identity refused to change the notary of state $originalState"
+    // TODO: similar classes occur in other places (NotaryProtocol), need to consolidate
+    data class Result private constructor(val sig: DigitalSignature.WithKey?, val error: NotaryChangeRefused?) {
+        companion object {
+            fun withError(error: NotaryChangeRefused) = Result(null, error)
+            fun noError(sig: DigitalSignature.WithKey) = Result(sig, null)
+        }
     }
+}
+
+/** Thrown when a participant refuses to change the notary of the state */
+class NotaryChangeRefused(val identity: Party, val state: StateRef, val cause: String?) {
+    override fun toString() = "A participant $identity refused to change the notary of state $state"
+}
+
+class NotaryChangeException(val error: NotaryChangeRefused) : Exception() {
+    override fun toString() = "${super.toString()}: Notary change failed - ${error.toString()}"
 }

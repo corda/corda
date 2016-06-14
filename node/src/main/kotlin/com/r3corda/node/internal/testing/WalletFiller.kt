@@ -3,7 +3,7 @@ package com.r3corda.node.internal.testing
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.OpaqueBytes
@@ -34,7 +34,7 @@ object WalletFiller {
             // this field as there's no other database or source of truth we need to sync with.
             val depositRef = myIdentity.ref(ref)
 
-            val issuance = TransactionBuilder()
+            val issuance = TransactionType.General.Builder()
             val freshKey = services.keyManagementService.freshKey()
             cash.generateIssue(issuance, Amount(pennies, Issued(depositRef, howMuch.token)), freshKey.public, notary)
             issuance.signWith(myKey)
