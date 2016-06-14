@@ -64,9 +64,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     // property.
     private val stateMachines = synchronizedMap(LinkedHashMap<ProtocolStateMachineImpl<*>, Checkpoint>())
 
-    // A map from fibers to futures that will be completed when the last corresponding checkpoint is removed
-    private val finalCheckpointRemovedFutures = synchronizedMap(HashMap<ProtocolStateMachineImpl<*>, SettableFuture<Unit>>())
-
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
 
@@ -182,19 +179,16 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     private fun initFiber(psm: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint?) {
         stateMachines[psm] = checkpoint
-        notifyChangeObservers(psm, AddOrRemove.ADD)
-        val finalCheckpointRemovedFuture: SettableFuture<Unit> = SettableFuture.create()
-        finalCheckpointRemovedFutures[psm] = finalCheckpointRemovedFuture
-        psm.resultFuture.then(executor) {
+        psm.actionOnEnd = {
             psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
             val finalCheckpoint = stateMachines.remove(psm)
             if (finalCheckpoint != null) {
                 checkpointStorage.removeCheckpoint(finalCheckpoint)
             }
-            finalCheckpointRemovedFuture.set(Unit)
             totalFinishedProtocols.inc()
             notifyChangeObservers(psm, AddOrRemove.REMOVE)
         }
+        notifyChangeObservers(psm, AddOrRemove.ADD)
     }
 
     /**
@@ -214,9 +208,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                 }
                 totalStartedProtocols.inc()
             }
-            val finalCheckpointRemovedFuture = finalCheckpointRemovedFutures.remove(fiber)
-            return Futures.transformAsync(finalCheckpointRemovedFuture, { fiber.resultFuture })
-        } catch(e: Throwable) {
+            return fiber.resultFuture
+        } catch (e: Throwable) {
             e.printStackTrace()
             throw e
         }

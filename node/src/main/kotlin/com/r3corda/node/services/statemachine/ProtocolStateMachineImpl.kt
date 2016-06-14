@@ -27,6 +27,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, fiber: ProtocolStateMachineImpl<*>) -> Unit)? = null
     @Transient private var receivedPayload: Any? = null
     @Transient lateinit override var serviceHub: ServiceHubInternal
+    @Transient internal lateinit var actionOnEnd: () -> Unit
 
     @Transient private var _logger: Logger? = null
     override val logger: Logger get() {
@@ -61,15 +62,18 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     override fun run(): R {
-        try {
-            val result = logic.call()
-            if (result != null)
-                _resultFuture?.set(result)
-            return result
-        } catch (e: Throwable) {
-            _resultFuture?.setException(e)
-            throw e
+        val result = try {
+            logic.call()
+        } catch (t: Throwable) {
+            actionOnEnd()
+            _resultFuture?.setException(t)
+            throw t
         }
+
+        // This is to prevent actionOnEnd being called twice if it throws an exception
+        actionOnEnd()
+        _resultFuture?.set(result)
+        return result
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
