@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.AbstractFuture
 import co.paralleluniverse.strands.SettableFuture
 import co.paralleluniverse.strands.Strand
+import co.paralleluniverse.strands.SuspendableRunnable
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.then
 import rx.Observable
@@ -78,8 +79,9 @@ abstract class MutableClock : Clock() {
  *
  * @throws InterruptedException if interrupted by something other than a [MutableClock]
  */
+@Suppress("UNUSED_VALUE") // This is here due to the compiler thinking version is not used
 @Suspendable
-private fun Clock.doInterruptibly(runnable: () -> Unit) {
+private fun Clock.doInterruptibly(runnable: SuspendableRunnable) {
     var version = 0L
     var subscription: Subscription? = null
     try {
@@ -88,7 +90,7 @@ private fun Clock.doInterruptibly(runnable: () -> Unit) {
             val strand = Strand.currentStrand()
             subscription = this.mutations.subscribe { strand.interrupt() }
         }
-        runnable()
+        runnable.run()
     } catch(e: InterruptedException) {
         // If clock has not mutated, then re-throw
         val newVersion = if (this is MutableClock) this.mutationCount else version
@@ -116,7 +118,7 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = SettableFutur
 
     var nanos = 0L
     do {
-        doInterruptibly @Suspendable {
+        doInterruptibly(SuspendableRunnable {
             nanos = Duration.between(this.instant(), deadline).toNanos()
             if (nanos > 0) {
                 try {
@@ -127,7 +129,7 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = SettableFutur
                     // No need to take action as will fall out of the loop due to future.isDone
                 }
             }
-        }
+        })
     } while (!future.isDone && nanos > 0)
     return future.isDone
 }
@@ -143,11 +145,11 @@ private fun <T : Any> makeFutureCurrentStrandFriendly(future: Future<T>): Future
     return if (Strand.isCurrentFiber() && future !is AbstractFuture) {
         if (future is ListenableFuture) {
             val settable = SettableFuture<T>()
-            future.then @Suspendable { settable.set(null) }
+            future.then { settable.set(null) }
             settable
         } else if (future is CompletableFuture) {
             val settable = SettableFuture<T>()
-            future.whenComplete(BiConsumer @Suspendable { value, throwable -> settable.set(null) })
+            future.whenComplete(BiConsumer { value, throwable -> settable.set(null) })
             settable
         } else {
             throw IllegalArgumentException("Cannot make future $future Fiber friendly whilst on a Fiber")

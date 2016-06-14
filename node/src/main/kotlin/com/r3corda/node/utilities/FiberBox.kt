@@ -38,6 +38,8 @@ import kotlin.concurrent.withLock
  */
 class FiberBox<T>(private val content: T, private val lock: Lock = ReentrantLock()) {
     private var mutated: SettableFuture<Boolean>? = null
+
+    @Suppress("UNUSED_VALUE")  // This is here due to the compiler thinking ourMutated is not used
     @Suspendable
     fun <R> readWithDeadline(clock: Clock, deadline: Instant, body: T.() -> R): R {
         var ex: Exception
