@@ -1,19 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html  ng-app="irsViewer">
 <head>
-  <!-- Standard Meta -->
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <!-- Standard Meta -->
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
-  <!-- Site Properties -->
-  <title>IRS Demo Viewer</title>
-  <link rel="stylesheet" type="text/css" href="./semantic/semantic.css">
+    <!-- Site Properties -->
+    <title>IRS Demo Viewer</title>
+    <link rel="stylesheet" type="text/css" href="semantic/semantic.css">
 
-  <script src="./semantic/semantic.js"></script>
-
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="semantic/semantic.js"></script>
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="js/app.js"></script>
 </head>
-<body>
+<body ng-controller="HomeController">
 <div class="ui inverted menu">
     <span class="header item"><a href="./">Home</a></span>
 </div>
@@ -43,22 +45,22 @@
 
         <table class="ui striped table">
             <thead>
-                <tr class="center aligned">
-                    <th>Trade Id</th>
-                    <th>Fixed Leg Payer</th>
-                    <th>Amount</th>
-                    <th>Floating Rate Payer</th>
-                    <th>Amount</th>
-                </tr>
+            <tr class="center aligned">
+                <th>Trade Id</th>
+                <th>Fixed Leg Payer</th>
+                <th>Amount</th>
+                <th>Floating Rate Payer</th>
+                <th>Amount</th>
+            </tr>
             </thead>
             <tbody>
-                <tr class="center aligned">
-                    <td><a href="./deal.html">1</a></td>
-                    <td class="single line"><a href="party.html">Big Bank</a></td>
-                    <td class="single line">500 GBP</td>
-                    <td class="single line"><a href="party.html">Little Bank</a></td>
-                    <td class="single line">10 GBP</td>
-                </tr>
+            <tr class="center aligned" ng-repeat="deal in deals">
+                <td><a href="./deal.html">{{deal.ref}}</a></td>
+                <td class="single line"><a href="party.html">{{deal.fixedLeg.fixedRatePayer}}</a></td>
+                <td class="single line">{{deal.fixedLeg.notional.quantity}} {{deal.fixedLeg.notional.token}}</td>
+                <td class="single line"><a href="party.html">{{deal.floatingLeg.floatingRatePayer}}</a></td>
+                <td class="single line">{{deal.floatingLeg.notional.quantity}} {{deal.floatingLeg.notional.token}}</td>
+            </tr>
             </tbody>
         </table>
     </div>
