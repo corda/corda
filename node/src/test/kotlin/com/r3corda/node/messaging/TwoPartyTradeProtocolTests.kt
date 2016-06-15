@@ -87,7 +87,7 @@ class TwoPartyTradeProtocolTests {
         // We run this in parallel threads to help catch any race conditions that may exist. The other tests
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
-        net = MockNetwork(true)
+        net = MockNetwork(false, true)
         transactionGroupFor<ContractState> {
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
@@ -173,9 +173,9 @@ class TwoPartyTradeProtocolTests {
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
-            fun pumpAlice() = (aliceNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pump(false)
+            fun pumpAlice() = (aliceNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(false)
 
-            fun pumpBob() = (bobNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pump(false)
+            fun pumpBob() = (bobNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(false)
 
             pumpBob()
 

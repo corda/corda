@@ -26,7 +26,7 @@ import java.util.*
 /**
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
-class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(runAsync, latencyInjector) {
+class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
     val om = JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
 
     init {
