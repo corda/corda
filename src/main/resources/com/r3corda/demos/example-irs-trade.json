@@ -45,7 +45,7 @@
     "paymentDelay": 0,
     "paymentCalendar": [ "London" ],
     "interestPeriodAdjustment": "Adjusted",
-    "fixingPeriod": "TWODAYS",
+    "fixingPeriodOffset": 2,
     "resetRule": "InAdvance",
     "fixingsPerPayment": "Quarterly",
     "fixingCalendar": [ "NewYork" ],

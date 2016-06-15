@@ -234,17 +234,6 @@ enum class PaymentRule {
 }
 
 /**
- * Date offset that the fixing is done prior to the accrual start date.
- * Currently not used in the calculation.
- */
-enum class DateOffset {
-    // TODO: Definitely shouldn't be an enum, but let's leave it for now at T-2 is a convention.
-    ZERO,
-    TWODAYS,
-}
-
-
-/**
  * Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
  * that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).
  */
