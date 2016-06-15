@@ -18,7 +18,6 @@ val TEST_PROGRAM_MAP: Map<Contract, Class<out Contract>> = mapOf(
         CASH_PROGRAM_ID to Cash::class.java,
         CP_PROGRAM_ID to CommercialPaper::class.java,
         JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper::class.java,
-        CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
         DUMMY_PROGRAM_ID to DummyContract::class.java,
         IRS_PROGRAM_ID to InterestRateSwap::class.java
 )
