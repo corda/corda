@@ -20,19 +20,20 @@
     <span class="header item"><a href="./">Home</a></span>
 </div>
 <div class="ui container">
+    <div class="ui negative message" id="http-error" ng-show="httpError">{{httpError}}</div>
     <div class="ui secondary menu">
         <div class="left item">
             <div class="ui left labeled button">
-                <span class="ui basic label">2016</span>
-                <button class="ui icon button"><i class="plus icon"></i></button>
+                <span class="ui basic label">{{date.year}}</span>
+                <button class="ui icon button" ng-click="updateDate('year')"><i class="plus icon"></i></button>
             </div>
             <div class="ui left labeled button">
-                <span class="ui basic label">01</span>
-                <button class="ui icon button"><i class="plus icon"></i></button>
+                <span class="ui basic label">{{date.month}}</span>
+                <button class="ui icon button" ng-click="updateDate('month')"><i class="plus icon"></i></button>
             </div>
             <div class="ui left labeled button">
-                <span class="ui basic label">01</span>
-                <button class="ui icon button"><i class="plus icon"></i></button>
+                <span class="ui basic label">{{date.day}}</span>
+                <button class="ui icon button" ng-click="updateDate('day')"><i class="plus icon"></i></button>
             </div>
         </div>
         <div class="right item">
