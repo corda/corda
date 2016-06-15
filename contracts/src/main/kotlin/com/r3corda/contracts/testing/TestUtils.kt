@@ -5,6 +5,7 @@ import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.cash.CASH_PROGRAM_ID
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Contract
+import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.testing.DUMMY_NOTARY

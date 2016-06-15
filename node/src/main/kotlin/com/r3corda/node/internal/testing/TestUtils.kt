@@ -1,6 +1,6 @@
 package com.r3corda.node.internal.testing
 
-import com.r3corda.contracts.DummyContract
+import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.seconds

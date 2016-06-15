@@ -1,6 +1,6 @@
 package com.r3corda.contracts.cash
 
-import com.r3corda.contracts.DummyContract
+import com.r3corda.core.contracts.DummyContract
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.core.contracts.*
