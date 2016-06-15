@@ -77,7 +77,7 @@ class MockAttachmentStorage : AttachmentStorage {
     }
 }
 
-class MockTransactionStorage : TransactionStorage {
+open class MockTransactionStorage : TransactionStorage {
     private val txns = HashMap<SecureHash, SignedTransaction>()
     override fun addTransaction(transaction: SignedTransaction) {
         txns[transaction.id] = transaction
