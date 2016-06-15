@@ -118,7 +118,7 @@ fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = SettableFutur
 
     var nanos = 0L
     do {
-        doInterruptibly(SuspendableRunnable {
+        doInterruptibly(SuspendableRunnable @Suspendable {
             nanos = Duration.between(this.instant(), deadline).toNanos()
             if (nanos > 0) {
                 try {
