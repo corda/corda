@@ -22,12 +22,46 @@
        buyer and seller -->
     <!-- All fields of the deal can be found from the JSON returned by the IRS demo API.
     All fields can be represented in some way -->
-    <div class="ui container" id="common">
-
-    </div>
-    <div class="ui container" id="fixedleg">
-        <table class="ui striped table">
-            <tbody>
+    <div class="ui grid">
+        <div class="sixteen wide column" id="common">
+            <table class="ui striped table">
+                <thead>
+                <tr class="center aligned">
+                    <th colspan="2">Common Information</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="center aligned">
+                    <td>Parties</td>
+                    <td><a href="party.html">Bank A</a>, <a href="party.html">Bank B</a></td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Trade ID</td>
+                    <td>trade1</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Valuation Date</td>
+                    <td>Every Local Business Day</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Legal Document Hash</td>
+                    <td>66a37f0bb9c63ff325bf2311bdcdcbb4</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Interest Rates</td>
+                    <td>EONIA with tenor 6M via oracle: Rates Service Provider</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="eight wide column" id="fixedleg">
+            <table class="ui striped table">
+                <thead>
+                <tr class="center aligned">
+                    <th colspan="2">Fixed Leg</th>
+                </tr>
+                </thead>
+                <tbody>
                 <tr class="center aligned">
                     <td>Payer</td>
                     <td><a href="party.html">Bank A</a></td>
@@ -48,15 +82,40 @@
                     <td>Terminates</td>
                     <td>01/01/2018</td>
                 </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="ui container" id="floatingleg">
-        Payer
-        Notional Amount
-        Frequency
-        Effective
-        Termination
+                </tbody>
+            </table>
+        </div>
+        <div class="eight wide column" id="floatingleg">
+            <table class="ui striped table">
+                <thead>
+                <tr class="center aligned">
+                    <th colspan="2">Floating Leg</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="center aligned">
+                    <td>Payer</td>
+                    <td><a href="party.html">Bank A</a></td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Notional Amount</td>
+                    <td>25000000 EUR</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Payment Frequency</td>
+                    <td>Quarterly</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Effective From</td>
+                    <td>01/01/2016</td>
+                </tr>
+                <tr class="center aligned">
+                    <td>Terminates</td>
+                    <td>01/01/2018</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 </body>
