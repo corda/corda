@@ -177,7 +177,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
     }
 
-    private fun initFiber(psm: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint?) {
+    private fun initFiber(psm: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint) {
         stateMachines[psm] = checkpoint
         psm.actionOnEnd = {
             psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
@@ -199,9 +199,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
         try {
             val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
+            val checkpoint = Checkpoint(serializeFiber(fiber), null, null, null)
+            checkpointStorage.addCheckpoint(checkpoint)
             // Need to add before iterating in case of immediate completion
-            // TODO: create an initial checkpoint here
-            initFiber(fiber, null)
+            initFiber(fiber, checkpoint)
             executor.executeASAP {
                 iterateStateMachine(fiber, null) {
                     fiber.start()
@@ -233,21 +234,19 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                                     receivedPayload: Any?,
                                     resumeAction: (Any?) -> Unit) {
         executor.checkOnThread()
-        psm.prepareForResumeWith(serviceHub, receivedPayload) { request, serialisedFiber ->
+        psm.prepareForResumeWith(serviceHub, receivedPayload) { request ->
             psm.logger.trace { "Suspended fiber ${psm.id} ${psm.logic}" }
-            onNextSuspend(psm, request, serialisedFiber)
+            onNextSuspend(psm, request)
         }
         psm.logger.trace { "Waking up fiber ${psm.id} ${psm.logic}" }
         resumeAction(receivedPayload)
     }
 
-    private fun onNextSuspend(psm: ProtocolStateMachineImpl<*>,
-                              request: FiberRequest,
-                              fiber: ProtocolStateMachineImpl<*>) {
+    private fun onNextSuspend(psm: ProtocolStateMachineImpl<*>, request: FiberRequest) {
         // We have a request to do something: send, receive, or send-and-receive.
         if (request is FiberRequest.ExpectingResponse<*>) {
             // Prepare a listener on the network that runs in the background thread when we receive a message.
-            checkpointOnExpectingResponse(psm, request, serializeFiber(fiber))
+            checkpointOnExpectingResponse(psm, request)
         }
         // If a non-null payload to send was provided, send it now.
         request.payload?.let {
@@ -267,11 +266,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
     }
 
-    private fun checkpointOnExpectingResponse(psm: ProtocolStateMachineImpl<*>,
-                                              request: FiberRequest.ExpectingResponse<*>,
-                                              serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) {
+    private fun checkpointOnExpectingResponse(psm: ProtocolStateMachineImpl<*>, request: FiberRequest.ExpectingResponse<*>) {
         executor.checkOnThread()
         val topic = "${request.topic}.${request.sessionIDForReceive}"
+        val serialisedFiber = serializeFiber(psm)
         updateCheckpoint(psm, serialisedFiber, topic, request.responseType, null)
         psm.logger.trace { "Preparing to receive message of type ${request.responseType.name} on topic $topic" }
         iterateOnResponse(psm, request.responseType, serialisedFiber, topic) {

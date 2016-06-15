@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory
 class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, private val loggerName: String) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, fiber: ProtocolStateMachineImpl<*>) -> Unit)? = null
+    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest) -> Unit)? = null
     @Transient private var receivedPayload: Any? = null
     @Transient lateinit override var serviceHub: ServiceHubInternal
     @Transient internal lateinit var actionOnEnd: () -> Unit
@@ -54,7 +54,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
 
     fun prepareForResumeWith(serviceHub: ServiceHubInternal,
                              receivedPayload: Any?,
-                             suspendAction: (StateMachineManager.FiberRequest, ProtocolStateMachineImpl<*>) -> Unit) {
+                             suspendAction: (StateMachineManager.FiberRequest) -> Unit) {
         this.serviceHub = serviceHub
         this.receivedPayload = receivedPayload
         this.suspendAction = suspendAction
@@ -108,7 +108,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     private fun suspend(with: StateMachineManager.FiberRequest) {
         parkAndSerialize { fiber, serializer ->
             try {
-                suspendAction!!(with, this)
+                suspendAction!!(with)
             } catch (t: Throwable) {
                 logger.warn("Captured exception which was swallowed by Quasar", t)
                 // TODO to throw or not to throw, that is the question

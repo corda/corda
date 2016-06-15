@@ -14,7 +14,7 @@ import com.r3corda.node.services.persistence.DataVendingService
 import com.r3corda.node.services.wallet.NodeWalletService
 import java.time.Clock
 
-class MockServices(
+open class MockServices(
         customWallet: WalletService? = null,
         val keyManagement: KeyManagementService? = null,
         val net: MessagingService? = null,
