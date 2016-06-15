@@ -90,4 +90,4 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
                          override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
                          override val myLegalIdentityKey: KeyPair = generateKeyPair(),
                          override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public))
-: SingletonSerializeAsToken(), StorageService
+: SingletonSerializeAsToken(), TxWritableStorageService

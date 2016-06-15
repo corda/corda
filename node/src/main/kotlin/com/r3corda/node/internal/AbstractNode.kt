@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
+import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
@@ -80,15 +81,18 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
     val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
-    val services = object : ServiceHubInternal {
+    val services = object : ServiceHubInternal() {
         override val networkService: MessagingService get() = net
         override val networkMapCache: NetworkMapCache = InMemoryNetworkMapCache()
-        override val storageService: StorageService get() = storage
+        override val storageService: TxWritableStorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
         override val clock: Clock = platformClock
+
+        override fun recordTransactions(txs: Iterable<SignedTransaction>) =
+                recordTransactionsInternal(storage, txs)
     }
 
     val info: NodeInfo by lazy {
@@ -97,7 +101,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
 
-    lateinit var storage: StorageService
+    lateinit var storage: TxWritableStorageService
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
@@ -265,7 +269,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected abstract fun startMessagingService()
 
-    protected open fun initialiseStorageService(dir: Path): Pair<StorageService, CheckpointStorage> {
+    protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
         val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
