@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="irsViewer">
 <head>
     <!-- Standard Meta -->
     <meta charset="utf-8" />
@@ -10,14 +10,20 @@
     <title>IRS Deal Viewer</title>
     <link rel="stylesheet" type="text/css" href="./semantic/semantic.css">
 
-    <script src="./semantic/semantic.js"></script>
-
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/lodash/lodash.js"></script>
+    <script src="semantic/semantic.js"></script>
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="js/app.js"></script>
 </head>
-<body>
+<body ng-controller="DealController">
 <div class="ui inverted menu">
     <span class="header item"><a href="./">Home</a></span>
 </div>
 <div class="ui container">
+    <div class="ui active dimmer" ng-show="isLoading()">
+        <div class="ui text loader">Loading</div>
+    </div>
     <!-- Todo: Deals should have common data at the top and interchangable green/red
        buyer and seller -->
     <!-- All fields of the deal can be found from the JSON returned by the IRS demo API.
@@ -33,23 +39,31 @@
                 <tbody>
                 <tr class="center aligned">
                     <td>Parties</td>
-                    <td><a href="party.html">Bank A</a>, <a href="party.html">Bank B</a></td>
+                    <td>
+                        <span ng-repeat="party in deal.parties">
+                            <a href="party.html">{{party}}</a><span ng-show="!$last">,</span>
+                        </span>
+                    </td>
                 </tr>
                 <tr class="center aligned">
                     <td>Trade ID</td>
-                    <td>trade1</td>
+                    <td>{{deal.ref}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Valuation Date</td>
-                    <td>Every Local Business Day</td>
+                    <td>{{deal.common.valuationDate}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Legal Document Hash</td>
-                    <td>66a37f0bb9c63ff325bf2311bdcdcbb4</td>
+                    <td>{{deal.common.hashLegalDocs}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Interest Rates</td>
-                    <td>EONIA with tenor 6M via oracle: Rates Service Provider</td>
+                    <td>
+                        {{deal.common.interestRate.name}} with tenor
+                        {{deal.common.interestRate.tenor.name}} via oracle
+                        {{deal.common.interestRate.oracle}}
+                    </td>
                 </tr>
                 </tbody>
             </table>
@@ -64,23 +78,23 @@
                 <tbody>
                 <tr class="center aligned">
                     <td>Payer</td>
-                    <td><a href="party.html">Bank A</a></td>
+                    <td><a href="party.html">{{deal.fixedLeg.fixedRatePayer}}</a></td>
                 </tr>
                 <tr class="center aligned">
                     <td>Notional Amount</td>
-                    <td>25000000 EUR</td>
+                    <td>{{deal.fixedLeg.notional.quantity}} {{deal.fixedLeg.notional.token}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
-                    <td>BiAnually</td>
+                    <td>{{deal.fixedLeg.paymentFrequency}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Effective From</td>
-                    <td>01/01/2016</td>
+                    <td>{{deal.fixedLeg.effectiveDate}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Terminates</td>
-                    <td>01/01/2018</td>
+                    <td>{{deal.fixedLeg.terminationDate}}</td>
                 </tr>
                 </tbody>
             </table>
@@ -95,23 +109,23 @@
                 <tbody>
                 <tr class="center aligned">
                     <td>Payer</td>
-                    <td><a href="party.html">Bank A</a></td>
+                    <td><a href="party.html">{{deal.floatingLeg.floatingRatePayer}}</a></td>
                 </tr>
                 <tr class="center aligned">
                     <td>Notional Amount</td>
-                    <td>25000000 EUR</td>
+                    <td>{{deal.floatingLeg.notional.quantity}} {{deal.floatingLeg.notional.token}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
-                    <td>Quarterly</td>
+                    <td>{{deal.floatingLeg.paymentFrequency}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Effective From</td>
-                    <td>01/01/2016</td>
+                    <td>{{deal.floatingLeg.effectiveDate}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Terminates</td>
-                    <td>01/01/2018</td>
+                    <td>{{deal.floatingLeg.terminationDate}}</td>
                 </tr>
                 </tbody>
             </table>

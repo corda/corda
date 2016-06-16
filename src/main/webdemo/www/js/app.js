@@ -9,9 +9,12 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
 
         var load = (type, promise) => {
             curLoading[type] = true;
-            return promise.then((arg1) => {
+            return promise.then((arg) => {
                 curLoading[type] = false;
-                return arg1;
+                return arg;
+            }, (arg) => {
+                curLoading[type] = false;
+                throw arg;
             });
         }
 
@@ -55,7 +58,13 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
             return load('deals', $http.get('http://localhost:31338/api/irs/deals')).then((resp) => {
                 return resp.data;
             });
-        }
+        };
+
+        this.getDeal = (dealId) => {
+            return load('deal' + dealId, $http.get('http://localhost:31338/api/irs/deals/' + dealId)).then((resp) => {
+                return resp.data;
+            });
+        };
 
         this.getDateModel = (date) => {
             return {
@@ -87,4 +96,10 @@ irsViewer.controller('HomeController', ($http, $scope, nodeService) => {
 
     nodeService.getDate().then((date) => $scope.date = date);
     nodeService.getDeals().then((deals) => $scope.deals = deals);
-})
+});
+
+irsViewer.controller('DealController', ($http, $scope, nodeService) => {
+    $scope.isLoading = nodeService.isLoading;
+
+    nodeService.getDeal('T000000001').then((deal) => $scope.deal = deal);
+});
