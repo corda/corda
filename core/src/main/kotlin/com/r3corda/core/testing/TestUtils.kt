@@ -139,10 +139,11 @@ abstract class AbstractTransactionForTest {
     }
 }
 
-// If you jumped here from a compiler error make sure the last line of your test tests for a transaction accept or fail
-// This is a dummy type that can only be instantiated by functions in this module. This way we can ensure that all tests
-// will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
-// the triggered diagnostic
+/** If you jumped here from a compiler error make sure the last line of your test tests for a transaction accept or fail
+ *  This is a dummy type that can only be instantiated by functions in this module. This way we can ensure that all tests
+ *  will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
+ *  the triggered diagnostic
+ */
 sealed class LastLineShouldTestForAcceptOrFailure {
     internal object Token: LastLineShouldTestForAcceptOrFailure()
 }
