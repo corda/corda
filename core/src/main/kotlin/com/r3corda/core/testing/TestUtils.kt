@@ -135,8 +135,16 @@ abstract class AbstractTransactionForTest {
 
     // Forbid patterns like:  transaction { ... transaction { ... } }
     @Deprecated("Cannot nest transactions, use tweak", level = DeprecationLevel.ERROR)
-    fun transaction(body: TransactionForTest.() -> Unit) {
+    fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure) {
     }
+}
+
+// If you jumped here from a compiler error make sure the last line of your test tests for a transaction accept or fail
+// This is a dummy type that can only be instantiated by functions in this module. This way we can ensure that all tests
+// will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
+// the triggered diagnostic
+sealed class LastLineShouldTestForAcceptOrFailure {
+    internal object Token: LastLineShouldTestForAcceptOrFailure()
 }
 
 // Corresponds to the args to Contract.verify
@@ -150,7 +158,10 @@ open class TransactionForTest : AbstractTransactionForTest() {
         tx.verify()
     }
 
-    fun accepts(time: Instant = TEST_TX_TIME) = runCommandsAndVerify(time)
+    fun accepts(time: Instant = TEST_TX_TIME): LastLineShouldTestForAcceptOrFailure {
+        runCommandsAndVerify(time)
+        return LastLineShouldTestForAcceptOrFailure.Token
+    }
     fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME) {
         val r = try {
             runCommandsAndVerify(time)
@@ -169,13 +180,16 @@ open class TransactionForTest : AbstractTransactionForTest() {
     /**
      * Used to confirm that the test, when (implicitly) run against the .verify() method, fails with the text of the message
      */
-    infix fun `fails requirement`(msg: String) = rejects(msg)
+    infix fun `fails requirement`(msg: String): LastLineShouldTestForAcceptOrFailure {
+        rejects(msg)
+        return LastLineShouldTestForAcceptOrFailure.Token
+    }
 
     fun fails_requirement(msg: String) = this.`fails requirement`(msg)
 
     // Use this to create transactions where the output of this transaction is automatically used as an input of
     // the next.
-    fun chain(vararg outputLabels: String, body: TransactionForTest.() -> Unit): TransactionForTest {
+    fun chain(vararg outputLabels: String, body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure): TransactionForTest {
         val states = outStates.mapNotNull {
             val l = it.label
             if (l != null && outputLabels.contains(l))
@@ -190,13 +204,12 @@ open class TransactionForTest : AbstractTransactionForTest() {
     }
 
     // Allow customisation of partial transactions.
-    fun tweak(body: TransactionForTest.() -> Unit): TransactionForTest {
+    fun tweak(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure): LastLineShouldTestForAcceptOrFailure {
         val tx = TransactionForTest()
         tx.inStates.addAll(inStates)
         tx.outStates.addAll(outStates)
         tx.commands.addAll(commands)
-        tx.body()
-        return tx
+        return tx.body()
     }
 
     override fun toString(): String {
@@ -217,7 +230,9 @@ open class TransactionForTest : AbstractTransactionForTest() {
     }
 }
 
-fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().apply { body() }
+fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure): LastLineShouldTestForAcceptOrFailure {
+    return body(TransactionForTest())
+}
 
 class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     open inner class WireTransactionDSL : AbstractTransactionForTest() {
