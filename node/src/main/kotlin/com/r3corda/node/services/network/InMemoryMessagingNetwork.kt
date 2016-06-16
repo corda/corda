@@ -203,7 +203,6 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
         protected inner class InnerState {
             val handlers: MutableList<Handler> = ArrayList()
-            val pendingRedelivery = LinkedList<MessageTransfer>()
         }
 
         protected val state = ThreadBox(InnerState())
@@ -223,16 +222,9 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
         override fun addMessageHandler(topic: String, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
             check(running)
-            val (handler, items) = state.locked {
-                val handler = Handler(executor, topic, callback).apply { handlers.add(this) }
-                val items = ArrayList(pendingRedelivery)
-                pendingRedelivery.clear()
-                Pair(handler, items)
+            return state.locked {
+                Handler(executor, topic, callback).apply { handlers.add(this) }
             }
-            for (it in items) {
-                send(it.message, handle)
-            }
-            return handler
         }
 
         override fun removeMessageHandler(registration: MessageHandlerRegistration) {
@@ -290,12 +282,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                 val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
 
                 if (h.isEmpty()) {
-                    // Got no handlers for this message yet. Keep the message around and attempt redelivery after a new
-                    // handler has been registered. The purpose of this path is to make unit tests that have multi-threading
-                    // reliable, as a sender may attempt to send a message to a receiver that hasn't finished setting
-                    // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
-                    // least sometimes.
-                    pendingRedelivery.add(transfer)
+                    loggerFor<InMemoryMessagingNetwork>().warn("No handlers for message ${transfer}")
                     return null
                 }
 
