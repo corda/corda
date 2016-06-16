@@ -1,6 +1,24 @@
 "use strict"
 
-let irsViewer = angular.module('irsViewer', []);
+let irsViewer = angular.module('irsViewer', ['ngRoute'])
+    .config(($routeProvider, $locationProvider) => {
+        $routeProvider
+            .when('/', {
+                controller: 'HomeController',
+                templateUrl: 'view/home.html'
+            })
+            .when('/deal/:dealId', {
+                controller: 'DealController',
+                templateUrl: 'view/deal.html'
+            })
+            .when('/party/:partyId', {
+                templateUrl: 'view/party.html'
+            })
+            .when('/create-deal', {
+                templateUrl: 'view/create-deal.html'
+            })
+            .otherwise({redirectTo: '/'});
+    })
 
 let nodeService = irsViewer.factory('nodeService', ($http) => {
     return new (function() {
@@ -86,7 +104,7 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
     });
 });
 
-irsViewer.controller('HomeController', ($http, $scope, nodeService) => {
+irsViewer.controller('HomeController', function HomeController($http, $scope, nodeService) {
     let handleHttpFail = (resp) => {
         console.log(resp.data)
         $scope.httpError = resp.data
@@ -102,7 +120,7 @@ irsViewer.controller('HomeController', ($http, $scope, nodeService) => {
     nodeService.getDeals().then((deals) => $scope.deals = deals);
 });
 
-irsViewer.controller('DealController', ($http, $scope, nodeService) => {
+irsViewer.controller('DealController', function DealController($http, $scope, nodeService) {
     let initSemanticUi = () => {
         $('.ui.accordion').accordion();
     }
