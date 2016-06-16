@@ -11,6 +11,7 @@
     <link rel="stylesheet" type="text/css" href="semantic/semantic.css">
 
     <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/lodash/lodash.js"></script>
     <script src="semantic/semantic.js"></script>
     <script src="bower_components/angular/angular.js"></script>
     <script src="js/app.js"></script>
@@ -21,7 +22,11 @@
 </div>
 <div class="ui container">
     <div class="ui negative message" id="http-error" ng-show="httpError">{{httpError}}</div>
+    <div class="ui info message" id="info-message" ng-show="infoMsg">{{infoMsg}}</div>
     <div class="ui secondary menu">
+        <div class="ui active dimmer" ng-show="isLoading()">
+            <div class="ui text loader">Loading</div>
+        </div>
         <div class="left item">
             <div class="ui left labeled button">
                 <span class="ui basic label">{{date.year}}</span>
