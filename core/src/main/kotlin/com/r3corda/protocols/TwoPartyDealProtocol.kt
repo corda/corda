@@ -352,10 +352,6 @@ object TwoPartyDealProtocol {
                 if (dealToFix.ref != handshake.payload)
                     throw DealRefMismatchException(dealToFix.ref, handshake.payload)
 
-                // Check the transaction that contains the state which is being resolved.
-                // We only have a hash here, so if we don't know it already, we have to ask for it.
-                //subProtocol(ResolveTransactionsProtocol(setOf(handshake.payload.txhash), otherSide))
-
                 return handshake
             }
         }
