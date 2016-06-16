@@ -292,6 +292,9 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // This is required to make all the unit tests pass
         register(Party::class.java)
 
+        // Work around a bug in Kryo handling nested generics
+        register(Issued::class.java, ImmutableClassSerializer(Issued::class))
+
         noReferencesWithin<WireTransaction>()
     }
 }

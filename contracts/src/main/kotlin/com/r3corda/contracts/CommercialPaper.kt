@@ -46,7 +46,7 @@ class CommercialPaper : Contract {
     data class State(
             val issuance: PartyAndReference,
             override val owner: PublicKey,
-            val faceValue: Amount<Currency>,
+            val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant,
             override val notary: Party
     ) : OwnableState, ICommercialPaperState {
@@ -60,7 +60,7 @@ class CommercialPaper : Contract {
         override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
 
         override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
-        override fun withFaceValue(newFaceValue: Amount<Currency>): ICommercialPaperState = copy(faceValue = newFaceValue)
+        override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
     }
 
@@ -136,7 +136,8 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Currency>, maturityDate: Instant, notary: Party): TransactionBuilder {
+    fun generateIssue(faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
+        val issuance = faceValue.token.issuer
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate, notary)
         return TransactionBuilder().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
@@ -160,7 +161,8 @@ class CommercialPaper : Contract {
     @Throws(InsufficientBalanceException::class)
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         // Add the cash movement using the states in our wallet.
-        Cash().generateSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
+        val amount = paper.state.faceValue.let { amount -> Amount<Currency>(amount.quantity, amount.token.product) }
+        Cash().generateSpend(tx, amount, paper.state.owner, wallet)
         tx.addInputState(paper.ref)
         tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.owner)
     }

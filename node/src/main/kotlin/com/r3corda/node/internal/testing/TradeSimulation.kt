@@ -5,6 +5,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.contracts.`issued by`
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.days
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
@@ -29,7 +32,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         WalletFiller.fillWithSomeTestCash(buyer.services, notary.info.identity, 1500.DOLLARS)
 
         val issuance = run {
-            val tx = CommercialPaper().generateIssue(seller.info.identity.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days, notary.info.identity)
+            val tx = CommercialPaper().generateIssue(1100.DOLLARS `issued by` seller.info.identity.ref(1, 2, 3), Instant.now() + 10.days, notary.info.identity)
             tx.setTime(Instant.now(), notary.info.identity, 30.seconds)
             tx.signWith(notary.storage.myLegalIdentityKey)
             tx.signWith(seller.storage.myLegalIdentityKey)
@@ -37,11 +40,13 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         }
         seller.services.storageService.validatedTransactions.addTransaction(issuance)
 
+        val cashIssuerKey = generateKeyPair()
+        val amount = 1000.DOLLARS `issued by` Party("Big friendly bank", cashIssuerKey.public).ref(1)
         val sessionID = random63BitValue()
         val buyerProtocol = TwoPartyTradeProtocol.Buyer(seller.net.myAddress, notary.info.identity,
-                1000.DOLLARS, CommercialPaper.State::class.java, sessionID)
+                amount, CommercialPaper.State::class.java, sessionID)
         val sellerProtocol = TwoPartyTradeProtocol.Seller(buyer.net.myAddress, notary.info,
-                issuance.tx.outRef(0), 1000.DOLLARS, seller.storage.myLegalIdentityKey, sessionID)
+                issuance.tx.outRef(0), amount, seller.storage.myLegalIdentityKey, sessionID)
 
         linkConsensus(listOf(buyer, seller, notary), sellerProtocol)
         linkProtocolProgress(buyer, buyerProtocol)

@@ -2,20 +2,23 @@ package com.r3corda.node.services
 
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.testing.CASH
+import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.core.bd
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.testing.ALICE_PUBKEY
 import com.r3corda.core.testing.MEGA_CORP
 import com.r3corda.core.testing.MEGA_CORP_KEY
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.clientapi.NodeInterestRates
+import com.r3corda.protocols.RatesFixProtocol
 import org.junit.Assert
 import org.junit.Test
-import com.r3corda.protocols.RatesFixProtocol
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -28,6 +31,9 @@ class NodeInterestRatesTest {
         EURIBOR 2016-03-15 1M = 0.123
         EURIBOR 2016-03-15 2M = 0.111
         """.trimIndent())
+
+    val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
+    val DUMMY_CASH_ISSUER = Party("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
 
     val oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY).apply { knownFixes = TEST_DATA }
 
@@ -111,5 +117,5 @@ class NodeInterestRatesTest {
         assertEquals("0.678".bd, fix.value)
     }
 
-    private fun makeTX() = TransactionBuilder(outputs = mutableListOf(1000.DOLLARS.CASH `owned by` ALICE_PUBKEY))
+    private fun makeTX() = TransactionBuilder(outputs = mutableListOf(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY))
 }

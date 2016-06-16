@@ -1,6 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.*
 import com.r3corda.core.crypto.Party
 import java.security.PublicKey
 import java.util.*
@@ -29,6 +28,9 @@ val Int.POUNDS: Amount<Currency> get() = Amount(this.toLong() * 100, GBP)
 val Int.SWISS_FRANCS: Amount<Currency> get() = Amount(this.toLong() * 100, CHF)
 
 val Double.DOLLARS: Amount<Currency> get() = Amount((this * 100).toLong(), USD)
+
+infix fun Currency.`issued by`(deposit: PartyAndReference) : Issued<Currency> = Issued<Currency>(deposit, this)
+infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) : Amount<Issued<Currency>> = Amount(quantity, token `issued by` deposit)
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
