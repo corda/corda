@@ -42,7 +42,7 @@ sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits)
         @JvmStatic fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
         @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
 
-        @JvmStatic fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
+        @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
     }
 
     abstract val signatureAlgorithmName: String
