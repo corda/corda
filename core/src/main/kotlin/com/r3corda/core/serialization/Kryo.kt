@@ -262,7 +262,7 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
     val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
-        check(obj.params.equals(ed25519Curve))
+        check(obj.params == ed25519Curve)
         output.writeInt(obj.seed.size, true)
         output.writeBytes(obj.seed)
     }
@@ -280,7 +280,7 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
-        check(obj.params.equals(ed25519Curve))
+        check(obj.params == ed25519Curve)
         output.writeInt(obj.abyte.size, true)
         output.writeBytes(obj.abyte)
     }
