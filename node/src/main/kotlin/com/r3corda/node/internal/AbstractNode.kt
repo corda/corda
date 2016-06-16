@@ -125,7 +125,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net = makeMessagingService()
         smm = StateMachineManager(services, checkpointStorage, serverThread)
         wallet = NodeWalletService(services)
-        keyManagement = E2ETestKeyManagementService()
+        // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
+        // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
+        // the identity key. But the infrastructure to make that easy isn't here yet.
+        keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
         makeInterestRatesOracleService()
         api = APIServerImpl(this)
 

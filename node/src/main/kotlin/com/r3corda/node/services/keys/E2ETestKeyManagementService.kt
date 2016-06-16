@@ -21,12 +21,20 @@ import javax.annotation.concurrent.ThreadSafe
  * etc
  */
 @ThreadSafe
-class E2ETestKeyManagementService : KeyManagementService {
+class E2ETestKeyManagementService(initialKeys: Set<KeyPair>) : KeyManagementService {
     private class InnerState {
         val keys = HashMap<PublicKey, PrivateKey>()
     }
 
     private val mutex = ThreadBox(InnerState())
+
+    init {
+        mutex.locked {
+            for (key in initialKeys) {
+                keys[key.public] = key.private
+            }
+        }
+    }
 
     // Accessing this map clones it.
     override val keys: Map<PublicKey, PrivateKey> get() = mutex.locked { HashMap(keys) }
