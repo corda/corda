@@ -6,16 +6,13 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.base.Throwables
-import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.abbreviate
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.*
-import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.Checkpoint
@@ -115,12 +112,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     }
 
     fun start() {
-        checkpointStorage.checkpoints.forEach { restoreCheckpoint(it) }
+        checkpointStorage.checkpoints.forEach { restoreFromCheckpoint(it) }
     }
 
-    private fun restoreCheckpoint(checkpoint: Checkpoint) {
+    private fun restoreFromCheckpoint(checkpoint: Checkpoint) {
         val fiber = deserializeFiber(checkpoint.serialisedFiber)
-        initFiber(fiber, checkpoint)
+        initFiber(fiber, { checkpoint })
 
         val topic = checkpoint.awaitingTopic
         if (topic != null) {
@@ -177,8 +174,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
     }
 
-    private fun initFiber(psm: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint) {
-        stateMachines[psm] = checkpoint
+    private fun initFiber(psm: ProtocolStateMachineImpl<*>, startingCheckpoint: () -> Checkpoint) {
+        psm.serviceHub = serviceHub
+        psm.suspendAction = { request ->
+            psm.logger.trace { "Suspended fiber ${psm.id} ${psm.logic}" }
+            onNextSuspend(psm, request)
+        }
         psm.actionOnEnd = {
             psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
             val finalCheckpoint = stateMachines.remove(psm)
@@ -188,6 +189,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
             totalFinishedProtocols.inc()
             notifyChangeObservers(psm, AddOrRemove.REMOVE)
         }
+        stateMachines[psm] = startingCheckpoint()
         notifyChangeObservers(psm, AddOrRemove.ADD)
     }
 
@@ -199,10 +201,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
         try {
             val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
-            val checkpoint = Checkpoint(serializeFiber(fiber), null, null, null)
-            checkpointStorage.addCheckpoint(checkpoint)
             // Need to add before iterating in case of immediate completion
-            initFiber(fiber, checkpoint)
+            initFiber(fiber) {
+                val checkpoint = Checkpoint(serializeFiber(fiber), null, null, null)
+                checkpointStorage.addCheckpoint(checkpoint)
+                checkpoint
+            }
             executor.executeASAP {
                 iterateStateMachine(fiber, null) {
                     fiber.start()
@@ -234,10 +238,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                                     receivedPayload: Any?,
                                     resumeAction: (Any?) -> Unit) {
         executor.checkOnThread()
-        psm.prepareForResumeWith(serviceHub, receivedPayload) { request ->
-            psm.logger.trace { "Suspended fiber ${psm.id} ${psm.logic}" }
-            onNextSuspend(psm, request)
-        }
+        psm.receivedPayload = receivedPayload
         psm.logger.trace { "Waking up fiber ${psm.id} ${psm.logic}" }
         resumeAction(receivedPayload)
     }

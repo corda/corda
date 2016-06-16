@@ -27,7 +27,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `newly added protocol is preserved on restart`() {
-        smm.add("mock", ProtocolWithoutCheckpoints())
+        smm.add("test", ProtocolWithoutCheckpoints())
         // Ensure we're restoring from the original add checkpoint
         assertThat(checkpointStorage.allCheckpoints).hasSize(1)
         val restoredProtocol = createManager().run {
@@ -37,9 +37,17 @@ class StateMachineManagerTests {
         assertThat(restoredProtocol.protocolStarted).isTrue()
     }
 
+    @Test
+    fun `protocol can lazily use the serviceHub in its constructor`() {
+        val protocol = ProtocolWithLazyServiceHub()
+        smm.add("test", protocol)
+        assertThat(protocol.lazyTime).isNotNull()
+    }
+
     private fun createManager() = StateMachineManager(object : MockServices() {
         override val networkService: MessagingService get() = network
     }, emptyList(), checkpointStorage, AffinityExecutor.SAME_THREAD)
+
 
 
     private class ProtocolWithoutCheckpoints : ProtocolLogic<Unit>() {
@@ -51,6 +59,15 @@ class StateMachineManagerTests {
             protocolStarted = true
             Fiber.park()
         }
+    }
+
+
+    private class ProtocolWithLazyServiceHub : ProtocolLogic<Unit>() {
+
+        val lazyTime by lazy { serviceHub.clock.instant() }
+
+        @Suspendable
+        override fun call() {}
     }
 
 
