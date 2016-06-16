@@ -62,7 +62,11 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
 
         this.getDeal = (dealId) => {
             return load('deal' + dealId, $http.get('http://localhost:31338/api/irs/deals/' + dealId)).then((resp) => {
-                return resp.data;
+                // Do some data modification to simplify the model
+                let deal = resp.data;
+                deal.fixedLeg.fixedRate.value = (deal.fixedLeg.fixedRate.ratioUnit.value * 100).toString().slice(0, 6);
+                console.log(deal);
+                return deal;
             });
         };
 
@@ -99,6 +103,12 @@ irsViewer.controller('HomeController', ($http, $scope, nodeService) => {
 });
 
 irsViewer.controller('DealController', ($http, $scope, nodeService) => {
+    let initSemanticUi = () => {
+        $('.ui.accordion').accordion();
+    }
+
+    initSemanticUi();
+
     $scope.isLoading = nodeService.isLoading;
 
     nodeService.getDeal('T000000001').then((deal) => $scope.deal = deal);

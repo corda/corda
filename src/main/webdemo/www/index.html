@@ -61,7 +61,7 @@
             </thead>
             <tbody>
             <tr class="center aligned" ng-repeat="deal in deals">
-                <td><a href="./deal.html">{{deal.ref}}</a></td>
+                <td><a href="./deal.html?id={{deal.ref}}">{{deal.ref}}</a></td>
                 <td class="single line"><a href="party.html">{{deal.fixedLeg.fixedRatePayer}}</a></td>
                 <td class="single line">{{deal.fixedLeg.notional.quantity}} {{deal.fixedLeg.notional.token}}</td>
                 <td class="single line"><a href="party.html">{{deal.floatingLeg.floatingRatePayer}}</a></td>
