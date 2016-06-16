@@ -84,40 +84,4 @@ class InMemoryMessagingTests {
         network.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
-
-    @Test
-    fun downAndUp() {
-        // Test (re)delivery of messages to nodes that aren't created yet, or were stopped and then restarted.
-        // The purpose of this functionality is to simulate a reliable messaging system that keeps trying until
-        // messages are delivered.
-        val node1 = network.createNode()
-        var node2 = network.createNode()
-
-        node1.net.send("test.topic", "hello!", node2.info.address)
-        network.runNetwork(rounds = 1)   // No handler registered, so the message goes into a holding area.
-        var runCount = 0
-        node2.net.addMessageHandler("test.topic") { msg, registration ->
-            if (msg.data.deserialize<String>() == "hello!")
-                runCount++
-        }
-        network.runNetwork(rounds = 1)  // Try again now the handler is registered
-        assertEquals(1, runCount)
-
-        // Shut node2 down for a while. Node 1 keeps sending it messages though.
-        node2.stop()
-
-        node1.net.send("test.topic", "are you there?", node2.info.address)
-        node1.net.send("test.topic", "wake up!", node2.info.address)
-
-        // Now re-create node2 with the same address as last time, and re-register a message handler.
-        // Check that the messages that were sent whilst it was gone are still there, waiting for it.
-        node2 = network.createNode(null, node2.id)
-        node2.net.addMessageHandler("test.topic") { a, b -> runCount++ }
-        network.runNetwork(rounds = 1)
-        assertEquals(2, runCount)
-        network.runNetwork(rounds = 1)
-        assertEquals(3, runCount)
-        network.runNetwork(rounds = 1)
-        assertEquals(3, runCount)
-    }
 }
