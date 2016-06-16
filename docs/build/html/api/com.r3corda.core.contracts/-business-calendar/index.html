@@ -114,6 +114,14 @@ TODO: Make more efficient if necessary</p>
 </tr>
 <tr>
 <td>
+<a href="get-offset-date.html">getOffsetDate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getOffsetDate</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.BusinessCalendar.Companion$getOffsetDate(java.time.LocalDate, com.r3corda.core.contracts.Frequency, kotlin.Int)/startDate">startDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.BusinessCalendar.Companion$getOffsetDate(java.time.LocalDate, com.r3corda.core.contracts.Frequency, kotlin.Int)/period">period</span><span class="symbol">:</span>&nbsp;<a href="../-frequency/index.html"><span class="identifier">Frequency</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.BusinessCalendar.Companion$getOffsetDate(java.time.LocalDate, com.r3corda.core.contracts.Frequency, kotlin.Int)/steps">steps</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;1<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></code><p>Calculates the date from @startDate moving forward @steps of time size @period. Does not apply calendar
+logic / roll conventions.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="parse-date-from-string.html">parseDateFromString</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">parseDateFromString</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.BusinessCalendar.Companion$parseDateFromString(kotlin.String)/it">it</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></code><p>Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan.</p>

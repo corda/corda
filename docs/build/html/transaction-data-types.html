@@ -1,0 +1,329 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Transaction Data Types &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Consensus Model" href="consensus.html"/>
+        <link rel="prev" title="Data model" href="data-model.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Transaction Data Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#amount">Amount</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contract-state">Contract State</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fungibleassets-and-cash">FungibleAssets and Cash</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#transaction-types">Transaction Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#party-and-publickey">Party and PublicKey</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#date-support">Date Support</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Transaction Data Types</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/transaction-data-types.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="transaction-data-types">
+<h1>Transaction Data Types<a class="headerlink" href="#transaction-data-types" title="Permalink to this headline">¶</a></h1>
+<p>There is a large library of data types used in Corda transactions and contract state objects.</p>
+<div class="section" id="amount">
+<h2>Amount<a class="headerlink" href="#amount" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">Amount</span></code> class is used to represent an amount of some fungible asset. It is a generic class which wraps around
+a type used to define the underlying product, generally represented by an <code class="docutils literal"><span class="pre">Issued</span></code> instance, or this can be a more
+complex type such as an obligation contract issuance definition (which in turn contains a token definition for whatever
+the obligation is to be settled in).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
+and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
+£10 note can be exchanged for two £5 notes, or vice-versa.</p>
+</div>
+<p>Where a contract refers directly to an amount of something, <code class="docutils literal"><span class="pre">Amount</span></code> should wrap <code class="docutils literal"><span class="pre">Issued</span></code>, which in
+turn can refer to a <code class="docutils literal"><span class="pre">Currency</span></code> (GBP, USD, CHF, etc.), or any other class. Future work in this area will include
+introducing classes to represent non-currency things (such as commodities) that Issued can wrap. For more
+complex amounts, <code class="docutils literal"><span class="pre">Amount</span></code> can wrap other types, for example to represent a number of Obligation contracts to be
+delivered (themselves referring to a currency), an <code class="docutils literal"><span class="pre">Amount</span></code> such as the following would used:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">Amount</span><span class="p">&lt;</span><span class="n">Obligation</span><span class="p">.</span><span class="n">State</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;&gt;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="contract-state">
+<h2>Contract State<a class="headerlink" href="#contract-state" title="Permalink to this headline">¶</a></h2>
+<p>A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
+the details of the contract (see <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a> for further detail). States essentially convert the generic template
+(code and legal prose) into a specific instance. In a <code class="docutils literal"><span class="pre">WireTransaction</span></code>, outputs are provided as <code class="docutils literal"><span class="pre">ContractState</span></code>
+implementations, while the inputs are references to the outputs of a previous transaction. These references are then
+stored as <code class="docutils literal"><span class="pre">StateRef</span></code> objects, which are converted to <code class="docutils literal"><span class="pre">StateAndRef</span></code> on demand.</p>
+<p>A number of interfaces then extend <code class="docutils literal"><span class="pre">ContractState</span></code>, representing standardised functionality for states:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt><code class="docutils literal"><span class="pre">OwnableState</span></code></dt>
+<dd>A state which has an owner (represented as a <code class="docutils literal"><span class="pre">PublicKey</span></code>, discussed later). Exposes the owner and a function for
+replacing the owner.</dd>
+<dt><code class="docutils literal"><span class="pre">LinearState</span></code></dt>
+<dd>A state which links back to its previous state, creating a thread of states over time. Intended to simplify tracking
+state versions.</dd>
+<dt><code class="docutils literal"><span class="pre">DealState</span></code></dt>
+<dd>A state representing an agreement between two or more parties. Intended to simplify implementing generic protocols
+that manipulate many agreement types.</dd>
+<dt><code class="docutils literal"><span class="pre">FixableDealState</span></code></dt>
+<dd>A deal state, with further functions exposed to support fixing of interest rates.</dd>
+</dl>
+</div></blockquote>
+<p>Things (such as attachments) which are identified by their hash should implement the <code class="docutils literal"><span class="pre">NamedByHash</span></code> interface,
+which standardises how the ID is extracted.</p>
+</div>
+<div class="section" id="fungibleassets-and-cash">
+<h2>FungibleAssets and Cash<a class="headerlink" href="#fungibleassets-and-cash" title="Permalink to this headline">¶</a></h2>
+<p>There is a common <code class="docutils literal"><span class="pre">FungibleAsset</span></code> superclass for contracts which model fungible assets, which also provides a standard
+interface for its subclasses&#8217; state objects to implement. The clear use-case is <code class="docutils literal"><span class="pre">Cash</span></code>, however <code class="docutils literal"><span class="pre">FungibleAsset</span></code> is
+intended to be readily extensible to cover other assets, for example commodities could be modelled by using a subclass
+whose state objects include further details (location of the commodity, origin, grade, etc.) as needed.</p>
+</div>
+<div class="section" id="transaction-types">
+<h2>Transaction Types<a class="headerlink" href="#transaction-types" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">WireTransaction</span></code> class contains the core of a transaction without signatures, and with references to attachments
+in place of the attachments themselves (see also <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a>). Once signed these are encapsulated in the
+<code class="docutils literal"><span class="pre">SignedTransaction</span></code> class. For processing a transaction (i.e. to verify it) it is first converted to a
+<code class="docutils literal"><span class="pre">LedgerTransaction</span></code>, which involves verifying the signatures and associating them to the relevant command(s), and
+resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
+<code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> type.</p>
+</div>
+<div class="section" id="party-and-publickey">
+<h2>Party and PublicKey<a class="headerlink" href="#party-and-publickey" title="Permalink to this headline">¶</a></h2>
+<p>Identities of parties involved in signing a transaction can be represented simply by their <code class="docutils literal"><span class="pre">PublicKey</span></code>, or by further
+information (such as name) using the <code class="docutils literal"><span class="pre">Party</span></code> class. An <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> contains a list of the public keys
+for signatures present on the transaction, as well as list of parties for those public keys (where known).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">These types are provisional and are likely to change in future, for example to add additional information to
+<code class="docutils literal"><span class="pre">Party</span></code>.</p>
+</div>
+</div>
+<div class="section" id="date-support">
+<h2>Date Support<a class="headerlink" href="#date-support" title="Permalink to this headline">¶</a></h2>
+<p>There are a number of supporting interfaces and classes for use by contract which deal with dates (especially in the
+context of deadlines). As contract negotiation typically deals with deadlines in terms such as &#8220;overnight&#8221;, &#8220;T+3&#8221;,
+etc., it&#8217;s desirable to allow conversion of these terms to their equivalent deadline. <code class="docutils literal"><span class="pre">Tenor</span></code> models the interval
+before a deadline, such as 3 days, etc., while <code class="docutils literal"><span class="pre">DateRollConvention</span></code> describes how deadlines are modified to take
+into account bank holidays or other events that modify normal working days.</p>
+<p>Calculating the rollover of a deadline based on working days requires information on the bank holidays involved
+(and where a contract&#8217;s parties are in different countries, for example, this can involve multiple separate sets of
+bank holidays). The <code class="docutils literal"><span class="pre">BusinessCalendar</span></code> class models these calendars of business holidays; currently it loads these
+from files on disk, but in future this is likely to involve reference data oracles in order to ensure consensus on the
+dates used.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="consensus.html" class="btn btn-neutral float-right" title="Consensus Model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="data-model.html" class="btn btn-neutral" title="Data model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -90,7 +90,7 @@ take the registration object, unlike the callback to <a href="add-message-handle
 <td>
 <a href="../send.html">send</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">MessagingService</span><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">MessagingService</span><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -101,7 +101,7 @@ take the registration object, unlike the callback to <a href="add-message-handle
 <td>
 <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MessagingService</span></code><p>This class implements the MessagingService API using Apache Artemis, the successor to their ActiveMQ product.
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">MessagingService</span></code><p>This class implements the MessagingService API using Apache Artemis, the successor to their ActiveMQ product.
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
 with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
 as well.</p>
@@ -111,7 +111,7 @@ as well.</p>
 <td>
 <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a></td>
 <td>
-<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InMemoryMessaging</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MessagingService</span></code><p>An <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> provides a MessagingService that isnt backed by any kind of network or disk storage
+<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InMemoryMessaging</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">MessagingService</span></code><p>An <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> provides a MessagingService that isnt backed by any kind of network or disk storage
 system, but just uses regular queues on the heap instead. It is intended for unit testing and developer convenience
 when all entities on the network are being simulated in-process.</p>
 </td>

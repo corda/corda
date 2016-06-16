@@ -20,4 +20,23 @@ forever and the software will be considered production ready. Until then, expect
 hard hat.
 
 Our goal is to cut a new milestone roughly once a month. There are no fixed dates. If need be, a milestone may slip by
-a few days to ensure the code is sufficiently usable.
+a few days to ensure the code is sufficiently usable. Usually the release will happen around the end of the month.
+
+Steps to cut a release
+======================
+
+1. Pick a commit that is stable and do basic QA: run all the tests, run the demos.
+2. Review the commits between this release and the last looking for new features, API changes, etc. Make sure the
+   summary in the current section of the :doc:`release-notes` is correct and update if not. Then move it into the right
+   section for this release. This is the right place to put any advice on how to port app code from the last release.
+3. Additionally, if there are any new features or APIs that deserve a new section in the docsite and the author didn't
+   create one, bug them to do so a day or two before the release.
+4. Regenerate the docsite if necessary and commit.
+5. Create a branch with a name like `release-M0` where 0 is replaced by the number of the milestone.
+6. Tag that branch with a tag like `release-M0.0`
+7. Push the branch and the tag to git.
+8. Write up a short announcement containing the summary of new features, changes, and API breaks. Send it to the
+   r3dlg-awg mailing list.
+
+If there are serious bugs found in the release, backport the fix to the branch and then tag it with e.g. `release-M0.1`
+Minor changes to the branch don't have to be announced unless it'd be critical to get all developers updated.

@@ -43,14 +43,14 @@ service would provide.</p>
 <td>
 <a href="../../com.r3corda.node.services.identity/-in-memory-identity-service/index.html">InMemoryIdentityService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InMemoryIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">IdentityService</span></code><p>Simple identity service which caches parties and provides functionality for efficient lookup.</p>
+<code><span class="keyword">class </span><span class="identifier">InMemoryIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">IdentityService</span></code><p>Simple identity service which caches parties and provides functionality for efficient lookup.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../../com.r3corda.core.node.services.testing/-mock-identity-service/index.html">MockIdentityService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">MockIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">IdentityService</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">MockIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">IdentityService</span><span class="symbol">, </span><a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code></td>
 </tr>
 </tbody>
 </table>

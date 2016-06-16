@@ -14,7 +14,7 @@
 <td>
 <a href="-in-memory-messaging-network/index.html">InMemoryMessagingNetwork</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InMemoryMessagingNetwork</span></code><p>An in-memory network allows you to manufacture <a href="-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
+<code><span class="keyword">class </span><span class="identifier">InMemoryMessagingNetwork</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>An in-memory network allows you to manufacture <a href="-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
 <a href="-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> maintains a queue of messages it has received, and a background thread that dispatches
 messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
 case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
@@ -25,7 +25,7 @@ testing).</p>
 <td>
 <a href="-in-memory-network-map-cache/index.html">InMemoryNetworkMapCache</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryNetworkMapCache</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code><p>Extremely simple in-memory cache of the network map.</p>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryNetworkMapCache</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code><p>Extremely simple in-memory cache of the network map.</p>
 </td>
 </tr>
 <tr>

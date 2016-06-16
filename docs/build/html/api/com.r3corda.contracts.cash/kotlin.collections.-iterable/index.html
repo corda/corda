@@ -1,0 +1,77 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.contracts.cash.kotlin.collections.Iterable - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.contracts.cash</a>&nbsp;/&nbsp;<a href=".">kotlin.collections.Iterable</a><br/>
+<br/>
+<h3>Extensions for kotlin.collections.Iterable</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="sum-cash.html">sumCash</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumCash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
+states cannot be added together (i.e. are different currencies).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-cash-by.html">sumCashBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumCashBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.cash$sumCashBy(kotlin.collections.Iterable((com.r3corda.core.contracts.ContractState)), java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the cash states in the list belonging to a single owner, throwing an exception
+if there are none, or if any of the cash states cannot be added together (i.e. are
+different currencies).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-cash-or-null.html">sumCashOrNull</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumCashOrNull</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the cash states in the list, returning null if there are none.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-cash-or-zero.html">sumCashOrZero</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumCashOrZero</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.cash$sumCashOrZero(kotlin.collections.Iterable((com.r3corda.core.contracts.ContractState)), java.util.Currency)/currency">currency</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the cash states in the list, returning zero of the given currency if there are none.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-fungible.html">sumFungible</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumFungible</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the asset states in the list, throwing an exception if there are none, or if any of the asset
+states cannot be added together (i.e. are different tokens).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-fungible-by.html">sumFungibleBy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumFungibleBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.cash$sumFungibleBy(kotlin.collections.Iterable((com.r3corda.core.contracts.ContractState)), java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the asset states in the list belonging to a single owner, throwing an exception
+if there are none, or if any of the asset states cannot be added together (i.e. are
+different tokens).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-fungible-or-null.html">sumFungibleOrNull</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumFungibleOrNull</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the asset states in the list, returning null if there are none.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sum-fungible-or-zero.html">sumFungibleOrZero</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">sumFungibleOrZero</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.cash$sumFungibleOrZero(kotlin.collections.Iterable((com.r3corda.core.contracts.ContractState)), com.r3corda.contracts.cash.sumFungibleOrZero.T)/token">token</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Sums the asset states in the list, returning zero of the given token if there are none.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

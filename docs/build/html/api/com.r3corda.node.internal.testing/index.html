@@ -34,11 +34,41 @@ Components that do IO are either swapped out for mocks, or pointed to a <a href=
 </tr>
 <tr>
 <td>
+<a href="-test-clock/index.html">TestClock</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.utilities/-mutable-clock/index.html"><span class="identifier">MutableClock</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the time advanced for use in testing</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-trade-simulation/index.html">TradeSimulation</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">TradeSimulation</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-simulation/index.html"><span class="identifier">Simulation</span></a></code><p>Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
 then B and C trade with each other, then C and A etc).</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-wallet-filler/index.html">WalletFiller</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">WalletFiller</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="issue-invalid-state.html">issueInvalidState</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">issueInvalidState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing$issueInvalidState(com.r3corda.node.internal.AbstractNode, com.r3corda.core.crypto.Party)/node">node</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.internal/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.testing$issueInvalidState(com.r3corda.node.internal.AbstractNode, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="issue-state.html">issueState</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">issueState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing$issueState(com.r3corda.node.internal.AbstractNode, com.r3corda.core.crypto.Party)/node">node</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.internal/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.testing$issueState(com.r3corda.node.internal.AbstractNode, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a></code></td>
 </tr>
 </tbody>
 </table>

@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.node.services.wallet</a>&nbsp;/&nbsp;<a href=".">NodeWalletService</a><br/>
 <br/>
 <h1>NodeWalletService</h1>
-<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><br/>
+<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><br/>
 <p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
 method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
 states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
@@ -34,7 +34,7 @@ states relevant to us into a database and once such a wallet is implemented, thi
 <td>
 <a href="cash-balances.html">cashBalances</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&gt;</span></code><p>Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+<code><span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
 which we have no cash evaluate to null, not 0.</p>
 </td>
 </tr>
@@ -53,19 +53,19 @@ keys in this wallet, you must inform the wallet service so it can update its int
 <code><span class="keyword">val </span><span class="identifier">linearHeads</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of the heads of LinearStates</p>
 </td>
 </tr>
+<tr>
+<td>
+<a href="updates.html">updates</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-wallet/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
+the update.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3>Functions</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="fill-with-some-test-cash.html">fillWithSomeTestCash</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.wallet.NodeWalletService$fillWithSomeTestCash(com.r3corda.core.crypto.Party, com.r3corda.core.contracts.Amount, kotlin.Int, kotlin.Int, java.util.Random)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.wallet.NodeWalletService$fillWithSomeTestCash(com.r3corda.core.crypto.Party, com.r3corda.core.contracts.Amount, kotlin.Int, kotlin.Int, java.util.Random)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.wallet.NodeWalletService$fillWithSomeTestCash(com.r3corda.core.crypto.Party, com.r3corda.core.contracts.Amount, kotlin.Int, kotlin.Int, java.util.Random)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.wallet.NodeWalletService$fillWithSomeTestCash(com.r3corda.core.crypto.Party, com.r3corda.core.contracts.Amount, kotlin.Int, kotlin.Int, java.util.Random)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.wallet.NodeWalletService$fillWithSomeTestCash(com.r3corda.core.crypto.Party, com.r3corda.core.contracts.Amount, kotlin.Int, kotlin.Int, java.util.Random)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
-to the wallet.</p>
-</td>
-</tr>
 <tr>
 <td>
 <a href="notify-all.html">notifyAll</a></td>
@@ -98,6 +98,12 @@ new states that they create. You should only insert transactions that have been 
 <a href="../../com.r3corda.core.node.services/-wallet-service/states-for-refs.html">statesForRefs</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$statesForRefs(kotlin.collections.List((com.r3corda.core.contracts.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
 </tr>
 </tbody>
 </table>

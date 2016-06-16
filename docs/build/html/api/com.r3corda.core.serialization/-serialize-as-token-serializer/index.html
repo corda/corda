@@ -9,7 +9,7 @@
 <h1>SerializeAsTokenSerializer</h1>
 <code><span class="keyword">class </span><span class="identifier">SerializeAsTokenSerializer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a><span class="symbol">&gt;</span></code><br/>
 <p>A Kryo serializer for <a href="../-serialize-as-token/index.html">SerializeAsToken</a> implementations.</p>
-<p>Annotate the <a href="../-serialize-as-token/index.html">SerializeAsToken</a> with @DefaultSerializer(SerializeAsTokenSerializer::class)</p>
+<p>This is registered in <a href="../create-kryo.html">createKryo</a>.</p>
 <br/>
 <br/>
 <br/>
@@ -40,6 +40,23 @@
 <a href="write.html">write</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">write</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SerializeAsTokenSerializer$write(, , com.r3corda.core.serialization.SerializeAsTokenSerializer.T)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.serialization.SerializeAsTokenSerializer$write(, , com.r3corda.core.serialization.SerializeAsTokenSerializer.T)/output">output</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.serialization.SerializeAsTokenSerializer$write(, , com.r3corda.core.serialization.SerializeAsTokenSerializer.T)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="clear-context.html">clearContext</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">clearContext</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SerializeAsTokenSerializer.Companion$clearContext()/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="set-context.html">setContext</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">setContext</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SerializeAsTokenSerializer.Companion$setContext(, com.r3corda.core.serialization.SerializeAsTokenContext)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.serialization.SerializeAsTokenSerializer.Companion$setContext(, com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>

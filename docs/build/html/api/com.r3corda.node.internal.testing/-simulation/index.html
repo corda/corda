@@ -137,6 +137,12 @@ in the UI somewhere.</p>
 </tr>
 <tr>
 <td>
+<a href="network-initialisation-finished.html">networkInitialisationFinished</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkInitialisationFinished</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="network-map.html">networkMap</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">networkMap</span><span class="symbol">: </span><a href="-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
@@ -213,7 +219,7 @@ network bringup has been simulated.</p>
 <td>
 <a href="start-trading-circle.html">startTradingCircle</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">startTradingCircle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$startTradingCircle(kotlin.Function2((kotlin.Int, , (()))))/tradeBetween">tradeBetween</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Int</span><span class="symbol">,</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
+<code><span class="keyword">fun </span><span class="identifier">startTradingCircle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$startTradingCircle(kotlin.Function2((kotlin.Int, kotlin.Int, (()))))/tradeBetween">tradeBetween</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Int</span><span class="symbol">,</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
 each time the returned future completes.</p>
 </td>
 </tr>

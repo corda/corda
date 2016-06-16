@@ -138,17 +138,17 @@ we do not support coercing numeric types in the reflective search for matching c
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.protocols/-fetch-data-protocol/index.html">FetchDataProtocol</a></td>
+<a href="../../com.r3corda.protocols/-notary-protocol/-client/index.html">Client</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FetchDataProtocol</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-named-by-hash/index.html"><span class="identifier">NamedByHash</span></a><span class="symbol">, </span><span class="identifier">W</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.protocols/-fetch-data-protocol/-result/index.html"><span class="identifier">Result</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>An abstract protocol for fetching typed data from a remote peer.</p>
+<code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
+timestamp is correct and none of its inputs have been used in another completed transaction</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.protocols/-notary-protocol/index.html">NotaryProtocol</a></td>
+<a href="../../com.r3corda.protocols/-fetch-data-protocol/index.html">FetchDataProtocol</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NotaryProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
-timestamp is correct and none of its inputs have been used in another completed transaction</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FetchDataProtocol</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-named-by-hash/index.html"><span class="identifier">NamedByHash</span></a><span class="symbol">, </span><span class="identifier">W</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.protocols/-fetch-data-protocol/-result/index.html"><span class="identifier">Result</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>An abstract protocol for fetching typed data from a remote peer.</p>
 </td>
 </tr>
 <tr>
@@ -195,6 +195,14 @@ all the transactions have been successfully verified and inserted into the local
 <a href="../../com.r3corda.protocols/-two-party-trade-protocol/-seller/index.html">Seller</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Seller</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.protocols/-notary-protocol/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
+if any of the input states have been previously committed.</p>
+</td>
 </tr>
 <tr>
 <td>
