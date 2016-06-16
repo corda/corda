@@ -185,3 +185,31 @@ instead do this
 The latter is easier to catch and handle if later necessary, and the type name should explain what went wrong.
 
 Note that Kotlin does not require exception types to be declared in method prototypes like Java does.
+
+5. Properties
+#############
+
+Where we want a public property to have one super-type in public and another sub-type in private (or internal), perhaps
+to expose additional methods with a greater level of access to the code within the enclosing class, the style should be:
+
+.. sourcecode:: kotlin
+
+   class PrivateFoo : PublicFoo
+
+   private val _foo = PrivateFoo()
+   val foo: PublicFoo get() = _foo
+
+Notably:
+
+* The public property should have an explicit and more restrictive type, most likely a super class or interface.
+* The private, backed property should begin with underscore but otherwise have the same name as the public property.
+  The underscore resolves a potential property name clash, and avoids naming such as "privateFoo".  If the type or use
+  of the private property is different enough that there is no naming collision, prefer the distinct names without
+  an underscore.
+* The underscore prefix is not a general pattern for private properties.
+* The public property should not have an additional backing field but use "get()" to return an appropriate copy of the
+  private field.
+* The public property should optionally wrap the returned value in an immutable wrapper, such as Guava's immutable
+  collection wrappers, if that is appropriate.
+* If the code following "get()" is succinct, prefer a one-liner formatting of the public property as above, otherwise
+  put the "get()" on the line below, indented.
