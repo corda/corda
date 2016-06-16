@@ -1,8 +1,6 @@
 package com.r3corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.JdkFutureAdapters
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
@@ -49,7 +47,6 @@ import java.security.KeyPair
 import java.time.Clock
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.CompletableFuture
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -130,9 +127,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         checkpointStorage = storageServices.second
         net = makeMessagingService()
         wallet = NodeWalletService(services)
-        keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
         identity = makeIdentityService()
+        // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
+        // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
+        // the identity key. But the infrastructure to make that easy isn't here yet.
+        keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
         api = APIServerImpl(this)
         smm = StateMachineManager(services, listOf(storage, net, wallet, keyManagement, identity, platformClock), checkpointStorage, serverThread)
 
