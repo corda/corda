@@ -211,6 +211,16 @@ inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     }
 }
 
+inline fun Output.writeBytesWithLength(byteArray: ByteArray) {
+    this.writeInt(byteArray.size, true)
+    this.writeBytes(byteArray)
+}
+
+inline fun Input.readBytesWithLength(): ByteArray {
+    val size = this.readInt(true)
+    return this.readBytes(size)
+}
+
 /** Thrown during deserialisation to indicate that an attachment needed to construct the [WireTransaction] is not found */
 class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
 
@@ -263,13 +273,11 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
         check(obj.params == ed25519Curve)
-        output.writeInt(obj.seed.size, true)
-        output.writeBytes(obj.seed)
+        output.writeBytesWithLength(obj.seed)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
-        val seedSize = input.readInt(true)
-        val seed = input.readBytes(seedSize)
+        val seed = input.readBytesWithLength()
         return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, ed25519Curve))
     }
 }
@@ -281,13 +289,11 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
 
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
         check(obj.params == ed25519Curve)
-        output.writeInt(obj.abyte.size, true)
-        output.writeBytes(obj.abyte)
+        output.writeBytesWithLength(obj.abyte)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
-        val ASize = input.readInt(true)
-        val A = input.readBytes(ASize)
+        val A = input.readBytesWithLength()
         return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
     }
 }
