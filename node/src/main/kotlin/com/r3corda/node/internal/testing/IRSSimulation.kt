@@ -105,8 +105,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val retFuture = SettableFuture.create<Unit>()
         val futA = node1.smm.add("floater", sideA)
+        val futB = node2.smm.add("fixer", sideB)
         executeOnNextIteration += {
-            val futB = node2.smm.add("fixer", sideB)
             Futures.allAsList(futA, futB) success {
                 retFuture.set(null)
             } failure { throwable ->
