@@ -10,6 +10,10 @@ import java.security.*
 import java.security.interfaces.ECPublicKey
 import net.i2p.crypto.eddsa.KeyPairGenerator as EddsaKeyPairGenerator
 
+fun newSecureRandom(): SecureRandom {
+    return SecureRandom.getInstance("NativePRNGNonBlocking")
+}
+
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
