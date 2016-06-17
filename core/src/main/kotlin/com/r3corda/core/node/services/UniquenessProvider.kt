@@ -1,8 +1,7 @@
 package com.r3corda.core.node.services
 
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.contracts.StateRef
-import com.r3corda.core.contracts.WireTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 
 /**
@@ -11,7 +10,7 @@ import com.r3corda.core.crypto.SecureHash
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction */
-    fun commit(tx: WireTransaction, callerIdentity: Party)
+    fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party)
 
     /** Specifies the consuming transaction for every conflicting state */
     data class Conflict(val stateHistory: Map<StateRef, ConsumingTx>)

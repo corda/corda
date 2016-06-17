@@ -27,7 +27,7 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
                 return states.values.map { it.ref }
             } else if (query.criteria is StatesQuery.Criteria.Deal) {
                 val states = node.services.walletService.linearHeadsOfType<DealState>().filterValues {
-                    it.state.ref == query.criteria.ref
+                    it.state.data.ref == query.criteria.ref
                 }
                 return states.values.map { it.ref }
             }
@@ -35,7 +35,7 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
         return emptyList()
     }
 
-    override fun fetchStates(states: List<StateRef>): Map<StateRef, ContractState?> {
+    override fun fetchStates(states: List<StateRef>): Map<StateRef, TransactionState<ContractState>?> {
         return node.services.walletService.statesForRefs(states)
     }
 

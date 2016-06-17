@@ -30,7 +30,7 @@ abstract class Wallet {
     abstract val states: List<StateAndRef<ContractState>>
 
     @Suppress("UNCHECKED_CAST")
-    inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state is T } as List<StateAndRef<T>>
+    inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
     /**
      * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
@@ -99,10 +99,10 @@ interface WalletService {
     /** Returns the [linearHeads] only when the type of the state would be considered an 'instanceof' the given type. */
     @Suppress("UNCHECKED_CAST")
     fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<SecureHash, StateAndRef<T>> {
-        return linearHeads.filterValues { stateType.isInstance(it.state) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
+        return linearHeads.filterValues { stateType.isInstance(it.state.data) }.mapValues { StateAndRef(it.value.state as TransactionState<T>, it.value.ref) }
     }
 
-    fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
+    fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
         val refsToStates = currentWallet.states.associateBy { it.ref }
         return refs.associateBy({ it }, { refsToStates[it]?.state })
     }

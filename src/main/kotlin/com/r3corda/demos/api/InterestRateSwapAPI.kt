@@ -44,14 +44,14 @@ class InterestRateSwapAPI(val api: APIServer) {
     private fun getDealByRef(ref: String): InterestRateSwap.State? {
         val states = api.queryStates(StatesQuery.selectDeal(ref))
         return if (states.isEmpty()) null else {
-            val deals = api.fetchStates(states).values.map { it as InterestRateSwap.State }.filterNotNull()
+            val deals = api.fetchStates(states).values.map { it?.data as InterestRateSwap.State }.filterNotNull()
             return if (deals.isEmpty()) null else deals[0]
         }
     }
 
     private fun getAllDeals(): Array<InterestRateSwap.State> {
         val states = api.queryStates(StatesQuery.selectAllDeals())
-        val swaps = api.fetchStates(states).values.map { it as InterestRateSwap.State }.filterNotNull().toTypedArray()
+        val swaps = api.fetchStates(states).values.map { it?.data as InterestRateSwap.State }.filterNotNull().toTypedArray()
         return swaps
     }
 

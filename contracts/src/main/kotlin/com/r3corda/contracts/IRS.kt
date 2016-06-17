@@ -487,7 +487,7 @@ class InterestRateSwap() : Contract {
     /**
      * verify() with some examples of what needs to be checked.
      */
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
 
         // Group by Trade ID for in / out states
         val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
@@ -587,13 +587,15 @@ class InterestRateSwap() : Contract {
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
-            val common: Common,
-            override val notary: Party
+            val common: Common
     ) : FixableDealState {
 
         override val contract = IRS_PROGRAM_ID
         override val thread = SecureHash.sha256(common.tradeID)
         override val ref = common.tradeID
+
+        override val participants: List<PublicKey>
+            get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return (fixedLeg.fixedRatePayer.owningKey in ourKeys) || (floatingLeg.floatingRatePayer.owningKey in ourKeys)
@@ -618,10 +620,10 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
+        override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
-        override fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix) {
-            InterestRateSwap().generateFix(ptx, StateAndRef(this, oldStateRef), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
+        override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
+            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
         }
 
         override fun nextFixingOf(): FixOf? {
@@ -715,8 +717,8 @@ class InterestRateSwap() : Contract {
         val newCalculation = Calculation(calculation.expression, floatingLegPaymentSchedule, fixedLegPaymentSchedule)
 
         // Put all the above into a new State object.
-        val state = State(fixedLeg, floatingLeg, newCalculation, common, notary)
-        return TransactionBuilder().withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
+        val state = State(fixedLeg, floatingLeg, newCalculation, common)
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 
     private fun calcFixingDate(date: LocalDate, fixingPeriod: DateOffset, calendar: BusinessCalendar): LocalDate {
@@ -729,8 +731,11 @@ class InterestRateSwap() : Contract {
 
     // TODO: Replace with rates oracle
     fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Pair<LocalDate, Rate>) {
-        tx.addInputState(irs.ref)
-        tx.addOutputState(irs.state.copy(calculation = irs.state.calculation.applyFixing(fixing.first, FixedRate(fixing.second))))
-        tx.addCommand(Commands.Fix(), listOf(irs.state.floatingLeg.floatingRatePayer.owningKey, irs.state.fixedLeg.fixedRatePayer.owningKey))
+        tx.addInputState(irs)
+        tx.addOutputState(
+                irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.first, FixedRate(fixing.second))),
+                irs.state.notary
+        )
+        tx.addCommand(Commands.Fix(), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))
     }
 }

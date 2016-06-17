@@ -1,10 +1,7 @@
 package com.r3corda.contracts
 
-import com.r3corda.contracts.testing.CASH
-import com.r3corda.contracts.testing.`issued by`
-import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.contracts.cash.Cash
-import com.r3corda.contracts.testing.STATE
+import com.r3corda.contracts.testing.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
@@ -32,8 +29,7 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
             MEGA_CORP.ref(123),
             MEGA_CORP_PUBKEY,
             1000.DOLLARS `issued by` MEGA_CORP.ref(123),
-            TEST_TX_TIME + 7.days,
-            DUMMY_NOTARY
+            TEST_TX_TIME + 7.days
     )
 
     override fun getIssueCommand(): CommandData = JavaCommercialPaper.Commands.Issue()
@@ -46,8 +42,7 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_PUBKEY,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
-            maturityDate = TEST_TX_TIME + 7.days,
-            notary = DUMMY_NOTARY
+            maturityDate = TEST_TX_TIME + 7.days
     )
 
     override fun getIssueCommand(): CommandData = CommercialPaper.Commands.Issue()
@@ -121,7 +116,7 @@ class CommercialPaperTestsGeneric {
     fun `issue cannot replace an existing state`() {
         transactionGroup {
             roots {
-                transaction(thisTest.getPaper() label "paper")
+                transaction(thisTest.getPaper() `with notary` DUMMY_NOTARY label "paper")
             }
             transaction {
                 input("paper")
@@ -144,9 +139,9 @@ class CommercialPaperTestsGeneric {
         trade(destroyPaperAtRedemption = false).expectFailureOfTx(3, "must be destroyed")
     }
 
-    fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*states), emptyList(), SecureHash.randomSHA256())
-        return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
+    fun <T : ContractState> cashOutputsToWallet(vararg outputs: TransactionState<T>): Pair<LedgerTransaction, List<StateAndRef<T>>> {
+        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*outputs), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.General())
+        return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 
     @Test
@@ -163,14 +158,14 @@ class CommercialPaperTestsGeneric {
         }
 
         val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
-                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY,
-                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY,
-                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY
+                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
+                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
+                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY
         )
 
         // Alice pays $9000 to MiniCorp to own some of their debt.
         val moveTX: LedgerTransaction = run {
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             Cash().generateSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
             CommercialPaper().generateMove(ptx, issueTX.outRef(0), ALICE_PUBKEY)
             ptx.signWith(MINI_CORP_KEY)
@@ -181,12 +176,12 @@ class CommercialPaperTestsGeneric {
 
         // Won't be validated.
         val (corpWalletTX, corpWallet) = cashOutputsToWallet(
-                9000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` MINI_CORP_PUBKEY,
-                4000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` MINI_CORP_PUBKEY
+                9000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY,
+                4000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY
         )
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             ptx.setTime(time, DUMMY_NOTARY, 30.seconds)
             CommercialPaper().generateRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
@@ -213,8 +208,8 @@ class CommercialPaperTestsGeneric {
         val someProfits = 1200.DOLLARS `issued by` issuer
         return transactionGroupFor() {
             roots {
-                transaction(900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY label "alice's $900")
-                transaction(someProfits.STATE `owned by` MEGA_CORP_PUBKEY label "some profits")
+                transaction(900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY label "alice's $900")
+                transaction(someProfits.STATE `owned by` MEGA_CORP_PUBKEY `with notary` DUMMY_NOTARY label "some profits")
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
@@ -230,7 +225,7 @@ class CommercialPaperTestsGeneric {
                 input("paper")
                 input("alice's $900")
                 output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output `owned by` ALICE_PUBKEY }
+                output("alice's paper") { "paper".output.data `owned by` ALICE_PUBKEY }
                 arg(ALICE_PUBKEY) { Cash.Commands.Move() }
                 arg(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
             }
@@ -244,7 +239,7 @@ class CommercialPaperTestsGeneric {
                 output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
                 output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
                 if (!destroyPaperAtRedemption)
-                    output { "paper".output }
+                    output { "paper".output.data }
 
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 arg(ALICE_PUBKEY) { thisTest.getRedeemCommand() }

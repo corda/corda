@@ -85,7 +85,7 @@ class IRSSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
-        val nextFixingDate = theDealRef.state.calculation.nextFixingDate() ?: return null
+        val nextFixingDate = theDealRef.state.data.calculation.nextFixingDate() ?: return null
         extraNodeLabels[node1] = "Fixing event on $nextFixingDate"
         extraNodeLabels[node2] = "Fixing event on $nextFixingDate"
 

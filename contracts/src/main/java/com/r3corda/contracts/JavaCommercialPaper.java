@@ -1,10 +1,11 @@
 package com.r3corda.contracts;
 
+import com.google.common.collect.ImmutableList;
 import com.r3corda.contracts.cash.Cash;
 import com.r3corda.contracts.cash.CashKt;
 import com.r3corda.contracts.cash.InsufficientBalanceException;
-import com.r3corda.core.contracts.TransactionForVerification.InOutGroup;
 import com.r3corda.core.contracts.*;
+import com.r3corda.core.contracts.TransactionForContract.InOutGroup;
 import com.r3corda.core.crypto.NullPublicKey;
 import com.r3corda.core.crypto.Party;
 import com.r3corda.core.crypto.SecureHash;
@@ -33,38 +34,36 @@ public class JavaCommercialPaper implements Contract {
         private PublicKey owner;
         private Amount<Issued<Currency>> faceValue;
         private Instant maturityDate;
-        private Party notary;
 
         public State() {
         }  // For serialization
 
         public State(PartyAndReference issuance, PublicKey owner, Amount<Issued<Currency>> faceValue,
-                     Instant maturityDate, Party notary) {
+                     Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
             this.faceValue = faceValue;
             this.maturityDate = maturityDate;
-            this.notary = notary;
         }
 
         public State copy() {
-            return new State(this.issuance, this.owner, this.faceValue, this.maturityDate, this.notary);
+            return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
         }
 
         public ICommercialPaperState withOwner(PublicKey newOwner) {
-            return new State(this.issuance, newOwner, this.faceValue, this.maturityDate, this.notary);
+            return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
         public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
-            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate, this.notary);
+            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
         }
 
         public ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue) {
-            return new State(this.issuance, this.owner, newFaceValue, this.maturityDate, this.notary);
+            return new State(this.issuance, this.owner, newFaceValue, this.maturityDate);
         }
 
         public ICommercialPaperState withMaturityDate(Instant newMaturityDate) {
-            return new State(this.issuance, this.owner, this.faceValue, newMaturityDate, this.notary);
+            return new State(this.issuance, this.owner, this.faceValue, newMaturityDate);
         }
 
         public PartyAndReference getIssuance() {
@@ -85,12 +84,6 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
-        public Party getNotary() {
-            return notary;
-        }
-
-        @NotNull
-        @Override
         public Contract getContract() {
             return JCP_PROGRAM_ID;
             //return SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
@@ -106,7 +99,6 @@ public class JavaCommercialPaper implements Contract {
             if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
             if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
             if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
-            if (notary != null ? !notary.equals(state.notary) : state.notary != null) return false;
             return !(maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null);
         }
 
@@ -116,12 +108,17 @@ public class JavaCommercialPaper implements Contract {
             result = 31 * result + (owner != null ? owner.hashCode() : 0);
             result = 31 * result + (faceValue != null ? faceValue.hashCode() : 0);
             result = 31 * result + (maturityDate != null ? maturityDate.hashCode() : 0);
-            result = 31 * result + (notary != null ? notary.hashCode() : 0);
             return result;
         }
 
         public State withoutOwner() {
-            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate, notary);
+            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
+        }
+
+        @NotNull
+        @Override
+        public List<PublicKey> getParticipants() {
+            return ImmutableList.of(this.owner);
         }
     }
 
@@ -149,7 +146,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @Override
-    public void verify(@NotNull TransactionForVerification tx) {
+    public void verify(@NotNull TransactionForContract tx) {
         // There are three possible things that can be done with CP.
         // Issuance, trading (aka moving in this prototype) and redeeming.
         // Each command has it's own set of restrictions which the verify function ... verifies.
@@ -233,19 +230,20 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
-        State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate, notary);
-        return new TransactionBuilder().withItems(state, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
+        State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
+        TransactionState output = new TransactionState<>(state, notary);
+        return new TransactionType.General.Builder().withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
-        new Cash().generateSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet);
-        tx.addInputState(paper.getRef());
-        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getOwner()));
+        new Cash().generateSpend(tx, paper.getState().getData().getFaceValue(), paper.getState().getData().getOwner(), wallet);
+        tx.addInputState(paper);
+        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
-        tx.addInputState(paper.getRef());
-        tx.addOutputState(new State(paper.getState().getIssuance(), newOwner, paper.getState().getFaceValue(), paper.getState().getMaturityDate(), paper.getState().getNotary()));
-        tx.addCommand(new Command(new Commands.Move(), paper.getState().getOwner()));
+        tx.addInputState(paper);
+        tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary()));
+        tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner()));
     }
 }

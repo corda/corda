@@ -314,7 +314,7 @@ object TwoPartyDealProtocol {
         }
 
         override fun assembleSharedTX(handshake: Handshake<T>): Pair<TransactionBuilder, List<PublicKey>> {
-            val ptx = handshake.payload.generateAgreement()
+            val ptx = handshake.payload.generateAgreement(notary)
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
@@ -336,7 +336,7 @@ object TwoPartyDealProtocol {
                                            val dealToFix: StateAndRef<T>,
                                            sessionID: Long,
                                            val replacementProgressTracker: ProgressTracker? = null) : Secondary<StateRef>(otherSide, notary, sessionID) {
-        private val ratesFixTracker = RatesFixProtocol.tracker(dealToFix.state.nextFixingOf()!!.name)
+        private val ratesFixTracker = RatesFixProtocol.tracker(dealToFix.state.data.nextFixingOf()!!.name)
 
         override val progressTracker: ProgressTracker = replacementProgressTracker ?: createTracker()
 
@@ -358,22 +358,21 @@ object TwoPartyDealProtocol {
 
         @Suspendable
         override fun assembleSharedTX(handshake: Handshake<StateRef>): Pair<TransactionBuilder, List<PublicKey>> {
-            val fixOf = dealToFix.state.nextFixingOf()!!
+            val fixOf = dealToFix.state.data.nextFixingOf()!!
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
             val myName = serviceHub.storageService.myLegalIdentity.name
-            val deal: T = dealToFix.state
+            val deal: T = dealToFix.state.data
             val myOldParty = deal.parties.single { it.name == myName }
 
             @Suppress("UNCHECKED_CAST")
             val newDeal = deal
-            val oldRef = dealToFix.ref
 
-            val ptx = TransactionBuilder()
+            val ptx = TransactionType.General.Builder()
             val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0], fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
-                    newDeal.generateFix(ptx, oldRef, fix)
+                    newDeal.generateFix(ptx, dealToFix, fix)
 
                     // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
                     // to have one.

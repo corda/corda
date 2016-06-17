@@ -26,13 +26,13 @@ class TransactionGraphSearchTests {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData, signer: KeyPair): GraphTransactionStorage {
-        val originTx = TransactionBuilder().apply {
-            addOutputState(DummyContract.State(random31BitValue(), DUMMY_NOTARY))
+        val originTx = TransactionType.General.Builder().apply {
+            addOutputState(DummyContract.State(random31BitValue()), DUMMY_NOTARY)
             addCommand(command, signer.public)
             signWith(signer)
         }.toSignedTransaction(false)
-        val inputTx = TransactionBuilder().apply {
-            addInputState(originTx.tx.outRef<DummyContract.State>(0).ref)
+        val inputTx = TransactionType.General.Builder().apply {
+            addInputState(originTx.tx.outRef<DummyContract.State>(0))
             signWith(signer)
         }.toSignedTransaction(false)
         return GraphTransactionStorage(originTx, inputTx)

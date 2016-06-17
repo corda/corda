@@ -1,12 +1,6 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.WireTransaction
-import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.*
 import com.r3corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
@@ -16,14 +10,19 @@ import java.util.*
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
- * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
- * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
- * multiple parties.
+ * intended to be passed around contracts that may edit it by adding new states/commands. Then once the states
+ * and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.
+ *
+ * The builder can be customised for specific transaction types, e.g. where additional processing is needed
+ * before adding a state/command.
  */
-class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf(),
-                         private val attachments: MutableList<SecureHash> = arrayListOf(),
-                         private val outputs: MutableList<ContractState> = arrayListOf(),
-                         private val commands: MutableList<Command> = arrayListOf()) {
+abstract class TransactionBuilder(protected val type: TransactionType = TransactionType.General(),
+                                  protected val notary: Party? = null) {
+    protected val inputs: MutableList<StateRef> = arrayListOf()
+    protected val attachments: MutableList<SecureHash> = arrayListOf()
+    protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf()
+    protected val commands: MutableList<Command> = arrayListOf()
+    protected val signers: MutableSet<PublicKey> = mutableSetOf()
 
     val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
 
@@ -49,7 +48,8 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
             when (t) {
-                is StateRef -> addInputState(t)
+                is StateAndRef<*> -> addInputState(t)
+                is TransactionState<*> -> addOutputState(t)
                 is ContractState -> addOutputState(t)
                 is Command -> addCommand(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
@@ -59,7 +59,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     }
 
     /** The signatures that have been collected so far - might be incomplete! */
-    private val currentSigs = arrayListOf<DigitalSignature.WithKey>()
+    protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
     fun signWith(key: KeyPair) {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
@@ -96,22 +96,25 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands))
+            ArrayList(outputs), ArrayList(commands), signers.toList(), type)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            for (command in commands) {
-                if (!gotKeys.containsAll(command.signers))
-                    throw IllegalStateException("Missing signatures on the transaction for a ${command.value.javaClass.canonicalName} command")
-            }
+            val missing = signers - gotKeys
+            if (missing.isNotEmpty())
+                throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.map { it.toStringShort() }}")
         }
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
-    fun addInputState(ref: StateRef) {
+    open fun addInputState(stateAndRef: StateAndRef<*>) {
         check(currentSigs.isEmpty())
-        inputs.add(ref)
+
+        val notaryKey = stateAndRef.state.notary.owningKey
+        signers.add(notaryKey)
+
+        inputs.add(stateAndRef.ref)
     }
 
     fun addAttachment(attachment: Attachment) {
@@ -119,14 +122,22 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
         attachments.add(attachment.id)
     }
 
-    fun addOutputState(state: ContractState) {
+    fun addOutputState(state: TransactionState<*>) {
         check(currentSigs.isEmpty())
         outputs.add(state)
     }
 
+    fun addOutputState(state: ContractState, notary: Party) = addOutputState(TransactionState(state, notary))
+
+    fun addOutputState(state: ContractState) {
+        checkNotNull(notary) { "Need to specify a Notary for the state, or set a default one on TransactionBuilder initialisation" }
+        addOutputState(state, notary!!)
+    }
+
     fun addCommand(arg: Command) {
         check(currentSigs.isEmpty())
-        // We should probably merge the lists of pubkeys for identical commands here.
+        // TODO: replace pubkeys in commands with 'pointers' to keys in signers
+        signers.addAll(arg.signers)
         commands.add(arg)
     }
 
@@ -136,7 +147,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
 
-    fun outputStates(): List<ContractState> = ArrayList(outputs)
+    fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
     fun commands(): List<Command> = ArrayList(commands)
     fun attachments(): List<SecureHash> = ArrayList(attachments)
 }

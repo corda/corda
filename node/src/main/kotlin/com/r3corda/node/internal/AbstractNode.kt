@@ -16,6 +16,7 @@ import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.api.APIServer
+import com.r3corda.node.services.NotaryChangeService
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MonitoringService
@@ -139,6 +140,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
+        NotaryChangeService(net, smm)
 
         buildAdvertisedServices()
 

@@ -9,10 +9,11 @@ import com.r3corda.core.contracts.DUMMY_PROGRAM_ID
 import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.PartyAndReference
 import com.r3corda.core.contracts.Issued
+import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
-import com.r3corda.core.testing.DUMMY_NOTARY
 import java.security.PublicKey
 import java.util.*
 
@@ -26,7 +27,7 @@ val TEST_PROGRAM_MAP: Map<Contract, Class<out Contract>> = mapOf(
         IRS_PROGRAM_ID to InterestRateSwap::class.java
 )
 
-fun generateState(notary: Party = DUMMY_NOTARY) = DummyContract.State(Random().nextInt(), notary)
+fun generateState() = DummyContract.State(Random().nextInt())
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -50,8 +51,10 @@ fun generateState(notary: Party = DUMMY_NOTARY) = DummyContract.State(Random().n
 infix fun Cash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
 infix fun Cash.State.`issued by`(party: Party) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
 infix fun Cash.State.`issued by`(deposit: PartyAndReference) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit)))
+infix fun Cash.State.`with notary`(notary: Party) = TransactionState(this, notary)
 
 infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
+infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
 infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
 
 infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State =
@@ -62,7 +65,8 @@ val DUMMY_CASH_ISSUER = Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).
 /** Allows you to write 100.DOLLARS.CASH */
 val Amount<Currency>.CASH: Cash.State get() = Cash.State(
         Amount<Issued<Currency>>(this.quantity, Issued<Currency>(DUMMY_CASH_ISSUER, this.token)),
-        NullPublicKey, DUMMY_NOTARY)
+        NullPublicKey)
 
-val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NullPublicKey, DUMMY_NOTARY)
+val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NullPublicKey)
 
+infix fun ContractState.`with notary`(notary: Party) = TransactionState(this, notary)

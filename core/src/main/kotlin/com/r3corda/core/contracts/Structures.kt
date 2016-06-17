@@ -1,9 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.TransactionBuilder
-import com.r3corda.core.contracts.TransactionForVerification
-import com.r3corda.core.contracts.Fix
-import com.r3corda.core.contracts.FixOf
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -31,8 +27,30 @@ interface ContractState {
     /** Contract by which the state belongs */
     val contract: Contract
 
-    /** Identity of the notary that ensures this state is not used as an input to a transaction more than once */
-    val notary: Party
+    /**
+     * A _participant_ is any party that is able to consume this state in a valid transaction.
+     *
+     * The list of participants is required for certain types of transactions. For example, when changing the notary
+     * for this state ([TransactionType.NotaryChange]), every participants has to be involved and approve the transaction
+     * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
+     * they possess, since someone consumed that state during the notary change process.
+     *
+     * The participants list should normally be derived from the contents of the state. E.g. for [Cash] the participants
+     * list should just contain the owner.
+     */
+    val participants: List<PublicKey>
+}
+
+/** A wrapper for [ContractState] containing additional platform-level state information. This is the state */
+data class TransactionState<out T : ContractState>(
+        val data: T,
+        /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
+        val notary: Party) {
+    /**
+     * Copies the underlying state, replacing the notary field with the new value.
+     * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState]
+     */
+    fun withNewNotary(newNotary: Party) = TransactionState(this.data, newNotary)
 }
 
 /**
@@ -100,7 +118,7 @@ interface DealState : LinearState {
      * TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
      * Contract instance from a ContractState are imminent, at which point we can move this out of here
      */
-    fun generateAgreement(): TransactionBuilder
+    fun generateAgreement(notary: Party): TransactionBuilder
 }
 
 /**
@@ -120,7 +138,7 @@ interface FixableDealState : DealState {
      * TODO: This would also likely move to methods on the Contract once the changes to reference
      * the Contract from the ContractState are in
      */
-    fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix)
+    fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix)
 }
 
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
@@ -135,11 +153,11 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 }
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
-data class StateAndRef<out T : ContractState>(val state: T, val ref: StateRef)
+data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
-    return mapNotNull { if (it.state is T) StateAndRef(it.state, it.ref) else null }
+    return mapNotNull { if (it.state.data is T) StateAndRef(TransactionState(it.state.data, it.state.notary), it.ref) else null }
 }
 
 /**
@@ -210,7 +228,7 @@ interface Contract {
      * existing contract code.
      */
     @Throws(IllegalArgumentException::class)
-    fun verify(tx: TransactionForVerification)
+    fun verify(tx: TransactionForContract)
 
     /**
      * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of

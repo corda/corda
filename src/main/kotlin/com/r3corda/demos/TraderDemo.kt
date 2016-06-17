@@ -356,7 +356,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             // Sign it as ourselves.
             tx.signWith(keyPair)
 
-            // Get the notary to sign it, thus committing the outputs.
+            // Get the notary to sign the timestamp
             val notarySig = subProtocol(NotaryProtocol.Client(tx.toWireTransaction()))
             tx.addSignatureUnchecked(notarySig)
 
@@ -369,7 +369,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionBuilder()
+            val builder = TransactionType.General.Builder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
             builder.addSignatureUnchecked(subProtocol(NotaryProtocol.Client(builder.toWireTransaction())))

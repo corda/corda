@@ -1,9 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.AuthenticatedObject
-import com.r3corda.core.contracts.LedgerTransaction
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.node.services.IdentityService
 import java.io.FileNotFoundException
@@ -22,7 +18,7 @@ fun WireTransaction.toLedgerTransaction(identityService: IdentityService,
     val attachments = attachments.map {
         attachmentStorage.openAttachment(it) ?: throw FileNotFoundException(it.toString())
     }
-    return LedgerTransaction(inputs, attachments, outputs, authenticatedArgs, id)
+    return LedgerTransaction(inputs, attachments, outputs, authenticatedArgs, id, signers, type)
 }
 
 /**

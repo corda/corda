@@ -5,6 +5,7 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.testing.DUMMY_NOTARY
 import org.junit.Test
+import java.security.PublicKey
 import kotlin.test.assertEquals
 
 
@@ -12,14 +13,15 @@ class WalletUpdateTests {
 
     object DummyContract : Contract {
 
-        override fun verify(tx: TransactionForVerification) {
+        override fun verify(tx: TransactionForContract) {
         }
 
         override val legalContractReference: SecureHash = SecureHash.sha256("")
     }
 
     private class DummyState : ContractState {
-        override val notary = DUMMY_NOTARY
+        override val participants: List<PublicKey>
+            get() = emptyList()
         override val contract = WalletUpdateTests.DummyContract
     }
 
@@ -29,11 +31,11 @@ class WalletUpdateTests {
     private val stateRef3 = StateRef(SecureHash.randomSHA256(), 3)
     private val stateRef4 = StateRef(SecureHash.randomSHA256(), 4)
 
-    private val stateAndRef0 = StateAndRef<DummyState>(DummyState(), stateRef0)
-    private val stateAndRef1 = StateAndRef<DummyState>(DummyState(), stateRef1)
-    private val stateAndRef2 = StateAndRef<DummyState>(DummyState(), stateRef2)
-    private val stateAndRef3 = StateAndRef<DummyState>(DummyState(), stateRef3)
-    private val stateAndRef4 = StateAndRef<DummyState>(DummyState(), stateRef4)
+    private val stateAndRef0 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef0)
+    private val stateAndRef1 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef1)
+    private val stateAndRef2 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef2)
+    private val stateAndRef3 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef3)
+    private val stateAndRef4 = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), stateRef4)
 
     @Test
     fun `nothing plus nothing is nothing`() {

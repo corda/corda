@@ -3,7 +3,7 @@ package com.r3corda.node.services
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.contracts.DOLLARS
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.USD
 import com.r3corda.core.contracts.verifyToLedgerTransaction
 import com.r3corda.core.node.ServiceHub
@@ -51,14 +51,14 @@ class NodeWalletServiceTest {
         val w = wallet.currentWallet
         assertEquals(3, w.states.size)
 
-        val state = w.states[0].state as Cash.State
+        val state = w.states[0].state.data as Cash.State
         val myIdentity = services.storageService.myLegalIdentity
         val myPartyRef = myIdentity.ref(ref)
         assertEquals(29.01.DOLLARS `issued by` myPartyRef, state.amount)
         assertEquals(ALICE_PUBKEY, state.owner)
 
-        assertEquals(33.34.DOLLARS `issued by` myPartyRef, (w.states[2].state as Cash.State).amount)
-        assertEquals(35.61.DOLLARS `issued by` myPartyRef, (w.states[1].state as Cash.State).amount)
+        assertEquals(33.34.DOLLARS `issued by` myPartyRef, (w.states[2].state.data as Cash.State).amount)
+        assertEquals(35.61.DOLLARS `issued by` myPartyRef, (w.states[1].state.data as Cash.State).amount)
     }
 
     @Test
@@ -67,22 +67,24 @@ class NodeWalletServiceTest {
 
         // A tx that sends us money.
         val freshKey = services.keyManagementService.freshKey()
-        val usefulTX = TransactionBuilder().apply {
+        val usefulTX = TransactionType.General.Builder().apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction()
         val myOutput = usefulTX.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments).outRef<Cash.State>(0)
 
         // A tx that spends our money.
-        val spendTX = TransactionBuilder().apply {
+        val spendTX = TransactionType.General.Builder().apply {
             Cash().generateSpend(this, 80.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_PUBKEY, listOf(myOutput))
             signWith(freshKey)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         // A tx that doesn't send us anything.
-        val irrelevantTX = TransactionBuilder().apply {
+        val irrelevantTX = TransactionType.General.Builder().apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         assertNull(wallet.cashBalances[USD])
