@@ -32,7 +32,7 @@ class IRSDemoTest {
 private fun setupNode(dir: Path, nodeType: String) {
     val args = listOf("--role", "Setup" + nodeType, "--dir", dir.toString())
     val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
-    assertEquals(proc.waitFor(30, TimeUnit.SECONDS), true);
+    assertEquals(proc.waitFor(2, TimeUnit.MINUTES), true);
     assertEquals(proc.exitValue(), 0)
 }
 
@@ -46,18 +46,19 @@ private fun startNode(dir: Path, nodeType: String, nodeAddr: String): Process {
 private fun runTrade() {
     val args = listOf("--role", "Trade", "trade1")
     val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
-    assertEquals(proc.waitFor(30, TimeUnit.SECONDS), true);
+    assertEquals(proc.waitFor(2, TimeUnit.MINUTES), true);
     assertEquals(proc.exitValue(), 0)
 }
 
 private fun runDateChange() {
     val args = listOf("--role", "Date", "2017-01-02")
     val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
-    assertEquals(proc.waitFor(30, TimeUnit.SECONDS), true);
+    assertEquals(proc.waitFor(2, TimeUnit.MINUTES), true);
     assertEquals(proc.exitValue(), 0)
 }
 
 private fun stopNode(nodeProc: Process?) {
+    assertEquals(nodeProc?.isAlive, true)
     nodeProc?.destroy()
 }
 
