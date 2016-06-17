@@ -67,9 +67,6 @@ enum class Role {
 val DIRNAME = "trader-demo"
 
 fun main(args: Array<String>) {
-    val cashIssuerKey = generateKeyPair()
-    val cashIssuer = Party("Trusted cash issuer", cashIssuerKey.public)
-    val amount = 1000.DOLLARS `issued by` cashIssuer.ref(1)
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
@@ -116,6 +113,7 @@ fun main(args: Array<String>) {
     // One of the two servers needs to run the network map and notary services. In such a trivial two-node network
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
+    var cashIssuer: Party? = null
     val networkMapId = if (role == Role.BUYER) {
         advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
@@ -127,6 +125,7 @@ fun main(args: Array<String>) {
         val path = Paths.get(DIRNAME, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
+        cashIssuer = party
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
 
@@ -135,8 +134,14 @@ fun main(args: Array<String>) {
         Node(directory, myNetAddr, config, networkMapId, advertisedServices).start()
     }
 
+    // TODO: Replace with a separate trusted cash issuer
+    if (cashIssuer == null) {
+        cashIssuer = node.services.storageService.myLegalIdentity
+    }
+
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
     // will contact the buyer and actually make something happen.
+    val amount = 1000.DOLLARS `issued by` cashIssuer.ref(0) // Note: "0" has to match the reference used in the wallet filler
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
