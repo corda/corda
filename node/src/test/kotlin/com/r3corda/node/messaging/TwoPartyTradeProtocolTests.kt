@@ -102,6 +102,15 @@ class TwoPartyTradeProtocolTests {
 
             val buyerSessionID = random63BitValue()
 
+            // We start the Buyer first, as the Seller sends the first message
+            val bobResult = runBuyer(
+                    bobNode.smm,
+                    notaryNode.info,
+                    aliceNode.net.myAddress,
+                    1000.DOLLARS `issued by` issuer,
+                    CommercialPaper.State::class.java,
+                    buyerSessionID
+            )
             val aliceResult = runSeller(
                     aliceNode.smm,
                     notaryNode.info,
@@ -109,14 +118,6 @@ class TwoPartyTradeProtocolTests {
                     lookup("alice's paper"),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
-                    buyerSessionID
-            )
-            val bobResult = runBuyer(
-                    bobNode.smm,
-                    notaryNode.info,
-                    aliceNode.net.myAddress,
-                    1000.DOLLARS `issued by` issuer,
-                    CommercialPaper.State::class.java,
                     buyerSessionID
             )
 
