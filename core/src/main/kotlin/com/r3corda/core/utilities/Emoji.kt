@@ -4,7 +4,7 @@ package com.r3corda.core.utilities
  * A simple wrapper class that contains icons and support for printing them only when we're connected to a terminal.
  */
 object Emoji {
-    val hasEmojiTerminal by lazy { System.getenv("TERM") != null && (System.getenv("LANG") != null) && System.getenv("LANG").contains("UTF-8") }
+    val hasEmojiTerminal by lazy { System.getenv("TERM") != null && (System.getenv("LANG")?.contains("UTF-8") == true) }
 
     const val CODE_DIAMOND = "\ud83d\udd37"
     const val CODE_BAG_OF_CASH = "\ud83d\udcb0"
