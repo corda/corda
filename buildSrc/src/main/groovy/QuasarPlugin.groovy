@@ -13,7 +13,6 @@ class QuasarPlugin implements Plugin<Project> {
             mavenCentral()
         }
 
-        project.configurations.getByName("default")
         project.configurations.create("quasar")
         project.dependencies.add("quasar", "co.paralleluniverse:quasar-core:${project.rootProject.ext.quasar_version}:jdk8@jar")
         project.dependencies.add("compile", "co.paralleluniverse:quasar-core:${project.rootProject.ext.quasar_version}:jdk8")
