@@ -573,6 +573,7 @@ class IRSTests {
             output("irs post agreement") { singleIRS() }
             arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
+            this.accepts()
         }
 
         val oldIRS = singleIRS(1)

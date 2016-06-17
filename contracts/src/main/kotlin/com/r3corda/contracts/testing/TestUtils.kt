@@ -46,8 +46,6 @@ fun generateState(notary: Party = DUMMY_NOTARY) = DummyContract.State(Random().n
 //    contract.accepts() -> should pass
 //    contract `fails requirement` "some substring of the error message"
 // }
-//
-// TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
 infix fun Cash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
 infix fun Cash.State.`issued by`(party: Party) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
