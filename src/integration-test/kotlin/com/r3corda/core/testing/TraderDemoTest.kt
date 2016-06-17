@@ -4,6 +4,7 @@ import com.r3corda.core.testing.utilities.spawn
 import com.r3corda.core.testing.utilities.waitForNodeStartup
 import org.junit.Test
 import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class TraderDemoTest {
@@ -29,7 +30,7 @@ private fun runBuyer(): Process {
 private fun runSeller() {
     val args = listOf("--role", "SELLER")
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
-    proc.waitFor();
+    assertEquals(proc.waitFor(30, TimeUnit.SECONDS), true);
     assertEquals(proc.exitValue(), 0)
 }
 
