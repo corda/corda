@@ -3,7 +3,6 @@ package com.r3corda.contracts.cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
@@ -75,7 +74,7 @@ class Cash : FungibleAsset<Currency>() {
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue
+        data class Issue(override val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : FungibleAsset.Commands.Issue
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for

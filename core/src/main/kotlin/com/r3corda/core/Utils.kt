@@ -4,7 +4,6 @@ import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.crypto.newSecureRandom
 import org.slf4j.Logger
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -37,7 +36,7 @@ fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else
  * Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to
  * avoid potential bugs where the value is used in a context where negative numbers are not expected.
  */
-fun random63BitValue(): Long = Math.abs(newSecureRandom().nextLong())
+fun random63BitValue(): Long = Math.abs(SecureRandom.getInstanceStrong().nextLong())
 
 // Some utilities for working with Guava listenable futures.
 fun <T> ListenableFuture<T>.then(executor: Executor, body: () -> Unit) = addListener(Runnable(body), executor)

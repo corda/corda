@@ -1,6 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.node.services.testing.MockTransactionStorage
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP_KEY
@@ -17,7 +16,7 @@ class TransactionGraphSearchTests {
         }
     }
 
-    fun random31BitValue(): Int = Math.abs(newSecureRandom().nextInt())
+    fun random31BitValue(): Int = Math.abs(SecureRandom.getInstanceStrong().nextInt())
 
     /**
      * Build a pair of transactions. The first issues a dummy output state, and has a command applied, the second then
