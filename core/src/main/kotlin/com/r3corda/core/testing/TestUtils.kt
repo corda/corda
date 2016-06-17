@@ -287,10 +287,16 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             rootTxns.add(wtx)
         }
 
+        /**
+         * Note: Don't delete, this is intended to trigger compiler diagnostic when the DSL primitive is used in the wrong place
+         */
         @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
         fun roots(body: Roots.() -> Unit) {
         }
 
+        /**
+         * Note: Don't delete, this is intended to trigger compiler diagnostic when the DSL primitive is used in the wrong place
+         */
         @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
         fun transaction(body: WireTransactionDSL.() -> Unit) {
         }
@@ -314,6 +320,9 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun labelForTransaction(tx: WireTransaction): String? = txnToLabelMap[tx.id]
     fun labelForTransaction(tx: LedgerTransaction): String? = txnToLabelMap[tx.id]
 
+    /**
+     * Note: Don't delete, this is intended to trigger compiler diagnostic when the DSL primitive is used in the wrong place
+     */
     @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
     fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {
     }
