@@ -5,6 +5,7 @@ apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'project-report'
+apply plugin: QuasarPlugin
 
 allprojects {
     sourceCompatibility = 1.8
@@ -41,8 +42,6 @@ repositories {
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    quasar
-
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
     runtime.exclude module: 'isolated'
 }
@@ -58,30 +57,9 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.1"
 
-    // Quasar: for the bytecode rewriting for state machines.
-    quasar "co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar"
-
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.4.1'
-}
-
-// These lines tell Gradle to add a couple of JVM command line arguments to unit test and program runs, which set up
-// the Quasar bytecode rewriting system so fibers can be suspended. The verifyInstrumentation line makes things run
-// slower but you get a much better error message if you forget to annotate a method with @Suspendable that needs it.
-//
-// In Java 9 (hopefully) the requirement to annotate methods as @Suspendable will go away.
-
-applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
-mainClassName = 'com.r3corda.demos.TraderDemoKt'
-
-tasks.withType(Test) {
-    jvmArgs "-javaagent:${configurations.quasar.singleFile}"
-    jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
-}
-tasks.withType(JavaExec) {
-    jvmArgs "-javaagent:${configurations.quasar.singleFile}"
-    jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
 }
 
 // Package up the demo programs.
@@ -121,27 +99,7 @@ tasks.withType(CreateStartScripts)
     }
 }
 
-// These lines tell gradle to run the Quasar suspendables scanner to look for unannotated super methods
-// that have @Suspendable sub implementations.  These tend to cause NPEs and are not caught by the verifier
-// NOTE: need to make sure the output isn't on the classpath or every other run it generates empty results, so
-// we explicitly delete to avoid that happening.  We also need to turn off what seems to be a spurious warning in the IDE
-//
-// TODO: Make this task incremental, as it can be quite slow.
-
-//noinspection GroovyAssignabilityCheck
-task quasarScan(dependsOn: ['classes', 'core:classes', 'contracts:classes', 'node:classes']) << {
-    ant.taskdef(name:'scanSuspendables', classname:'co.paralleluniverse.fibers.instrument.SuspendablesScanner',
-            classpath: "${sourceSets.main.output.classesDir}:${sourceSets.main.output.resourcesDir}:${configurations.runtime.asPath}")
-    delete "$sourceSets.main.output.resourcesDir/META-INF/suspendables", "$sourceSets.main.output.resourcesDir/META-INF/suspendable-supers"
-    ant.scanSuspendables(
-            auto:false,
-            suspendablesFile: "$sourceSets.main.output.resourcesDir/META-INF/suspendables",
-            supersFile: "$sourceSets.main.output.resourcesDir/META-INF/suspendable-supers") {
-        fileset(dir: sourceSets.main.output.classesDir)
-    }
-}
-
-jar.dependsOn quasarScan
+quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
 
 applicationDistribution.into("bin") {
     from(getRateFixDemo)

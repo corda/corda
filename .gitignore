@@ -18,6 +18,9 @@ tags
 /core/build
 /docs/build/doctrees
 
+# gradle's buildSrc build/
+/buildSrc/build/
+
 # This exists only in the internal repo
 /network-explorer/build
 
