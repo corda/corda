@@ -1,40 +1,44 @@
 package com.r3corda.core.testing
 
+import com.r3corda.core.testing.utilities.assertExitOrKill
+import com.r3corda.core.testing.utilities.ensureNodeStartsOrKill
 import com.r3corda.core.testing.utilities.spawn
-import com.r3corda.core.testing.utilities.waitForNodeStartup
 import org.junit.Test
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
         var nodeProc: Process? = null
         try {
+            cleanupFiles()
             nodeProc = runBuyer()
             runSeller()
         } finally {
             nodeProc?.destroy()
-            cleanup()
+            cleanupFiles()
         }
     }
 }
 
 private fun runBuyer(): Process {
+    println("Running Buyer")
     val args = listOf("--role", "BUYER")
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
-    waitForNodeStartup("http://localhost:31338")
+    ensureNodeStartsOrKill(proc, "http://localhost:31338")
     return proc
 }
 
 private fun runSeller() {
+    println("Running Seller")
     val args = listOf("--role", "SELLER")
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
-    assertEquals(proc.waitFor(30, TimeUnit.SECONDS), true);
+    assertExitOrKill(proc);
     assertEquals(proc.exitValue(), 0)
 }
 
-private fun cleanup() {
+private fun cleanupFiles() {
+    println("Cleaning up TraderDemoTest files")
     val dir = Paths.get("trader-demo")
     println("Erasing " + dir)
     dir.toFile().deleteRecursively()
