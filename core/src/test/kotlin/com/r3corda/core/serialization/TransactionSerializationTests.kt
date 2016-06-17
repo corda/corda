@@ -3,6 +3,7 @@ package com.r3corda.core.serialization
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
@@ -34,7 +35,7 @@ class TransactionSerializationTests {
         }
         interface Commands : CommandData {
             class Move() : TypeOnlyCommandData(), Commands
-            data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
+            data class Issue(val nonce: Long = newSecureRandom().nextLong()) : Commands
             data class Exit(val amount: Amount<Currency>) : Commands
         }
     }

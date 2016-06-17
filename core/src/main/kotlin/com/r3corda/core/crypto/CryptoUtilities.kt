@@ -10,6 +10,8 @@ import java.security.*
 import java.security.interfaces.ECPublicKey
 import net.i2p.crypto.eddsa.KeyPairGenerator as EddsaKeyPairGenerator
 
+fun newSecureRandom() = SecureRandom.getInstance("NativePRNGNonBlocking")
+
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
@@ -38,7 +40,7 @@ sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits)
         @JvmStatic fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
         @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
 
-        @JvmStatic fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
+        @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
     }
 
     abstract val signatureAlgorithmName: String
