@@ -160,7 +160,10 @@ fun runTraderDemo(args: Array<String>): Int {
     return 0
 }
 
-private fun runSeller(myNetAddr: HostAndPort, node: Node, recipient: SingleMessageRecipient) {
+private fun runSeller(myNetAddr: HostAndPort,
+                      node: Node,
+                      recipient: SingleMessageRecipient,
+                      amount: Amount<Issued<Currency>>) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -179,7 +182,7 @@ private fun runSeller(myNetAddr: HostAndPort, node: Node, recipient: SingleMessa
             it.second.get()
         }
     } else {
-        val seller = TraderDemoProtocolSeller(myAddr, recipient, amount)
+        val seller = TraderDemoProtocolSeller(myNetAddr, recipient, amount)
         node.smm.add("demo.seller", seller).get()
     }
 
@@ -245,7 +248,7 @@ private class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
                 send(DEMO_TOPIC, recipient, 0, sessionID)
 
                 val notary = serviceHub.networkMapCache.notaryNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(recipient, notary.identity, 1000.DOLLARS,
+                val buyer = TwoPartyTradeProtocol.Buyer(recipient, notary.identity, amount,
                         CommercialPaper.State::class.java, sessionID)
 
                 // This invokes the trading protocol and out pops our finished transaction.
@@ -299,14 +302,14 @@ private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         object SELF_ISSUING : ProgressTracker.Step("Got session ID back, issuing and timestamping some commercial paper")
 
-        object TRADING : ProgressTracker.Step("Starting the trade protocol")
+        object TRADING : ProgressTracker.Step("Starting the trade protocol") {
+            override fun childProgressTracker(): ProgressTracker = TwoPartyTradeProtocol.Seller.tracker()
+        }
 
         // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
         // point: by setting up the tracker in advance, the user can see what's coming in more detail, instead of being
         // surprised when it appears as a new set of tasks below the current one.
-        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING).apply {
-            childrenFor[TRADING] = TwoPartyTradeProtocol.Seller.tracker()
-        }
+        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING)
     }
 
     @Suspendable
