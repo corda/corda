@@ -46,7 +46,9 @@ configurations {
     runtime.exclude module: 'isolated'
 }
 
+// This is required for quasar. I think.
 applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
+// Needed by the :startScripts task
 mainClassName = 'com.r3corda.demos.TraderDemoKt'
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
