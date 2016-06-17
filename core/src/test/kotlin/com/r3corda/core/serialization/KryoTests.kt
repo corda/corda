@@ -1,7 +1,11 @@
 package com.r3corda.core.serialization
 
 import com.google.common.primitives.Ints
+import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.verifyWithECDSA
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.time.Instant
 import java.util.*
@@ -54,6 +58,21 @@ class KryoTests {
         assertThat(bits.deserialize(kryo)).isEqualTo(cyclic)
     }
 
+    @Test
+    fun `deserialised keypair functions the same as serialised one`() {
+        val keyPair = generateKeyPair()
+        val bitsToSign: ByteArray = Ints.toByteArray(0x01234567)
+        val wrongBits: ByteArray = Ints.toByteArray(0x76543210)
+        val signature = keyPair.signWithECDSA(bitsToSign)
+        signature.verifyWithECDSA(bitsToSign)
+        assertThatThrownBy { signature.verifyWithECDSA(wrongBits) }
+
+        val deserialisedKeyPair = keyPair.serialize(kryo).deserialize(kryo)
+        val deserialisedSignature = deserialisedKeyPair.signWithECDSA(bitsToSign)
+        assertThat(deserialisedSignature).isEqualTo(signature)
+        deserialisedSignature.verifyWithECDSA(bitsToSign)
+        assertThatThrownBy { deserialisedSignature.verifyWithECDSA(wrongBits) }
+    }
 
     private data class Person(val name: String, val birthday: Instant?)
 

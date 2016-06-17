@@ -67,6 +67,9 @@ dependencies {
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:2.5.5"
 
+    // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
+    compile 'net.i2p.crypto:eddsa:0.1.0'
+
     // Quasar: for the bytecode rewriting for state machines.
     quasar "co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar"
 }

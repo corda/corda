@@ -17,6 +17,11 @@ import com.r3corda.core.crypto.sha256
 import com.r3corda.core.node.AttachmentsClassLoader
 import com.r3corda.core.node.services.AttachmentStorage
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
+import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
@@ -29,6 +34,7 @@ import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.*
 import kotlin.reflect.jvm.javaType
+import java.security.PrivateKey
 
 /**
  * Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
@@ -205,6 +211,16 @@ inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     }
 }
 
+inline fun Output.writeBytesWithLength(byteArray: ByteArray) {
+    this.writeInt(byteArray.size, true)
+    this.writeBytes(byteArray)
+}
+
+inline fun Input.readBytesWithLength(): ByteArray {
+    val size = this.readInt(true)
+    return this.readBytes(size)
+}
+
 /** Thrown during deserialisation to indicate that an attachment needed to construct the [WireTransaction] is not found */
 class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
 
@@ -250,6 +266,39 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     }
 }
 
+/** For serialising an ed25519 private key */
+@ThreadSafe
+object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
+    val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+
+    override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
+        check(obj.params == ed25519Curve)
+        output.writeBytesWithLength(obj.seed)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
+        val seed = input.readBytesWithLength()
+        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, ed25519Curve))
+    }
+}
+
+/** For serialising an ed25519 public key */
+@ThreadSafe
+object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
+    val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+
+    override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
+        check(obj.params == ed25519Curve)
+        output.writeBytesWithLength(obj.abyte)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
+        val A = input.readBytesWithLength()
+        return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+    }
+}
+
+
 fun createKryo(k: Kryo = Kryo()): Kryo {
     return k.apply {
         // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
@@ -273,8 +322,8 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // Some things where the JRE provides an efficient custom serialisation.
         val keyPair = generateKeyPair()
-        register(keyPair.public.javaClass, ReferencesAwareJavaSerializer)
-        register(keyPair.private.javaClass, ReferencesAwareJavaSerializer)
+        register(keyPair.public.javaClass, Ed25519PublicKeySerializer)
+        register(keyPair.private.javaClass, Ed25519PrivateKeySerializer)
         register(Instant::class.java, ReferencesAwareJavaSerializer)
 
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
