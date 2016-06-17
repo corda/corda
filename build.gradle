@@ -46,6 +46,9 @@ configurations {
     runtime.exclude module: 'isolated'
 }
 
+applicationDefaultJvmArgs = ["-javaagent:${configurations.quasar.singleFile}"]
+mainClassName = 'com.r3corda.demos.TraderDemoKt'
+
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
