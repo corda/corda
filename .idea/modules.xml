@@ -2,6 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc_main.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc_main.iml" group="buildSrc" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc_test.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc_test.iml" group="buildSrc" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts.iml" group="contracts" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts_main.iml" group="contracts" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts_test.iml" group="contracts" />
