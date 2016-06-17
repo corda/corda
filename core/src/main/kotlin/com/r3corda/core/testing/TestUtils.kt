@@ -286,6 +286,14 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             }
             rootTxns.add(wtx)
         }
+
+        @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
+        fun roots(body: Roots.() -> Unit) {
+        }
+
+        @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
+        fun transaction(body: WireTransactionDSL.() -> Unit) {
+        }
     }
 
     fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
@@ -305,6 +313,10 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
 
     fun labelForTransaction(tx: WireTransaction): String? = txnToLabelMap[tx.id]
     fun labelForTransaction(tx: LedgerTransaction): String? = txnToLabelMap[tx.id]
+
+    @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
+    fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {
+    }
 
     fun toTransactionGroup() = TransactionGroup(
             txns.map { it.toLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments) }.toSet(),
