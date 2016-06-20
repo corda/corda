@@ -40,7 +40,6 @@ interface ServiceHub {
      * sends them to the wallet for further processing.
      *
      * @param txs The transactions to record
-     * @see recordTransactionsInternal function to call with the writable storage service
      */
     fun recordTransactions(txs: Iterable<SignedTransaction>)
 
