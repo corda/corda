@@ -65,6 +65,7 @@ dependencies {
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.4.1'
+    testCompile 'com.pholser:junit-quickcheck-core:0.6'
 }
 
 // Package up the demo programs.
