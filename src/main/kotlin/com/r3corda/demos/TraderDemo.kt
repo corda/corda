@@ -201,7 +201,7 @@ fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
     }
 
     val future = if (node.isPreviousCheckpointsPresent) {
-        val (buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
+        val (@Suppress("UNUSED_VARIABLE") buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
         future
     } else {
         // We use a simple scenario-specific wrapper protocol to make things happen.

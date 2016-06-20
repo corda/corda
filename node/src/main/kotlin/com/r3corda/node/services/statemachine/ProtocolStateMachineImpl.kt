@@ -103,7 +103,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
     private fun suspend(with: StateMachineManager.FiberRequest) {
         parkAndSerialize { fiber, serializer ->
             try {
-                suspendAction!!(with)
+                suspendAction(with)
             } catch (t: Throwable) {
                 logger.warn("Captured exception which was swallowed by Quasar", t)
                 // TODO to throw or not to throw, that is the question
