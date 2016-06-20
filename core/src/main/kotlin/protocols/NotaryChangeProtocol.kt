@@ -59,7 +59,7 @@ object NotaryChangeProtocol {
             val me = listOf(myKey)
 
             val signatures = if (participants == me) {
-                listOf(getNotarySignature(stx.tx))
+                listOf(getNotarySignature(stx))
             } else {
                 collectSignatures(participants - me, stx)
             }
@@ -93,7 +93,7 @@ object NotaryChangeProtocol {
                 getParticipantSignature(participantNode, stx, sessionIdForSend)
             }
 
-            val allSignatures = participantSignatures + getNotarySignature(stx.tx)
+            val allSignatures = participantSignatures + getNotarySignature(stx)
             sessions.forEach { send(TOPIC_CHANGE, it.key.address, it.value, allSignatures) }
 
             return allSignatures
@@ -121,9 +121,9 @@ object NotaryChangeProtocol {
         }
 
         @Suspendable
-        private fun getNotarySignature(wtx: WireTransaction): DigitalSignature.LegallyIdentifiable {
+        private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
             progressTracker.currentStep = NOTARY
-            return subProtocol(NotaryProtocol.Client(wtx))
+            return subProtocol(NotaryProtocol.Client(stx))
         }
     }
 
