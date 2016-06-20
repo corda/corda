@@ -8,6 +8,8 @@ import com.google.common.collect.testing.testers.CollectionAddAllTester
 import com.google.common.collect.testing.testers.CollectionClearTester
 import com.google.common.collect.testing.testers.CollectionRemoveAllTester
 import com.google.common.collect.testing.testers.CollectionRetainAllTester
+import com.r3corda.core.serialization.deserialize
+import com.r3corda.core.serialization.serialize
 import junit.framework.TestSuite
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,7 +19,8 @@ import kotlin.test.assertEquals
 @RunWith(Suite::class)
 @Suite.SuiteClasses(
         NonEmptySetTest.Guava::class,
-        NonEmptySetTest.Remove::class
+        NonEmptySetTest.Remove::class,
+        NonEmptySetTest.Serializer::class
 )
 class NonEmptySetTest {
     /**
@@ -91,6 +94,20 @@ class NonEmptySetTest {
             while (iterator.hasNext()) {
                 iterator.remove()
             }
+        }
+    }
+
+    /**
+     * Test serialization/deserialization.
+     */
+    class Serializer {
+        @Test
+        fun `serialize deserialize`() {
+            val expected: NonEmptySet<Int> = nonEmptySetOf(-17, 22, 17)
+            val serialized = expected.serialize().bits
+            val actual = serialized.deserialize<NonEmptySet<Int>>()
+
+            assertEquals(expected, actual)
         }
     }
 }

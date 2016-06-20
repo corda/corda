@@ -41,13 +41,13 @@ abstract class FungibleAsset<T> : Contract {
 
     // Just for grouping
     interface Commands : CommandData {
-        interface Move : Commands
+        interface Move : MoveCommand, Commands
 
         /**
          * Allows new asset states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        interface Issue : Commands { val nonce: Long }
+        interface Issue : IssueCommand, Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
@@ -89,7 +89,7 @@ abstract class FungibleAsset<T> : Contract {
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
 
-                verifyMoveCommands<Commands.Move>(inputs, tx)
+                verifyMoveCommand<Commands.Move>(inputs, tx)
             }
         }
     }
