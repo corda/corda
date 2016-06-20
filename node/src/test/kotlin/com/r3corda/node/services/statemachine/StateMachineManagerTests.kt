@@ -17,7 +17,7 @@ import java.util.*
 class StateMachineManagerTests {
 
     val checkpointStorage = RecordingCheckpointStorage()
-    val network = InMemoryMessagingNetwork().InMemoryMessaging(true, InMemoryMessagingNetwork.Handle(1, "mock"))
+    val network = InMemoryMessagingNetwork(false).InMemoryMessaging(true, InMemoryMessagingNetwork.Handle(1, "mock"))
     val smm = createManager()
 
     @After

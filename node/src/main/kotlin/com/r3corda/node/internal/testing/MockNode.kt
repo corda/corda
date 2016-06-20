@@ -36,11 +36,12 @@ import java.util.*
  *
  *    BriefLogFormatter.initVerbose("+messaging")
  */
-class MockNetwork(private val threadPerNode: Boolean = false,
+class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
+                  private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var counter = 0
     val filesystem = Jimfs.newFileSystem(Configuration.unix())
-    val messagingNetwork = InMemoryMessagingNetwork()
+    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
 
     val identities = ArrayList<Party>()
 
@@ -133,13 +134,17 @@ class MockNetwork(private val threadPerNode: Boolean = false,
      * stability (no nodes sent any messages in the last round).
      */
     fun runNetwork(rounds: Int = -1) {
-        fun pumpAll() = messagingNetwork.endpoints.map { it.pump(false) }
+        check(!networkSendManuallyPumped)
+        fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
-        if (rounds == -1)
+        if (rounds == -1) {
             while (pumpAll().any { it != null }) {
             }
-        else
-            repeat(rounds) { pumpAll() }
+        } else {
+            repeat(rounds) {
+                pumpAll()
+            }
+        }
     }
 
     /**

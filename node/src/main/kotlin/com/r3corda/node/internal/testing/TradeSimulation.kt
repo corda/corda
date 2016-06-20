@@ -19,7 +19,7 @@ import java.time.Instant
  * Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
  * then B and C trade with each other, then C and A etc).
  */
-class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(runAsync, latencyInjector) {
+class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(false, runAsync, latencyInjector) {
     override fun startMainSimulation(): ListenableFuture<Unit> {
         startTradingCircle { i, j -> tradeBetween(i, j) }
         return Futures.immediateFailedFuture(UnsupportedOperationException("This future never completes"))
