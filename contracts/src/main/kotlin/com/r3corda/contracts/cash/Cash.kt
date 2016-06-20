@@ -172,7 +172,7 @@ class Cash : FungibleAsset<Currency>() {
         val keysUsed = gathered.map { it.state.data.owner }.toSet()
 
         val states = gathered.groupBy { it.state.data.deposit }.map {
-            val (deposit, coins) = it
+            val coins = it.value
             val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
             TransactionState(State(totalAmount, to), coins.first().state.notary)
         }

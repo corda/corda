@@ -385,7 +385,7 @@ class CashTests {
             makeCash(80.SWISS_FRANCS, MINI_CORP, 2)
     )
 
-    fun makeSpend(amount: Amount<Currency>, dest: PublicKey, corp: Party, depositRef: OpaqueBytes = defaultRef): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: PublicKey, @Suppress("UNUSED_PARAMETER") corp: Party, @Suppress("UNUSED_PARAMETER") depositRef: OpaqueBytes = defaultRef): WireTransaction {
         val tx = TransactionType.General.Builder()
         Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
@@ -516,8 +516,8 @@ class CashTests {
                 Cash.State(4000.DOLLARS `issued by` defaultIssuer, MEGA_CORP_PUBKEY)
         )
         // Test that summing everything produces the total number of dollars
-        var expected = 7000.DOLLARS `issued by` defaultIssuer
-        var actual = states.sumCash()
+        val expected = 7000.DOLLARS `issued by` defaultIssuer
+        val actual = states.sumCash()
         assertEquals(expected, actual)
     }
 

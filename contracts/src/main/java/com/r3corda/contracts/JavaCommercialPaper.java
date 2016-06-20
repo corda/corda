@@ -229,7 +229,7 @@ public class JavaCommercialPaper implements Contract {
         return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
-    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
+    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary);
         return new TransactionType.General.Builder().withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
