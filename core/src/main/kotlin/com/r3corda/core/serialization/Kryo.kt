@@ -212,12 +212,12 @@ inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     }
 }
 
-inline fun Output.writeBytesWithLength(byteArray: ByteArray) {
+fun Output.writeBytesWithLength(byteArray: ByteArray) {
     this.writeInt(byteArray.size, true)
     this.writeBytes(byteArray)
 }
 
-inline fun Input.readBytesWithLength(): ByteArray {
+fun Input.readBytesWithLength(): ByteArray {
     val size = this.readInt(true)
     return this.readBytes(size)
 }

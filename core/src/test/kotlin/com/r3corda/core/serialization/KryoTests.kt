@@ -3,7 +3,6 @@ package com.r3corda.core.serialization
 import com.google.common.primitives.Ints
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.crypto.verifyWithECDSA
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
