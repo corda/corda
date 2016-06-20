@@ -1,3 +1,8 @@
 <div class="ui container">
-
+    <div class="ui active dimmer" ng-show="isLoading()">
+        <div class="ui text loader">Loading</div>
+    </div>
+    <form ng-submit="createDeal()">
+        <input type="submit" class="ui submit button" />
+    </form>
 </div>

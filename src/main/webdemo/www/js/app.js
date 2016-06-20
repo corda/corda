@@ -15,6 +15,7 @@ let irsViewer = angular.module('irsViewer', ['ngRoute'])
                 templateUrl: 'view/party.html'
             })
             .when('/create-deal', {
+                controller: 'CreateDealController',
                 templateUrl: 'view/create-deal.html'
             })
             .otherwise({redirectTo: '/'});
@@ -101,6 +102,124 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
                 return (last || curLoading[key]);
             }, false);
         }
+
+        this.createDeal = () => {
+            let dealJson = `{
+                "fixedLeg": {
+                  "fixedRatePayer": "Bank A",
+                  "notional": {
+                    "quantity": 2500000000,
+                    "token": "EUR"
+                  },
+                  "paymentFrequency": "SemiAnnual",
+                  "effectiveDate": "2016-03-11",
+                  "effectiveDateAdjustment": null,
+                  "terminationDate": "2026-03-11",
+                  "terminationDateAdjustment": null,
+                  "fixedRate": {
+                    "ratioUnit": {
+                      "value": "0.01676"
+                    }
+                  },
+                  "dayCountBasisDay": "D30",
+                  "dayCountBasisYear": "Y360",
+                  "rollConvention": "ModifiedFollowing",
+                  "dayInMonth": 10,
+                  "paymentRule": "InArrears",
+                  "paymentDelay": 0,
+                  "paymentCalendar": "London",
+                  "interestPeriodAdjustment": "Adjusted"
+                },
+                "floatingLeg": {
+                  "floatingRatePayer": "Bank B",
+                  "notional": {
+                    "quantity": 2500000000,
+                    "token": "EUR"
+                  },
+                  "paymentFrequency": "Quarterly",
+                  "effectiveDate": "2016-03-11",
+                  "effectiveDateAdjustment": null,
+                  "terminationDate": "2026-03-11",
+                  "terminationDateAdjustment": null,
+                  "dayCountBasisDay": "D30",
+                  "dayCountBasisYear": "Y360",
+                  "rollConvention": "ModifiedFollowing",
+                  "fixingRollConvention": "ModifiedFollowing",
+                  "dayInMonth": 10,
+                  "resetDayInMonth": 10,
+                  "paymentRule": "InArrears",
+                  "paymentDelay": 0,
+                  "paymentCalendar": [ "London" ],
+                  "interestPeriodAdjustment": "Adjusted",
+                  "fixingPeriod": "TWODAYS",
+                  "resetRule": "InAdvance",
+                  "fixingsPerPayment": "Quarterly",
+                  "fixingCalendar": [ "NewYork" ],
+                  "index": "ICE LIBOR",
+                  "indexSource": "Rates Service Provider",
+                  "indexTenor": {
+                    "name": "3M"
+                  }
+                },
+                "calculation": {
+                  "expression": "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
+                  "floatingLegPaymentSchedule": {
+                  },
+                  "fixedLegPaymentSchedule": {
+                  }
+                },
+                "common": {
+                  "baseCurrency": "EUR",
+                  "eligibleCurrency": "EUR",
+                  "eligibleCreditSupport": "Cash in an Eligible Currency",
+                  "independentAmounts": {
+                    "quantity": 0,
+                    "token": "EUR"
+                  },
+                  "threshold": {
+                    "quantity": 0,
+                    "token": "EUR"
+                  },
+                  "minimumTransferAmount": {
+                    "quantity": 25000000,
+                    "token": "EUR"
+                  },
+                  "rounding": {
+                    "quantity": 1000000,
+                    "token": "EUR"
+                  },
+                  "valuationDate": "Every Local Business Day",
+                  "notificationTime": "2:00pm London",
+                  "resolutionTime": "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
+                  "interestRate": {
+                    "oracle": "Rates Service Provider",
+                    "tenor": {
+                      "name": "6M"
+                    },
+                    "ratioUnit": null,
+                    "name": "EONIA"
+                  },
+                  "addressForTransfers": "",
+                  "exposure": {},
+                  "localBusinessDay": [ "London" , "NewYork" ],
+                  "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
+                  "tradeID": "tradeXXX",
+                  "hashLegalDocs": "put hash here"
+                },
+                "notary": "Bank A"
+              }`;
+
+            return load('create-deal', $http.post('http://localhost:31338/api/irs/deals',
+                data: {
+                    trade: dealJson
+                }
+            })).then((resp) => {
+                console.log("RESPONSE: " + resp);
+            }, (resp) => {
+                console.log("FAILURE: " + resp);
+                throw resp;
+            })
+        }
     });
 });
 
@@ -130,4 +249,11 @@ irsViewer.controller('DealController', function DealController($http, $scope, no
     $scope.isLoading = nodeService.isLoading;
 
     nodeService.getDeal('T000000001').then((deal) => $scope.deal = deal);
+});
+
+irsViewer.controller('CreateDealController', function CreateDealController($http, $scope, $location, nodeService) {
+    $scope.isLoading = nodeService.isLoading;
+    $scope.createDeal = () => {
+        nodeService.createDeal().then((tradeId) => $location.path('#/deal/' + tradeId));
+    };
 });
