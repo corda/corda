@@ -3,6 +3,7 @@ package com.r3corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.ThreadBox
+import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
@@ -115,7 +116,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort,
         val config = createArtemisConfig(directory, myHostPort)
         mq.setConfiguration(config)
         val secConfig = SecurityConfiguration()
-        val password = BigInteger(128, SecureRandom.getInstanceStrong()).toString(16)
+        val password = BigInteger(128, newSecureRandom()).toString(16)
         secConfig.addUser("internal", password)
         secConfig.addRole("internal", "internal")
         secConfig.defaultUser = "internal"
