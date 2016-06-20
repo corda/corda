@@ -10,6 +10,10 @@ apply plugin: QuasarPlugin
 allprojects {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
 }
 
 buildscript {
