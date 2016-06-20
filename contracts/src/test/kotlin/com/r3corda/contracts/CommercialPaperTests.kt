@@ -8,7 +8,6 @@ import com.r3corda.core.days
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
-
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -140,7 +139,7 @@ class CommercialPaperTestsGeneric {
     }
 
     fun <T : ContractState> cashOutputsToWallet(vararg outputs: TransactionState<T>): Pair<LedgerTransaction, List<StateAndRef<T>>> {
-        val ltx = LedgerTransaction(emptyList(), emptyList(), listOf(*outputs), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.General())
+        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.General())
         return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 

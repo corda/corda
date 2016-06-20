@@ -206,7 +206,7 @@ public class JavaCommercialPaper implements Contract {
                         throw new IllegalArgumentException("Failed Requirement: must be timestamped");
                     Instant time = timestampCommand.getBefore();
 
-                    Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutStates(), input.getOwner());
+                    Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
                     if (!received.equals(input.getFaceValue()))
                         throw new IllegalStateException("Failed Requirement: received amount equals the face value: "

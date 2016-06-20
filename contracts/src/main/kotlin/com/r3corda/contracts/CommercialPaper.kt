@@ -100,7 +100,7 @@ class CommercialPaper : Contract {
             // Redemption of the paper requires movement of on-ledger cash.
                 is Commands.Redeem -> {
                     val input = inputs.single()
-                    val received = tx.outStates.sumCashBy(input.owner)
+                    val received = tx.outputs.sumCashBy(input.owner)
                     val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                     requireThat {
                         "the paper must have matured" by (time >= input.maturityDate)

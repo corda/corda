@@ -52,8 +52,8 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
 }
 
 /** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
-data class TransactionForVerification(val inStates: List<TransactionState<ContractState>>,
-                                      val outStates: List<TransactionState<ContractState>>,
+data class TransactionForVerification(val inputs: List<TransactionState<ContractState>>,
+                                      val outputs: List<TransactionState<ContractState>>,
                                       val attachments: List<Attachment>,
                                       val commands: List<AuthenticatedObject<CommandData>>,
                                       val origHash: SecureHash,
@@ -73,20 +73,25 @@ data class TransactionForVerification(val inStates: List<TransactionState<Contra
     @Throws(TransactionVerificationException::class)
     fun verify() = type.verify(this)
 
-    fun toTransactionForContract() = TransactionForContract(inStates.map { it.data }, outStates.map { it.data }, attachments, commands, origHash)
+    fun toTransactionForContract() = TransactionForContract(inputs.map { it.data }, outputs.map { it.data }, attachments, commands, origHash)
 }
 
 /**
  * A transaction to be passed as input to a contract verification function. Defines helper methods to
  * simplify verification logic in contracts.
  */
-data class TransactionForContract(val inStates: List<ContractState>,
-                                  val outStates: List<ContractState>,
+data class TransactionForContract(val inputs: List<ContractState>,
+                                  val outputs: List<ContractState>,
                                   val attachments: List<Attachment>,
                                   val commands: List<AuthenticatedObject<CommandData>>,
                                   val origHash: SecureHash) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
+
+    @Deprecated("This property was renamed to inputs", ReplaceWith("inputs"))
+    val inStates: List<ContractState> get() = inputs
+    @Deprecated("This property was renamed to outputs", ReplaceWith("outputs"))
+    val outStates: List<ContractState> get() = outputs
 
     /**
      * Given a type and a function that returns a grouping key, associates inputs and outputs together so that they
@@ -103,8 +108,8 @@ data class TransactionForContract(val inStates: List<ContractState>,
      * currency field: the resulting list can then be iterated over to perform the per-currency calculation.
      */
     fun <T : ContractState, K : Any> groupStates(ofType: Class<T>, selector: (T) -> K): List<InOutGroup<T, K>> {
-        val inputs = inStates.filterIsInstance(ofType)
-        val outputs = outStates.filterIsInstance(ofType)
+        val inputs = inputs.filterIsInstance(ofType)
+        val outputs = outputs.filterIsInstance(ofType)
 
         val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
         val outGroups: Map<K, List<T>> = outputs.groupBy(selector)
@@ -115,8 +120,8 @@ data class TransactionForContract(val inStates: List<ContractState>,
 
     /** See the documentation for the reflection-based version of [groupStates] */
     inline fun <reified T : ContractState, K : Any> groupStates(selector: (T) -> K): List<InOutGroup<T, K>> {
-        val inputs = inStates.filterIsInstance<T>()
-        val outputs = outStates.filterIsInstance<T>()
+        val inputs = inputs.filterIsInstance<T>()
+        val outputs = outputs.filterIsInstance<T>()
 
         val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
         val outGroups: Map<K, List<T>> = outputs.groupBy(selector)

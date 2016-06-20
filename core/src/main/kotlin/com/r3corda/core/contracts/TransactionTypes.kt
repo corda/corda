@@ -28,7 +28,7 @@ sealed class TransactionType {
     fun verifySigners(tx: TransactionForVerification): Set<PublicKey> {
         val timestamp = tx.commands.noneOrSingle { it.value is TimestampCommand }
         val timestampKey = timestamp?.signers.orEmpty()
-        val notaryKey = (tx.inStates.map { it.notary.owningKey } + timestampKey).toSet()
+        val notaryKey = (tx.inputs.map { it.notary.owningKey } + timestampKey).toSet()
         if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey
@@ -59,7 +59,7 @@ sealed class TransactionType {
             // TODO: Check that notary is unchanged
             val ctx = tx.toTransactionForContract()
 
-            val contracts = (ctx.inStates.map { it.contract } + ctx.outStates.map { it.contract }).toSet()
+            val contracts = (ctx.inputs.map { it.contract } + ctx.outputs.map { it.contract }).toSet()
             for (contract in contracts) {
                 try {
                     contract.verify(ctx)
@@ -97,7 +97,7 @@ sealed class TransactionType {
          */
         override fun verifyTransaction(tx: TransactionForVerification) {
             try {
-                tx.inStates.zip(tx.outStates).forEach {
+                tx.inputs.zip(tx.outputs).forEach {
                     check(it.first.data == it.second.data)
                     check(it.first.notary != it.second.notary)
                 }
@@ -108,7 +108,7 @@ sealed class TransactionType {
         }
 
         override fun getRequiredSigners(tx: TransactionForVerification): Set<PublicKey> {
-            val participantKeys = tx.inStates.flatMap { it.data.participants }.toSet()
+            val participantKeys = tx.inputs.flatMap { it.data.participants }.toSet()
             return participantKeys
         }
     }
