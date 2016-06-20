@@ -1,6 +1,5 @@
 package com.r3corda.contracts.cash
 
-import com.r3corda.core.contracts.DummyContract
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.contracts.testing.`with deposit`
@@ -385,7 +384,7 @@ class CashTests {
             makeCash(80.SWISS_FRANCS, MINI_CORP, 2)
     )
 
-    fun makeSpend(amount: Amount<Currency>, dest: PublicKey, @Suppress("UNUSED_PARAMETER") corp: Party, @Suppress("UNUSED_PARAMETER") depositRef: OpaqueBytes = defaultRef): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
         val tx = TransactionType.General.Builder()
         Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
@@ -393,7 +392,7 @@ class CashTests {
 
     @Test
     fun generateSimpleDirectSpend() {
-        val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1, MEGA_CORP)
+        val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0].data)
         assertEquals(OUR_PUBKEY_1, wtx.commands.single { it.value is Cash.Commands.Move }.signers[0])
@@ -408,7 +407,7 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithChange() {
-        val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1, MEGA_CORP)
+        val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
         assertEquals(WALLET[0].state.data.copy(amount = 90.DOLLARS `issued by` defaultIssuer), wtx.outputs[1].data)
@@ -417,7 +416,7 @@ class CashTests {
 
     @Test
     fun generateSpendWithTwoInputs() {
-        val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1, MEGA_CORP)
+        val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[1].ref, wtx.inputs[1])
         assertEquals(WALLET[0].state.data.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS `issued by` defaultIssuer), wtx.outputs[0].data)
@@ -426,7 +425,7 @@ class CashTests {
 
     @Test
     fun generateSpendMixedDeposits() {
-        val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1, MEGA_CORP)
+        val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(3, wtx.inputs.size)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(WALLET[1].ref, wtx.inputs[1])
@@ -439,12 +438,12 @@ class CashTests {
     @Test
     fun generateSpendInsufficientBalance() {
         val e: InsufficientBalanceException = assertFailsWith("balance") {
-            makeSpend(1000.DOLLARS, THEIR_PUBKEY_1, MEGA_CORP)
+            makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)
         }
         assertEquals((1000 - 580).DOLLARS, e.amountMissing)
 
         assertFailsWith(InsufficientBalanceException::class) {
-            makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1, MEGA_CORP)
+            makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1)
         }
     }
 
