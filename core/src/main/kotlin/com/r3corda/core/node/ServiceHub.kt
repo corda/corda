@@ -39,14 +39,18 @@ interface ServiceHub {
      * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
      * sends them to the wallet for further processing.
      *
-     * TODO: Need to come up with a way for preventing transactions being written other than by this method.
+     * @param txs The transactions to record
+     * @see recordTransactionsInternal function to call with the writable storage service
+     */
+    fun recordTransactions(txs: Iterable<SignedTransaction>)
+
+    /**
+     * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
+     * sends them to the wallet for further processing.
      *
      * @param txs The transactions to record
      */
-    fun recordTransactions(txs: List<SignedTransaction>) {
-        txs.forEach { storageService.validatedTransactions.addTransaction(it) }
-        walletService.notifyAll(txs.map { it.tx })
-    }
+    fun recordTransactions(vararg txs: SignedTransaction) = recordTransactions(txs.toList())
 
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState]

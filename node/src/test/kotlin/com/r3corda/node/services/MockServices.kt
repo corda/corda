@@ -1,6 +1,7 @@
 package com.r3corda.node.services
 
 import com.codahale.metrics.MetricRegistry
+import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.testing.MockStorageService
@@ -19,11 +20,11 @@ open class MockServices(
         val keyManagement: KeyManagementService? = null,
         val net: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
-        val storage: StorageService? = MockStorageService(),
+        val storage: TxWritableStorageService? = MockStorageService(),
         val mapCache: NetworkMapCache? = MockNetworkMapCache(),
         val mapService: NetworkMapService? = null,
         val overrideClock: Clock? = NodeClock()
-) : ServiceHubInternal {
+) : ServiceHubInternal() {
     override val walletService: WalletService = customWallet ?: NodeWalletService(this)
 
     override val keyManagementService: KeyManagementService
@@ -40,6 +41,12 @@ open class MockServices(
         get() = overrideClock ?: throw UnsupportedOperationException()
 
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
+    // We isolate the storage service with writable TXes so that it can't be accessed except via recordTransactions()
+    private val txStorageService: TxWritableStorageService
+        get() = storage ?: throw UnsupportedOperationException()
+
+    override fun recordTransactions(txs: Iterable<SignedTransaction>) =
+            recordTransactionsInternal(txStorageService, txs)
 
     init {
         if (net != null && storage != null) {

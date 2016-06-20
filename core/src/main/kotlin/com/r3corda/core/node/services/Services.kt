@@ -159,7 +159,7 @@ interface StorageService {
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
      * the transaction data to other nodes that need it.
      */
-    val validatedTransactions: TransactionStorage
+    val validatedTransactions: ReadOnlyTransactionStorage
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
@@ -170,6 +170,18 @@ interface StorageService {
      */
     val myLegalIdentity: Party
     val myLegalIdentityKey: KeyPair
+}
+
+/**
+ * Storage service, with extensions to allow validated transactions to be added to. For use only within [ServiceHub].
+ */
+interface TxWritableStorageService : StorageService {
+    /**
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
+     */
+    override val validatedTransactions: TransactionStorage
 }
 
 

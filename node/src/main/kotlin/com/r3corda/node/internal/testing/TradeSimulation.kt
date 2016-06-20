@@ -38,7 +38,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
             tx.signWith(seller.storage.myLegalIdentityKey)
             tx.toSignedTransaction(true)
         }
-        seller.services.storageService.validatedTransactions.addTransaction(issuance)
+        seller.services.recordTransactions(issuance)
 
         val cashIssuerKey = generateKeyPair()
         val amount = 1000.DOLLARS `issued by` Party("Big friendly bank", cashIssuerKey.public).ref(1)

@@ -5,8 +5,7 @@ import com.r3corda.core.crypto.SecureHash
 import java.io.InputStream
 
 /**
- * An attachment store records potentially large binary objects, identified by their hash. Note that attachments are
- * immutable and can never be erased once inserted!
+ * An attachment store records potentially large binary objects, identified by their hash.
  */
 interface AttachmentStorage {
     /**
