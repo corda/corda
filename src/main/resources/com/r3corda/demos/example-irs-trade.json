@@ -100,5 +100,5 @@
     "tradeID": "tradeXXX",
     "hashLegalDocs": "put hash here"
   },
-  "notary": "Bank A"
+  "participants": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"] // 43 'A's, size of a Base58 encoded ed25519 pubkey
 }
