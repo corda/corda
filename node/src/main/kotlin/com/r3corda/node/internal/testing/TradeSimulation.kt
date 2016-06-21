@@ -3,7 +3,7 @@ package com.r3corda.node.internal.testing
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
-import com.r3corda.contracts.testing.WalletFiller
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.`issued by`
@@ -30,7 +30,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val buyer = banks[buyerBankIndex]
         val seller = banks[sellerBankIndex]
 
-        WalletFiller.fillWithSomeTestCash(buyer.services, notary.info.identity, 1500.DOLLARS)
+        buyer.services.fillWithSomeTestCash(1500.DOLLARS, notary.info.identity)
 
         val issuance = run {
             val tx = CommercialPaper().generateIssue(1100.DOLLARS `issued by` seller.info.identity.ref(1, 2, 3), Instant.now() + 10.days, notary.info.identity)

@@ -67,7 +67,6 @@ abstract class Wallet {
     companion object {
         val NoUpdate = Update(emptySet(), emptySet())
     }
-
 }
 
 /**

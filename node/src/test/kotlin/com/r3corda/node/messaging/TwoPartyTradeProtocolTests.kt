@@ -4,9 +4,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.testing.CASH
-import com.r3corda.contracts.testing.WalletFiller
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -93,7 +93,7 @@ class TwoPartyTradeProtocolTests {
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
             val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
 
-            WalletFiller.fillWithSomeTestCash(bobNode.services, DUMMY_NOTARY, 2000.DOLLARS)
+            bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val issuer = bobNode.services.storageService.myLegalIdentity.ref(0)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` issuer, notaryNode.info.identity, null).second
@@ -147,7 +147,7 @@ class TwoPartyTradeProtocolTests {
 
             net.runNetwork() // Clear network map registration messages
 
-            WalletFiller.fillWithSomeTestCash(bobNode.services, DUMMY_NOTARY, 2000.DOLLARS)
+            bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` issuer, notaryNode.info.identity, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)

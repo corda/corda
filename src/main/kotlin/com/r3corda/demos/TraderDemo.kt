@@ -3,7 +3,7 @@ package com.r3corda.demos
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.r3corda.contracts.CommercialPaper
-import com.r3corda.contracts.testing.WalletFiller
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -226,7 +226,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
         // Self issue some cash.
         //
         // TODO: At some point this demo should be extended to have a central bank node.
-        WalletFiller.fillWithSomeTestCash(serviceHub, notary, 3000.DOLLARS)
+        serviceHub.fillWithSomeTestCash(3000.DOLLARS, notary)
 
         while (true) {
             // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band

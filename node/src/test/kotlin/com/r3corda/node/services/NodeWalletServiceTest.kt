@@ -1,7 +1,7 @@
 package com.r3corda.node.services
 
 import com.r3corda.contracts.cash.Cash
-import com.r3corda.contracts.testing.WalletFiller
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.testing.MockKeyManagementService
@@ -42,7 +42,7 @@ class NodeWalletServiceTest {
 
         kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
-        WalletFiller.fillWithSomeTestCash(services, DUMMY_NOTARY, 100.DOLLARS, 3, 3, Random(0L), ref)
+        services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ref)
 
         val w = wallet.currentWallet
         assertEquals(3, w.states.size)
