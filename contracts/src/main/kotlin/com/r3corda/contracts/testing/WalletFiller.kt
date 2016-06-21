@@ -1,4 +1,4 @@
-package com.r3corda.node.internal.testing
+package com.r3corda.contracts.testing
 
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.Amount
@@ -10,7 +10,6 @@ import com.r3corda.core.serialization.OpaqueBytes
 import java.util.*
 
 object WalletFiller {
-
     /**
      * Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
      * to the wallet.

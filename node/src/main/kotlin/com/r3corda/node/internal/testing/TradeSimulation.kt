@@ -3,6 +3,7 @@ package com.r3corda.node.internal.testing
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.testing.WalletFiller
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.`issued by`

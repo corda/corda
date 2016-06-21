@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.testing.CASH
+import com.r3corda.contracts.testing.WalletFiller
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
 import com.r3corda.core.contracts.*
@@ -21,7 +22,6 @@ import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
-import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.NodeAttachmentService

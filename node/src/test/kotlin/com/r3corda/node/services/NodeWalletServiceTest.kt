@@ -1,18 +1,14 @@
 package com.r3corda.node.services
 
 import com.r3corda.contracts.cash.Cash
-import com.r3corda.core.contracts.`issued by`
-import com.r3corda.core.contracts.DOLLARS
-import com.r3corda.core.contracts.TransactionType
-import com.r3corda.core.contracts.USD
-import com.r3corda.core.contracts.verifyToLedgerTransaction
+import com.r3corda.contracts.testing.WalletFiller
+import com.r3corda.core.contracts.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.testing.MockKeyManagementService
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
-import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.wallet.NodeWalletService
 import org.junit.After
 import org.junit.Before

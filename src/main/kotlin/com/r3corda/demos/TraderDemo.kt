@@ -3,6 +3,7 @@ package com.r3corda.demos
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.testing.WalletFiller
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -20,7 +21,6 @@ import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
-import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
