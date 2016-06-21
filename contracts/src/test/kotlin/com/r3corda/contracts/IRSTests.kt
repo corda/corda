@@ -198,17 +198,6 @@ class IRSTests {
 
     val attachments = MockStorageService().attachments
 
-    val exampleIRS = createDummyIRS(1)
-
-    val inState = InterestRateSwap.State(
-            exampleIRS.fixedLeg,
-            exampleIRS.floatingLeg,
-            exampleIRS.calculation,
-            exampleIRS.common
-    )
-
-    val outState = inState.copy()
-
     @Test
     fun ok() {
         trade().verify()
@@ -310,7 +299,7 @@ class IRSTests {
         while (true) {
             val nextFixingDate = currentIRS.calculation.nextFixingDate() ?: break
             println("\n\n\n ***** Applying a fixing to $nextFixingDate \n\n\n")
-            var fixTX: LedgerTransaction = run {
+            val fixTX: LedgerTransaction = run {
                 val tx = TransactionType.General.Builder()
                 val fixing = Pair(nextFixingDate, FixedRate("0.052".percent))
                 InterestRateSwap().generateFix(tx, previousTXN.outRef(0), fixing)
@@ -359,7 +348,7 @@ class IRSTests {
 
         for (i in stuffToPrint) {
             println(i)
-            var z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 15), Expression(i))
+            val z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 15), Expression(i))
             println(z.javaClass)
             println(z)
             println("-----------")
@@ -619,7 +608,7 @@ class IRSTests {
 
                 val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
                 val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
-                var modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
+                val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
 
                 output() {
                     newIRS.copy(
@@ -640,7 +629,7 @@ class IRSTests {
                 arg(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
 
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
-                var modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
+                val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
 
                 output() {
                     newIRS.copy(
