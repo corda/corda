@@ -1,5 +1,6 @@
 package com.r3corda.node.services.transactions
 
+import com.r3corda.core.messaging.Ack
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceType
@@ -35,12 +36,13 @@ abstract class NotaryService(val smm: StateMachineManager,
         )
     }
 
-    private fun processRequest(req: NotaryProtocol.Handshake) {
+    private fun processRequest(req: NotaryProtocol.Handshake): Ack {
         val protocol = protocolFactory.create(req.replyTo as SingleMessageRecipient,
                 req.sessionID!!,
                 req.sendSessionID,
                 timestampChecker,
                 uniquenessProvider)
         smm.add(NotaryProtocol.TOPIC, protocol)
+        return Ack
     }
 }

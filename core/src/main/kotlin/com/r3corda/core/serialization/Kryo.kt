@@ -37,7 +37,6 @@ import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.*
 import kotlin.reflect.jvm.javaType
-import java.security.PrivateKey
 
 /**
  * Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
@@ -305,6 +304,19 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
+/** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */
+interface DeserializeAsKotlinObjectDef
+
+/** Serializer to deserialize kotlin object definitions marked with [DeserializeAsKotlinObjectDef]. */
+object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<DeserializeAsKotlinObjectDef>): DeserializeAsKotlinObjectDef {
+        // read the public static INSTANCE field that kotlin compiler generates.
+        return type.getField("INSTANCE").get(null) as DeserializeAsKotlinObjectDef
+    }
+
+    override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {
+    }
+}
 
 fun createKryo(k: Kryo = Kryo()): Kryo {
     return k.apply {
@@ -354,6 +366,9 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // This ensures a NonEmptySetSerializer is constructed with an initial value.
         register(NonEmptySet::class.java, NonEmptySetSerializer)
+
+        /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
+        addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
         
         noReferencesWithin<WireTransaction>()
     }

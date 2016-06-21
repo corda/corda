@@ -5,6 +5,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.messaging.Ack
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
@@ -104,7 +105,7 @@ object NotaryChangeProtocol {
             val proposal = Proposal(originalState.ref, newNotary, stx)
 
             val handshake = Handshake(sessionIdForSend, serviceHub.networkService.myAddress, sessionIdForReceive)
-            sendAndReceive<Unit>(TOPIC_INITIATE, node.address, 0, sessionIdForReceive, handshake)
+            sendAndReceive<Ack>(TOPIC_INITIATE, node.address, 0, sessionIdForReceive, handshake)
 
             val response = sendAndReceive<Result>(TOPIC_CHANGE, node.address, sessionIdForSend, sessionIdForReceive, proposal)
             val participantSignature = response.validate {
