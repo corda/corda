@@ -372,7 +372,7 @@ class InterestRateSwap() : Contract {
             var rollConvention: DateRollConvention,
             var fixingRollConvention: DateRollConvention,
             var resetDayInMonth: Int,
-            var fixingPeriod: DateOffset,
+            var fixingPeriodOffset: Int,
             var resetRule: PaymentRule,
             var fixingsPerPayment: Frequency,
             var fixingCalendar: BusinessCalendar,
@@ -383,7 +383,7 @@ class InterestRateSwap() : Contract {
             dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment) {
         override fun toString(): String = "FloatingLeg(Payer=$floatingRatePayer," + super.toString() +
                 "rollConvention=$rollConvention,FixingRollConvention=$fixingRollConvention,ResetDayInMonth=$resetDayInMonth" +
-                "FixingPeriond=$fixingPeriod,ResetRule=$resetRule,FixingsPerPayment=$fixingsPerPayment,FixingCalendar=$fixingCalendar," +
+                "FixingPeriondOffset=$fixingPeriodOffset,ResetRule=$resetRule,FixingsPerPayment=$fixingsPerPayment,FixingCalendar=$fixingCalendar," +
                 "Index=$index,IndexSource=$indexSource,IndexTenor=$indexTenor"
 
         override fun equals(other: Any?): Boolean {
@@ -397,7 +397,7 @@ class InterestRateSwap() : Contract {
             if (rollConvention != other.rollConvention) return false
             if (fixingRollConvention != other.fixingRollConvention) return false
             if (resetDayInMonth != other.resetDayInMonth) return false
-            if (fixingPeriod != other.fixingPeriod) return false
+            if (fixingPeriodOffset != other.fixingPeriodOffset) return false
             if (resetRule != other.resetRule) return false
             if (fixingsPerPayment != other.fixingsPerPayment) return false
             if (fixingCalendar != other.fixingCalendar) return false
@@ -409,7 +409,7 @@ class InterestRateSwap() : Contract {
         }
 
         override fun hashCode() = super.hashCode() + 31 * Objects.hash(floatingRatePayer, rollConvention,
-                fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment, fixingCalendar,
+                fixingRollConvention, resetDayInMonth, fixingPeriodOffset, resetRule, fixingsPerPayment, fixingCalendar,
                 index, indexSource, indexTenor)
 
 
@@ -430,7 +430,7 @@ class InterestRateSwap() : Contract {
                  rollConvention: DateRollConvention = this.rollConvention,
                  fixingRollConvention: DateRollConvention = this.fixingRollConvention,
                  resetDayInMonth: Int = this.resetDayInMonth,
-                 fixingPeriod: DateOffset = this.fixingPeriod,
+                 fixingPeriod: Int = this.fixingPeriodOffset,
                  resetRule: PaymentRule = this.resetRule,
                  fixingsPerPayment: Frequency = this.fixingsPerPayment,
                  fixingCalendar: BusinessCalendar = this.fixingCalendar,
@@ -515,7 +515,7 @@ class InterestRateSwap() : Contract {
                         "The termination dates are aligned" by (irs.floatingLeg.terminationDate == irs.fixedLeg.terminationDate)
                         "The rates are valid" by checkRates(arrayOf(irs.fixedLeg, irs.floatingLeg))
                         "The schedules are valid" by checkSchedules(arrayOf(irs.fixedLeg, irs.floatingLeg))
-
+                        "The fixing period date offset cannot be negative" by (irs.floatingLeg.fixingPeriodOffset >= 0)
 
                         // TODO: further tests
                     }
@@ -705,7 +705,7 @@ class InterestRateSwap() : Contract {
                     periodEndDate,
                     floatingLeg.dayCountBasisDay,
                     floatingLeg.dayCountBasisYear,
-                    calcFixingDate(periodStartDate, floatingLeg.fixingPeriod, floatingLeg.fixingCalendar),
+                    calcFixingDate(periodStartDate, floatingLeg.fixingPeriodOffset, floatingLeg.fixingCalendar),
                     floatingLeg.notional,
                     ReferenceRate(floatingLeg.indexSource, floatingLeg.indexTenor, floatingLeg.index)
             )
@@ -721,11 +721,10 @@ class InterestRateSwap() : Contract {
         return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 
-    private fun calcFixingDate(date: LocalDate, fixingPeriod: DateOffset, calendar: BusinessCalendar): LocalDate {
-        return when (fixingPeriod) {
-            DateOffset.ZERO -> date
-            DateOffset.TWODAYS -> calendar.moveBusinessDays(date, DateRollDirection.BACKWARD, 2)
-            else -> TODO("Improved fixing date calculation logic")
+    private fun calcFixingDate(date: LocalDate, fixingPeriodOffset: Int, calendar: BusinessCalendar): LocalDate {
+        return when (fixingPeriodOffset) {
+            0 -> date
+            else -> calendar.moveBusinessDays(date, DateRollDirection.BACKWARD, fixingPeriodOffset)
         }
     }
 
