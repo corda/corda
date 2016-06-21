@@ -72,8 +72,6 @@ fun main(args: Array<String>) {
 
 fun runTraderDemo(args: Array<String>): Int {
     val cashIssuerKey = generateKeyPair()
-    val cashIssuer = Party("Trusted cash issuer", cashIssuerKey.public)
-    val amount = 1000.DOLLARS `issued by` cashIssuer.ref(1)
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
@@ -142,9 +140,15 @@ fun runTraderDemo(args: Array<String>): Int {
         cashIssuer = party
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
+
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
         Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+    }
+
+    // TODO: Replace with a separate trusted cash issuer
+    if (cashIssuer == null) {
+        cashIssuer = node.services.storageService.myLegalIdentity
     }
 
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
@@ -367,7 +371,7 @@ private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionBuilder()
+            val builder = TransactionType.General.Builder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
             val notarySignature = subProtocol(NotaryProtocol.Client(builder.toSignedTransaction(false)))
