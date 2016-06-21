@@ -1807,18 +1807,12 @@ $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@mkdir -p $(dir $(@))
 	$(generator) -cp $(boot-classpath) -i $(<) -o $(@) -t $(call gen-arg,$(@))
 
-$(classpath-build)/%.class: $(classpath-src)/%.java
-	@echo $(<)
-
 $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
-	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
-		$(classpath-classes) arch=$(build-arch) platform=$(bootimage-platform))"; \
-	if [ -n "$${classes}" ]; then \
-		$(javac) -source 1.$(java-version) -target 1.$(java-version) \
-			-d $(classpath-build) -bootclasspath $(boot-classpath) \
-		$${classes}; fi
+	$(javac) -source 1.$(java-version) -target 1.$(java-version) \
+		-d $(classpath-build) -bootclasspath $(boot-classpath) \
+		$(classpath-sources)
 	@touch $(@)
 
 $(build)/android-src/%.cpp: $(luni-native)/%.cpp
