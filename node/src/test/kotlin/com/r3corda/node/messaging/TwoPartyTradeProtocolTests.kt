@@ -28,7 +28,6 @@ import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.wallet.WalletImpl
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -458,7 +457,7 @@ class TwoPartyTradeProtocolTests {
             arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
         }
 
-        val wallet = WalletImpl(listOf<StateAndRef<Cash.State>>(lookup("bob cash 1"), lookup("bob cash 2")))
+        val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("bob cash 1"), lookup("bob cash 2")))
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
@@ -478,7 +477,7 @@ class TwoPartyTradeProtocolTests {
                 attachment(attachmentID)
         }
 
-        val wallet = WalletImpl(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))
+        val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))
         return Pair(wallet, listOf(ap))
     }
 

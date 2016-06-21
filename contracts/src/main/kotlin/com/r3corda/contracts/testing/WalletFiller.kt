@@ -2,7 +2,10 @@
 package com.r3corda.contracts.testing
 
 import com.r3corda.contracts.cash.Cash
-import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.Amount
+import com.r3corda.core.contracts.Issued
+import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
@@ -56,10 +59,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
         stx.tx.outputs.indices.map { i -> stx.tx.outRef<Cash.State>(i) }
     }
 
-    return object : Wallet() {
-        override val states: List<StateAndRef<ContractState>> = states
-        override val cashBalances: Map<Currency, Amount<Currency>> = mapOf(howMuch.token to howMuch)
-    }
+    return Wallet(states)
 }
 
 private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {

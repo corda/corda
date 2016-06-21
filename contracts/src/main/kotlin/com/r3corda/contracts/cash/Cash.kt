@@ -5,9 +5,9 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,3 +224,15 @@ fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map
 
 /** Sums the cash states in the list, returning zero of the given currency if there are none. */
 fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero<Issued<Currency>>(currency)
+
+/**
+ * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+ * which we have no cash evaluate to null (not present in map), not 0.
+ */
+val Wallet.cashBalances: Map<Currency, Amount<Currency>> get() = states.
+        // Select the states we own which are cash, ignore the rest, take the amounts.
+        mapNotNull { (it.state.data as? Cash.State)?.amount }.
+        // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
+        groupBy { it.token.product }.
+        // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
+        mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }

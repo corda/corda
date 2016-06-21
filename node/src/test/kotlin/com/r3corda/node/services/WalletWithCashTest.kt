@@ -1,6 +1,7 @@
 package com.r3corda.node.services
 
 import com.r3corda.contracts.cash.Cash
+import com.r3corda.contracts.cash.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.ServiceHub
@@ -17,7 +18,9 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class NodeWalletServiceTest {
+// TODO: Move this to the cash contract tests once mock services are further split up.
+
+class WalletWithCashTest {
     val kms = MockKeyManagementService(ALICE_KEY)
 
     @Before
@@ -83,13 +86,13 @@ class NodeWalletServiceTest {
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
-        assertNull(wallet.cashBalances[USD])
+        assertNull(wallet.currentWallet.cashBalances[USD])
         wallet.notify(usefulTX.tx)
-        assertEquals(100.DOLLARS, wallet.cashBalances[USD])
+        assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
         wallet.notify(irrelevantTX.tx)
-        assertEquals(100.DOLLARS, wallet.cashBalances[USD])
+        assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
         wallet.notify(spendTX.tx)
-        assertEquals(20.DOLLARS, wallet.cashBalances[USD])
+        assertEquals(20.DOLLARS, wallet.currentWallet.cashBalances[USD])
 
         // TODO: Flesh out these tests as needed.
     }

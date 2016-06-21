@@ -1,6 +1,7 @@
 package com.r3corda.node.services.wallet
 
 import com.codahale.metrics.Gauge
+import com.r3corda.contracts.cash.cashBalances
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.node.services.api.ServiceHubInternal
 import java.util.*
@@ -9,7 +10,6 @@ import java.util.*
  * This class observes the wallet and reflect current cash balances as exposed metrics in the monitoring service.
  */
 class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal) {
-
     init {
         // TODO: Need to consider failure scenarios.  This needs to run if the TX is successfully recorded
         serviceHubInternal.walletService.updates.subscribe { update ->

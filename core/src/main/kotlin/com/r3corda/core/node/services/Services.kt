@@ -6,7 +6,6 @@ import com.r3corda.core.crypto.SecureHash
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.util.*
 
 /**
  * Postfix for base topics when sending a request to a service.
@@ -26,17 +25,9 @@ val TOPIC_DEFAULT_POSTFIX = ".0"
  *
  * This absract class has no references to Cash contracts.
  */
-abstract class Wallet {
-    abstract val states: List<StateAndRef<ContractState>>
-
+class Wallet(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
-
-    /**
-     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-     * which we have no cash evaluate to null (not present in map), not 0.
-     */
-    abstract val cashBalances: Map<Currency, Amount<Currency>>
 
     /**
      * Represents an update observed by the Wallet that will be notified to observers.  Include the [StateRef]s of
@@ -81,12 +72,6 @@ interface WalletService {
      * keys in this wallet, you must inform the wallet service so it can update its internal state.
      */
     val currentWallet: Wallet
-
-    /**
-     * Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-     * which we have no cash evaluate to null, not 0.
-     */
-    val cashBalances: Map<Currency, Amount<Currency>>
 
     /**
      * Returns a snapshot of the heads of LinearStates

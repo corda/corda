@@ -3,6 +3,7 @@ package com.r3corda.demos
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.cash.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
@@ -266,7 +267,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
     }
 
     private fun logBalance() {
-        val balances = serviceHub.walletService.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
+        val balances = serviceHub.walletService.currentWallet.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
         logger.info("Remaining balance: ${balances.joinToString()}")
     }
 
