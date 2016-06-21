@@ -19,18 +19,32 @@ import java.util.*
 
 fun currency(code: String) = Currency.getInstance(code)
 
-val USD = currency("USD")
-val GBP = currency("GBP")
-val CHF = currency("CHF")
+// Java interop
+object Java {
+    @JvmField val USD = currency("USD")
+    @JvmField val GBP = currency("GBP")
+    @JvmField val CHF = currency("CHF")
 
-val Int.DOLLARS: Amount<Currency> get() = Amount(this.toLong() * 100, USD)
-val Int.POUNDS: Amount<Currency> get() = Amount(this.toLong() * 100, GBP)
-val Int.SWISS_FRANCS: Amount<Currency> get() = Amount(this.toLong() * 100, CHF)
+    @JvmStatic fun DOLLARS(amount: Int) = Amount(amount.toLong() * 100, USD)
+    @JvmStatic fun DOLLARS(amount: Double) = Amount((amount * 100).toLong(), USD)
+    @JvmStatic fun POUNDS(amount: Int) = Amount(amount.toLong() * 100, GBP)
+    @JvmStatic fun SWISS_FRANCS(amount: Int) = Amount(amount.toLong() * 100, CHF)
 
-val Double.DOLLARS: Amount<Currency> get() = Amount((this * 100).toLong(), USD)
+    @JvmStatic fun issuedBy(currency: Currency, deposit: PartyAndReference) = Issued<Currency>(deposit, currency)
+    @JvmStatic fun issuedBy(amount: Amount<Currency>, deposit: PartyAndReference) = Amount(amount.quantity, issuedBy(amount.token, deposit))
+}
 
-infix fun Currency.`issued by`(deposit: PartyAndReference) : Issued<Currency> = Issued<Currency>(deposit, this)
-infix fun <T> Amount<T>.`issued by`(deposit: PartyAndReference) : Amount<Issued<T>> = Amount(quantity, Issued<T>(deposit, this.token))
+val USD = Java.USD
+val GBP = Java.GBP
+val CHF = Java.CHF
+
+val Int.DOLLARS: Amount<Currency> get() = Java.DOLLARS(this)
+val Double.DOLLARS: Amount<Currency> get() = Java.DOLLARS(this)
+val Int.POUNDS: Amount<Currency> get() = Java.POUNDS(this)
+val Int.SWISS_FRANCS: Amount<Currency> get() = Java.SWISS_FRANCS(this)
+
+infix fun Currency.`issued by`(deposit: PartyAndReference) = Java.issuedBy(this, deposit)
+infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = Java.issuedBy(this, deposit)
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 

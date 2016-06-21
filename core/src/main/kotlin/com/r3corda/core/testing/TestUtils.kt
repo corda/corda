@@ -43,8 +43,8 @@ object TestUtils {
  *  JAVA INTEROP. Please keep the following points in mind when extending the Kotlin DSL
  *
  *   - Annotate functions with Kotlin defaults with @JvmOverloads. This produces the relevant overloads for Java.
- *   - Void closures in arguments are inconvenient in Java, use overloading to define non-closure variants as well
- *   - Top-level vals should be defined in the [Java] object and annotated with @JvmField first and should be referred
+ *   - Void closures in arguments are inconvenient in Java, use overloading to define non-closure variants as well.
+ *   - Top-level vals should be defined in a [Java] object and annotated with @JvmField first and should be referred
  *     to from the global val. This allows static importing of [Java] in Java tests, which mimicks top-level vals.
  *   - Same goes for top-level funs. Define them in [Java] with annotation @JvmStatic and define a global alias later.
  *   - Infix functions work as regular ones from Java, but symbols with spaces in them don't! Define a camelCase variant
@@ -52,39 +52,73 @@ object TestUtils {
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
  *   - The Int.DOLLARS syntax doesn't work from Java. To remedy add a @JvmStatic DOLLARS(Int) function to [Java]
  */
+object Java {
+    // A dummy time at which we will be pretending test transactions are created.
+    @JvmField val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
-// A few dummy values for testing.
-val MEGA_CORP_KEY = TestUtils.keypair
-val MEGA_CORP_PUBKEY = MEGA_CORP_KEY.public
+    // A few dummy values for testing.
+    @JvmField val MEGA_CORP_KEY = TestUtils.keypair
+    @JvmField val MEGA_CORP_PUBKEY = MEGA_CORP_KEY.public
 
-val MINI_CORP_KEY = TestUtils.keypair2
-val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
+    @JvmField val MINI_CORP_KEY = TestUtils.keypair2
+    @JvmField val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
 
-val ORACLE_KEY = TestUtils.keypair3
-val ORACLE_PUBKEY = ORACLE_KEY.public
+    @JvmField val ORACLE_KEY = TestUtils.keypair3
+    @JvmField val ORACLE_PUBKEY = ORACLE_KEY.public
 
-val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
-val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
+    @JvmField val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
+    @JvmField val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
 
-val ALICE_KEY = generateKeyPair()
-val ALICE_PUBKEY = ALICE_KEY.public
-val ALICE = Party("Alice", ALICE_PUBKEY)
+    @JvmField val ALICE_KEY = generateKeyPair()
+    @JvmField val ALICE_PUBKEY = ALICE_KEY.public
+    @JvmField val ALICE = Party("Alice", ALICE_PUBKEY)
 
-val BOB_KEY = generateKeyPair()
-val BOB_PUBKEY = BOB_KEY.public
-val BOB = Party("Bob", BOB_PUBKEY)
+    @JvmField val BOB_KEY = generateKeyPair()
+    @JvmField val BOB_PUBKEY = BOB_KEY.public
+    @JvmField val BOB = Party("Bob", BOB_PUBKEY)
 
-val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
-val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
+    @JvmField val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
+    @JvmField val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-val DUMMY_NOTARY_KEY = generateKeyPair()
-val DUMMY_NOTARY = Party("Notary Service", DUMMY_NOTARY_KEY.public)
+    @JvmField val DUMMY_NOTARY_KEY = generateKeyPair()
+    @JvmField val DUMMY_NOTARY = Party("Notary Service", DUMMY_NOTARY_KEY.public)
 
-val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
+    @JvmField val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-val MOCK_IDENTITY_SERVICE = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+    @JvmField val MOCK_IDENTITY_SERVICE = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
-fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
+    @JvmStatic fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
+
+    @JvmStatic fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure): LastLineShouldTestForAcceptOrFailure {
+        return body(TransactionForTest())
+    }
+}
+
+val TEST_TX_TIME = Java.TEST_TX_TIME
+val MEGA_CORP_KEY = Java.MEGA_CORP_KEY
+val MEGA_CORP_PUBKEY = Java.MEGA_CORP_PUBKEY
+val MINI_CORP_KEY = Java.MINI_CORP_KEY
+val MINI_CORP_PUBKEY = Java.MINI_CORP_PUBKEY
+val ORACLE_KEY = Java.ORACLE_KEY
+val ORACLE_PUBKEY = Java.ORACLE_PUBKEY
+val DUMMY_PUBKEY_1 = Java.DUMMY_PUBKEY_1
+val DUMMY_PUBKEY_2 = Java.DUMMY_PUBKEY_2
+val ALICE_KEY = Java.ALICE_KEY
+val ALICE_PUBKEY = Java.ALICE_PUBKEY
+val ALICE = Java.ALICE
+val BOB_KEY = Java.BOB_KEY
+val BOB_PUBKEY = Java.BOB_PUBKEY
+val BOB = Java.BOB
+val MEGA_CORP = Java.MEGA_CORP
+val MINI_CORP = Java.MINI_CORP
+val DUMMY_NOTARY_KEY = Java.DUMMY_NOTARY_KEY
+val DUMMY_NOTARY = Java.DUMMY_NOTARY
+val ALL_TEST_KEYS = Java.ALL_TEST_KEYS
+val MOCK_IDENTITY_SERVICE = Java.MOCK_IDENTITY_SERVICE
+
+fun generateStateRef() = Java.generateStateRef()
+
+fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure) = Java.transaction(body)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -120,7 +154,10 @@ abstract class AbstractTransactionForTest {
     protected val signers = LinkedHashSet<PublicKey>()
     protected val type = TransactionType.General()
 
+    @JvmOverloads
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, TransactionState(s(), DUMMY_NOTARY)).apply { outStates.add(this) }
+    @JvmOverloads
+    open fun output(label: String? = null, s: ContractState) = output(label) { s }
 
     protected fun commandsToAuthenticatedObjects(): List<AuthenticatedObject<CommandData>> {
         return commands.map { AuthenticatedObject(it.signers, it.signers.mapNotNull { MOCK_IDENTITY_SERVICE.partyFromKey(it) }, it.value) }
@@ -130,10 +167,11 @@ abstract class AbstractTransactionForTest {
         attachments.add(attachmentID)
     }
 
-    fun arg(vararg key: PublicKey, c: () -> CommandData) {
-        val keys = listOf(*key)
-        addCommand(Command(c(), keys))
+    fun arg(vararg keys: PublicKey, c: () -> CommandData) {
+        val keysList = listOf(*keys)
+        addCommand(Command(c(), keysList))
     }
+    fun arg(key: PublicKey, c: CommandData) = arg(key) { c }
 
     fun timestamp(time: Instant) {
         val data = TimestampCommand(time, 30.seconds)
@@ -165,12 +203,15 @@ sealed class LastLineShouldTestForAcceptOrFailure {
 }
 
 // Corresponds to the args to Contract.verify
+// Note on defaults: try to avoid Kotlin defaults as they don't work from Java. Instead define overloads
 open class TransactionForTest : AbstractTransactionForTest() {
     private val inStates = arrayListOf<TransactionState<ContractState>>()
+
     fun input(s: () -> ContractState) {
         signers.add(DUMMY_NOTARY.owningKey)
         inStates.add(TransactionState(s(), DUMMY_NOTARY))
     }
+    fun input(s: ContractState) = input { s }
 
     protected fun runCommandsAndVerify(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
@@ -178,10 +219,13 @@ open class TransactionForTest : AbstractTransactionForTest() {
         tx.verify()
     }
 
+    @JvmOverloads
     fun accepts(time: Instant = TEST_TX_TIME): LastLineShouldTestForAcceptOrFailure {
         runCommandsAndVerify(time)
         return LastLineShouldTestForAcceptOrFailure.Token
     }
+
+    @JvmOverloads
     fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME): LastLineShouldTestForAcceptOrFailure {
         val r = try {
             runCommandsAndVerify(time)
@@ -202,8 +246,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
      * Used to confirm that the test, when (implicitly) run against the .verify() method, fails with the text of the message
      */
     infix fun `fails requirement`(msg: String): LastLineShouldTestForAcceptOrFailure = rejects(msg)
-
-    fun fails_requirement(msg: String) = this.`fails requirement`(msg)
+    fun failsRequirement(msg: String) = this.`fails requirement`(msg)
 
     // Use this to create transactions where the output of this transaction is automatically used as an input of
     // the next.
@@ -249,10 +292,6 @@ open class TransactionForTest : AbstractTransactionForTest() {
         result += 31 * result + commands.hashCode()
         return result
     }
-}
-
-fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure): LastLineShouldTestForAcceptOrFailure {
-    return body(TransactionForTest())
 }
 
 class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
@@ -335,6 +374,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     val txns = ArrayList<WireTransaction>()
     private val txnToLabelMap = HashMap<SecureHash, String>()
 
+    @JvmOverloads
     fun transaction(label: String? = null, body: WireTransactionDSL.() -> Unit): WireTransaction {
         val forTest = InternalWireTransactionDSL()
         forTest.body()
