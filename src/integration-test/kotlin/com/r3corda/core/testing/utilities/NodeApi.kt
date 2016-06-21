@@ -9,7 +9,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.test.assertEquals
 
-class NodeDidNotStartException: Throwable {
+class NodeDidNotStartException: Exception {
     constructor(message: String): super(message) {}
 }
 
@@ -17,7 +17,7 @@ fun ensureNodeStartsOrKill(proc: Process, nodeAddr: HostAndPort) {
     try {
         assertEquals(proc.isAlive, true)
         waitForNodeStartup(nodeAddr)
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         println("Forcibly killing node process")
         proc.destroyForcibly()
         throw e
@@ -47,7 +47,7 @@ private fun waitForNodeStartup(nodeAddr: HostAndPort) {
             "IOException: ${e.toString()}"
         }
 
-        if(retries > 50) {
+        if(retries > 25) {
             throw NodeDidNotStartException("The node did not start: " + err)
         }
     } while (respCode != 200)

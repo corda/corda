@@ -61,7 +61,7 @@ enum class IRSDemoRole {
 
 private class NodeParams() {
     var dir : Path = Paths.get("")
-    var address : String = ""
+    var address : HostAndPort = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
     var mapAddress: String = ""
     var identityFile: Path = Paths.get("")
     var tradeWithAddrs: List<String> = listOf()
@@ -235,7 +235,7 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
         nodeParams.dir = Paths.get(options.valueOf(args.dirArg))
     }
     if (options.has(args.networkAddressArg)) {
-        nodeParams.address = options.valueOf(args.networkAddressArg)
+        nodeParams.address = HostAndPort.fromString(options.valueOf(args.networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     }
     nodeParams.identityFile = if (options.has(args.networkMapIdentityFile)) {
         Paths.get(options.valueOf(args.networkMapIdentityFile))
@@ -265,7 +265,8 @@ private fun runNode(nodeParams: NodeParams) : Unit {
     ExitServerProtocol.Handler.register(node)
 
     if(nodeParams.uploadRates) {
-        runUploadRates("http://localhost:31341")
+        val apiAddr = "http://${nodeParams.address.hostText}:${nodeParams.address.port + 1}";
+        runUploadRates(apiAddr)
     }
 
     try {
@@ -283,8 +284,7 @@ private fun createRecipient(addr: String) : SingleMessageRecipient {
 private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
-    val myNetAddr = HostAndPort.fromString(params.address).withDefaultPort(Node.DEFAULT_PORT)
-    val networkMapId = if (params.mapAddress.equals(params.address)) {
+    val networkMapId = if (params.mapAddress.equals(params.address.toString())) {
         // This node provides network map and notary services
         advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
@@ -293,7 +293,7 @@ private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, r
         nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
     }
 
-    val node = logElapsedTime("Node startup") {  Node(params.dir, myNetAddr, config, networkMapId,
+    val node = logElapsedTime("Node startup") {  Node(params.dir, params.address, config, networkMapId,
             advertisedServices, DemoClock(),
             listOf(InterestRateSwapAPI::class.java)).start() }
 
@@ -415,7 +415,7 @@ private fun uploadFile(url: URL, file: String) : Boolean {
 private fun createNodeAParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeA")
-    params.address = "localhost"
+    params.address = HostAndPort.fromString("localhost")
     params.tradeWithAddrs = listOf("localhost:31340")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeB).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
     params.defaultLegalName = "Bank A"
@@ -425,7 +425,7 @@ private fun createNodeAParams() : NodeParams {
 private fun createNodeBParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeB")
-    params.address = "localhost:31340"
+    params.address = HostAndPort.fromString("localhost:31340")
     params.tradeWithAddrs = listOf("localhost")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeA).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
     params.defaultLegalName = "Bank B"

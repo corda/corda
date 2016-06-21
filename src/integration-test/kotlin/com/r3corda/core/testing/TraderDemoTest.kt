@@ -1,5 +1,6 @@
 package com.r3corda.core.testing
 
+import com.google.common.net.HostAndPort
 import com.r3corda.core.testing.utilities.assertExitOrKill
 import com.r3corda.core.testing.utilities.ensureNodeStartsOrKill
 import com.r3corda.core.testing.utilities.spawn
@@ -9,11 +10,12 @@ import kotlin.test.assertEquals
 
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
+        val buyerAddr = freeLocalHostAndPort()
         var nodeProc: Process? = null
         try {
             cleanupFiles()
-            nodeProc = runBuyer()
-            runSeller()
+            nodeProc = runBuyer(buyerAddr)
+            runSeller(buyerAddr)
         } finally {
             nodeProc?.destroy()
             cleanupFiles()
@@ -21,18 +23,22 @@ class TraderDemoTest {
     }
 }
 
-private fun runBuyer(): Process {
+private fun runBuyer(buyerAddr: HostAndPort): Process {
     println("Running Buyer")
-    val args = listOf("--role", "BUYER")
-    val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
-    ensureNodeStartsOrKill(proc, freeLocalHostAndPort())
+    val args = listOf("--role", "BUYER", "--network-address", buyerAddr.toString())
+    val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoBuyer")
+    ensureNodeStartsOrKill(proc, buyerAddr)
     return proc
 }
 
-private fun runSeller() {
+private fun runSeller(buyerAddr: HostAndPort) {
     println("Running Seller")
-    val args = listOf("--role", "SELLER")
-    val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
+    val sellerAddr = freeLocalHostAndPort()
+    val args = listOf(
+            "--role", "SELLER",
+            "--network-address", sellerAddr.toString(),
+            "--other-network-address", buyerAddr.toString())
+    val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoSeller")
     assertExitOrKill(proc);
     assertEquals(proc.exitValue(), 0)
 }

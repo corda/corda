@@ -18,8 +18,8 @@ class IRSDemoTest {
         try {
             setupNode(dirA, "NodeA")
             setupNode(dirB, "NodeB")
-            procA = startNode(dirA, "NodeA", nodeAddrA)
-            procB = startNode(dirB, "NodeB", freeLocalHostAndPort())
+            procA = startNode(dirA, "NodeA", nodeAddrA, nodeAddrA)
+            procB = startNode(dirB, "NodeB", freeLocalHostAndPort(), nodeAddrA)
             runTrade(apiAddrA)
             runDateChange(apiAddrA)
         } finally {
@@ -33,16 +33,20 @@ class IRSDemoTest {
 private fun setupNode(dir: Path, nodeType: String) {
     println("Running setup for $nodeType")
     val args = listOf("--role", "Setup" + nodeType, "--dir", dir.toString())
-    val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
+    val proc = spawn("com.r3corda.demos.IRSDemoKt", args, "IRSDemoSetup$nodeType")
     assertExitOrKill(proc)
     assertEquals(proc.exitValue(), 0)
 }
 
-private fun startNode(dir: Path, nodeType: String, nodeAddr: HostAndPort): Process {
+private fun startNode(dir: Path, nodeType: String, nodeAddr: HostAndPort, networkMapAddr: HostAndPort): Process {
     println("Running node $nodeType")
     println("Node addr: ${nodeAddr.toString()}")
-    val args = listOf("--role", nodeType, "--dir", dir.toString(), "--network-address", nodeAddr.toString())
-    val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
+    val args = listOf(
+            "--role", nodeType,
+            "--dir", dir.toString(),
+            "--network-address", nodeAddr.toString(),
+            "--network-map-address", networkMapAddr.toString())
+    val proc = spawn("com.r3corda.demos.IRSDemoKt", args, "IRSDemo$nodeType")
     ensureNodeStartsOrKill(proc, nodeAddr)
     return proc
 }
@@ -50,7 +54,7 @@ private fun startNode(dir: Path, nodeType: String, nodeAddr: HostAndPort): Proce
 private fun runTrade(nodeAddr: HostAndPort) {
     println("Running trade")
     val args = listOf("--role", "Trade", "trade1", "--network-address", "http://" + nodeAddr.toString())
-    val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
+    val proc = spawn("com.r3corda.demos.IRSDemoKt", args, "IRSDemoTrade")
     assertExitOrKill(proc)
     assertEquals(proc.exitValue(), 0)
 }
@@ -58,7 +62,7 @@ private fun runTrade(nodeAddr: HostAndPort) {
 private fun runDateChange(nodeAddr: HostAndPort) {
     println("Running date change")
     val args = listOf("--role", "Date", "2017-01-02", "--network-address", "http://" + nodeAddr.toString())
-    val proc = spawn("com.r3corda.demos.IRSDemoKt", args)
+    val proc = spawn("com.r3corda.demos.IRSDemoKt", args, "IRSDemoDate")
     assertExitOrKill(proc)
     assertEquals(proc.exitValue(), 0)
 }
