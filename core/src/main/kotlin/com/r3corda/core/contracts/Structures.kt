@@ -19,6 +19,23 @@ interface NamedByHash {
 }
 
 /**
+ * Interface for state objects that support being netted with other state objects.
+ */
+interface BilateralNettableState<T: BilateralNettableState<T>> {
+    /**
+     * Returns an object used to determine if two states can be subject to close-out netting. If two states return
+     * equal objects, they can be close out netted together.
+     */
+    val bilateralNetState: Any
+
+    /**
+     * Perform bilateral netting of this state with another state. The two states must be compatible (as in
+     * bilateralNetState objects are equal).
+     */
+    fun net(other: T): T
+}
+
+/**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
  * updated, instead, any changes must generate a new successor state. States can be updated (consumed) only once: the
@@ -233,6 +250,7 @@ data class Command(val value: CommandData, val signers: List<PublicKey>) {
 }
 
 /** A common issue command, to enforce that issue commands have a nonce value. */
+// TODO: Revisit use of nonce values - should this be part of the TX rather than the command perhaps?
 interface IssueCommand : CommandData {
     val nonce: Long
 }

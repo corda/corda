@@ -31,9 +31,9 @@ class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Except
  */
 abstract class FungibleAsset<T> : Contract {
     /** A state representing a cash claim against some party */
-    interface State<T> : FungibleAssetState<T> {
+    interface State<T> : FungibleAssetState<T, Issued<T>> {
         /** Where the underlying currency backing this ledger entry can be found (propagated) */
-        override val deposit: PartyAndReference
+        val deposit: PartyAndReference
         override val amount: Amount<Issued<T>>
         /** There must be a MoveCommand signed by this key to claim the amount */
         override val owner: PublicKey
