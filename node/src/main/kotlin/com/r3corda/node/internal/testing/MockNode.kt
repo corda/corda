@@ -12,7 +12,6 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
-import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
@@ -67,7 +66,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
-                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, NodeClock()) {
+                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
