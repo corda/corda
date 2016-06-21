@@ -173,7 +173,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
         runCommandsAndVerify(time)
         return LastLineShouldTestForAcceptOrFailure.Token
     }
-    fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME) {
+    fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME): LastLineShouldTestForAcceptOrFailure {
         val r = try {
             runCommandsAndVerify(time)
             false
@@ -186,15 +186,13 @@ open class TransactionForTest : AbstractTransactionForTest() {
             true
         }
         if (!r) throw AssertionError("Expected exception but didn't get one")
+        return LastLineShouldTestForAcceptOrFailure.Token
     }
 
     /**
      * Used to confirm that the test, when (implicitly) run against the .verify() method, fails with the text of the message
      */
-    infix fun `fails requirement`(msg: String): LastLineShouldTestForAcceptOrFailure {
-        rejects(msg)
-        return LastLineShouldTestForAcceptOrFailure.Token
-    }
+    infix fun `fails requirement`(msg: String): LastLineShouldTestForAcceptOrFailure = rejects(msg)
 
     fun fails_requirement(msg: String) = this.`fails requirement`(msg)
 
