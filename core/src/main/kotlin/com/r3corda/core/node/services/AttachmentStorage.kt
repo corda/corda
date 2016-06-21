@@ -9,10 +9,8 @@ import java.io.InputStream
  */
 interface AttachmentStorage {
     /**
-     * Returns a newly opened stream for the given locally stored attachment, or null if no such attachment is known.
-     * The returned stream must be closed when you are done with it to avoid resource leaks. You should probably wrap
-     * the result in a [JarInputStream] unless you're sending it somewhere, there is a convenience helper for this
-     * on [Attachment].
+     * Returns a handle to a locally stored attachment, or null if it's not known. The handle can be used to open
+     * a stream for the data, which will be a zip/jar file.
      */
     fun openAttachment(id: SecureHash): Attachment?
 
