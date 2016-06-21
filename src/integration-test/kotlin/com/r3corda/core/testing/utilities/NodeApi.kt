@@ -1,5 +1,7 @@
 package com.r3corda.core.testing.utilities
 
+import com.google.common.net.HostAndPort
+import java.io.IOException
 import java.io.InputStreamReader
 import java.net.ConnectException
 import java.net.SocketException
@@ -11,22 +13,23 @@ class NodeDidNotStartException: Throwable {
     constructor(message: String): super(message) {}
 }
 
-fun ensureNodeStartsOrKill(proc: Process, nodeAddr: String) {
+fun ensureNodeStartsOrKill(proc: Process, nodeAddr: HostAndPort) {
     try {
         assertEquals(proc.isAlive, true)
         waitForNodeStartup(nodeAddr)
     } catch (e: Exception) {
-        proc.destroy()
+        println("Forcibly killing node process")
+        proc.destroyForcibly()
         throw e
     }
 }
 
-private fun waitForNodeStartup(nodeAddr: String) {
+private fun waitForNodeStartup(nodeAddr: HostAndPort) {
+    val url = URL("http://${nodeAddr.hostText}:${nodeAddr.port + 1}/api/status")
     var retries = 0
     var respCode: Int
     do {
         retries++
-        val url = URL(nodeAddr + "/api/status")
         val err = try {
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
@@ -39,9 +42,12 @@ private fun waitForNodeStartup(nodeAddr: String) {
         } catch(e: SocketException) {
             respCode = -1
             "Could not connect: ${e.toString()}"
+        } catch (e: IOException) {
+            respCode = -1
+            "IOException: ${e.toString()}"
         }
 
-        if(retries > 200) {
+        if(retries > 50) {
             throw NodeDidNotStartException("The node did not start: " + err)
         }
     } while (respCode != 200)

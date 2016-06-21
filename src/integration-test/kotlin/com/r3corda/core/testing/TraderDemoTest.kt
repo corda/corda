@@ -25,7 +25,7 @@ private fun runBuyer(): Process {
     println("Running Buyer")
     val args = listOf("--role", "BUYER")
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args)
-    ensureNodeStartsOrKill(proc, "http://localhost:31338")
+    ensureNodeStartsOrKill(proc, freeLocalHostAndPort())
     return proc
 }
 

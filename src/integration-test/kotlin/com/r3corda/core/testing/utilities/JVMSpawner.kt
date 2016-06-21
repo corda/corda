@@ -11,6 +11,7 @@ fun spawn(className: String, args: List<String>): Process {
     val javaArgs = listOf(path, "-javaagent:lib/quasar.jar",  "-cp", classpath, className)
     val builder = ProcessBuilder(javaArgs + args)
     builder.redirectError(Paths.get("error.$className.log").toFile())
+    builder.inheritIO()
     val process = builder.start();
     return process
 }
@@ -19,7 +20,7 @@ fun assertExitOrKill(proc: Process) {
     try {
         assertEquals(proc.waitFor(2, TimeUnit.MINUTES), true)
     } catch (e: Throwable) {
-        proc.destroy()
+        proc.destroyForcibly()
         throw e
     }
 }
@@ -28,6 +29,6 @@ fun assertAliveAndKill(proc: Process) {
     try {
         assertEquals(proc.isAlive, true)
     } finally {
-        proc.destroy()
+        proc.destroyForcibly()
     }
 }
