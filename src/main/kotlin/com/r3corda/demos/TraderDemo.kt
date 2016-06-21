@@ -16,6 +16,9 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
+import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.core.utilities.Emoji
+import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
 import com.r3corda.node.internal.testing.WalletFiller
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
@@ -23,9 +26,6 @@ import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.core.utilities.BriefLogFormatter
-import com.r3corda.core.utilities.Emoji
-import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
@@ -250,6 +250,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
 
                 // This invokes the trading protocol and out pops our finished transaction.
                 val tradeTX: SignedTransaction = subProtocol(buyer)
+                // TODO: This should be moved into the protocol itself.
                 serviceHub.recordTransactions(listOf(tradeTX))
 
                 logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
