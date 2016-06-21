@@ -1,5 +1,123 @@
 "use strict"
 
+function formatDateForNode(date) {
+    // Produces yyyy-dd-mm. JS is missing proper date formatting libs
+    return date.toISOString().substring(0, 10);
+}
+
+function formatDateForAngular(dateStr) {
+    let parts = dateStr.split("-");
+    return new Date(parts[0], parts[1], parts[2]);
+}
+
+let fixedLegModel = {
+    fixedRatePayer: "Bank A",
+    notional: {
+        quantity: 2500000000,
+        token: "EUR"
+    },
+    paymentFrequency: "SemiAnnual",
+    effectiveDate: new Date(2016, 3, 11),
+    effectiveDateAdjustment: null,
+    terminationDate: new Date(2026, 3, 11),
+    terminationDateAdjustment: null,
+      fixedRate: {
+        ratioUnit: {
+            value: "0.01676"
+        }
+    },
+    dayCountBasisDay: "D30",
+    dayCountBasisYear: "Y360",
+    rollConvention: "ModifiedFollowing",
+    dayInMonth: 10,
+    paymentRule: "InArrears",
+    paymentDelay: 0,
+    paymentCalendar: "London",
+    interestPeriodAdjustment: "Adjusted"
+};
+
+let floatingLegModel = {
+   floatingRatePayer: "Bank B",
+   notional: {
+       quantity: 2500000000,
+       token: "EUR"
+   },
+   paymentFrequency: "Quarterly",
+   effectiveDate: new Date(2016, 3, 11),
+   effectiveDateAdjustment: null,
+   terminationDate: new Date(2026, 3, 11),
+   terminationDateAdjustment: null,
+   dayCountBasisDay: "D30",
+   dayCountBasisYear: "Y360",
+   rollConvention: "ModifiedFollowing",
+   fixingRollConvention: "ModifiedFollowing",
+   dayInMonth: 10,
+   resetDayInMonth: 10,
+   paymentRule: "InArrears",
+   paymentDelay: 0,
+   paymentCalendar: [ "London" ],
+   interestPeriodAdjustment: "Adjusted",
+   fixingPeriod: "TWODAYS",
+   resetRule: "InAdvance",
+   fixingsPerPayment: "Quarterly",
+   fixingCalendar: [ "NewYork" ],
+   index: "ICE LIBOR",
+   indexSource: "Rates Service Provider",
+   indexTenor: {
+       name: "3M"
+   }
+};
+
+let calculationModel = {
+    expression: "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
+    floatingLegPaymentSchedule: {
+
+    },
+    fixedLegPaymentSchedule: {
+
+    }
+};
+
+// Todo: Finish this model to solve the problem of the dates being in two different formats
+let commonModel = function() {
+    this.baseCurrency = "EUR";
+    this.eligibleCurrency = "EUR";
+    this.eligibleCreditSupport: "Cash in an Eligible Currency";
+    this.independentAmounts = {
+        quantity: 0,
+        token: "EUR"
+    };
+    this.threshold = {
+        quantity: 0,
+        token: "EUR"
+    };
+    minimumTransferAmount: {
+        quantity: 25000000,
+        token: "EUR"
+    },
+    rounding: {
+        quantity: 1000000,
+        token: "EUR"
+    },
+    valuationDate: "Every Local Business Day",
+    notificationTime: "2:00pm London",
+    resolutionTime: "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
+    interestRate: {
+        oracle: "Rates Service Provider",
+        tenor: {
+            name: "6M"
+        },
+        ratioUnit: null,
+        name: "EONIA"
+    },
+    addressForTransfers: "",
+    exposure: {},
+    localBusinessDay: [ "London" , "NewYork" ],
+    dailyInterestAmount: "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
+    tradeID: tradeId,
+    hashLegalDocs: "put hash here"
+};
+
 let irsViewer = angular.module('irsViewer', ['ngRoute'])
     .config(($routeProvider, $locationProvider) => {
         $routeProvider
@@ -23,10 +141,10 @@ let irsViewer = angular.module('irsViewer', ['ngRoute'])
 
 let nodeService = irsViewer.factory('nodeService', ($http) => {
     return new (function() {
-        var date = new Date(2016, 0, 1, 0, 0, 0);
-        var curLoading = {};
+        let date = new Date(2016, 0, 1, 0, 0, 0);
+        let curLoading = {};
 
-        var load = (type, promise) => {
+        let load = (type, promise) => {
             curLoading[type] = true;
             return promise.then((arg) => {
                 curLoading[type] = false;
@@ -37,9 +155,8 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
             });
         }
 
-        var changeDateOnNode = (newDate) => {
-            // Produces yyyy-dd-mm. JS is missing proper date formatting libs
-            const dateStr = newDate.toISOString().substring(0, 10);
+        let changeDateOnNode = (newDate) => {
+            const dateStr = formatDateForNode(newDate)
             return load('date', $http.put('http://localhost:31338/api/irs/demodate', "\"" + dateStr + "\"")).then((resp) => {
                 date = newDate;
                 return this.getDateModel(date);
@@ -103,125 +220,45 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
             }, false);
         }
 
-        this.createDeal = () => {
-            let dealJson = `{
-                "fixedLeg": {
-                  "fixedRatePayer": "Bank A",
-                  "notional": {
-                    "quantity": 2500000000,
-                    "token": "EUR"
-                  },
-                  "paymentFrequency": "SemiAnnual",
-                  "effectiveDate": "2016-03-11",
-                  "effectiveDateAdjustment": null,
-                  "terminationDate": "2026-03-11",
-                  "terminationDateAdjustment": null,
-                  "fixedRate": {
-                    "ratioUnit": {
-                      "value": "0.01676"
-                    }
-                  },
-                  "dayCountBasisDay": "D30",
-                  "dayCountBasisYear": "Y360",
-                  "rollConvention": "ModifiedFollowing",
-                  "dayInMonth": 10,
-                  "paymentRule": "InArrears",
-                  "paymentDelay": 0,
-                  "paymentCalendar": "London",
-                  "interestPeriodAdjustment": "Adjusted"
-                },
-                "floatingLeg": {
-                  "floatingRatePayer": "Bank B",
-                  "notional": {
-                    "quantity": 2500000000,
-                    "token": "EUR"
-                  },
-                  "paymentFrequency": "Quarterly",
-                  "effectiveDate": "2016-03-11",
-                  "effectiveDateAdjustment": null,
-                  "terminationDate": "2026-03-11",
-                  "terminationDateAdjustment": null,
-                  "dayCountBasisDay": "D30",
-                  "dayCountBasisYear": "Y360",
-                  "rollConvention": "ModifiedFollowing",
-                  "fixingRollConvention": "ModifiedFollowing",
-                  "dayInMonth": 10,
-                  "resetDayInMonth": 10,
-                  "paymentRule": "InArrears",
-                  "paymentDelay": 0,
-                  "paymentCalendar": [ "London" ],
-                  "interestPeriodAdjustment": "Adjusted",
-                  "fixingPeriod": "TWODAYS",
-                  "resetRule": "InAdvance",
-                  "fixingsPerPayment": "Quarterly",
-                  "fixingCalendar": [ "NewYork" ],
-                  "index": "ICE LIBOR",
-                  "indexSource": "Rates Service Provider",
-                  "indexTenor": {
-                    "name": "3M"
-                  }
-                },
-                "calculation": {
-                  "expression": "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
-                  "floatingLegPaymentSchedule": {
-                  },
-                  "fixedLegPaymentSchedule": {
-                  }
-                },
-                "common": {
-                  "baseCurrency": "EUR",
-                  "eligibleCurrency": "EUR",
-                  "eligibleCreditSupport": "Cash in an Eligible Currency",
-                  "independentAmounts": {
-                    "quantity": 0,
-                    "token": "EUR"
-                  },
-                  "threshold": {
-                    "quantity": 0,
-                    "token": "EUR"
-                  },
-                  "minimumTransferAmount": {
-                    "quantity": 25000000,
-                    "token": "EUR"
-                  },
-                  "rounding": {
-                    "quantity": 1000000,
-                    "token": "EUR"
-                  },
-                  "valuationDate": "Every Local Business Day",
-                  "notificationTime": "2:00pm London",
-                  "resolutionTime": "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
-                  "interestRate": {
-                    "oracle": "Rates Service Provider",
-                    "tenor": {
-                      "name": "6M"
-                    },
-                    "ratioUnit": null,
-                    "name": "EONIA"
-                  },
-                  "addressForTransfers": "",
-                  "exposure": {},
-                  "localBusinessDay": [ "London" , "NewYork" ],
-                  "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
-                  "tradeID": "tradeXXX",
-                  "hashLegalDocs": "put hash here"
-                },
-                "notary": "Bank A"
-              }`;
+        this.newDeal = () => {
+            let now = new Date();
+            let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
 
-            return load('create-deal', $http.post('http://localhost:31338/api/irs/deals',
-                data: {
-                    trade: dealJson
-                }
-            })).then((resp) => {
-                console.log("RESPONSE: " + resp);
+            return {
+                fixedLeg: fixedLegModel,
+                floatingLeg: floatingLegModel,
+                calculation: calculationModel,
+                common: commonModel,
+                notary: "Bank A"
+              };
+        }
+
+        this.createDeal = (deal) => {
+            return load('create-deal', $http.post('http://localhost:31338/api/irs/deals', deal))
+            .then((resp) => {
+                return deal.tradeId;
             }, (resp) => {
-                console.log("FAILURE: " + resp);
                 throw resp;
             })
         }
     });
 });
+
+function initSemanticUi() {
+    $('.ui.accordion').accordion();
+    $('.ui.dropdown').dropdown();
+}
+
+function prepareDeal(deal) {
+    let newDeal = Object.assign({}, deal);
+
+    newDeal.fixedLeg.effectiveDate = formatDateForNode(newDeal.fixedLeg.effectiveDate);
+    newDeal.fixedLeg.terminationDate = formatDateForNode(newDeal.fixedLeg.terminationDate);
+    newDeal.floatingLeg.effectiveDate = formatDateForNode(newDeal.floatingLeg.effectiveDate);
+    newDeal.floatingLeg.terminationDate = formatDateForNode(newDeal.floatingLeg.terminationDate);
+
+    return newDeal;
+}
 
 irsViewer.controller('HomeController', function HomeController($http, $scope, nodeService) {
     let handleHttpFail = (resp) => {
@@ -239,21 +276,24 @@ irsViewer.controller('HomeController', function HomeController($http, $scope, no
     nodeService.getDeals().then((deals) => $scope.deals = deals);
 });
 
-irsViewer.controller('DealController', function DealController($http, $scope, nodeService) {
-    let initSemanticUi = () => {
-        $('.ui.accordion').accordion();
-    }
-
+irsViewer.controller('DealController', function DealController($http, $scope, $routeParams, nodeService) {
     initSemanticUi();
 
     $scope.isLoading = nodeService.isLoading;
 
-    nodeService.getDeal('T000000001').then((deal) => $scope.deal = deal);
+    nodeService.getDeal($routeParams.dealId).then((deal) => $scope.deal = deal);
 });
 
+
 irsViewer.controller('CreateDealController', function CreateDealController($http, $scope, $location, nodeService) {
+    initSemanticUi();
+
     $scope.isLoading = nodeService.isLoading;
+    $scope.deal = nodeService.newDeal();
     $scope.createDeal = () => {
-        nodeService.createDeal().then((tradeId) => $location.path('#/deal/' + tradeId));
+        nodeService.createDeal(prepareDeal($scope.deal))
+        .then((tradeId) => $location.path('#/deal/' + tradeId), (resp) => {
+            $scope.formError = resp.data;
+        });
     };
 });
