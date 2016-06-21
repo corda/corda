@@ -163,6 +163,14 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return this
     }
 
+    /**
+     * Run any tasks that are needed to ensure the node is in a correct state before running start()
+     */
+    open fun setup(): AbstractNode {
+        createNodeDir()
+        return this
+    }
+
     private fun buildAdvertisedServices() {
         val serviceTypes = info.advertisedServices
         if (NetworkMapService.Type in serviceTypes) makeNetworkMapService()
@@ -326,5 +334,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         } catch (e: FileAlreadyExistsException) {
         }
         return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
+    }
+
+    protected fun createNodeDir() {
+        if (!Files.exists(dir)) {
+            Files.createDirectories(dir)
+        }
     }
 }

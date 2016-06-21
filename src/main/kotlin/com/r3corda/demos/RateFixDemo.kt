@@ -48,12 +48,7 @@ fun main(args: Array<String>) {
     // Suppress the Artemis MQ noise, and activate the demo logging.
     BriefLogFormatter.initVerbose("+demo.ratefix", "-org.apache.activemq")
 
-    // TODO: Move this into the AbstractNode class.
     val dir = Paths.get(options.valueOf(dirArg))
-    if (!Files.exists(dir)) {
-        Files.createDirectory(dir)
-    }
-
     val networkMapAddr = ArtemisMessagingService.makeRecipient(options.valueOf(networkMapAddrArg))
     val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
     val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity)
@@ -78,7 +73,7 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
             advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).start() }
+            listOf(InterestRateSwapAPI::class.java)).setup().start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 

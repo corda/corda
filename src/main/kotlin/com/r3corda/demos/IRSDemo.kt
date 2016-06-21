@@ -401,7 +401,7 @@ private fun startNode(params : NodeParams) : Node {
 
     val node = logElapsedTime("Node startup") { Node(params.dir, myNetAddr, config, networkMapId,
             advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).start() }
+            listOf(InterestRateSwapAPI::class.java)).setup().start() }
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.

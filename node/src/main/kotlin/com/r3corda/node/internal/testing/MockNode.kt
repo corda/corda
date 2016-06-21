@@ -122,7 +122,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             override val nearestCity: String = "Atlantis"
         }
         val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
-        if (start) node.start()
+        if (start) node.setup().start()
         _nodes.add(node)
         return node
     }

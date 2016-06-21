@@ -26,6 +26,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
 import javax.management.ObjectName
@@ -152,6 +153,11 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         return this
     }
 
+    override fun setup(): Node {
+        super.setup()
+        return this
+    }
+
     override fun stop() {
         webServer.stop()
         super.stop()
@@ -177,6 +183,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             println("Shut that other node down and try again. It may have process ID ${file.readText()}")
             System.exit(1)
         }
+
         nodeFileLock = l
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         f.setLength(0)
