@@ -62,6 +62,9 @@ class Cash : FungibleAsset<Currency>() {
         override val participants: List<PublicKey>
             get() = listOf(owner)
 
+        override fun move(amount: Amount<Issued<Currency>>, owner: PublicKey): FungibleAsset.State<Currency>
+            = copy(amount = amount, owner = owner)
+
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))

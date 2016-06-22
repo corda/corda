@@ -399,3 +399,24 @@ fun calculateDaysBetween(startDate: LocalDate,
         else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
     }
 }
+
+/**
+ * Enum for the types of netting that can be applied to state objects. Exact behaviour
+ * for each type of netting is left to the contract to determine.
+ */
+enum class NetType {
+    /**
+     * Close-out netting applies where one party is bankrupt or otherwise defaults (exact terms are contract specific),
+     * and allows their counterparty to net obligations without requiring approval from all parties. For example, if
+     * Bank A owes Bank B £1m, and Bank B owes Bank A £1m, in the case of Bank B defaulting this would enable Bank A
+     * to net out the two obligations to zero, rather than being legally obliged to pay £1m without any realistic
+     * expectation of the debt to them being paid. Realistically this is limited to bilateral netting, to simplify
+     * determining which party must sign the netting transaction.
+     */
+    CLOSE_OUT,
+    /**
+     * "Payment" is used to refer to conventional netting, where all parties must confirm the netting transaction. This
+     * can be a multilateral netting transaction, and may be created by a central clearing service.
+     */
+    PAYMENT
+}

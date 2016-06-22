@@ -30,7 +30,7 @@ val Int.SWISS_FRANCS: Amount<Currency> get() = Amount(this.toLong() * 100, CHF)
 val Double.DOLLARS: Amount<Currency> get() = Amount((this * 100).toLong(), USD)
 
 infix fun Currency.`issued by`(deposit: PartyAndReference) : Issued<Currency> = Issued<Currency>(deposit, this)
-infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) : Amount<Issued<Currency>> = Amount(quantity, token `issued by` deposit)
+infix fun <T> Amount<T>.`issued by`(deposit: PartyAndReference) : Amount<Issued<T>> = Amount(quantity, Issued<T>(deposit, this.token))
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
