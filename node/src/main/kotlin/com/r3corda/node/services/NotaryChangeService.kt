@@ -1,5 +1,6 @@
 package com.r3corda.node.services
 
+import com.r3corda.core.messaging.Ack
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.node.services.api.AbstractNodeService
@@ -17,11 +18,12 @@ class NotaryChangeService(net: MessagingService, val smm: StateMachineManager) :
         )
     }
 
-    private fun handleChangeNotaryRequest(req: NotaryChangeProtocol.Handshake) {
+    private fun handleChangeNotaryRequest(req: NotaryChangeProtocol.Handshake): Ack {
         val protocol = NotaryChangeProtocol.Acceptor(
                 req.replyTo as SingleMessageRecipient,
                 req.sessionID!!,
                 req.sessionIdForSend)
         smm.add(NotaryChangeProtocol.TOPIC_CHANGE, protocol)
+        return Ack
     }
 }

@@ -3,6 +3,7 @@ package com.r3corda.core.serialization
 import com.google.common.primitives.Ints
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.messaging.Ack
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -71,6 +72,14 @@ class KryoTests {
         assertThat(deserialisedSignature).isEqualTo(signature)
         deserialisedSignature.verifyWithECDSA(bitsToSign)
         assertThatThrownBy { deserialisedSignature.verifyWithECDSA(wrongBits) }
+    }
+
+    @Test
+    fun `write and read Ack`() {
+        val tokenizableBefore = Ack
+        val serializedBytes = tokenizableBefore.serialize(kryo)
+        val tokenizableAfter = serializedBytes.deserialize(kryo)
+        assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
     }
 
     private data class Person(val name: String, val birthday: Instant?)

@@ -7,6 +7,7 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.messaging.Ack
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.TimestampChecker
@@ -55,7 +56,7 @@ object NotaryProtocol {
             val receiveSessionID = random63BitValue()
 
             val handshake = Handshake(serviceHub.networkService.myAddress, sendSessionID, receiveSessionID)
-            sendAndReceive<Unit>(TOPIC_INITIATE, notaryNode.address, 0, receiveSessionID, handshake)
+            sendAndReceive<Ack>(TOPIC_INITIATE, notaryNode.address, 0, receiveSessionID, handshake)
 
             val request = SignRequest(wtx.serialized, serviceHub.storageService.myLegalIdentity)
             val response = sendAndReceive<Result>(TOPIC, notaryNode.address, sendSessionID, receiveSessionID, request)
