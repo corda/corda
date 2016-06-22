@@ -1,5 +1,5 @@
-Transaction Data Types
-======================
+Data types
+==========
 
 There is a large library of data types used in Corda transactions and contract state objects.
 
@@ -27,14 +27,17 @@ delivered (themselves referring to a currency), an ``Amount`` such as the follow
 
       Amount<Obligation.State<Currency>>
 
-Contract State
---------------
+State
+-----
 
 A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
 the details of the contract (see :doc:`data-model` for further detail). States essentially convert the generic template
-(code and legal prose) into a specific instance. In a ``WireTransaction``, outputs are provided as ``ContractState``
+(code and legal prose) into a specific instance. In a ``WireTransaction``, outputs are provided as ``TransactionState``
 implementations, while the inputs are references to the outputs of a previous transaction. These references are then
 stored as ``StateRef`` objects, which are converted to ``StateAndRef`` on demand.
+
+The ``TransactionState`` is a container for a ``ContractState`` (the custom data used by a contract program) and additional
+platform-level state information, such as the *notary* pointer (see :doc:`consensus`).
 
 A number of interfaces then extend ``ContractState``, representing standardised functionality for states:
 
@@ -64,8 +67,8 @@ interface for its subclasses' state objects to implement. The clear use-case is 
 intended to be readily extensible to cover other assets, for example commodities could be modelled by using a subclass
 whose state objects include further details (location of the commodity, origin, grade, etc.) as needed.
 
-Transaction Types
------------------
+Transaction lifecycle types
+---------------------------
 
 The ``WireTransaction`` class contains the core of a transaction without signatures, and with references to attachments
 in place of the attachments themselves (see also :doc:`data-model`). Once signed these are encapsulated in the
@@ -84,7 +87,7 @@ for signatures present on the transaction, as well as list of parties for those 
 .. note:: These types are provisional and are likely to change in future, for example to add additional information to
           ``Party``.
 
-Date Support
+Date support
 ------------
 
 There are a number of supporting interfaces and classes for use by contract which deal with dates (especially in the
