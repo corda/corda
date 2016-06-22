@@ -39,8 +39,19 @@ object TestUtils {
     val keypair3 = generateKeyPair()
 }
 
-// A dummy time at which we will be pretending test transactions are created.
-val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
+/**
+ *  JAVA INTEROP. Please keep the following points in mind when extending the Kotlin DSL
+ *
+ *   - Annotate functions with Kotlin defaults with @JvmOverloads. This produces the relevant overloads for Java.
+ *   - Void closures in arguments are inconvenient in Java, use overloading to define non-closure variants as well
+ *   - Top-level vals should be defined in the [Java] object and annotated with @JvmField first and should be referred
+ *     to from the global val. This allows static importing of [Java] in Java tests, which mimicks top-level vals.
+ *   - Same goes for top-level funs. Define them in [Java] with annotation @JvmStatic and define a global alias later.
+ *   - Infix functions work as regular ones from Java, but symbols with spaces in them don't! Define a camelCase variant
+ *     as well.
+ *   - varargs are exposed as array types in Java. Define overloads for common cases.
+ *   - The Int.DOLLARS syntax doesn't work from Java. To remedy add a @JvmStatic DOLLARS(Int) function to [Java]
+ */
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY = TestUtils.keypair
@@ -94,8 +105,6 @@ fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 //    contract `fails requirement` "some substring of the error message"
 // }
 //
-// TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
-
 class LabeledOutput(val label: String?, val state: TransactionState<*>) {
     override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
     override fun equals(other: Any?) = other is LabeledOutput && state.equals(other.state)

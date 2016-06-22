@@ -5,7 +5,7 @@ import java.security.PublicKey
 import java.util.*
 
 /**
- * Defines a simple domain specific language for the specificiation of financial contracts. Currently covers:
+ * Defines a simple domain specific language for the specification of financial contracts. Currently covers:
  *
  *  - Some utilities for working with commands.
  *  - Code for working with currencies.
