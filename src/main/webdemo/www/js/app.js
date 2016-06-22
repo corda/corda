@@ -79,7 +79,7 @@ let calculationModel = {
 };
 
 // Todo: Finish this model to solve the problem of the dates being in two different formats
-let commonModel = function() {
+/*let commonModel = function() {
     this.baseCurrency = "EUR";
     this.eligibleCurrency = "EUR";
     this.eligibleCreditSupport: "Cash in an Eligible Currency";
@@ -116,7 +116,46 @@ let commonModel = function() {
     dailyInterestAmount: "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
     tradeID: tradeId,
     hashLegalDocs: "put hash here"
-};
+};*/
+
+let commonModel = {
+    "baseCurrency": "EUR",
+    "eligibleCurrency": "EUR",
+    "eligibleCreditSupport": "Cash in an Eligible Currency",
+    "independentAmounts": {
+      "quantity": 0,
+      "token": "EUR"
+    },
+    "threshold": {
+      "quantity": 0,
+      "token": "EUR"
+    },
+    "minimumTransferAmount": {
+      "quantity": 25000000,
+      "token": "EUR"
+    },
+    "rounding": {
+      "quantity": 1000000,
+      "token": "EUR"
+    },
+    "valuationDate": "Every Local Business Day",
+    "notificationTime": "2:00pm London",
+    "resolutionTime": "2:00pm London time on the first LocalBusiness Day following the date on which the notice is give",
+    "interestRate": {
+      "oracle": "Rates Service Provider",
+      "tenor": {
+        "name": "6M"
+      },
+      "ratioUnit": null,
+      "name": "EONIA"
+    },
+    "addressForTransfers": "",
+    "exposure": {},
+    "localBusinessDay": [ "London" , "NewYork" ],
+    "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
+    "tradeID": "tradeXXX",
+    "hashLegalDocs": "put hash here"
+  };
 
 let irsViewer = angular.module('irsViewer', ['ngRoute'])
     .config(($routeProvider, $locationProvider) => {

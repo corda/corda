@@ -22,6 +22,7 @@
                             <select class="ui dropdown fluid" name="token" ng-model="deal.fixedLeg.notional.token">
                                 <option value="EUR">EUR</option>
                                 <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
                             </select>
                         </div>
                     </div>
@@ -47,16 +48,6 @@
                     <input type="date" name="terminationDate" ng-model="deal.fixedLeg.terminationDate"/>
                 </div>
                 <div class="field">
-                    <h3>Fixed Rate</h3>
-                    <div class="ui container">
-                        <h3>Ratio Unit</h3>
-                        <div class="field">
-                            <label>Value</label>
-                            <input type="text" name="value" ng-model="deal.fixedLeg.fixedRate.ratioUnit.value"/>
-                        </div>
-                    </div>
-                </div>
-                <div class="field">
                     <label>Day Count Basis</label>
                     <input type="text" name="dayCountBasisDay" ng-model="deal.fixedLeg.dayCountBasisDay"/>
                 </div>
@@ -66,28 +57,53 @@
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
-                    <input type="text" name="rollConvention" ng-model="deal.fixedLeg.rollConvention"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.fixedLeg.rollConvention" />
+                        <div class="default text">{{deal.fixedLeg.rollConvention}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="Following">Following</div>
+                            <div class="item" data-value="Preceding">Preceding</div>
+                            <div class="item" data-value="ModifiedFollowing">Modified following</div>
+                            <div class="item" data-value="ModifiedFollowingBimonthly">Modified following bimonthly</div>
+                            <div class="item" data-value="EndOfMonth">End of month</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Day in Month</label>
                     <input type="text" name="dayInMonth" ng-model="deal.fixedLeg.dayInMonth"/>
                 </div>
                 <div class="field">
-                    <label>Payment Rule</label>
-                    <input type="text" name="paymentRule" ng-model="deal.fixedLeg.paymentRule"/>
-                </div>
-                <div class="field">
                     <label>Payment Delay</label>
-                    <input type="text" name="paymentDelay" ng-model="deal.fixedLeg.paymentDelay"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.fixedLeg.paymentDelay" />
+                        <div class="default text">{{deal.fixedLeg.paymentDelay}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="0">T+00D</div>
+                            <div class="item" data-value="1">T+01D</div>
+                            <div class="item" data-value="2">T+02D</div>
+                            <div class="item" data-value="3">T+03D</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Payment Calendar</label>
                     <input type="text" name="paymentCalendar" ng-model="deal.fixedLeg.paymentCalendar"/>
                 </div>
                 <div class="field">
+                    <label>Fixed Rate Ratio Unit</label>
+                    <input type="text" name="value" ng-model="deal.fixedLeg.fixedRate.ratioUnit.value"/>
+                </div>
+                <div class="field">
                     <label>Interest Period Adjustment</label>
-                    <input type="text" name="interestPeriodAdjustment"
-                           ng-model="deal.fixedLeg.interestPeriodAdjustment"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.fixedLeg.interestPeriodAdjustment" />
+                        <div class="default text">{{deal.fixedLeg.interestPeriodAdjustment}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="Adjusted">Adjusted</div>
+                            <div class="item" data-value="Unadjusted">Unadjusted</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="eight wide column">
@@ -106,6 +122,7 @@
                             <select class="ui dropdown fluid" name="token" ng-model="deal.floatingLeg.notional.token">
                                 <option value="EUR">EUR</option>
                                 <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
                             </select>
                         </div>
                     </div>
@@ -140,11 +157,31 @@
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
-                    <input type="text" name="rollConvention" ng-model="deal.floatingLeg.rollConvention"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.floatingLeg.rollConvention" />
+                        <div class="default text">{{deal.floatingLeg.rollConvention}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="Following">Following</div>
+                            <div class="item" data-value="Preceding">Preceding</div>
+                            <div class="item" data-value="ModifiedFollowing">Modified following</div>
+                            <div class="item" data-value="ModifiedFollowingBimonthly">Modified following bimonthly</div>
+                            <div class="item" data-value="EndOfMonth">End of month</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Fixing Roll Convention</label>
-                    <input type="text" name="fixingRollConvention" ng-model="deal.floatingLeg.fixingRollConvention"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.floatingLeg.fixingRollConvention" />
+                        <div class="default text">{{deal.floatingLeg.fixingRollConvention}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="Following">Following</div>
+                            <div class="item" data-value="Preceding">Preceding</div>
+                            <div class="item" data-value="ModifiedFollowing">Modified following</div>
+                            <div class="item" data-value="ModifiedFollowingBimonthly">Modified following bimonthly</div>
+                            <div class="item" data-value="EndOfMonth">End of month</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Day In Month</label>
@@ -155,12 +192,17 @@
                     <input type="text" name="resetDayInMonth" ng-model="deal.floatingLeg.resetDayInMonth"/>
                 </div>
                 <div class="field">
-                    <label>Payment Rule</label>
-                    <input type="text" name="paymentRule" ng-model="deal.floatingLeg.paymentRule"/>
-                </div>
-                <div class="field">
                     <label>Payment Delay</label>
-                    <input type="text" name="paymentDelay" ng-model="deal.floatingLeg.paymentDelay"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.floatingLeg.paymentDelay" />
+                        <div class="default text">{{deal.floatingLeg.paymentDelay}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="0">T+00D</div>
+                            <div class="item" data-value="1">T+01D</div>
+                            <div class="item" data-value="2">T+02D</div>
+                            <div class="item" data-value="3">T+03D</div>
+                        </div>
+                    </div>
                 </div>
                 <!--<div class="ui container"><h3>deal.floatingLeg.paymentCalendar</h3>
                     <div class="field">
@@ -170,8 +212,14 @@
                 </div>-->
                 <div class="field">
                     <label>Interest Period Adjustment</label>
-                    <input type="text" name="interestPeriodAdjustment"
-                           ng-model="deal.floatingLeg.interestPeriodAdjustment"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.floatingLeg.interestPeriodAdjustment" />
+                        <div class="default text">{{deal.floatingLeg.interestPeriodAdjustment}}</div>
+                        <div class="menu">
+                            <div class="item" data-value="Adjusted">Adjusted</div>
+                            <div class="item" data-value="Unadjusted">Unadjusted</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Fixing Period</label>
@@ -205,13 +253,6 @@
                         <label>Name</label>
                         <input type="text" name="name" ng-model="deal.floatingLeg.indexTenor.name"/>
                     </div>
-                </div>
-            </div>
-            <div class="sixteen wide column">
-                <h3>Calculation</h3>
-                <div class="field">
-                    <label>Expression</label>
-                    <input type="text" name="expression" ng-model="deal.calculation.expression"/>
                 </div>
             </div>
             <div class="sixteen wide column">
@@ -257,6 +298,7 @@
                                 <select class="ui dropdown fluid" name="token" ng-model="deal.common.threshold.token">
                                     <option value="EUR">EUR</option>
                                     <option value="USD">USD</option>
+                                    <option value="GBP">GBP</option>
                                 </select>
                             </div>
                         </div>
@@ -272,6 +314,7 @@
                             <select class="ui dropdown fluid" name="token" ng-model="deal.common.minimumTransferAmount.token">
                                 <option value="EUR">EUR</option>
                                 <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
                             </select>
                         </div>
                     </div>
@@ -335,18 +378,6 @@
                         <input type="text" name="1" ng-model="deal.common.localBusinessDay.1"/>
                     </div>
                 </div>-->
-                <div class="field">
-                    <label>Daily Interest Amount</label>
-                    <input type="text" name="dailyInterestAmount" ng-model="deal.common.dailyInterestAmount"/>
-                </div>
-                <div class="field">
-                    <label>Trade ID</label>
-                    <input type="text" name="tradeID" ng-model="deal.common.tradeID"/>
-                </div>
-                <div class="field">
-                    <label>Hash Legal Docs</label>
-                    <input type="text" name="hashLegalDocs" ng-model="deal.common.hashLegalDocs"/>
-                </div>
             </div>
             <div class="sixteen wide column">
                 <input type="submit" class="ui submit primary button fluid"/>
