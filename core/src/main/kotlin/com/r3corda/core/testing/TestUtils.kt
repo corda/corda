@@ -262,8 +262,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     val String.output: TransactionState<T>
-        get() =
-        labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
+        get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
     val String.outputRef: StateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
 
     fun <C : ContractState> lookup(label: String): StateAndRef<C> {

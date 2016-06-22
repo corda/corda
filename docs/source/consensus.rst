@@ -5,7 +5,7 @@ The fundamental unit of consensus in Corda is the **state**. The concept of cons
 
 1. Consensus over state **validity** -- parties can reach certainty that a transaction defining output states is accepted by the contracts pointed to by the states and has all the required signatures. This is achieved by parties independently running the same contract code and validation logic (as described in :doc:`data model <data-model>`)
 
-2. Consensus over state **uniqueness** -- parties can reach certainty the the output states created in a transaction are the unique successors to the input states consumed by that transaction (in other words -- a state has not been used as an input by more than one transaction)
+2. Consensus over state **uniqueness** -- parties can reach certainty the output states created in a transaction are the unique successors to the input states consumed by that transaction (in other words -- a state has not been used as an input by more than one transaction)
 
 This article presents an initial model for addressing the **uniqueness** problem.
 
