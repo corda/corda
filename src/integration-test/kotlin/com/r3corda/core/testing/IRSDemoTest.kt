@@ -10,7 +10,8 @@ import java.nio.file.Paths
 class IRSDemoTest {
     @Test fun `runs IRS demo`() {
         val nodeAddrA = freeLocalHostAndPort()
-        val apiAddrA = HostAndPort.fromString("${nodeAddrA.hostText}:${nodeAddrA.port + 1}")
+        val apiAddrA = freeLocalHostAndPort()
+        val apiAddrB = freeLocalHostAndPort()
         val dirA = Paths.get("./nodeA")
         val dirB = Paths.get("./nodeB")
         var procA: Process? = null
@@ -18,8 +19,8 @@ class IRSDemoTest {
         try {
             setupNode(dirA, "NodeA")
             setupNode(dirB, "NodeB")
-            procA = startNode(dirA, "NodeA", nodeAddrA, nodeAddrA)
-            procB = startNode(dirB, "NodeB", freeLocalHostAndPort(), nodeAddrA)
+            procA = startNode(dirA, "NodeA", nodeAddrA, nodeAddrA, apiAddrA)
+            procB = startNode(dirB, "NodeB", freeLocalHostAndPort(), nodeAddrA, apiAddrB)
             runTrade(apiAddrA)
             runDateChange(apiAddrA)
         } finally {
@@ -38,16 +39,21 @@ private fun setupNode(dir: Path, nodeType: String) {
     assertEquals(proc.exitValue(), 0)
 }
 
-private fun startNode(dir: Path, nodeType: String, nodeAddr: HostAndPort, networkMapAddr: HostAndPort): Process {
+private fun startNode(dir: Path,
+                      nodeType: String,
+                      nodeAddr: HostAndPort,
+                      networkMapAddr: HostAndPort,
+                      apiAddr: HostAndPort): Process {
     println("Running node $nodeType")
     println("Node addr: ${nodeAddr.toString()}")
     val args = listOf(
             "--role", nodeType,
             "--dir", dir.toString(),
             "--network-address", nodeAddr.toString(),
-            "--network-map-address", networkMapAddr.toString())
+            "--network-map-address", networkMapAddr.toString(),
+            "--api-address", apiAddr.port.toString())
     val proc = spawn("com.r3corda.demos.IRSDemoKt", args, "IRSDemo$nodeType")
-    ensureNodeStartsOrKill(proc, nodeAddr)
+    ensureNodeStartsOrKill(proc, apiAddr)
     return proc
 }
 

@@ -25,7 +25,7 @@ fun ensureNodeStartsOrKill(proc: Process, nodeAddr: HostAndPort) {
 }
 
 private fun waitForNodeStartup(nodeAddr: HostAndPort) {
-    val url = URL("http://${nodeAddr.hostText}:${nodeAddr.port + 1}/api/status")
+    val url = URL("http://${nodeAddr.toString()}/api/status")
     var retries = 0
     var respCode: Int
     do {

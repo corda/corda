@@ -71,6 +71,9 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
+    // Todo: Move to node config file
+    private var webServerPort: Int = p2pAddr.port + 1
+
     override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, serverThread)
 
     override fun startMessagingService() {
@@ -78,11 +81,14 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         (net as ArtemisMessagingService).start()
     }
 
+    fun setWebServerPort(port: Int): Node {
+        webServerPort = port
+        return this
+    }
+
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-
-        val port = p2pAddr.port + 1   // TODO: Move this into the node config file.
-        val server = Server(port)
+        val server = Server(webServerPort)
 
         val handlerCollection = HandlerCollection()
 

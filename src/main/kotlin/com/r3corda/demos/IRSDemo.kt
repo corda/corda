@@ -63,6 +63,7 @@ private class NodeParams() {
     var dir : Path = Paths.get("")
     var address : HostAndPort = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
     var mapAddress: String = ""
+    var apiPort : Int = Node.DEFAULT_PORT + 1
     var identityFile: Path = Paths.get("")
     var tradeWithAddrs: List<String> = listOf()
     var tradeWithIdentities: List<Path> = listOf()
@@ -73,6 +74,7 @@ private class NodeParams() {
 private class DemoArgs() {
     lateinit var roleArg: OptionSpec<IRSDemoRole>
     lateinit var networkAddressArg: OptionSpec<String>
+    lateinit var apiPort: OptionSpec<Int>
     lateinit var dirArg: OptionSpec<String>
     lateinit var networkMapIdentityFile: OptionSpec<String>
     lateinit var networkMapNetAddr: OptionSpec<String>
@@ -179,6 +181,7 @@ private fun setupArgs(parser: OptionParser): DemoArgs {
 
     args.roleArg = parser.accepts("role").withRequiredArg().ofType(IRSDemoRole::class.java).required()
     args.networkAddressArg = parser.accepts("network-address").withOptionalArg()
+    args.apiPort = parser.accepts("api-address").withOptionalArg().ofType(Int::class.java)
     args.dirArg = parser.accepts("directory").withOptionalArg()
     args.networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
     args.networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
@@ -237,6 +240,12 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     if (options.has(args.networkAddressArg)) {
         nodeParams.address = HostAndPort.fromString(options.valueOf(args.networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     }
+    if(options.has(args.apiPort)) {
+        nodeParams.apiPort = options.valueOf(args.apiPort)
+    } else if(options.has(args.networkAddressArg)) {
+        nodeParams.apiPort = nodeParams.address.port + 1
+    }
+
     nodeParams.identityFile = if (options.has(args.networkMapIdentityFile)) {
         Paths.get(options.valueOf(args.networkMapIdentityFile))
     } else {
@@ -265,8 +274,7 @@ private fun runNode(nodeParams: NodeParams) : Unit {
     ExitServerProtocol.Handler.register(node)
 
     if(nodeParams.uploadRates) {
-        val apiAddr = "http://${nodeParams.address.hostText}:${nodeParams.address.port + 1}";
-        runUploadRates(apiAddr)
+        runUploadRates(HostAndPort.fromString("localhost:${nodeParams.apiPort}"))
     }
 
     try {
@@ -295,7 +303,7 @@ private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, r
 
     val node = logElapsedTime("Node startup") {  Node(params.dir, params.address, config, networkMapId,
             advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).start() }
+            listOf(InterestRateSwapAPI::class.java)).setWebServerPort(params.apiPort).start() }
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
@@ -321,12 +329,12 @@ private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, adve
     }
 }
 
-private fun runUploadRates(host: String) {
+private fun runUploadRates(host: HostAndPort) {
     val fileContents = IOUtils.toString(NodeParams::class.java.getResource("example.rates.txt"))
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
-            val url = URL(host + "/upload/interest-rates")
+            val url = URL("http://${host.toString()}/upload/interest-rates")
             if(uploadFile(url, fileContents)) {
                 timer!!.cancel()
                 println("Rates uploaded successfully")
@@ -415,7 +423,8 @@ private fun uploadFile(url: URL, file: String) : Boolean {
 private fun createNodeAParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeA")
-    params.address = HostAndPort.fromString("localhost")
+    params.address = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
+    params.apiPort = Node.DEFAULT_PORT + 1
     params.tradeWithAddrs = listOf("localhost:31340")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeB).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
     params.defaultLegalName = "Bank A"
@@ -426,6 +435,7 @@ private fun createNodeBParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeB")
     params.address = HostAndPort.fromString("localhost:31340")
+    params.apiPort = 31341
     params.tradeWithAddrs = listOf("localhost")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeA).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
     params.defaultLegalName = "Bank B"
