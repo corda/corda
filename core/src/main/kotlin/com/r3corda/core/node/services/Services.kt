@@ -23,7 +23,7 @@ val TOPIC_DEFAULT_POSTFIX = ".0"
  * change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
  * about new transactions from our peers and generate new transactions that consume states ourselves.
  *
- * This absract class has no references to Cash contracts.
+ * This abstract class has no references to Cash contracts.
  */
 class Wallet(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
