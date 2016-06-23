@@ -24,6 +24,10 @@ val TOPIC_DEFAULT_POSTFIX = ".0"
  * about new transactions from our peers and generate new transactions that consume states ourselves.
  *
  * This abstract class has no references to Cash contracts.
+ *
+ * [states] Holds the list of states that are *active* and *relevant*.
+ *   Active means they haven't been consumed yet (or we don't know about it).
+ *   Relevant means they contain at least one of our pubkeys
  */
 class Wallet(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
