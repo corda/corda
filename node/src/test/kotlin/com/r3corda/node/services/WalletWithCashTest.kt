@@ -101,12 +101,14 @@ class WalletWithCashTest {
 
 
     @Test
-    fun addingSeveralTransactionsOfTheSameLinearStateThreadFails() {
+    fun branchingLinearStatesFails() {
         val (wallet, services) = make()
 
         val freshKey = services.keyManagementService.freshKey()
 
         val thread = SecureHash.sha256("thread")
+
+        // Issue a linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
             signWith(freshKey)
@@ -114,9 +116,44 @@ class WalletWithCashTest {
 
         wallet.notify(dummyIssue.tx)
         assertEquals(1, wallet.currentWallet.states.size)
+
+        // Issue another linear state of the same thread (nonce different)
+        val dummyIssue2 = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            signWith(freshKey)
+        }.toSignedTransaction()
+
         assertThatThrownBy {
-            wallet.notify(dummyIssue.tx)
+            wallet.notify(dummyIssue2.tx)
         }
+        assertEquals(1, wallet.currentWallet.states.size)
+    }
+
+    @Test
+    fun sequencingLinearStatesWorks() {
+        val (wallet, services) = make()
+
+        val freshKey = services.keyManagementService.freshKey()
+
+        val thread = SecureHash.sha256("thread")
+
+        // Issue a linear state
+        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            signWith(freshKey)
+        }.toSignedTransaction()
+
+        wallet.notify(dummyIssue.tx)
+        assertEquals(1, wallet.currentWallet.states.size)
+
+        // Move the same state
+        val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            addInputState(dummyIssue.tx.outRef<LinearState>(0))
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction()
+
+        wallet.notify(dummyMove.tx)
         assertEquals(1, wallet.currentWallet.states.size)
     }
 }
