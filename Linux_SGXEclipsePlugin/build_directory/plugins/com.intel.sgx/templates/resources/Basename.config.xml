@@ -1,0 +1,9 @@
+<EnclaveConfiguration>
+  <ProdID>$(ProdID)</ProdID>
+  <ISVSVN>$(IsvSvn)</ISVSVN>
+  <StackMaxSize>$(ThreadStackSize)</StackMaxSize>
+  <HeapMaxSize>$(GlobalHeapSize)</HeapMaxSize>
+  <TCSNum>$(TcsNumber)</TCSNum>
+  <TCSPolicy>$(TcsPolicy)</TCSPolicy>
+  <DisableDebug>$(DisableDebug)</DisableDebug>
+</EnclaveConfiguration>

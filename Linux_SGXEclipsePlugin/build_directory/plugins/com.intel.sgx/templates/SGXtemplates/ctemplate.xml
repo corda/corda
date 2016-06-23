@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--                                                                       -->
+<!-- Copyright (c) 2016 Intel Corporation.				   -->
+<!-- 									   -->
+<!-- All rights reserved. This program and the accompanying materials	   -->
+<!-- are made available under the terms of the Eclipse Public License v1.0 -->
+<!-- which accompanies this distribution, and is available at		   -->
+<!-- http://www.eclipse.org/legal/epl-v10.html				   -->
+<!-- 									   -->
+<!-- Contributors:							   -->
+<!--     Intel Corporation - initial implementation and documentation	   -->
+<!--                                                                       -->
+<template type="ProjTempl" version="1.0" supplier="Eclipse.org" revision="1.0" author="Bala Torati (Symbian)"
+		copyright="Copyright (c) 2007 Symbian Software Limited and others. All rights reserved. This program and the accompanying materials are made available under the terms of the Eclipse Public License v1.0 which accompanies this distribution, and is available athttp://www.eclipse.org/legal/epl-v10.html"
+		id="myHelloWorldCCProject" label="HelloWorld.CCtemplate.label" description="HelloWorld.CCtemplate.description"
+		 help="help.html">
+	<property-group id="basics" label="HelloWorld.basics.label" description="HelloWorld.basics.description" type="PAGES-ONLY" help="help.html">
+		<property id="author"
+			label="HelloWorld.author.label"
+			description="HelloWorld.author.description"
+			type="input"
+			pattern=".*"
+			default=""
+			hidden="false"
+			persist="true"/>
+		<property id="copyright"
+			label="HelloWorld.copyright.label"
+			description="HelloWorld.copyright.description"
+			type="input"
+			pattern=".*"
+			default="HelloWorld.copyright.default"
+			hidden="false"
+			persist="true"/>
+		<property id="message"
+			label="HelloWorld.message.label"
+			description="HelloWorld.message.description"
+			type="input"
+			pattern=".*"
+			default="HelloWorld.message.default"
+			hidden="false"
+			persist="true"/>
+		<property id="sourceDir"
+				label="HelloWorld.sourceDir.label"
+				description="HelloWorld.sourceDir.description"
+				type="input"
+				default="HelloWorld.sourceDir.default"
+				pattern="[a-zA-Z0-9]+"
+				persist="true"/>
+	</property-group>
+	
+	<process type="org.eclipse.cdt.managedbuilder.core.NewManagedProject">
+		<simple name="name" value="$(projectName)" /> 
+		<simple name="artifactExtension" value="exe" /> 
+		<simple name="isCProject" value="false" /> 
+	</process>
+
+	<process type="org.eclipse.cdt.core.CreateSourceFolder">
+		<simple name="projectName" value="$(projectName)"/>
+		<simple name="path" value="$(sourceDir)"/>
+	</process>
+
+	<process type="org.eclipse.cdt.core.AddFiles">
+		<simple name="projectName" value="$(projectName)"/>
+		<complex-array name="files">
+			<element>
+				<simple name="source" value="src/Basename.cpp"/>
+				<simple name="target" value="$(sourceDir)/$(projectName).cpp"/>
+				<simple name="replaceable" value="true"/>
+			</element>
+		</complex-array>
+	</process>
+
+	<process type="org.eclipse.cdt.ui.OpenFiles">
+		<simple name="projectName" value="$(projectName)"/>
+		<complex-array name="files">
+			<element>
+				<simple name="target" value="$(sourceDir)/$(projectName).cpp"/>
+			</element>
+		</complex-array>
+	</process>
+
+</template>
+

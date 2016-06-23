@@ -1,0 +1,222 @@
+#
+# Copyright (C) 2011-2016 Intel Corporation. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   * Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in
+#     the documentation and/or other materials provided with the
+#     distribution.
+#   * Neither the name of Intel Corporation nor the names of its
+#     contributors may be used to endorse or promote products derived
+#     from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#
+
+# This Makefile will compile SDK to generate various components
+# including:
+#  - Trusted libraries
+#        - tstdc:         libsgx_tstdc.a
+#        - tstdcxx:       libsgx_tstdcxx.a
+#        - tservice:      libsgx_tservice.a
+#        - trts:          libsgx_trts.a
+#        - tcrypto:       libsgx_tcrypto.a
+#        - tkey_exchange: libsgx_tkey_exchange.a
+#  - Untrtusted libraries
+#        - ukey_exchange: libsgx_ukey_exchange.a
+#        - ptrace:        libsgx_ptrace.so, gdb-sgx-plugin
+#        - sample_crypto: libsample_crypto.so (for sample code use)
+#  - Tools
+#        - signtool:      sgx_sign
+#        - edger8r:       sgx_edger8r
+#  - Simulation libraries and tools
+#        - simulation:    libsgx_trts_sim.a, libsgx_tservice_sim.a, libsgx_urts_sim.a, libsgx_uae_service_sim.a, sgx_config_cpusvn
+#
+include ../buildenv.mk
+
+LIBTLIBC   := $(BUILD_DIR)/libsgx_tstdc.a
+LIBTLIBCXX := $(BUILD_DIR)/libsgx_tstdcxx.a
+LIBTSE     := $(BUILD_DIR)/libsgx_tservice.a
+
+.PHONY: all
+all: tstdc tstdcxx tservice trts tcrypto tkey_exchange ukey_exchange ptrace sample_crypto simulation signtool edger8r
+
+# ---------------------------------------------------
+#  tstdc
+#      includes: tlibc, libm, tlibthread, compiler-rt
+# ---------------------------------------------------
+.PHONY: tstdc
+tstdc: $(LIBTLIBC)
+
+$(LIBTLIBC): tlibthread compiler-rt sgx_libm
+	$(MAKE) -C tlibc/ -j4 2> /dev/null
+	@$(MKDIR) $(BUILD_DIR)/.libm  $(BUILD_DIR)/.tlibc   $(BUILD_DIR)/.tlibthread
+	@$(RM) -f $(BUILD_DIR)/.libm/* $(BUILD_DIR)/.tlibc/* $(BUILD_DIR)/.tlibthread/*
+	@cd $(BUILD_DIR)/.libm     && $(AR) x $(LINUX_EXTERNAL_DIR)/sgx_libm/libm.a
+	@cd $(BUILD_DIR)/.tlibc      && $(AR) x $(LINUX_SDK_DIR)/tlibc/libtlibc.a
+	@cd $(BUILD_DIR)/.tlibthread && $(AR) x $(LINUX_SDK_DIR)/tlibthread/libtlibthread.a
+	$(CP) compiler-rt/libcompiler-rt.a $@
+	$(AR) rsD $@ $(BUILD_DIR)/.libm/*.o $(BUILD_DIR)/.tlibc/*.o $(BUILD_DIR)/.tlibthread/*.o
+	@$(RM) -rf $(BUILD_DIR)/.libm $(BUILD_DIR)/.tlibc $(BUILD_DIR)/.tlibthread
+
+.PHONY: tlibthread
+tlibthread:
+	$(MAKE) -C tlibthread/
+
+.PHONY: compiler-rt
+compiler-rt:
+	$(MAKE) -C compiler-rt/ 2> /dev/null
+
+LIBM_PATH = $(LINUX_EXTERNAL_DIR)/sgx_libm/
+
+M_ARCH = intel64
+ifneq ($(ARCH), x86_64)
+	M_ARCH := ia32
+endif
+
+.PHONY: sgx_libm
+sgx_libm:
+	$(MAKE) -C $(LIBM_PATH) ARCH=$(M_ARCH) 2> /dev/null
+
+# ---------------------------------------------------
+#  tstdcxx
+#      includes: cpprt, tlibstdcxx
+# ---------------------------------------------------
+.PHONY: tstdcxx
+tstdcxx: $(LIBTLIBCXX)
+
+$(LIBTLIBCXX): cpprt tlibstdcxx
+	@$(MKDIR) $(BUILD_DIR)/.cpprt   $(BUILD_DIR)/.tlibstdcxx
+	@$(RM) -f $(BUILD_DIR)/.cpprt/* $(BUILD_DIR)/.tlibstdcxx/*
+	@cd $(BUILD_DIR)/.cpprt      && $(AR) x $(LINUX_SDK_DIR)/cpprt/libcpprt.a
+	@cd $(BUILD_DIR)/.tlibstdcxx && $(AR) x $(LINUX_SDK_DIR)/tlibstdcxx/libtlibstdcxx.a
+	$(AR) rcsD $@ $(BUILD_DIR)/.cpprt/*.o $(BUILD_DIR)/.tlibstdcxx/*.o
+	@$(RM) -rf   $(BUILD_DIR)/.cpprt     $(BUILD_DIR)/.tlibstdcxx
+
+.PHONY: cpprt
+cpprt:
+	$(MAKE) -C cpprt 
+
+.PHONY: tlibstdcxx
+tlibstdcxx: $(BUILD_DIR)
+	$(MAKE) -C tlibstdcxx/ 2> /dev/null
+	$(CP) tlibstdcxx/README.sgx $(BUILD_DIR)/STLport_Changes_SGX.txt
+
+# ---------------------------------------------------
+#  tse
+#      includes: selib, tseal, tae_service, ec_dh_lib 
+# ---------------------------------------------------
+.PHONY: tservice
+tservice: $(LIBTSE)
+
+$(LIBTSE): selib tseal tae_service
+	@$(MKDIR) $(BUILD_DIR)/.tservice
+	@$(RM) -f $(BUILD_DIR)/.tservice/*
+	cd $(BUILD_DIR)/.tservice && $(AR) x $(LINUX_SDK_DIR)/tseal/linux/libtSeal.a
+	cd $(BUILD_DIR)/.tservice && $(AR) x $(LINUX_SDK_DIR)/tae_service/libtae_service.a
+	$(CP) $(LINUX_SDK_DIR)/selib/linux/libselib.a $@
+	$(AR) rsD $@ $(BUILD_DIR)/.tservice/*.o
+	@$(RM) -rf  $(BUILD_DIR)/.tservice
+
+.PHONY: selib
+selib:
+	$(MAKE) -C selib/linux/
+
+.PHONY: tseal
+tseal:
+	$(MAKE) -C tseal/linux/
+
+.PHONY: tae_service
+tae_service: 
+	$(MAKE) -C tae_service
+
+# ---------------------------------------------------
+#  Other trusted libraries
+# ---------------------------------------------------
+.PHONY: trts
+trts:
+	$(MAKE) -C trts/
+
+.PHONY: tcrypto
+tcrypto:
+	$(MAKE) -C tlibcrypto/
+
+.PHONY: tkey_exchange
+tkey_exchange:
+	$(MAKE) -C tkey_exchange
+
+# ---------------------------------------------------
+#  Untrusted libraries
+# ---------------------------------------------------
+.PHONY: ukey_exchange
+ukey_exchange:
+	$(MAKE) -C ukey_exchange
+
+.PHONY: ptrace
+ptrace:
+	$(MAKE) -C debugger_interface/linux/
+
+.PHONY: sample_crypto
+sample_crypto:
+	$(MAKE) -C sample_libcrypto
+
+# ---------------------------------------------------
+#  simualtion libraries and tools
+# ---------------------------------------------------
+.PHONY: simulation
+simulation:
+	$(MAKE) -C simulation/
+
+# ---------------------------------------------------
+#  tools
+# ---------------------------------------------------
+.PHONY: signtool
+signtool:
+	$(MAKE) -C sign_tool/SignTool/
+
+.PHONY: edger8r
+edger8r:
+	$(MAKE) -C edger8r/linux/
+
+$(BUILD_DIR):
+	$(MKDIR) $@
+
+clean:
+	$(MAKE) -C $(LIBM_PATH) ARCH=$(M_ARCH)         clean 
+	$(MAKE) -C tlibc/                              clean
+	$(MAKE) -C tlibthread/                         clean
+	$(MAKE) -C compiler-rt/                        clean
+	$(MAKE) -C cpprt                               clean
+	$(MAKE) -C tlibstdcxx/                         clean
+	$(MAKE) -C tseal/linux/                        clean
+	$(MAKE) -C selib/linux/                        clean
+	$(MAKE) -C tae_service/                        clean
+	$(MAKE) -C trts/                               clean
+	$(MAKE) -C tlibcrypto/                         clean
+	$(MAKE) -C tkey_exchange/                      clean
+	$(MAKE) -C ukey_exchange/                      clean
+	$(MAKE) -C debugger_interface/linux/           clean
+	$(MAKE) -C sample_libcrypto/                   clean
+	$(MAKE) -C simulation/                         clean
+	$(MAKE) -C sign_tool/SignTool                  clean
+	$(MAKE) -C edger8r/linux                       clean
+	@$(RM) $(LIBTLIBC) $(LIBTLIBCXX) $(LIBTSE)
+	@$(RM) $(BUILD_DIR)/STLport_Changes_SGX.txt
+
+rebuild: clean all

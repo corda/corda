@@ -1,0 +1,2 @@
+DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
+<deliverydir>/License.txt	<installdir>/package/licenses/License.txt	0	main	STP
