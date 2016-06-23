@@ -22,8 +22,8 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 open class InMemoryWalletService(private val services: ServiceHub) : SingletonSerializeAsToken(), WalletService {
-    class ClashingThreads(threads: Set<SecureHash>) :
-            Exception("There are multiple linear states pointing to the same thread. The clashing thread(s): $threads")
+    class ClashingThreads(threads: Set<SecureHash>, transactions: Iterable<WireTransaction>) :
+            Exception("There are multiple linear head states after processing transactions $transactions. The clashing thread(s): $threads")
     private val log = loggerFor<InMemoryWalletService>()
 
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
@@ -79,7 +79,7 @@ open class InMemoryWalletService(private val services: ServiceHub) : SingletonSe
 
             val clashingThreads = walletAndNetDelta.first.clashingThreads
             if (!clashingThreads.isEmpty()) {
-                throw ClashingThreads(clashingThreads)
+                throw ClashingThreads(clashingThreads, txns)
             }
 
             wallet = walletAndNetDelta.first
