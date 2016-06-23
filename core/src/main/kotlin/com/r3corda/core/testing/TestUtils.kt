@@ -295,7 +295,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun labelForState(output: TransactionState<*>): String? = outputsToLabels[output]
 
     inner class Roots {
-        fun transaction(vararg outputStates: LabeledOutput) {
+        fun transaction(vararg outputStates: LabeledOutput): Roots {
             val outs = outputStates.map { it.state }
             val wtx = WireTransaction(emptyList(), emptyList(), outs, emptyList(), emptyList(), TransactionType.General())
             for ((index, state) in outputStates.withIndex()) {
@@ -305,6 +305,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
                 labelToOutputs[label] = state.state as TransactionState<T>
             }
             rootTxns.add(wtx)
+            return this
         }
 
         /**
@@ -370,8 +371,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             verify()
         }
         assertEquals(index, e.index)
-        if (!e.cause!!.message!!.contains(message))
-            throw AssertionError("Exception should have said '$message' but was actually: ${e.cause.message}", e.cause)
+        if (!(e.cause?.message ?: "") .contains(message))
+            throw AssertionError("Exception should have said '$message' but was actually: ${e.cause?.message}", e.cause)
         return e
     }
 

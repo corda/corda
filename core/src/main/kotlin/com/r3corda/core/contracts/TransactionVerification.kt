@@ -93,6 +93,9 @@ data class TransactionForContract(val inputs: List<ContractState>,
     @Deprecated("This property was renamed to outputs", ReplaceWith("outputs"))
     val outStates: List<ContractState> get() = outputs
 
+    inline fun <reified T: CommandData, K> groupCommands(keySelector: (AuthenticatedObject<T>) -> K): Map<K, List<AuthenticatedObject<T>>>
+        = commands.select<T>().groupBy(keySelector)
+
     /**
      * Given a type and a function that returns a grouping key, associates inputs and outputs together so that they
      * can be processed as one. The grouping key is any arbitrary object that can act as a map key (so must implement
