@@ -4,6 +4,7 @@ import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.cash.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.testing.MockKeyManagementService
 import com.r3corda.core.node.services.testing.MockStorageService
@@ -14,6 +15,7 @@ import com.r3corda.node.services.wallet.NodeWalletService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -95,5 +97,63 @@ class WalletWithCashTest {
         assertEquals(20.DOLLARS, wallet.currentWallet.cashBalances[USD])
 
         // TODO: Flesh out these tests as needed.
+    }
+
+
+    @Test
+    fun branchingLinearStatesFails() {
+        val (wallet, services) = make()
+
+        val freshKey = services.keyManagementService.freshKey()
+
+        val thread = SecureHash.sha256("thread")
+
+        // Issue a linear state
+        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            signWith(freshKey)
+        }.toSignedTransaction()
+
+        wallet.notify(dummyIssue.tx)
+        assertEquals(1, wallet.currentWallet.states.size)
+
+        // Issue another linear state of the same thread (nonce different)
+        val dummyIssue2 = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            signWith(freshKey)
+        }.toSignedTransaction()
+
+        assertThatThrownBy {
+            wallet.notify(dummyIssue2.tx)
+        }
+        assertEquals(1, wallet.currentWallet.states.size)
+    }
+
+    @Test
+    fun sequencingLinearStatesWorks() {
+        val (wallet, services) = make()
+
+        val freshKey = services.keyManagementService.freshKey()
+
+        val thread = SecureHash.sha256("thread")
+
+        // Issue a linear state
+        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            signWith(freshKey)
+        }.toSignedTransaction()
+
+        wallet.notify(dummyIssue.tx)
+        assertEquals(1, wallet.currentWallet.states.size)
+
+        // Move the same state
+        val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            addInputState(dummyIssue.tx.outRef<LinearState>(0))
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction()
+
+        wallet.notify(dummyMove.tx)
+        assertEquals(1, wallet.currentWallet.states.size)
     }
 }

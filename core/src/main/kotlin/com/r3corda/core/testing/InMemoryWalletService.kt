@@ -22,6 +22,8 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 open class InMemoryWalletService(private val services: ServiceHub) : SingletonSerializeAsToken(), WalletService {
+    class ClashingThreads(threads: Set<SecureHash>, transactions: Iterable<WireTransaction>) :
+            Exception("There are multiple linear head states after processing transactions $transactions. The clashing thread(s): $threads")
     private val log = loggerFor<InMemoryWalletService>()
 
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
@@ -44,7 +46,7 @@ open class InMemoryWalletService(private val services: ServiceHub) : SingletonSe
      * Returns a snapshot of the heads of LinearStates
      */
     override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
-        get() = mutex.locked { wallet }.let { wallet ->
+        get() = currentWallet.let { wallet ->
             wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.data.thread }.mapValues { it.value }
         }
 
@@ -74,10 +76,17 @@ open class InMemoryWalletService(private val services: ServiceHub) : SingletonSe
                 val combinedDelta = delta + walletAndDelta.second
                 Pair(wallet, combinedDelta)
             }
+
+            val clashingThreads = walletAndNetDelta.first.clashingThreads
+            if (!clashingThreads.isEmpty()) {
+                throw ClashingThreads(clashingThreads, txns)
+            }
+
             wallet = walletAndNetDelta.first
             netDelta = walletAndNetDelta.second
             return@locked wallet
         }
+
         if (netDelta != Wallet.NoUpdate) {
             _updatesPublisher.onNext(netDelta)
         }
@@ -119,5 +128,24 @@ open class InMemoryWalletService(private val services: ServiceHub) : SingletonSe
         }
 
         return Pair(Wallet(newStates), change)
+    }
+
+    companion object {
+
+        // Returns the set of LinearState threads that clash in the wallet
+        val Wallet.clashingThreads: Set<SecureHash> get() {
+            val clashingThreads = HashSet<SecureHash>()
+            val threadsSeen = HashSet<SecureHash>()
+            for (linearState in states.filterStatesOfType<LinearState>()) {
+                val thread = linearState.state.data.thread
+                if (threadsSeen.contains(thread)) {
+                    clashingThreads.add(thread)
+                } else {
+                    threadsSeen.add(thread)
+                }
+            }
+            return clashingThreads
+        }
+
     }
 }
