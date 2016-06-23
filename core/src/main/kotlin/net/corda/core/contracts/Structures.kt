@@ -381,7 +381,7 @@ interface IssueCommand : CommandData {
     val nonce: Long
 }
 
-/** A common move command for contracts which can change owner. */
+/** A common move command for contract states which can change owner. */
 interface MoveCommand : CommandData {
     /**
      * Contract code the moved state(s) are for the attention of, for example to indicate that the states are moved in
@@ -395,6 +395,12 @@ interface MoveCommand : CommandData {
 interface NetCommand : CommandData {
     /** The type of netting to apply, see [NetType] for options. */
     val type: NetType
+}
+
+/** Indicates that this transaction replaces the inputs from a legacy contract to a new equivalent contract. */
+interface UpgradeCommand<T: ContractState> : CommandData {
+    val oldContract: Contract
+    val newContract: UpgradedContract<T>
 }
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
@@ -444,6 +450,30 @@ interface Contract {
      */
     val legalContractReference: SecureHash
 }
+
+/**
+ * Interface for contracts which can upgrade state objects issued by other contracts. Generally represents that this
+ * is an upgraded version of the previous contract.
+ *
+ * @param O the old contract state (can be [ContractState] or other common supertype if this supports upgrading
+ * more than one state).
+ */
+interface UpgradedContract<O : ContractState>: Contract {
+    /**
+     * Upgrade the another contract's state object to a state object referencing this contract.
+     *
+     * @throws IllegalArgumentException if the given state object is not one that can be upgraded. This can be either
+     * that the class is incompatible, or that the data inside the state object cannot be upgraded for some reason.
+     */
+    @Throws(IllegalArgumentException::class)
+    fun upgrade(state: O): ContractState
+}
+
+/**
+ * Convenience method for upgrading a contract state from state and reference.
+ */
+@Throws(IllegalArgumentException::class)
+fun <O : ContractState> UpgradedContract<O>.upgrade(ref: StateAndRef<O>): ContractState = upgrade(ref.state.data)
 
 /**
  * An attachment is a ZIP (or an optionally signed JAR) that contains one or more files. Attachments are meant to

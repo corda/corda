@@ -164,6 +164,12 @@ interface VaultService {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 
+    /** Get contracts we would be willing to upgrade the suggested contract to. */
+    // TODO: We need a better place to put business logic functions
+    fun <T : ContractState> getUpgradeCandidates(old: Contract): Set<UpgradedContract<T>>
+    /** Attempt to upgrade the given contract to a newer version. */
+    fun <T: ContractState> upgradeContracts(refs: List<StateAndRef<T>>, new: UpgradedContract<T>): List<ListenableFuture<*>>
+
     /**
      *  Add a note to an existing [LedgerTransaction] given by its unique [SecureHash] id
      *  Multiple notes may be attached to the same [LedgerTransaction].

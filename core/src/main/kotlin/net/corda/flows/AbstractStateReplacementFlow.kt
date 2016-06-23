@@ -26,8 +26,8 @@ import net.corda.flows.AbstractStateReplacementFlow.Instigator
  *
  * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
  * ([Acceptor]) of that state. If participants agree to the proposed change, they each sign the transaction.
- * Finally, [Instigator] sends the transaction containing all signatures back to each participant so they can record it and
- * use the new updated state for future transactions.
+ * Finally, [Instigator] sends the transaction containing all participants' signatures to the notary for signature, and
+ * then back to each participant so they can record it and use the new updated state for future transactions.
  */
 abstract class AbstractStateReplacementFlow {
     data class Proposal<out T>(val stateRef: StateRef, val modification: T, val stx: SignedTransaction)

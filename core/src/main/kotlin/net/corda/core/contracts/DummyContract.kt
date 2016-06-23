@@ -1,5 +1,7 @@
 package net.corda.core.contracts
 
+import net.corda.core.contracts.clauses.UpgradeClause
+import net.corda.core.contracts.clauses.verifyClause
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -10,6 +12,12 @@ import net.corda.core.transactions.TransactionBuilder
 val DUMMY_PROGRAM_ID = DummyContract()
 
 data class DummyContract(override val legalContractReference: SecureHash = SecureHash.sha256("")) : Contract {
+    interface Clauses {
+        class Upgrade: UpgradeClause<ContractState, Commands, Unit>() {
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Upgrade::class.java)
+            override val expectedType: Class<*> = State::class.java
+        }
+    }
 
     interface State : ContractState {
         val magicNumber: Int
@@ -38,11 +46,13 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
     interface Commands : CommandData {
         class Create : TypeOnlyCommandData(), Commands
         class Move : TypeOnlyCommandData(), Commands
+        data class Upgrade(override val oldContract: Contract,
+                           override val newContract: UpgradedContract<State>) : UpgradeCommand<State>, Commands
     }
 
-    override fun verify(tx: TransactionForContract) {
-        // Always accepts.
-    }
+    fun extractCommands(tx: TransactionForContract)
+        = tx.commands.select<Commands>()
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Upgrade(), extractCommands(tx))
 
     companion object {
         @JvmStatic

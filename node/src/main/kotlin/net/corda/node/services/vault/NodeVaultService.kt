@@ -1,6 +1,7 @@
 package net.corda.node.services.vault
 
 import com.google.common.collect.Sets
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
@@ -346,5 +347,17 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         } else {
             false
         }
+    }
+
+    override fun <T : ContractState> getUpgradeCandidates(old: Contract): Set<UpgradedContract<T>> {
+        // TODO: Add some rules here - likely user configured values as a start
+        // TODO: Either here or somewhere else, make sure there's a process for blocking upgrades until dependent contracts
+        //       have all been updated. For example obligations to pay cash must be updated before cash is updated.
+        return emptySet()
+    }
+
+    override fun <T : ContractState> upgradeContracts(refs: List<StateAndRef<T>>, new: UpgradedContract<T>): List<ListenableFuture<*>> {
+        // refs.map { ref -> smm.add(ContractUpgradeProtocol.Instigator(ref, new)) }.toList()
+        return emptyList()
     }
 }
