@@ -9,7 +9,8 @@ import java.util.*
 class DummyLinearState(
         override val thread: SecureHash = SecureHash.randomSHA256(),
         override val contract: Contract = AlwaysSucceedContract(),
-        override val participants: List<PublicKey> = listOf()) : LinearState {
+        override val participants: List<PublicKey> = listOf(),
+        val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState {
 
     override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
         return participants.any { ourKeys.contains(it) }
