@@ -353,7 +353,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             tx.signWith(keyPair)
 
             // Get the notary to sign the timestamp
-            val notarySig = subProtocol(NotaryProtocol.Client(tx.toWireTransaction()))
+            val notarySig = subProtocol(NotaryProtocol.Client(tx.toSignedTransaction(false)))
             tx.addSignatureUnchecked(notarySig)
 
             // Commit it to local storage.
@@ -368,7 +368,8 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             val builder = TransactionType.General.Builder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
-            builder.addSignatureUnchecked(subProtocol(NotaryProtocol.Client(builder.toWireTransaction())))
+            val notarySignature = subProtocol(NotaryProtocol.Client(builder.toSignedTransaction(false)))
+            builder.addSignatureUnchecked(notarySignature)
             val tx = builder.toSignedTransaction(true)
             serviceHub.recordTransactions(listOf(tx))
             tx
