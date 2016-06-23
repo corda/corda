@@ -21,13 +21,10 @@ let fixedLegModel = {
     effectiveDateAdjustment: null,
     terminationDate: new Date(2026, 3, 11),
     terminationDateAdjustment: null,
-      fixedRate: {
-        ratioUnit: {
-            value: "0.01676"
-        }
-    },
-    dayCountBasisDay: "D30",
-    dayCountBasisYear: "Y360",
+    fixedRate: "1.676",
+    dayCountBasis: "30/360",
+    //dayCountBasisDay: "D30",
+    //dayCountBasisYear: "Y360",
     rollConvention: "ModifiedFollowing",
     dayInMonth: 10,
     paymentRule: "InArrears",
@@ -47,8 +44,9 @@ let floatingLegModel = {
    effectiveDateAdjustment: null,
    terminationDate: new Date(2026, 3, 11),
    terminationDateAdjustment: null,
-   dayCountBasisDay: "D30",
-   dayCountBasisYear: "Y360",
+   dayCountBasis: "30/360",
+   //dayCountBasisDay: "D30",
+   //dayCountBasisYear: "Y360",
    rollConvention: "ModifiedFollowing",
    fixingRollConvention: "ModifiedFollowing",
    dayInMonth: 10,
@@ -78,19 +76,24 @@ let calculationModel = {
     }
 };
 
-// Todo: Finish this model to solve the problem of the dates being in two different formats
-/*let commonModel = function() {
-    this.baseCurrency = "EUR";
-    this.eligibleCurrency = "EUR";
-    this.eligibleCreditSupport: "Cash in an Eligible Currency";
-    this.independentAmounts = {
+let fixedRateViewModel = {
+    ratioUnit: {
+        value: 0.01 // %
+    }
+}
+
+let commonViewModel = {
+    baseCurrency: "EUR",
+    eligibleCurrency: "EUR",
+    eligibleCreditSupport: "Cash in an Eligible Currency",
+    independentAmounts: {
         quantity: 0,
         token: "EUR"
-    };
-    this.threshold = {
+    },
+    threshold: {
         quantity: 0,
         token: "EUR"
-    };
+    },
     minimumTransferAmount: {
         quantity: 25000000,
         token: "EUR"
@@ -101,7 +104,7 @@ let calculationModel = {
     },
     valuationDate: "Every Local Business Day",
     notificationTime: "2:00pm London",
-    resolutionTime: "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
+    resolutionTime: "2:00pm London time on the first LocalBusiness Day following the date on which the notice is give",
     interestRate: {
         oracle: "Rates Service Provider",
         tenor: {
@@ -114,50 +117,50 @@ let calculationModel = {
     exposure: {},
     localBusinessDay: [ "London" , "NewYork" ],
     dailyInterestAmount: "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
-    tradeID: tradeId,
     hashLegalDocs: "put hash here"
-};*/
+};
 
-let commonModel = {
-    "baseCurrency": "EUR",
-    "eligibleCurrency": "EUR",
-    "eligibleCreditSupport": "Cash in an Eligible Currency",
-    "independentAmounts": {
-      "quantity": 0,
-      "token": "EUR"
-    },
-    "threshold": {
-      "quantity": 0,
-      "token": "EUR"
-    },
-    "minimumTransferAmount": {
-      "quantity": 25000000,
-      "token": "EUR"
-    },
-    "rounding": {
-      "quantity": 1000000,
-      "token": "EUR"
-    },
-    "valuationDate": "Every Local Business Day",
-    "notificationTime": "2:00pm London",
-    "resolutionTime": "2:00pm London time on the first LocalBusiness Day following the date on which the notice is give",
-    "interestRate": {
-      "oracle": "Rates Service Provider",
-      "tenor": {
-        "name": "6M"
-      },
-      "ratioUnit": null,
-      "name": "EONIA"
-    },
-    "addressForTransfers": "",
-    "exposure": {},
-    "localBusinessDay": [ "London" , "NewYork" ],
-    "dailyInterestAmount": "(CashAmount * InterestRate ) / (fixedLeg.notional.token.currencyCode.equals('GBP')) ? 365 : 360",
-    "tradeID": "tradeXXX",
-    "hashLegalDocs": "put hash here"
-  };
+let dealViewModel = {
+  fixedLeg: fixedLegModel,
+  floatingLeg: floatingLegModel,
+  common: commonViewModel,
+  notary: "Bank A"
+};
 
-let irsViewer = angular.module('irsViewer', ['ngRoute'])
+let Deal = function(dealViewModel) {
+    let now = new Date();
+    let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
+
+    this.toJson = () => {
+        let fixedLeg = {};
+        let floatingLeg = {};
+        let common = {};
+        _.assign(fixedLeg, dealViewModel.fixedLeg);
+        _.assign(floatingLeg, dealViewModel.floatingLeg);
+        _.assign(common, dealViewModel.common);
+
+        fixedRateViewModel.fixedRate = Number(fixedLeg.fixedRate) / 100;
+        _.assign(fixedLeg.fixedRate, fixedRateViewModel);
+
+        common.tradeID = tradeId;
+        fixedLeg.effectiveDate = formatDateForNode(fixedLeg.effectiveDate);
+        fixedLeg.terminationDate = formatDateForNode(fixedLeg.terminationDate);
+        floatingLeg.effectiveDate = formatDateForNode(floatingLeg.effectiveDate);
+        floatingLeg.terminationDate = formatDateForNode(floatingLeg.terminationDate);
+
+        let json = {
+            fixedLeg: fixedLeg,
+            floatingLeg: floatingLeg,
+            calculation: calculationModel,
+            common: common,
+            notary: dealViewModel.notary
+        }
+
+        return json;
+    };
+};
+
+let irsViewer = angular.module('irsViewer', ['ngRoute', 'fcsa-number'])
     .config(($routeProvider, $locationProvider) => {
         $routeProvider
             .when('/', {
@@ -260,20 +263,11 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
         }
 
         this.newDeal = () => {
-            let now = new Date();
-            let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
-
-            return {
-                fixedLeg: fixedLegModel,
-                floatingLeg: floatingLegModel,
-                calculation: calculationModel,
-                common: commonModel,
-                notary: "Bank A"
-              };
+            return dealViewModel;
         }
 
         this.createDeal = (deal) => {
-            return load('create-deal', $http.post('http://localhost:31338/api/irs/deals', deal))
+            return load('create-deal', $http.post('http://localhost:31338/api/irs/deals', deal.toJson()))
             .then((resp) => {
                 return deal.tradeId;
             }, (resp) => {
@@ -286,17 +280,6 @@ let nodeService = irsViewer.factory('nodeService', ($http) => {
 function initSemanticUi() {
     $('.ui.accordion').accordion();
     $('.ui.dropdown').dropdown();
-}
-
-function prepareDeal(deal) {
-    let newDeal = Object.assign({}, deal);
-
-    newDeal.fixedLeg.effectiveDate = formatDateForNode(newDeal.fixedLeg.effectiveDate);
-    newDeal.fixedLeg.terminationDate = formatDateForNode(newDeal.fixedLeg.terminationDate);
-    newDeal.floatingLeg.effectiveDate = formatDateForNode(newDeal.floatingLeg.effectiveDate);
-    newDeal.floatingLeg.terminationDate = formatDateForNode(newDeal.floatingLeg.terminationDate);
-
-    return newDeal;
 }
 
 irsViewer.controller('HomeController', function HomeController($http, $scope, nodeService) {
@@ -330,9 +313,10 @@ irsViewer.controller('CreateDealController', function CreateDealController($http
     $scope.isLoading = nodeService.isLoading;
     $scope.deal = nodeService.newDeal();
     $scope.createDeal = () => {
-        nodeService.createDeal(prepareDeal($scope.deal))
+        nodeService.createDeal(new Deal($scope.deal))
         .then((tradeId) => $location.path('#/deal/' + tradeId), (resp) => {
             $scope.formError = resp.data;
         });
     };
+    $('input.percent').mask("9.999999%", {placeholder: "", autoclear: false});
 });

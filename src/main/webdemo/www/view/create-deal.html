@@ -16,7 +16,7 @@
                     <label>Notional</label>
                     <div class="ui grid">
                         <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.fixedLeg.notional.quantity"/>
+                            <input type="text" name="quantity" ng-model="deal.fixedLeg.notional.quantity" fcsa-number/>
                         </div>
                         <div class="eight wide column">
                             <select class="ui dropdown fluid" name="token" ng-model="deal.fixedLeg.notional.token">
@@ -41,7 +41,7 @@
                 </div>
                 <div class="field">
                     <label>Effective Date</label>
-                    <input type="date" name="effectiveDate" ng-model="deal.fixedLeg.effectiveDateAccess" ng-model-options="{ getterSetter: true }"/>
+                    <input type="date" name="effectiveDate" ng-model="deal.fixedLeg.effectiveDate""/>
                 </div>
                 <div class="field">
                     <label>Termination Date</label>
@@ -49,11 +49,25 @@
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
-                    <input type="text" name="dayCountBasisDay" ng-model="deal.fixedLeg.dayCountBasisDay"/>
-                </div>
-                <div class="field">
-                    <label>Day Bound Basis Year</label>
-                    <input type="text" name="dayCountBasisYear" ng-model="deal.fixedLeg.dayCountBasisYear"/>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.fixedLeg.dayCountBasis" />
+                        <div class="default text">{{deal.fixedLeg.dayCountBasis}}</div>
+                        <div class="menu">
+                            <div class="item">1/1</div>
+                            <div class="item">30/360</div>
+                            <div class="item">30E/360</div>
+                            <div class="item">30E/360 (IDSA)</div>
+                            <div class="item">30E+/360 ISDO</div>
+                            <div class="item">ACT/360</div>
+                            <div class="item">ACT/365 Fixed</div>
+                            <div class="item">ACT/365 L</div>
+                            <div class="item">ACT/365 A/1</div>
+                            <div class="item">NL/365</div>
+                            <div class="item">ACT/ACT ISDA</div>
+                            <div class="item">ACT/ACT ICMA</div>
+                            <div class="item">Business/252</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
@@ -91,8 +105,8 @@
                     <input type="text" name="paymentCalendar" ng-model="deal.fixedLeg.paymentCalendar"/>
                 </div>
                 <div class="field">
-                    <label>Fixed Rate Ratio Unit</label>
-                    <input type="text" name="value" ng-model="deal.fixedLeg.fixedRate.ratioUnit.value"/>
+                    <label>Fixed Rate</label>
+                    <input type="text" name="value" class="percent" ng-model="deal.fixedLeg.fixedRate"/>
                 </div>
                 <div class="field">
                     <label>Interest Period Adjustment</label>
@@ -116,7 +130,7 @@
                     <label>Notional</label>
                     <div class="ui grid">
                         <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.floatingLeg.notional.quantity"/>
+                            <input type="text" name="quantity" ng-model="deal.floatingLeg.notional.quantity" fcsa-number/>
                         </div>
                         <div class="eight wide column">
                             <select class="ui dropdown fluid" name="token" ng-model="deal.floatingLeg.notional.token">
@@ -148,12 +162,26 @@
                     <input type="date" name="terminationDate" ng-model="deal.floatingLeg.terminationDate"/>
                 </div>
                 <div class="field">
-                    <label>Day Count Basis Day</label>
-                    <input type="text" name="dayCountBasisDay" ng-model="deal.floatingLeg.dayCountBasisDay"/>
-                </div>
-                <div class="field">
-                    <label>Day Count Basis Year</label>
-                    <input type="text" name="dayCountBasisYear" ng-model="deal.floatingLeg.dayCountBasisYear"/>
+                    <label>Day Count Basis</label>
+                    <div class="ui selection dropdown">
+                        <input type="hidden" ng-model="deal.floatingLeg.dayCountBasis" />
+                        <div class="default text">{{deal.floatingLeg.dayCountBasis}}</div>
+                        <div class="menu">
+                            <div class="item">1/1</div>
+                            <div class="item">30/360</div>
+                            <div class="item">30E/360</div>
+                            <div class="item">30E/360 (IDSA)</div>
+                            <div class="item">30E+/360 ISDO</div>
+                            <div class="item">ACT/360</div>
+                            <div class="item">ACT/365 Fixed</div>
+                            <div class="item">ACT/365 L</div>
+                            <div class="item">ACT/365 A/1</div>
+                            <div class="item">NL/365</div>
+                            <div class="item">ACT/ACT ISDA</div>
+                            <div class="item">ACT/ACT ICMA</div>
+                            <div class="item">Business/252</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
@@ -277,7 +305,7 @@
                     <label>Independent Amounts</label>
                     <div class="ui grid">
                         <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.common.independentAmounts.quantity"/>
+                            <input type="text" name="quantity" ng-model="deal.common.independentAmounts.quantity" fcsa-number />
                         </div>
                         <div class="eight wide column">
                             <select class="ui dropdown fluid" name="token" ng-model="deal.common.independentAmounts.token">
@@ -292,7 +320,7 @@
                     <div class="field">
                         <div class="ui grid">
                             <div class="eight wide column">
-                                <input type="text" name="quantity" ng-model="deal.common.threshold.quantity"/>
+                                <input type="text" name="quantity" ng-model="deal.common.threshold.quantity" fcsa-number />
                             </div>
                             <div class="eight wide column">
                                 <select class="ui dropdown fluid" name="token" ng-model="deal.common.threshold.token">
@@ -308,7 +336,7 @@
                     <label>Minimum Transfer Amount</label>
                     <div class="ui grid">
                         <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.common.minimumTransferAmount.quantity"/>
+                            <input type="text" name="quantity" ng-model="deal.common.minimumTransferAmount.quantity" fcsa-number />
                         </div>
                         <div class="eight wide column">
                             <select class="ui dropdown fluid" name="token" ng-model="deal.common.minimumTransferAmount.token">
@@ -323,7 +351,7 @@
                     <label>Rounding</label>
                     <div class="ui grid">
                         <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.common.rounding.quantity"/>
+                            <input type="text" name="quantity" ng-model="deal.common.rounding.quantity" fcsa-number/>
                         </div>
                         <div class="eight wide column">
                             <select class="ui dropdown fluid" name="token" ng-model="deal.common.rounding.token">
