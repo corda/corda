@@ -48,25 +48,42 @@ fun generateState() = DummyContract.State(Random().nextInt())
 //    contract `fails requirement` "some substring of the error message"
 // }
 
-infix fun Cash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
-infix fun Cash.State.`issued by`(party: Party) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
-infix fun Cash.State.`issued by`(deposit: PartyAndReference) = copy(amount = Amount<Issued<Currency>>(amount.quantity, issuanceDef.copy(issuer = deposit)))
-infix fun Cash.State.`with notary`(notary: Party) = TransactionState(this, notary)
+// For Java compatibility please define helper methods here and then define the infix notation
+object JavaTestHelpers {
+    @JvmStatic fun ownedBy(state: Cash.State, owner: PublicKey) = state.copy(owner = owner)
+    @JvmStatic fun issuedBy(state: Cash.State, party: Party) = state.copy(amount = Amount<Issued<Currency>>(state.amount.quantity, state.issuanceDef.copy(issuer = state.deposit.copy(party = party))))
+    @JvmStatic fun issuedBy(state: Cash.State, deposit: PartyAndReference) = state.copy(amount = Amount<Issued<Currency>>(state.amount.quantity, state.issuanceDef.copy(issuer = deposit)))
+    @JvmStatic fun withNotary(state: Cash.State, notary: Party) = TransactionState(state, notary)
+    @JvmStatic fun withDeposit(state: Cash.State, deposit: PartyAndReference) = state.copy(amount = state.amount.copy(token = state.amount.token.copy(issuer = deposit)))
 
-infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
-infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
-infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
+    @JvmStatic fun ownedBy(state: CommercialPaper.State, owner: PublicKey) = state.copy(owner = owner)
+    @JvmStatic fun withNotary(state: CommercialPaper.State, notary: Party) = TransactionState(state, notary)
+    @JvmStatic fun ownedBy(state: ICommercialPaperState, new_owner: PublicKey) = state.withOwner(new_owner)
 
-infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State =
-        copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
+    @JvmStatic fun withNotary(state: ContractState, notary: Party) = TransactionState(state, notary)
+
+    @JvmStatic fun CASH(amount: Amount<Currency>) = Cash.State(
+            Amount<Issued<Currency>>(amount.quantity, Issued<Currency>(DUMMY_CASH_ISSUER, amount.token)),
+            NullPublicKey)
+    @JvmStatic fun STATE(amount: Amount<Issued<Currency>>) = Cash.State(amount, NullPublicKey)
+}
+
+
+infix fun Cash.State.`owned by`(owner: PublicKey) = JavaTestHelpers.ownedBy(this, owner)
+infix fun Cash.State.`issued by`(party: Party) = JavaTestHelpers.issuedBy(this, party)
+infix fun Cash.State.`issued by`(deposit: PartyAndReference) = JavaTestHelpers.issuedBy(this, deposit)
+infix fun Cash.State.`with notary`(notary: Party) = JavaTestHelpers.withNotary(this, notary)
+infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = JavaTestHelpers.withDeposit(this, deposit)
+
+infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = JavaTestHelpers.ownedBy(this, owner)
+infix fun CommercialPaper.State.`with notary`(notary: Party) = JavaTestHelpers.withNotary(this, notary)
+infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = JavaTestHelpers.ownedBy(this, new_owner)
+
+infix fun ContractState.`with notary`(notary: Party) = JavaTestHelpers.withNotary(this, notary)
 
 val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
 val DUMMY_CASH_ISSUER = Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).ref(1)
 /** Allows you to write 100.DOLLARS.CASH */
-val Amount<Currency>.CASH: Cash.State get() = Cash.State(
-        Amount<Issued<Currency>>(this.quantity, Issued<Currency>(DUMMY_CASH_ISSUER, this.token)),
-        NullPublicKey)
+val Amount<Currency>.CASH: Cash.State get() = JavaTestHelpers.CASH(this)
+val Amount<Issued<Currency>>.STATE: Cash.State get() = JavaTestHelpers.STATE(this)
 
-val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NullPublicKey)
-
-infix fun ContractState.`with notary`(notary: Party) = TransactionState(this, notary)
