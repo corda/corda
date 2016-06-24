@@ -4,9 +4,9 @@ import com.r3corda.core.contracts.PartyAndReference;
 import com.r3corda.core.serialization.OpaqueBytes;
 import org.junit.Test;
 
-import static com.r3corda.core.testing.Java.*;
-import static com.r3corda.core.contracts.Java.*;
-import static com.r3corda.contracts.testing.Java.*;
+import static com.r3corda.core.testing.JavaTestHelpers.*;
+import static com.r3corda.core.contracts.JavaTestHelpers.*;
+import static com.r3corda.contracts.testing.JavaTestHelpers.*;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL

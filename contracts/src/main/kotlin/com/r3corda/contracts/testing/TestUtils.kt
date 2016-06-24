@@ -49,7 +49,7 @@ fun generateState() = DummyContract.State(Random().nextInt())
 // }
 
 // For Java compatibility please define helper methods here and then define the infix notation
-object Java {
+object JavaTestHelpers {
     @JvmStatic fun ownedBy(state: Cash.State, owner: PublicKey) = state.copy(owner = owner)
     @JvmStatic fun issuedBy(state: Cash.State, party: Party) = state.copy(amount = Amount<Issued<Currency>>(state.amount.quantity, state.issuanceDef.copy(issuer = state.deposit.copy(party = party))))
     @JvmStatic fun issuedBy(state: Cash.State, deposit: PartyAndReference) = state.copy(amount = Amount<Issued<Currency>>(state.amount.quantity, state.issuanceDef.copy(issuer = deposit)))
@@ -69,21 +69,21 @@ object Java {
 }
 
 
-infix fun Cash.State.`owned by`(owner: PublicKey) = Java.ownedBy(this, owner)
-infix fun Cash.State.`issued by`(party: Party) = Java.issuedBy(this, party)
-infix fun Cash.State.`issued by`(deposit: PartyAndReference) = Java.issuedBy(this, deposit)
-infix fun Cash.State.`with notary`(notary: Party) = Java.withNotary(this, notary)
-infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = Java.withDeposit(this, deposit)
+infix fun Cash.State.`owned by`(owner: PublicKey) = JavaTestHelpers.ownedBy(this, owner)
+infix fun Cash.State.`issued by`(party: Party) = JavaTestHelpers.issuedBy(this, party)
+infix fun Cash.State.`issued by`(deposit: PartyAndReference) = JavaTestHelpers.issuedBy(this, deposit)
+infix fun Cash.State.`with notary`(notary: Party) = JavaTestHelpers.withNotary(this, notary)
+infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = JavaTestHelpers.withDeposit(this, deposit)
 
-infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = Java.ownedBy(this, owner)
-infix fun CommercialPaper.State.`with notary`(notary: Party) = Java.withNotary(this, notary)
-infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = Java.ownedBy(this, new_owner)
+infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = JavaTestHelpers.ownedBy(this, owner)
+infix fun CommercialPaper.State.`with notary`(notary: Party) = JavaTestHelpers.withNotary(this, notary)
+infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = JavaTestHelpers.ownedBy(this, new_owner)
 
-infix fun ContractState.`with notary`(notary: Party) = Java.withNotary(this, notary)
+infix fun ContractState.`with notary`(notary: Party) = JavaTestHelpers.withNotary(this, notary)
 
 val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
 val DUMMY_CASH_ISSUER = Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).ref(1)
 /** Allows you to write 100.DOLLARS.CASH */
-val Amount<Currency>.CASH: Cash.State get() = Java.CASH(this)
-val Amount<Issued<Currency>>.STATE: Cash.State get() = Java.STATE(this)
+val Amount<Currency>.CASH: Cash.State get() = JavaTestHelpers.CASH(this)
+val Amount<Issued<Currency>>.STATE: Cash.State get() = JavaTestHelpers.STATE(this)
 

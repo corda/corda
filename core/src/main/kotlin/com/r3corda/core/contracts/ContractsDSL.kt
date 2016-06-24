@@ -20,7 +20,7 @@ import java.util.*
 fun currency(code: String) = Currency.getInstance(code)
 
 // Java interop
-object Java {
+object JavaTestHelpers {
     @JvmField val USD = currency("USD")
     @JvmField val GBP = currency("GBP")
     @JvmField val CHF = currency("CHF")
@@ -34,17 +34,17 @@ object Java {
     @JvmStatic fun issuedBy(amount: Amount<Currency>, deposit: PartyAndReference) = Amount(amount.quantity, issuedBy(amount.token, deposit))
 }
 
-val USD = Java.USD
-val GBP = Java.GBP
-val CHF = Java.CHF
+val USD = JavaTestHelpers.USD
+val GBP = JavaTestHelpers.GBP
+val CHF = JavaTestHelpers.CHF
 
-val Int.DOLLARS: Amount<Currency> get() = Java.DOLLARS(this)
-val Double.DOLLARS: Amount<Currency> get() = Java.DOLLARS(this)
-val Int.POUNDS: Amount<Currency> get() = Java.POUNDS(this)
-val Int.SWISS_FRANCS: Amount<Currency> get() = Java.SWISS_FRANCS(this)
+val Int.DOLLARS: Amount<Currency> get() = JavaTestHelpers.DOLLARS(this)
+val Double.DOLLARS: Amount<Currency> get() = JavaTestHelpers.DOLLARS(this)
+val Int.POUNDS: Amount<Currency> get() = JavaTestHelpers.POUNDS(this)
+val Int.SWISS_FRANCS: Amount<Currency> get() = JavaTestHelpers.SWISS_FRANCS(this)
 
-infix fun Currency.`issued by`(deposit: PartyAndReference) = Java.issuedBy(this, deposit)
-infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = Java.issuedBy(this, deposit)
+infix fun Currency.`issued by`(deposit: PartyAndReference) = JavaTestHelpers.issuedBy(this, deposit)
+infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = JavaTestHelpers.issuedBy(this, deposit)
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 

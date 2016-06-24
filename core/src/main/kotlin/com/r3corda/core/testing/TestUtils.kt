@@ -50,9 +50,10 @@ object TestUtils {
  *   - Infix functions work as regular ones from Java, but symbols with spaces in them don't! Define a camelCase variant
  *     as well.
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
- *   - The Int.DOLLARS syntax doesn't work from Java. To remedy add a @JvmStatic DOLLARS(Int) function to [Java]
+ *   - The Int.DOLLARS syntax doesn't work from Java. To remedy add a @JvmStatic DOLLARS(Int) function to
+ *     [JavaTestHelpers]
  */
-object Java {
+object JavaTestHelpers {
     // A dummy time at which we will be pretending test transactions are created.
     @JvmField val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
@@ -94,31 +95,31 @@ object Java {
     }
 }
 
-val TEST_TX_TIME = Java.TEST_TX_TIME
-val MEGA_CORP_KEY = Java.MEGA_CORP_KEY
-val MEGA_CORP_PUBKEY = Java.MEGA_CORP_PUBKEY
-val MINI_CORP_KEY = Java.MINI_CORP_KEY
-val MINI_CORP_PUBKEY = Java.MINI_CORP_PUBKEY
-val ORACLE_KEY = Java.ORACLE_KEY
-val ORACLE_PUBKEY = Java.ORACLE_PUBKEY
-val DUMMY_PUBKEY_1 = Java.DUMMY_PUBKEY_1
-val DUMMY_PUBKEY_2 = Java.DUMMY_PUBKEY_2
-val ALICE_KEY = Java.ALICE_KEY
-val ALICE_PUBKEY = Java.ALICE_PUBKEY
-val ALICE = Java.ALICE
-val BOB_KEY = Java.BOB_KEY
-val BOB_PUBKEY = Java.BOB_PUBKEY
-val BOB = Java.BOB
-val MEGA_CORP = Java.MEGA_CORP
-val MINI_CORP = Java.MINI_CORP
-val DUMMY_NOTARY_KEY = Java.DUMMY_NOTARY_KEY
-val DUMMY_NOTARY = Java.DUMMY_NOTARY
-val ALL_TEST_KEYS = Java.ALL_TEST_KEYS
-val MOCK_IDENTITY_SERVICE = Java.MOCK_IDENTITY_SERVICE
+val TEST_TX_TIME = JavaTestHelpers.TEST_TX_TIME
+val MEGA_CORP_KEY = JavaTestHelpers.MEGA_CORP_KEY
+val MEGA_CORP_PUBKEY = JavaTestHelpers.MEGA_CORP_PUBKEY
+val MINI_CORP_KEY = JavaTestHelpers.MINI_CORP_KEY
+val MINI_CORP_PUBKEY = JavaTestHelpers.MINI_CORP_PUBKEY
+val ORACLE_KEY = JavaTestHelpers.ORACLE_KEY
+val ORACLE_PUBKEY = JavaTestHelpers.ORACLE_PUBKEY
+val DUMMY_PUBKEY_1 = JavaTestHelpers.DUMMY_PUBKEY_1
+val DUMMY_PUBKEY_2 = JavaTestHelpers.DUMMY_PUBKEY_2
+val ALICE_KEY = JavaTestHelpers.ALICE_KEY
+val ALICE_PUBKEY = JavaTestHelpers.ALICE_PUBKEY
+val ALICE = JavaTestHelpers.ALICE
+val BOB_KEY = JavaTestHelpers.BOB_KEY
+val BOB_PUBKEY = JavaTestHelpers.BOB_PUBKEY
+val BOB = JavaTestHelpers.BOB
+val MEGA_CORP = JavaTestHelpers.MEGA_CORP
+val MINI_CORP = JavaTestHelpers.MINI_CORP
+val DUMMY_NOTARY_KEY = JavaTestHelpers.DUMMY_NOTARY_KEY
+val DUMMY_NOTARY = JavaTestHelpers.DUMMY_NOTARY
+val ALL_TEST_KEYS = JavaTestHelpers.ALL_TEST_KEYS
+val MOCK_IDENTITY_SERVICE = JavaTestHelpers.MOCK_IDENTITY_SERVICE
 
-fun generateStateRef() = Java.generateStateRef()
+fun generateStateRef() = JavaTestHelpers.generateStateRef()
 
-fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure) = Java.transaction(body)
+fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure) = JavaTestHelpers.transaction(body)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
