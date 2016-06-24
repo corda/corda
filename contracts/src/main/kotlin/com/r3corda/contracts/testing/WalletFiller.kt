@@ -71,11 +71,12 @@ private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, m
         if (i < numStates - 1) {
             // Adjust the amount a bit up or down, to give more realistic amounts (not all identical).
             amounts[i] = baseSize + (baseSize / 2 * (rng.nextDouble() - 0.5)).toLong()
-            filledSoFar += baseSize
+            filledSoFar += amounts[i]
         } else {
             // Handle inexact rounding.
             amounts[i] = howMuch.quantity - filledSoFar
         }
     }
+    check(amounts.sum() == howMuch.quantity)
     return amounts
 }
