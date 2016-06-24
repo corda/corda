@@ -91,7 +91,7 @@ object JavaTestHelpers {
 
     @JvmStatic val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-    @JvmStatic val MOCK_IDENTITY_SERVICE: IdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+    @JvmStatic val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
     @JvmStatic fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
