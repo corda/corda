@@ -45,9 +45,13 @@ object TestUtils {
  *
  *   - Annotate functions with Kotlin defaults with @JvmOverloads. This produces the relevant overloads for Java.
  *   - Void closures in arguments are inconvenient in Java, use overloading to define non-closure variants as well.
- *   - Top-level vals should be defined in a [Java] object and annotated with @JvmField first and should be referred
- *     to from the global val. This allows static importing of [Java] in Java tests, which mimicks top-level vals.
- *   - Same goes for top-level funs. Define them in [Java] with annotation @JvmStatic and define a global alias later.
+ *   - Top-level funs should be defined in a [JavaTestHelpers] object and annotated with @JvmStatic first and should be
+ *     referred to from the global fun. This allows static importing of [JavaTestHelpers] in Java tests, which mimicks
+ *     top-level funs.
+ *   - Top-level vals are trickier. *DO NOT USE @JvmField INSIDE [JavaTestHelpers]*. It's surprisingly easy to
+ *     introduce a static init cycle because of the way Kotlin compiles top-level things, which can cause
+ *     non-deterministic behaviour, including your field not being initialized at all! Instead opt for a proper Kotlin
+ *     val with a custom @JvmStatic get(). See examples below.
  *   - Infix functions work as regular ones from Java, but symbols with spaces in them don't! Define a camelCase variant
  *     as well.
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
