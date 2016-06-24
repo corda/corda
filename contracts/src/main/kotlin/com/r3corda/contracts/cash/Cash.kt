@@ -54,6 +54,9 @@ class Cash : FungibleAsset<Currency>() {
     ) : FungibleAsset.State<Currency> {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
             : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
+
+        override val productAmount: Amount<Currency>
+            get() = Amount(amount.quantity, amount.token.product)
         override val deposit: PartyAndReference
             get() = amount.token.issuer
         override val contract = CASH_PROGRAM_ID
@@ -62,8 +65,8 @@ class Cash : FungibleAsset<Currency>() {
         override val participants: List<PublicKey>
             get() = listOf(owner)
 
-        override fun move(amount: Amount<Issued<Currency>>, owner: PublicKey): FungibleAsset.State<Currency>
-            = copy(amount = amount, owner = owner)
+        override fun move(newAmount: Amount<Currency>, newOwner: PublicKey): FungibleAsset.State<Currency>
+            = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
@@ -75,9 +78,9 @@ class Cash : FungibleAsset<Currency>() {
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
-         * @param contractHash the hash of the contract this cash is settling, to ensure one cash contract cannot be
-         * used to settle multiple contracts. May be null, if this is not relevant to any other contract in the
-         * same transaction
+         * @param contractHash the contract this move is for the attention of. Only that contract's verify function
+         * should take the moved states into account when considering whether it is valid. Typically this will be
+         * null.
          */
         data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
 
