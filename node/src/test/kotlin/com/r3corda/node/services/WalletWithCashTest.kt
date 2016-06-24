@@ -58,7 +58,7 @@ class WalletWithCashTest {
         assertEquals(29.01.DOLLARS `issued by` myPartyRef, state.amount)
         assertEquals(ALICE_PUBKEY, state.owner)
 
-        assertEquals(33.34.DOLLARS `issued by` myPartyRef, (w.states[2].state.data as Cash.State).amount)
+        assertEquals(35.38.DOLLARS `issued by` myPartyRef, (w.states[2].state.data as Cash.State).amount)
         assertEquals(35.61.DOLLARS `issued by` myPartyRef, (w.states[1].state.data as Cash.State).amount)
     }
 
