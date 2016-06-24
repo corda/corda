@@ -21,9 +21,9 @@ fun currency(code: String) = Currency.getInstance(code)
 
 // Java interop
 object JavaTestHelpers {
-    @JvmField val USD = currency("USD")
-    @JvmField val GBP = currency("GBP")
-    @JvmField val CHF = currency("CHF")
+    @JvmStatic val USD: Currency get() = currency("USD")
+    @JvmStatic val GBP: Currency get() = currency("GBP")
+    @JvmStatic val CHF: Currency get() = currency("CHF")
 
     @JvmStatic fun DOLLARS(amount: Int) = Amount(amount.toLong() * 100, USD)
     @JvmStatic fun DOLLARS(amount: Double) = Amount((amount * 100).toLong(), USD)

@@ -14,9 +14,9 @@ import static com.r3corda.contracts.testing.JavaTestHelpers.*;
 public class CashTestsJava {
 
     private OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});;
-    private PartyAndReference defaultIssuer = MEGA_CORP.ref(defaultRef);
-    private Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), DUMMY_PUBKEY_1);
-    private Cash.State outState = new Cash.State(inState.getAmount(), DUMMY_PUBKEY_2);;
+    private PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
+    private Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1());
+    private Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2());
 
     @Test
     public void trivial() {
@@ -26,7 +26,7 @@ public class CashTestsJava {
             tx.failsRequirement("the amounts balance");
 
             tx.tweak(tw -> {
-                tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), DUMMY_PUBKEY_2));
+                tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), getDUMMY_PUBKEY_2()));
                 return tw.failsRequirement("the amounts balance");
             });
 
@@ -37,20 +37,20 @@ public class CashTestsJava {
             });
             tx.tweak(tw -> {
                 tw.output(outState);
-                tw.arg(DUMMY_PUBKEY_2, new Cash.Commands.Move());
+                tw.arg(getDUMMY_PUBKEY_2(), new Cash.Commands.Move());
                 return tw.failsRequirement("the owning keys are the same as the signing keys");
             });
             tx.tweak(tw -> {
                 tw.output(outState);
-                tw.output(issuedBy(outState, MINI_CORP));
-                tw.arg(DUMMY_PUBKEY_1, new Cash.Commands.Move());
+                tw.output(issuedBy(outState, getMINI_CORP()));
+                tw.arg(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
                 return tw.failsRequirement("at least one asset input");
             });
 
             // Simple reallocation works.
             return tx.tweak(tw -> {
                 tw.output(outState);
-                tw.arg(DUMMY_PUBKEY_1, new Cash.Commands.Move());
+                tw.arg(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
                 return tw.accepts();
             });
         });

@@ -6,6 +6,7 @@ import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
+import com.r3corda.core.node.services.IdentityService
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.seconds
@@ -55,38 +56,38 @@ object TestUtils {
  */
 object JavaTestHelpers {
     // A dummy time at which we will be pretending test transactions are created.
-    @JvmField val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
+    @JvmStatic val TEST_TX_TIME: Instant get() = Instant.parse("2015-04-17T12:00:00.00Z")
 
     // A few dummy values for testing.
-    @JvmField val MEGA_CORP_KEY = TestUtils.keypair
-    @JvmField val MEGA_CORP_PUBKEY = MEGA_CORP_KEY.public
+    @JvmStatic val MEGA_CORP_KEY: KeyPair get() = TestUtils.keypair
+    @JvmStatic val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
 
-    @JvmField val MINI_CORP_KEY = TestUtils.keypair2
-    @JvmField val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
+    @JvmStatic val MINI_CORP_KEY: KeyPair get() = TestUtils.keypair2
+    @JvmStatic val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
 
-    @JvmField val ORACLE_KEY = TestUtils.keypair3
-    @JvmField val ORACLE_PUBKEY = ORACLE_KEY.public
+    @JvmStatic val ORACLE_KEY: KeyPair get() = TestUtils.keypair3
+    @JvmStatic val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
 
-    @JvmField val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
-    @JvmField val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
+    @JvmStatic val DUMMY_PUBKEY_1: PublicKey get() = DummyPublicKey("x1")
+    @JvmStatic val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
 
-    @JvmField val ALICE_KEY = generateKeyPair()
-    @JvmField val ALICE_PUBKEY = ALICE_KEY.public
-    @JvmField val ALICE = Party("Alice", ALICE_PUBKEY)
+    @JvmStatic val ALICE_KEY: KeyPair get() = generateKeyPair()
+    @JvmStatic val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
+    @JvmStatic val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
 
-    @JvmField val BOB_KEY = generateKeyPair()
-    @JvmField val BOB_PUBKEY = BOB_KEY.public
-    @JvmField val BOB = Party("Bob", BOB_PUBKEY)
+    @JvmStatic val BOB_KEY: KeyPair get() = generateKeyPair()
+    @JvmStatic val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
+    @JvmStatic val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
-    @JvmField val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
-    @JvmField val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
+    @JvmStatic val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
+    @JvmStatic val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-    @JvmField val DUMMY_NOTARY_KEY = generateKeyPair()
-    @JvmField val DUMMY_NOTARY = Party("Notary Service", DUMMY_NOTARY_KEY.public)
+    @JvmStatic val DUMMY_NOTARY_KEY: KeyPair get() = generateKeyPair()
+    @JvmStatic val DUMMY_NOTARY: Party get() = Party("Notary Service", DUMMY_NOTARY_KEY.public)
 
-    @JvmField val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
+    @JvmStatic val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-    @JvmField val MOCK_IDENTITY_SERVICE = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+    @JvmStatic val MOCK_IDENTITY_SERVICE: IdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
     @JvmStatic fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
