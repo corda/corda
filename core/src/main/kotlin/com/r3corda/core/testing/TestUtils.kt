@@ -51,7 +51,7 @@ object TestUtils {
  *   - Top-level vals are trickier. *DO NOT USE @JvmField INSIDE [JavaTestHelpers]*. It's surprisingly easy to
  *     introduce a static init cycle because of the way Kotlin compiles top-level things, which can cause
  *     non-deterministic behaviour, including your field not being initialized at all! Instead opt for a proper Kotlin
- *     val with a custom @JvmStatic get(). See examples below.
+ *     val either with a custom @JvmStatic get() or a lazy delegate if the initialiser has side-effects See examples below.
  *   - Infix functions work as regular ones from Java, but symbols with spaces in them don't! Define a camelCase variant
  *     as well.
  *   - varargs are exposed as array types in Java. Define overloads for common cases.
@@ -75,18 +75,18 @@ object JavaTestHelpers {
     @JvmStatic val DUMMY_PUBKEY_1: PublicKey get() = DummyPublicKey("x1")
     @JvmStatic val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
 
-    @JvmStatic val ALICE_KEY: KeyPair get() = generateKeyPair()
+    @JvmStatic val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
     @JvmStatic val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
 
-    @JvmStatic val BOB_KEY: KeyPair get() = generateKeyPair()
+    @JvmStatic val BOB_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
     @JvmStatic val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
     @JvmStatic val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
     @JvmStatic val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-    @JvmStatic val DUMMY_NOTARY_KEY: KeyPair get() = generateKeyPair()
+    @JvmStatic val DUMMY_NOTARY_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val DUMMY_NOTARY: Party get() = Party("Notary Service", DUMMY_NOTARY_KEY.public)
 
     @JvmStatic val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
