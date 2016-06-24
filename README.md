@@ -91,7 +91,7 @@ Install Intel(R) SGX SDK
 To install Intel(R) SGX SDK, execute the installer with root privilege:
 ```
 $ cd linux/installer/bin
-$ sudo ./sgx_linux_x64_sdk_${version}.bin `
+$ sudo ./sgx_linux_x64_sdk_${version}.bin 
 ```
 ###Test Intel(R) SGX SDK Package with the Sample Codes
 - Copy the sample codes installed by Intel(R) SGX SDK package into your work folder, such as  
@@ -133,14 +133,14 @@ Install Intel(R) SGX PSW
   See the topic, Build and Install the Intel(R) SGX Driver, on how to install the SGX driver.
 - Install the library using the following command:  
 ```
-  $ sudo apt-get install libcurl4-openssl-dev libprotobuf-dev libprotobuf-c0-dev`
+  $ sudo apt-get install libcurl4-openssl-dev libprotobuf-dev libprotobuf-c0-dev
 ```
 
 ###Install Intel(R) SGX PSW
 To install Intel(R) SGX PSW, execute the installer with root privilege:  
 ```
 $ cd linux/installer/bin
-$ sudo ./sgx_linux_x64_psw_${version}.bin`
+$ sudo ./sgx_linux_x64_psw_${version}.bin
 ```
 
 ###Start or Stop aesmd Service
