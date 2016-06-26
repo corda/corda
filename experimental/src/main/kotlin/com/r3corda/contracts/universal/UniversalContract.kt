@@ -3,6 +3,7 @@ package com.r3corda.contracts.universal
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import java.security.PublicKey
 
 /**
  * Created by sofusmortensen on 23/05/16.
@@ -12,7 +13,7 @@ val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
 class UniversalContract : Contract {
 
-    data class State(override val notary: Party,
+    data class State(override val participants: List<PublicKey>,
                      val details: Arrangement) : ContractState {
         override val contract = UNIVERSAL_PROGRAM_ID
     }
@@ -30,7 +31,7 @@ class UniversalContract : Contract {
         class Issue : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
 
         requireThat {
             "transaction has a single command".by (tx.commands.size == 1 )
@@ -42,7 +43,7 @@ class UniversalContract : Contract {
 
         when (value) {
             is Commands.Action -> {
-                val inState = tx.inStates.single() as State
+                val inState = tx.inputs.single() as State
                 val actions = actions(inState.details)
 
                 requireThat {
@@ -51,9 +52,9 @@ class UniversalContract : Contract {
                     "condition must be met" by ( true ) // todo
                 }
 
-                when (tx.outStates.size) {
+                when (tx.outputs.size) {
                     1 -> {
-                        val outState = tx.outStates.single() as State
+                        val outState = tx.outputs.single() as State
                         requireThat {
                             "output state must match action result state" by (actions[value.name]!!.arrangement.equals(outState.details))
                         }
@@ -61,7 +62,7 @@ class UniversalContract : Contract {
                     0 -> throw IllegalArgumentException("must have at least one out state")
                     else -> {
 
-                        var allContracts = And( tx.outStates.map { (it as State).details }.toSet() )
+                        var allContracts = And( tx.outputs.map { (it as State).details }.toSet() )
 
                         requireThat {
                             "output states must match action result state" by (actions[value.name]!!.arrangement.equals(allContracts))
@@ -71,15 +72,15 @@ class UniversalContract : Contract {
                 }
             }
             is Commands.Issue -> {
-                val outState = tx.outStates.single() as State
+                val outState = tx.outputs.single() as State
                 requireThat {
                     "the transaction is signed by all liable parties" by ( liableParties(outState.details).all { it in cmd.signers } )
-                    "the transaction has no input states" by tx.inStates.isEmpty()
+                    "the transaction has no input states" by tx.inputs.isEmpty()
                 }
             }
             is Commands.Move -> {
-                val inState = tx.inStates.single() as State
-                val outState = tx.outStates.single() as State
+                val inState = tx.inputs.single() as State
+                val outState = tx.outputs.single() as State
                 requireThat {
                     "the transaction is signed by all liable parties" by
                             ( liableParties(outState.details).all { it in cmd.signers } )
@@ -94,9 +95,9 @@ class UniversalContract : Contract {
     override val legalContractReference: SecureHash
         get() = throw UnsupportedOperationException()
 
-    fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: Party) {
+    fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: PublicKey) {
         check(tx.inputStates().isEmpty())
-        tx.addOutputState( State(notary, arrangement) )
+        tx.addOutputState( State(listOf(notary), arrangement) )
         tx.addCommand(Commands.Issue(), at.party.owningKey)
     }
 }

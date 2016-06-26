@@ -1,6 +1,7 @@
 package com.r3corda.contracts.universal
 
 import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.core.testing.transaction
 import org.junit.Test
 
@@ -21,11 +22,11 @@ class FXSwap {
     val transfer1 = arrange { wileECoyote.gives(roadRunner, 1200.K*USD) }
     val transfer2 = arrange { roadRunner.gives(wileECoyote, 1.M*EUR) }
 
-    val outState1 = UniversalContract.State( DUMMY_NOTARY, transfer1 )
-    val outState2 = UniversalContract.State( DUMMY_NOTARY, transfer2 )
+    val outState1 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer1 )
+    val outState2 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer2 )
 
 
-    val inState = UniversalContract.State( DUMMY_NOTARY, contract)
+    val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
 
     @Test
     fun `issue - signature`() {

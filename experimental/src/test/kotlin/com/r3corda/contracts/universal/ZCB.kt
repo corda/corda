@@ -28,12 +28,12 @@ class ZCB {
     val transfer = arrange { wileECoyote.gives(roadRunner, 100.K*GBP) }
     val transferWrong = arrange { wileECoyote.gives(roadRunner, 80.K*GBP) }
 
-    val inState = UniversalContract.State( DUMMY_NOTARY, contract )
+    val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract )
 
-    val outState = UniversalContract.State( DUMMY_NOTARY, transfer )
-    val outStateWrong = UniversalContract.State( DUMMY_NOTARY, transferWrong )
+    val outState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer )
+    val outStateWrong = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferWrong )
 
-    val outStateMove = UniversalContract.State( DUMMY_NOTARY, contractMove )
+    val outStateMove = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractMove )
 
     @Test
     fun basic() {
