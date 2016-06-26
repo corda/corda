@@ -31,7 +31,11 @@ abstract class ProtocolLogic<T> {
     /** This is where you should log things to. */
     val logger: Logger get() = psm.logger
 
-    /** Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts */
+    /**
+     * Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is
+     * only available once the protocol has started, which means it cannnot be accessed in the constructor. Either
+     * access this lazily or from inside [call].
+     */
     val serviceHub: ServiceHub get() = psm.serviceHub
 
     // Kotlin helpers that allow the use of generic types.
@@ -69,7 +73,7 @@ abstract class ProtocolLogic<T> {
         val ours = progressTracker
         val theirs = subLogic.progressTracker
         if (ours != null && theirs != null)
-            ours.childrenFor[ours.currentStep] = theirs
+            ours.setChildProgressTracker(ours.currentStep, theirs)
     }
 
     /**

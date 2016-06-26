@@ -3,10 +3,11 @@ package com.r3corda.contracts.cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -44,28 +45,25 @@ class Cash : FungibleAsset<Currency>() {
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
 
-    data class IssuanceDefinition<T>(
-            /** Where the underlying currency backing this ledger entry can be found (propagated) */
-            override val deposit: PartyAndReference,
-
-            override val token: T
-    ) : AssetIssuanceDefinition<T>
-
     /** A state representing a cash claim against some party */
     data class State(
-            /** Where the underlying currency backing this ledger entry can be found (propagated) */
-            override val deposit: PartyAndReference,
-
-            override val amount: Amount<Currency>,
+            override val amount: Amount<Issued<Currency>>,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
-            override val owner: PublicKey,
-
-            override val notary: Party
+            override val owner: PublicKey
     ) : FungibleAsset.State<Currency> {
-        override val issuanceDef: IssuanceDefinition<Currency>
-            get() = IssuanceDefinition(deposit, amount.token)
+        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
+            : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
+        override val deposit: PartyAndReference
+            get() = amount.token.issuer
         override val contract = CASH_PROGRAM_ID
+        override val issuanceDef: Issued<Currency>
+            get() = amount.token
+        override val participants: List<PublicKey>
+            get() = listOf(owner)
+
+        override fun move(amount: Amount<Issued<Currency>>, owner: PublicKey): FungibleAsset.State<Currency>
+            = copy(amount = amount, owner = owner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
@@ -74,36 +72,54 @@ class Cash : FungibleAsset<Currency>() {
 
     // Just for grouping
     interface Commands : CommandData {
-        class Move() : TypeOnlyCommandData(), FungibleAsset.Commands.Move
+        /**
+         * A command stating that money has been moved, optionally to fulfil another contract.
+         *
+         * @param contractHash the hash of the contract this cash is settling, to ensure one cash contract cannot be
+         * used to settle multiple contracts. May be null, if this is not relevant to any other contract in the
+         * same transaction
+         */
+        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        data class Issue(override val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : FungibleAsset.Commands.Issue
+        data class Issue(override val nonce: Long = newSecureRandom().nextLong()) : FungibleAsset.Commands.Issue, Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(override val amount: Amount<Currency>) : Commands, FungibleAsset.Commands.Exit<Currency>
+        data class Exit(override val amount: Amount<Issued<Currency>>) : Commands, FungibleAsset.Commands.Exit<Currency>
     }
 
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, issuanceDef: AssetIssuanceDefinition<Currency>, pennies: Long, owner: PublicKey, notary: Party)
-            = generateIssue(tx, Amount(pennies, issuanceDef.token), issuanceDef.deposit, owner, notary)
+    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: PublicKey, notary: Party)
+            = generateIssue(tx, Amount(pennies, tokenDef), owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Currency>, at: PartyAndReference, owner: PublicKey, notary: Party) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: PublicKey, notary: Party) {
         check(tx.inputStates().isEmpty())
-        check(tx.outputStates().sumCashOrNull() == null)
-        tx.addOutputState(Cash.State(at, amount, owner, notary))
+        check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
+        val at = amount.token.issuer
+        tx.addOutputState(TransactionState(Cash.State(amount, owner), notary))
         tx.addCommand(Cash.Commands.Issue(), at.party.owningKey)
     }
+
+    /**
+     * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
+     * Note that the wallet list is not updated: it's up to you to do that.
+     */
+    @Throws(InsufficientBalanceException::class)
+    fun generateSpend(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, to: PublicKey,
+                      cashStates: List<StateAndRef<State>>): List<PublicKey> =
+            generateSpend(tx, Amount(amount.quantity, amount.token.product), to, cashStates,
+                    setOf(amount.token.issuer.party))
 
     /**
      * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
@@ -138,45 +154,51 @@ class Cash : FungibleAsset<Currency>() {
 
         val currency = amount.token
         val acceptableCoins = run {
-            val ofCurrency = cashStates.filter { it.state.amount.token == currency }
+            val ofCurrency = cashStates.filter { it.state.data.amount.token.product == currency }
             if (onlyFromParties != null)
-                ofCurrency.filter { it.state.deposit.party in onlyFromParties }
+                ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
             else
                 ofCurrency
         }
 
         val gathered = arrayListOf<StateAndRef<State>>()
         var gatheredAmount = Amount(0, currency)
+        var takeChangeFrom: StateAndRef<State>? = null
         for (c in acceptableCoins) {
             if (gatheredAmount >= amount) break
             gathered.add(c)
-            gatheredAmount += c.state.amount
+            gatheredAmount += Amount(c.state.data.amount.quantity, currency)
+            takeChangeFrom = c
         }
 
         if (gatheredAmount < amount)
             throw InsufficientBalanceException(amount - gatheredAmount)
 
-        val change = gatheredAmount - amount
-        val keysUsed = gathered.map { it.state.owner }.toSet()
+        val change = if (takeChangeFrom != null && gatheredAmount > amount) {
+            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+        } else {
+            null
+        }
+        val keysUsed = gathered.map { it.state.data.owner }.toSet()
 
-        val states = gathered.groupBy { it.state.deposit }.map {
-            val (deposit, coins) = it
-            val totalAmount = coins.map { it.state.amount }.sumOrThrow()
-            State(deposit, totalAmount, to, coins.first().state.notary)
+        val states = gathered.groupBy { it.state.data.deposit }.map {
+            val coins = it.value
+            val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
+            TransactionState(State(totalAmount, to), coins.first().state.notary)
         }
 
-        val outputs = if (change.quantity > 0) {
+        val outputs = if (change != null) {
             // Just copy a key across as the change key. In real life of course, this works but leaks private data.
             // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
             // value flows through the transaction graph.
-            val changeKey = gathered.first().state.owner
+            val changeKey = gathered.first().state.data.owner
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
-                    states.last().let { it.copy(amount = it.amount - change) } +
-                    State(gathered.last().state.deposit, change, changeKey, gathered.last().state.notary)
+                    states.last().let { TransactionState(it.data.copy(amount = it.data.amount - change), it.notary) } +
+                    TransactionState(State(change, changeKey), gathered.last().state.notary)
         } else states
 
-        for (state in gathered) tx.addInputState(state.ref)
+        for (state in gathered) tx.addInputState(state)
         for (state in outputs) tx.addOutputState(state)
         // What if we already have a move command with the right keys? Filter it out here or in platform code?
         val keysList = keysUsed.toList()
@@ -204,4 +226,16 @@ fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.
 fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
 
 /** Sums the cash states in the list, returning zero of the given currency if there are none. */
-fun Iterable<ContractState>.sumCashOrZero(currency: Currency) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
+fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero<Issued<Currency>>(currency)
+
+/**
+ * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+ * which we have no cash evaluate to null (not present in map), not 0.
+ */
+val Wallet.cashBalances: Map<Currency, Amount<Currency>> get() = states.
+        // Select the states we own which are cash, ignore the rest, take the amounts.
+        mapNotNull { (it.state.data as? Cash.State)?.amount }.
+        // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }
+        groupBy { it.token.product }.
+        // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
+        mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }

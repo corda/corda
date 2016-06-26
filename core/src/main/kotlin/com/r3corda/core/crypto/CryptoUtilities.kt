@@ -1,13 +1,22 @@
 package com.r3corda.core.crypto
 
 import com.google.common.io.BaseEncoding
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
+import net.i2p.crypto.eddsa.EdDSAEngine
 import java.math.BigInteger
 import java.security.*
 import java.security.interfaces.ECPublicKey
+import net.i2p.crypto.eddsa.KeyPairGenerator as EddsaKeyPairGenerator
+
+fun newSecureRandom(): SecureRandom {
+    if (System.getProperty("os.name") == "Linux") {
+        return SecureRandom.getInstance("NativePRNGNonBlocking")
+    } else {
+        return SecureRandom.getInstanceStrong()
+    }
+}
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
@@ -37,7 +46,7 @@ sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits)
         @JvmStatic fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
         @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
 
-        @JvmStatic fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
+        @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
     }
 
     abstract val signatureAlgorithmName: String
@@ -118,7 +127,7 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
 
 /** Utility to simplify the act of signing a byte array */
 fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
-    val signer = Signature.getInstance("SHA256withECDSA")
+    val signer = EdDSAEngine()
     signer.initSign(this)
     signer.update(bits)
     val sig = signer.sign()
@@ -140,7 +149,7 @@ fun KeyPair.signWithECDSA(bitsToSign: ByteArray, party: Party): DigitalSignature
 
 /** Utility to simplify the act of verifying a signature */
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
-    val verifier = Signature.getInstance("SHA256withECDSA")
+    val verifier = EdDSAEngine()
     verifier.initVerify(this)
     verifier.update(content)
     if (verifier.verify(signature.bits) == false)
@@ -160,4 +169,4 @@ operator fun KeyPair.component1() = this.private
 operator fun KeyPair.component2() = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
-fun generateKeyPair() = KeyPairGenerator.getInstance("EC").genKeyPair()
+fun generateKeyPair() = EddsaKeyPairGenerator().generateKeyPair()

@@ -10,7 +10,7 @@ class IRSSimulationTest {
 
     @Test fun `runs to completion`() {
         BriefLogFormatter.initVerbose("messaging")
-        val sim = IRSSimulation(false, null)
+        val sim = IRSSimulation(false, false, null)
         val future = sim.start()
         while (!future.isDone) sim.iterate()
         try {

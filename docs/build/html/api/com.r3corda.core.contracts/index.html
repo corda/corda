@@ -22,7 +22,9 @@ We dont actually do anything with this yet though, so its ignored for now.</p>
 <td>
 <a href="-amount/index.html">Amount</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Amount</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&gt;</span></code><p>Amount represents a positive quantity of currency, measured in pennies, which are the smallest representable units.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Comparable</span><span class="symbol">&lt;</span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
+representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
+amount used in whatever underlying thing the amount represents.</p>
 </td>
 </tr>
 <tr>
@@ -131,6 +133,12 @@ in the toString lest some people get confused.</p>
 <code><span class="keyword">interface </span><span class="identifier">DealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-linear-state/index.html"><span class="identifier">LinearState</span></a></code><p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
 implementation of general protocols that manipulate many agreement types.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-dummy-contract/index.html">DummyContract</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract/index.html"><span class="identifier">Contract</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -392,6 +400,12 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 <a href="-c-h-f.html">CHF</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">CHF</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-p-r-o-g-r-a-m_-i-d.html">DUMMY_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_PROGRAM_ID</span><span class="symbol">: </span><a href="-dummy-contract/index.html"><span class="identifier">DummyContract</span></a></code></td>
 </tr>
 <tr>
 <td>

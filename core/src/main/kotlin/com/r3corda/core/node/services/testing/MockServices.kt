@@ -6,13 +6,8 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.sha256
-import com.r3corda.core.node.services.AttachmentStorage
-import com.r3corda.core.node.services.IdentityService
-import com.r3corda.core.node.services.KeyManagementService
-import com.r3corda.core.node.services.StorageService
+import com.r3corda.core.node.services.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.core.utilities.RecordingMap
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -82,33 +77,17 @@ class MockAttachmentStorage : AttachmentStorage {
     }
 }
 
+open class MockTransactionStorage : TransactionStorage {
+    private val txns = HashMap<SecureHash, SignedTransaction>()
+    override fun addTransaction(transaction: SignedTransaction) {
+        txns[transaction.id] = transaction
+    }
+    override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
+}
 
 @ThreadSafe
 class MockStorageService(override val attachments: AttachmentStorage = MockAttachmentStorage(),
+                         override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
                          override val myLegalIdentityKey: KeyPair = generateKeyPair(),
-                         override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
-// This parameter is for unit tests that want to observe operation details.
-                         val recordingAs: (String) -> String = { tableName -> "" })
-: SingletonSerializeAsToken(), StorageService {
-    protected val tables = HashMap<String, MutableMap<*, *>>()
-
-    private fun <K, V> getMapOriginal(tableName: String): MutableMap<K, V> {
-        synchronized(tables) {
-            @Suppress("UNCHECKED_CAST")
-            return tables.getOrPut(tableName) {
-                recorderWrap(Collections.synchronizedMap(HashMap<K, V>()), tableName)
-            } as MutableMap<K, V>
-        }
-    }
-
-    private fun <K, V> recorderWrap(map: MutableMap<K, V>, tableName: String): MutableMap<K, V> {
-        if (recordingAs(tableName) != "")
-            return RecordingMap(map, LoggerFactory.getLogger("recordingmap.${recordingAs(tableName)}"))
-        else
-            return map
-    }
-
-    override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
-    get() = getMapOriginal("validated-transactions")
-
-}
+                         override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public))
+: SingletonSerializeAsToken(), TxWritableStorageService

@@ -1,12 +1,14 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.TimestampCommand
 import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.messaging.Ack
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.TimestampChecker
@@ -16,7 +18,6 @@ import com.r3corda.core.noneOrSingle
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
@@ -33,7 +34,7 @@ object NotaryProtocol {
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the timestamp is invalid
      */
-    class Client(private val wtx: WireTransaction,
+    class Client(private val stx: SignedTransaction,
                  override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
         companion object {
 
@@ -55,9 +56,9 @@ object NotaryProtocol {
             val receiveSessionID = random63BitValue()
 
             val handshake = Handshake(serviceHub.networkService.myAddress, sendSessionID, receiveSessionID)
-            sendAndReceive<Unit>(TOPIC_INITIATE, notaryNode.address, 0, receiveSessionID, handshake)
+            sendAndReceive<Ack>(TOPIC_INITIATE, notaryNode.address, 0, receiveSessionID, handshake)
 
-            val request = SignRequest(wtx.serialized, serviceHub.storageService.myLegalIdentity)
+            val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
             val response = sendAndReceive<Result>(TOPIC, notaryNode.address, sendSessionID, receiveSessionID, request)
 
             val notaryResult = validateResponse(response)
@@ -68,7 +69,7 @@ object NotaryProtocol {
             progressTracker.currentStep = VALIDATING
 
             response.validate {
-                if (it.sig != null) validateSignature(it.sig, wtx.serialized)
+                if (it.sig != null) validateSignature(it.sig, stx.txBits)
                 else if (it.error is NotaryError.Conflict) it.error.conflict.verified()
                 else if (it.error == null || it.error !is NotaryError)
                     throw IllegalStateException("Received invalid result from Notary service '${notaryNode.identity}'")
@@ -83,6 +84,7 @@ object NotaryProtocol {
 
         private fun findNotaryNode(): NodeInfo {
             var maybeNotaryKey: PublicKey? = null
+            val wtx = stx.tx
 
             val timestampCommand = wtx.commands.singleOrNull { it.value is TimestampCommand }
             if (timestampCommand != null) maybeNotaryKey = timestampCommand.signers.first()
@@ -116,17 +118,17 @@ object NotaryProtocol {
         @Suspendable
         override fun call() {
             val request = receive<SignRequest>(TOPIC, receiveSessionID).validate { it }
-            val txBits = request.txBits
+            val stx = request.tx
+            val wtx = stx.tx
             val reqIdentity = request.callerIdentity
 
-            val wtx = txBits.deserialize()
             val result: Result
             try {
                 validateTimestamp(wtx)
-                beforeCommit(wtx, reqIdentity)
+                beforeCommit(stx, reqIdentity)
                 commitInputStates(wtx, reqIdentity)
 
-                val sig = sign(txBits)
+                val sig = sign(stx.txBits)
                 result = Result.noError(sig)
 
             } catch(e: NotaryException) {
@@ -158,12 +160,12 @@ object NotaryProtocol {
          * undo the commit of the input states (the exact mechanism still needs to be worked out)
          */
         @Suspendable
-        open fun beforeCommit(wtx: WireTransaction, reqIdentity: Party) {
+        open fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {
         }
 
         private fun commitInputStates(tx: WireTransaction, reqIdentity: Party) {
             try {
-                uniquenessProvider.commit(tx, reqIdentity)
+                uniquenessProvider.commit(tx.inputs, tx.id, reqIdentity)
             } catch (e: UniquenessException) {
                 val conflictData = e.error.serialize()
                 val signedConflict = SignedData(conflictData, sign(conflictData))
@@ -184,7 +186,7 @@ object NotaryProtocol {
             sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
 
     /** TODO: The caller must authenticate instead of just specifying its identity */
-    class SignRequest(val txBits: SerializedBytes<WireTransaction>,
+    class SignRequest(val tx: SignedTransaction,
                       val callerIdentity: Party)
 
     data class Result private constructor(val sig: DigitalSignature.LegallyIdentifiable?, val error: NotaryError?) {
@@ -231,4 +233,6 @@ sealed class NotaryError {
     class TimestampInvalid : NotaryError()
 
     class TransactionInvalid : NotaryError()
+
+    class SignaturesMissing(val missingSigners: List<PublicKey>) : NotaryError()
 }

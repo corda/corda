@@ -27,7 +27,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     rollConvention = DateRollConvention.ModifiedFollowing,
                     dayInMonth = 10,
                     paymentRule = PaymentRule.InArrears,
-                    paymentDelay = 0,
+                    paymentDelay = 3,
                     paymentCalendar = BusinessCalendar.getInstance("London", "NewYork"),
                     interestPeriodAdjustment = AccrualAdjustment.Adjusted
             )
@@ -47,10 +47,10 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dayInMonth = 10,
                     resetDayInMonth = 10,
                     paymentRule = PaymentRule.InArrears,
-                    paymentDelay = 0,
+                    paymentDelay = 3,
                     paymentCalendar = BusinessCalendar.getInstance("London", "NewYork"),
                     interestPeriodAdjustment = AccrualAdjustment.Adjusted,
-                    fixingPeriod = DateOffset.TWODAYS,
+                    fixingPeriodOffset = 2,
                     resetRule = PaymentRule.InAdvance,
                     fixingsPerPayment = Frequency.Quarterly,
                     fixingCalendar = BusinessCalendar.getInstance("London"),
@@ -97,7 +97,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, notary = DUMMY_NOTARY)
+            InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
         }
         2 -> {
             // 10y swap, we pay 1.3% fixed 30/360 semi, rec 3m usd libor act/360 Q on 25m notional (mod foll/adj on both sides)
@@ -140,7 +140,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     paymentDelay = 0,
                     paymentCalendar = BusinessCalendar.getInstance(),
                     interestPeriodAdjustment = AccrualAdjustment.Adjusted,
-                    fixingPeriod = DateOffset.TWODAYS,
+                    fixingPeriodOffset = 2,
                     resetRule = PaymentRule.InAdvance,
                     fixingsPerPayment = Frequency.Quarterly,
                     fixingCalendar = BusinessCalendar.getInstance(),
@@ -187,7 +187,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     dailyInterestAmount = Expression("(CashAmount * InterestRate ) / (fixedLeg.notional.currency.currencyCode.equals('GBP')) ? 365 : 360")
             )
 
-            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, notary = DUMMY_NOTARY)
+            return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common)
 
         }
         else -> TODO("IRS number $irsSelect not defined")
@@ -197,18 +197,6 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 class IRSTests {
 
     val attachments = MockStorageService().attachments
-
-    val exampleIRS = createDummyIRS(1)
-
-    val inState = InterestRateSwap.State(
-            exampleIRS.fixedLeg,
-            exampleIRS.floatingLeg,
-            exampleIRS.calculation,
-            exampleIRS.common,
-            DUMMY_NOTARY
-    )
-
-    val outState = inState.copy()
 
     @Test
     fun ok() {
@@ -255,7 +243,7 @@ class IRSTests {
      * Utility so I don't have to keep typing this
      */
     fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
-        return generateIRSTxn(irsSelector).outputs.filterIsInstance<InterestRateSwap.State>().single()
+        return generateIRSTxn(irsSelector).outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
     }
 
     /**
@@ -287,7 +275,7 @@ class IRSTests {
             newCalculation = newCalculation.applyFixing(it.key, FixedRate(PercentageRatioUnit(it.value)))
         }
 
-        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common, DUMMY_NOTARY)
+        val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common)
         println(newIRS.exportIRSToCSV())
     }
 
@@ -306,13 +294,13 @@ class IRSTests {
     @Test
     fun generateIRSandFixSome() {
         var previousTXN = generateIRSTxn(1)
-        var currentIRS = previousTXN.outputs.filterIsInstance<InterestRateSwap.State>().single()
+        var currentIRS = previousTXN.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
         println(currentIRS.prettyPrint())
         while (true) {
             val nextFixingDate = currentIRS.calculation.nextFixingDate() ?: break
             println("\n\n\n ***** Applying a fixing to $nextFixingDate \n\n\n")
-            var fixTX: LedgerTransaction = run {
-                val tx = TransactionBuilder()
+            val fixTX: LedgerTransaction = run {
+                val tx = TransactionType.General.Builder()
                 val fixing = Pair(nextFixingDate, FixedRate("0.052".percent))
                 InterestRateSwap().generateFix(tx, previousTXN.outRef(0), fixing)
                 with(tx) {
@@ -323,7 +311,7 @@ class IRSTests {
                 }
                 tx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
             }
-            currentIRS = previousTXN.outputs.filterIsInstance<InterestRateSwap.State>().single()
+            currentIRS = previousTXN.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
             println(currentIRS.prettyPrint())
             previousTXN = fixTX
         }
@@ -360,7 +348,7 @@ class IRSTests {
 
         for (i in stuffToPrint) {
             println(i)
-            var z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 12), Expression(i))
+            val z = dummyIRS.evaluateCalculation(LocalDate.of(2016, 9, 15), Expression(i))
             println(z.javaClass)
             println(z)
             println("-----------")
@@ -387,11 +375,11 @@ class IRSTests {
             transaction("Fix") {
                 input("irs post agreement")
                 output("irs post first fixing") {
-                    "irs post agreement".output.copy(
-                            "irs post agreement".output.fixedLeg,
-                            "irs post agreement".output.floatingLeg,
-                            "irs post agreement".output.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                            "irs post agreement".output.common
+                    "irs post agreement".output.data.copy(
+                            "irs post agreement".output.data.fixedLeg,
+                            "irs post agreement".output.data.floatingLeg,
+                            "irs post agreement".output.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                            "irs post agreement".output.data.common
                     )
                 }
                 arg(ORACLE_PUBKEY) {
@@ -573,6 +561,7 @@ class IRSTests {
             output("irs post agreement") { singleIRS() }
             arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
+            this.accepts()
         }
 
         val oldIRS = singleIRS(1)
@@ -619,7 +608,7 @@ class IRSTests {
 
                 val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
                 val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
-                var modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
+                val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
 
                 output() {
                     newIRS.copy(
@@ -640,7 +629,7 @@ class IRSTests {
                 arg(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
 
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
-                var modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
+                val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
 
                 output() {
                     newIRS.copy(
@@ -677,7 +666,6 @@ class IRSTests {
                             irs.floatingLeg,
                             irs.calculation,
                             irs.common.copy(tradeID = "t1")
-
                     )
                 }
                 arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -691,7 +679,6 @@ class IRSTests {
                             irs.floatingLeg,
                             irs.calculation,
                             irs.common.copy(tradeID = "t2")
-
                     )
                 }
                 arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
@@ -702,19 +689,19 @@ class IRSTests {
                 input("irs post agreement1")
                 input("irs post agreement2")
                 output("irs post first fixing1") {
-                    "irs post agreement1".output.copy(
-                            "irs post agreement1".output.fixedLeg,
-                            "irs post agreement1".output.floatingLeg,
-                            "irs post agreement1".output.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            "irs post agreement1".output.common.copy(tradeID = "t1")
+                    "irs post agreement1".output.data.copy(
+                            "irs post agreement1".output.data.fixedLeg,
+                            "irs post agreement1".output.data.floatingLeg,
+                            "irs post agreement1".output.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            "irs post agreement1".output.data.common.copy(tradeID = "t1")
                     )
                 }
                 output("irs post first fixing2") {
-                    "irs post agreement2".output.copy(
-                            "irs post agreement2".output.fixedLeg,
-                            "irs post agreement2".output.floatingLeg,
-                            "irs post agreement2".output.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            "irs post agreement2".output.common.copy(tradeID = "t2")
+                    "irs post agreement2".output.data.copy(
+                            "irs post agreement2".output.data.fixedLeg,
+                            "irs post agreement2".output.data.floatingLeg,
+                            "irs post agreement2".output.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            "irs post agreement2".output.data.common.copy(tradeID = "t2")
                     )
                 }
 

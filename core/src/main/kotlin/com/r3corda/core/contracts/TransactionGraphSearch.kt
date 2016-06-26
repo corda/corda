@@ -1,9 +1,7 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.WireTransaction
-import com.r3corda.core.contracts.CommandData
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.services.ReadOnlyTransactionStorage
 import java.util.*
 import java.util.concurrent.Callable
 
@@ -15,9 +13,10 @@ import java.util.concurrent.Callable
  *
  * In future, this should support restricting the search by time, and other types of useful query.
  *
- * TODO: Write unit tests for this.
+ * @param transactions map of transaction id to [SignedTransaction]
+ * @param startPoints transactions to use as starting points for the search
  */
-class TransactionGraphSearch(val transactions: Map<SecureHash, SignedTransaction>,
+class TransactionGraphSearch(val transactions: ReadOnlyTransactionStorage,
                              val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
     class Query(
             val withCommandOfType: Class<out CommandData>? = null
@@ -35,7 +34,7 @@ class TransactionGraphSearch(val transactions: Map<SecureHash, SignedTransaction
 
         while (next.isNotEmpty()) {
             val hash = next.removeAt(next.lastIndex)
-            val tx = transactions[hash]?.tx ?: continue
+            val tx = transactions.getTransaction(hash)?.tx ?: continue
 
             if (q.matches(tx))
                 results += tx

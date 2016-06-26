@@ -3,6 +3,8 @@ package com.r3corda.demos
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.cash.cashBalances
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -25,8 +27,6 @@ import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.services.wallet.NodeWalletService
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
@@ -37,6 +37,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
+import java.util.*
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
@@ -95,7 +96,7 @@ fun main(args: Array<String>) {
     // for protocols will change in future.
     BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
-    val directory = setupDirectory(role)
+    val directory = Paths.get(DIRNAME, role.name.toLowerCase())
 
     // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
@@ -113,6 +114,7 @@ fun main(args: Array<String>) {
     // One of the two servers needs to run the network map and notary services. In such a trivial two-node network
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
+    var cashIssuer: Party? = null
     val networkMapId = if (role == Role.BUYER) {
         advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
@@ -124,27 +126,28 @@ fun main(args: Array<String>) {
         val path = Paths.get(DIRNAME, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
+        cashIssuer = party
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
-        Node(directory, myNetAddr, config, networkMapId, advertisedServices).start()
+        Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+    }
+
+    // TODO: Replace with a separate trusted cash issuer
+    if (cashIssuer == null) {
+        cashIssuer = node.services.storageService.myLegalIdentity
     }
 
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
     // will contact the buyer and actually make something happen.
+    val amount = 1000.DOLLARS `issued by` cashIssuer.ref(0) // Note: "0" has to match the reference used in the wallet filler
     if (role == Role.BUYER) {
-        runBuyer(node)
+        runBuyer(node, amount)
     } else {
-        runSeller(myNetAddr, node, theirNetAddr)
+        runSeller(myNetAddr, node, theirNetAddr, amount)
     }
-}
-
-fun setupDirectory(mode: Role): Path {
-    val directory = Paths.get(DIRNAME, mode.name.toLowerCase())
-    Files.createDirectories(directory)
-    return directory
 }
 
 fun parseOptions(args: Array<String>, parser: OptionParser): OptionSet {
@@ -157,7 +160,7 @@ fun parseOptions(args: Array<String>, parser: OptionParser): OptionSet {
     }
 }
 
-fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
+fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort, amount: Amount<Issued<Currency>>) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -173,20 +176,18 @@ fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort) {
 
     if (node.isPreviousCheckpointsPresent) {
         node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).forEach {
-            ANSIProgressRenderer.progressTracker = it.first.progressTracker
             it.second.get()
         }
     } else {
         val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
-        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide)
-        ANSIProgressRenderer.progressTracker = seller.progressTracker
+        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide, amount)
         node.smm.add("demo.seller", seller).get()
     }
 
     node.stop()
 }
 
-fun runBuyer(node: Node) {
+fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
     // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
     // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
     val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
@@ -195,13 +196,11 @@ fun runBuyer(node: Node) {
     }
 
     val future = if (node.isPreviousCheckpointsPresent) {
-        val (buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
-        ANSIProgressRenderer.progressTracker = buyer.progressTracker  //TODO the SMM will soon be able to wire up the ANSIProgressRenderer automatially
+        val (@Suppress("UNUSED_VARIABLE") buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
         future
     } else {
         // We use a simple scenario-specific wrapper protocol to make things happen.
-        val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity)
-        ANSIProgressRenderer.progressTracker = buyer.progressTracker
+        val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity, amount)
         node.smm.add("demo.buyer", buyer)
     }
 
@@ -212,7 +211,9 @@ fun runBuyer(node: Node) {
 
 val DEMO_TOPIC = "initiate.demo.trade"
 
-class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Party) : ProtocolLogic<Unit>() {
+class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
+                              val notary: Party,
+                              val amount: Amount<Issued<Currency>>) : ProtocolLogic<Unit>() {
     companion object {
         object WAITING_FOR_SELLER_TO_CONNECT : ProgressTracker.Step("Waiting for seller to connect to us")
 
@@ -226,7 +227,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Par
         // Self issue some cash.
         //
         // TODO: At some point this demo should be extended to have a central bank node.
-        (serviceHub.walletService as NodeWalletService).fillWithSomeTestCash(notary, 3000.DOLLARS)
+        serviceHub.fillWithSomeTestCash(3000.DOLLARS, notary)
 
         while (true) {
             // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
@@ -245,11 +246,12 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Par
                 send(DEMO_TOPIC, newPartnerAddr, 0, sessionID)
 
                 val notary = serviceHub.networkMapCache.notaryNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, notary.identity, 1000.DOLLARS,
+                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, notary.identity, amount,
                         CommercialPaper.State::class.java, sessionID)
 
                 // This invokes the trading protocol and out pops our finished transaction.
                 val tradeTX: SignedTransaction = subProtocol(buyer)
+                // TODO: This should be moved into the protocol itself.
                 serviceHub.recordTransactions(listOf(tradeTX))
 
                 logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
@@ -265,7 +267,7 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path, val notary: Par
     }
 
     private fun logBalance() {
-        val balances = serviceHub.walletService.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
+        val balances = serviceHub.walletService.currentWallet.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
         logger.info("Remaining balance: ${balances.joinToString()}")
     }
 
@@ -289,6 +291,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
 
 class TraderDemoProtocolSeller(val myAddress: HostAndPort,
                                val otherSide: SingleMessageRecipient,
+                               val amount: Amount<Issued<Currency>>,
                                override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
     companion object {
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
@@ -297,14 +300,14 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         object SELF_ISSUING : ProgressTracker.Step("Got session ID back, issuing and timestamping some commercial paper")
 
-        object TRADING : ProgressTracker.Step("Starting the trade protocol")
+        object TRADING : ProgressTracker.Step("Starting the trade protocol") {
+            override fun childProgressTracker(): ProgressTracker = TwoPartyTradeProtocol.Seller.tracker()
+        }
 
         // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
         // point: by setting up the tracker in advance, the user can see what's coming in more detail, instead of being
         // surprised when it appears as a new set of tasks below the current one.
-        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING).apply {
-            childrenFor[TRADING] = TwoPartyTradeProtocol.Seller.tracker()
-        }
+        fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING)
     }
 
     @Suspendable
@@ -321,8 +324,8 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         progressTracker.currentStep = TRADING
 
-        val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, commercialPaper, 1000.DOLLARS, cpOwnerKey,
-                sessionID, progressTracker.childrenFor[TRADING]!!)
+        val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, commercialPaper, amount, cpOwnerKey,
+                sessionID, progressTracker.getChildProgressTracker(TRADING)!!)
         val tradeTX: SignedTransaction = subProtocol(seller)
         serviceHub.recordTransactions(listOf(tradeTX))
 
@@ -336,7 +339,7 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
         val party = Party("Bank of London", keyPair.public)
 
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS, Instant.now() + 10.days, notaryNode.identity)
+            val tx = CommercialPaper().generateIssue(1100.DOLLARS `issued by` party.ref(1, 2, 3), Instant.now() + 10.days, notaryNode.identity)
 
             // TODO: Consider moving these two steps below into generateIssue.
 
@@ -349,8 +352,8 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
             // Sign it as ourselves.
             tx.signWith(keyPair)
 
-            // Get the notary to sign it, thus committing the outputs.
-            val notarySig = subProtocol(NotaryProtocol.Client(tx.toWireTransaction()))
+            // Get the notary to sign the timestamp
+            val notarySig = subProtocol(NotaryProtocol.Client(tx.toSignedTransaction(false)))
             tx.addSignatureUnchecked(notarySig)
 
             // Commit it to local storage.
@@ -362,10 +365,11 @@ class TraderDemoProtocolSeller(val myAddress: HostAndPort,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionBuilder()
+            val builder = TransactionType.General.Builder()
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
-            builder.addSignatureUnchecked(subProtocol(NotaryProtocol.Client(builder.toWireTransaction())))
+            val notarySignature = subProtocol(NotaryProtocol.Client(builder.toSignedTransaction(false)))
+            builder.addSignatureUnchecked(notarySignature)
             val tx = builder.toSignedTransaction(true)
             serviceHub.recordTransactions(listOf(tx))
             tx

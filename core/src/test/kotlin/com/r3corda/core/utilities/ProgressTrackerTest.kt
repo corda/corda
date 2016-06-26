@@ -70,7 +70,7 @@ class ProgressTrackerTest {
         pt.currentStep = SimpleSteps.ONE
         assertNextStep(SimpleSteps.ONE)
 
-        pt.childrenFor[SimpleSteps.TWO] = pt2
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
         pt.nextStep()
         assertEquals(SimpleSteps.TWO, (stepNotification.pollFirst() as ProgressTracker.Change.Structural).parent)
         assertNextStep(SimpleSteps.TWO)
@@ -83,7 +83,7 @@ class ProgressTrackerTest {
     @Test
     fun `can be rewound`() {
         val pt2 = ChildSteps.tracker()
-        pt.childrenFor[SimpleSteps.TWO] = pt2
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
         repeat(4) { pt.nextStep() }
         pt.currentStep = SimpleSteps.ONE
         assertEquals(SimpleSteps.TWO, pt.nextStep())

@@ -3,6 +3,7 @@ package com.r3corda.contracts;
 import com.r3corda.core.contracts.Amount;
 import com.r3corda.core.contracts.ContractState;
 import com.r3corda.core.contracts.PartyAndReference;
+import com.r3corda.core.contracts.Issued;
 
 import java.security.*;
 import java.time.*;
@@ -18,7 +19,7 @@ public interface ICommercialPaperState extends ContractState {
 
     ICommercialPaperState withIssuance(PartyAndReference newIssuance);
 
-    ICommercialPaperState withFaceValue(Amount<Currency> newFaceValue);
+    ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue);
 
     ICommercialPaperState withMaturityDate(Instant newMaturityDate);
 }

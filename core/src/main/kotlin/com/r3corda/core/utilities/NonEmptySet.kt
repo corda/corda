@@ -1,12 +1,20 @@
 package com.r3corda.core.utilities
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
+import java.util.*
+
 /**
  * A set which is constrained to ensure it can never be empty. An initial value must be provided at
  * construction, and attempting to remove the last element will cause an IllegalStateException.
+ * The underlying set is exposed for Kryo to access, but should not be accessed directly.
  */
-class NonEmptySet<T>(initial: T, private val set: MutableSet<T> = mutableSetOf()) : MutableSet<T> {
+class NonEmptySet<T>(initial: T) : MutableSet<T> {
+    private val set: MutableSet<T> = HashSet<T>()
+
     init {
-        require (set.isEmpty()) { "Provided set must be empty." }
         set.add(initial)
     }
 
@@ -80,4 +88,28 @@ fun <T> nonEmptySetOf(initial: T, vararg elements: T): NonEmptySet<T> {
     // We add the first element twice, but it's a set, so who cares
     set.addAll(elements)
     return set
+}
+
+/**
+ * Custom serializer which understands it has to read in an item before
+ * trying to construct the set.
+ */
+object NonEmptySetSerializer : Serializer<NonEmptySet<Any>>() {
+    override fun write(kryo: Kryo, output: Output, obj: NonEmptySet<Any>) {
+        // Write out the contents as normal
+        output.writeInt(obj.size)
+        obj.forEach { kryo.writeClassAndObject(output, it) }
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<NonEmptySet<Any>>): NonEmptySet<Any> {
+        val size = input.readInt()
+        require(size >= 1) { "Size is positive" }
+        // TODO: Is there an upper limit we can apply to how big one of these could be?
+        val first = kryo.readClassAndObject(input)
+        // Read the first item and use it to construct the NonEmptySet
+        val set = NonEmptySet(first)
+        // Read in the rest of the set
+        for (i in 2..size) { set.add(kryo.readClassAndObject(input)) }
+        return set
+    }
 }

@@ -12,7 +12,6 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
-import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
@@ -36,11 +35,12 @@ import java.util.*
  *
  *    BriefLogFormatter.initVerbose("+messaging")
  */
-class MockNetwork(private val threadPerNode: Boolean = false,
+class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
+                  private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var counter = 0
     val filesystem = Jimfs.newFileSystem(Configuration.unix())
-    val messagingNetwork = InMemoryMessagingNetwork()
+    val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
 
     val identities = ArrayList<Party>()
 
@@ -66,7 +66,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
-                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, NodeClock()) {
+                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -121,7 +121,7 @@ class MockNetwork(private val threadPerNode: Boolean = false,
             override val nearestCity: String = "Atlantis"
         }
         val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
-        if (start) node.start()
+        if (start) node.setup().start()
         _nodes.add(node)
         return node
     }
@@ -133,13 +133,17 @@ class MockNetwork(private val threadPerNode: Boolean = false,
      * stability (no nodes sent any messages in the last round).
      */
     fun runNetwork(rounds: Int = -1) {
-        fun pumpAll() = messagingNetwork.endpoints.map { it.pump(false) }
+        check(!networkSendManuallyPumped)
+        fun pumpAll() = messagingNetwork.endpoints.map { it.pumpReceive(false) }
 
-        if (rounds == -1)
+        if (rounds == -1) {
             while (pumpAll().any { it != null }) {
             }
-        else
-            repeat(rounds) { pumpAll() }
+        } else {
+            repeat(rounds) {
+                pumpAll()
+            }
+        }
     }
 
     /**

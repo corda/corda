@@ -1,6 +1,5 @@
 package com.r3corda.contracts
 
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -373,7 +372,7 @@ class InterestRateSwap() : Contract {
             var rollConvention: DateRollConvention,
             var fixingRollConvention: DateRollConvention,
             var resetDayInMonth: Int,
-            var fixingPeriod: DateOffset,
+            var fixingPeriodOffset: Int,
             var resetRule: PaymentRule,
             var fixingsPerPayment: Frequency,
             var fixingCalendar: BusinessCalendar,
@@ -384,7 +383,7 @@ class InterestRateSwap() : Contract {
             dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment) {
         override fun toString(): String = "FloatingLeg(Payer=$floatingRatePayer," + super.toString() +
                 "rollConvention=$rollConvention,FixingRollConvention=$fixingRollConvention,ResetDayInMonth=$resetDayInMonth" +
-                "FixingPeriond=$fixingPeriod,ResetRule=$resetRule,FixingsPerPayment=$fixingsPerPayment,FixingCalendar=$fixingCalendar," +
+                "FixingPeriondOffset=$fixingPeriodOffset,ResetRule=$resetRule,FixingsPerPayment=$fixingsPerPayment,FixingCalendar=$fixingCalendar," +
                 "Index=$index,IndexSource=$indexSource,IndexTenor=$indexTenor"
 
         override fun equals(other: Any?): Boolean {
@@ -398,7 +397,7 @@ class InterestRateSwap() : Contract {
             if (rollConvention != other.rollConvention) return false
             if (fixingRollConvention != other.fixingRollConvention) return false
             if (resetDayInMonth != other.resetDayInMonth) return false
-            if (fixingPeriod != other.fixingPeriod) return false
+            if (fixingPeriodOffset != other.fixingPeriodOffset) return false
             if (resetRule != other.resetRule) return false
             if (fixingsPerPayment != other.fixingsPerPayment) return false
             if (fixingCalendar != other.fixingCalendar) return false
@@ -410,7 +409,7 @@ class InterestRateSwap() : Contract {
         }
 
         override fun hashCode() = super.hashCode() + 31 * Objects.hash(floatingRatePayer, rollConvention,
-                fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment, fixingCalendar,
+                fixingRollConvention, resetDayInMonth, fixingPeriodOffset, resetRule, fixingsPerPayment, fixingCalendar,
                 index, indexSource, indexTenor)
 
 
@@ -431,7 +430,7 @@ class InterestRateSwap() : Contract {
                  rollConvention: DateRollConvention = this.rollConvention,
                  fixingRollConvention: DateRollConvention = this.fixingRollConvention,
                  resetDayInMonth: Int = this.resetDayInMonth,
-                 fixingPeriod: DateOffset = this.fixingPeriod,
+                 fixingPeriod: Int = this.fixingPeriodOffset,
                  resetRule: PaymentRule = this.resetRule,
                  fixingsPerPayment: Frequency = this.fixingsPerPayment,
                  fixingCalendar: BusinessCalendar = this.fixingCalendar,
@@ -488,7 +487,7 @@ class InterestRateSwap() : Contract {
     /**
      * verify() with some examples of what needs to be checked.
      */
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
 
         // Group by Trade ID for in / out states
         val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
@@ -516,7 +515,7 @@ class InterestRateSwap() : Contract {
                         "The termination dates are aligned" by (irs.floatingLeg.terminationDate == irs.fixedLeg.terminationDate)
                         "The rates are valid" by checkRates(arrayOf(irs.fixedLeg, irs.floatingLeg))
                         "The schedules are valid" by checkSchedules(arrayOf(irs.fixedLeg, irs.floatingLeg))
-
+                        "The fixing period date offset cannot be negative" by (irs.floatingLeg.fixingPeriodOffset >= 0)
 
                         // TODO: further tests
                     }
@@ -588,13 +587,15 @@ class InterestRateSwap() : Contract {
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
-            val common: Common,
-            override val notary: Party
+            val common: Common
     ) : FixableDealState {
 
         override val contract = IRS_PROGRAM_ID
         override val thread = SecureHash.sha256(common.tradeID)
         override val ref = common.tradeID
+
+        override val participants: List<PublicKey>
+            get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return (fixedLeg.fixedRatePayer.owningKey in ourKeys) || (floatingLeg.floatingRatePayer.owningKey in ourKeys)
@@ -619,10 +620,10 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        override fun generateAgreement(): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
+        override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
-        override fun generateFix(ptx: TransactionBuilder, oldStateRef: StateRef, fix: Fix) {
-            InterestRateSwap().generateFix(ptx, StateAndRef(this, oldStateRef), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
+        override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
+            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
         }
 
         override fun nextFixingOf(): FixOf? {
@@ -672,15 +673,17 @@ class InterestRateSwap() : Contract {
 
         // Create a schedule for the fixed payments
         for (periodEndDate in dates) {
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, fixedLeg.paymentDelay)
             val paymentEvent = FixedRatePaymentEvent(
-                    // TODO: We are assuming the payment date is the end date of the accrual period.
-                    periodEndDate, periodStartDate, periodEndDate,
+                    paymentDate,
+                    periodStartDate,
+                    periodEndDate,
                     fixedLeg.dayCountBasisDay,
                     fixedLeg.dayCountBasisYear,
                     fixedLeg.notional,
                     fixedLeg.fixedRate
             )
-            fixedLegPaymentSchedule[periodEndDate] = paymentEvent
+            fixedLegPaymentSchedule[paymentDate] = paymentEvent
             periodStartDate = periodEndDate
         }
 
@@ -695,40 +698,43 @@ class InterestRateSwap() : Contract {
 
         // Now create a schedule for the floating and fixes.
         for (periodEndDate in dates) {
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, floatingLeg.paymentDelay) 
             val paymentEvent = FloatingRatePaymentEvent(
-                    periodEndDate,
+                    paymentDate,
                     periodStartDate,
                     periodEndDate,
                     floatingLeg.dayCountBasisDay,
                     floatingLeg.dayCountBasisYear,
-                    calcFixingDate(periodStartDate, floatingLeg.fixingPeriod, floatingLeg.fixingCalendar),
+                    calcFixingDate(periodStartDate, floatingLeg.fixingPeriodOffset, floatingLeg.fixingCalendar),
                     floatingLeg.notional,
                     ReferenceRate(floatingLeg.indexSource, floatingLeg.indexTenor, floatingLeg.index)
             )
 
-            floatingLegPaymentSchedule.put(periodEndDate, paymentEvent)
+            floatingLegPaymentSchedule[paymentDate] = paymentEvent
             periodStartDate = periodEndDate
         }
 
         val newCalculation = Calculation(calculation.expression, floatingLegPaymentSchedule, fixedLegPaymentSchedule)
 
         // Put all the above into a new State object.
-        val state = State(fixedLeg, floatingLeg, newCalculation, common, notary)
-        return TransactionBuilder().withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
+        val state = State(fixedLeg, floatingLeg, newCalculation, common)
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
     }
 
-    private fun calcFixingDate(date: LocalDate, fixingPeriod: DateOffset, calendar: BusinessCalendar): LocalDate {
-        return when (fixingPeriod) {
-            DateOffset.ZERO -> date
-            DateOffset.TWODAYS -> calendar.moveBusinessDays(date, DateRollDirection.BACKWARD, 2)
-            else -> TODO("Improved fixing date calculation logic")
+    private fun calcFixingDate(date: LocalDate, fixingPeriodOffset: Int, calendar: BusinessCalendar): LocalDate {
+        return when (fixingPeriodOffset) {
+            0 -> date
+            else -> calendar.moveBusinessDays(date, DateRollDirection.BACKWARD, fixingPeriodOffset)
         }
     }
 
     // TODO: Replace with rates oracle
     fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Pair<LocalDate, Rate>) {
-        tx.addInputState(irs.ref)
-        tx.addOutputState(irs.state.copy(calculation = irs.state.calculation.applyFixing(fixing.first, FixedRate(fixing.second))))
-        tx.addCommand(Commands.Fix(), listOf(irs.state.floatingLeg.floatingRatePayer.owningKey, irs.state.fixedLeg.fixedRatePayer.owningKey))
+        tx.addInputState(irs)
+        tx.addOutputState(
+                irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.first, FixedRate(fixing.second))),
+                irs.state.notary
+        )
+        tx.addCommand(Commands.Fix(), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))
     }
 }

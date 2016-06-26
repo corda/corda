@@ -10,9 +10,13 @@ import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.r3corda.core.contracts.BusinessCalendar
+import com.r3corda.core.crypto.Base58
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.IdentityService
+import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,6 +26,7 @@ import java.time.LocalDateTime
  * the java.time API, some core types, and Kotlin data classes.
  */
 object JsonSupport {
+
     fun createDefaultMapper(identities: IdentityService): ObjectMapper {
         val mapper = ServiceHubObjectMapper(identities)
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -44,6 +49,10 @@ object JsonSupport {
         // for a SecureHash at the moment and tries to use SHA256 directly even though we only give it SecureHash
         cordaModule.addDeserializer(SecureHash.SHA256::class.java, SecureHashDeserializer())
         cordaModule.addDeserializer(BusinessCalendar::class.java, CalendarDeserializer)
+
+        // For ed25519 pubkeys
+        cordaModule.addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
+        cordaModule.addDeserializer(EdDSAPublicKey::class.java, PublicKeyDeserializer)
 
         mapper.registerModule(timeModule)
         mapper.registerModule(cordaModule)
@@ -123,6 +132,26 @@ object JsonSupport {
                 BusinessCalendar.getInstance(*array)
             } catch (e: Exception) {
                 throw JsonParseException("Invalid calendar(s) ${parser.text}: ${e.message}", parser.currentLocation)
+            }
+        }
+    }
+
+    private val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+
+    object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
+       override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
+           check(obj.params == ed25519Curve)
+           generator.writeString(Base58.encode(obj.abyte))
+       }
+    }
+
+    object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
+            return try {
+                val A = Base58.decode(parser.text)
+                EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+            } catch (e: Exception) {
+                throw JsonParseException("Invalid public key ${parser.text}: ${e.message}", parser.currentLocation)
             }
         }
     }

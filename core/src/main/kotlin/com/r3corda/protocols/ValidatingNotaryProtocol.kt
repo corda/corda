@@ -1,6 +1,7 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.TransactionVerificationException
 import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.contracts.toLedgerTransaction
@@ -22,8 +23,10 @@ class ValidatingNotaryProtocol(otherSide: SingleMessageRecipient,
                                timestampChecker: TimestampChecker,
                                uniquenessProvider: UniquenessProvider) : NotaryProtocol.Service(otherSide, sessionIdForSend, sessionIdForReceive, timestampChecker, uniquenessProvider) {
     @Suspendable
-    override fun beforeCommit(wtx: WireTransaction, reqIdentity: Party) {
+    override fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {
+        val wtx = stx.tx
         try {
+            checkSignatures(stx)
             validateDependencies(reqIdentity, wtx)
             checkContractValid(wtx)
         } catch (e: Exception) {
@@ -33,6 +36,13 @@ class ValidatingNotaryProtocol(otherSide: SingleMessageRecipient,
                 else -> throw e
             }
         }
+    }
+
+    private fun checkSignatures(stx: SignedTransaction) {
+        val myKey = serviceHub.storageService.myLegalIdentity.owningKey
+        val missing = stx.verify(false) - myKey
+
+        if (missing.isNotEmpty()) throw NotaryException(NotaryError.SignaturesMissing(missing.toList()))
     }
 
     private fun checkContractValid(wtx: WireTransaction) {

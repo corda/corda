@@ -3,7 +3,6 @@ package com.r3corda.contracts
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.contracts.cash.InsufficientBalanceException
 import com.r3corda.contracts.cash.sumCashBy
-import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
@@ -12,7 +11,7 @@ import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
 import java.time.Instant
-import java.util.Currency
+import java.util.*
 
 /**
  * This is an ultra-trivial implementation of commercial paper, which is essentially a simpler version of a corporate
@@ -46,11 +45,12 @@ class CommercialPaper : Contract {
     data class State(
             val issuance: PartyAndReference,
             override val owner: PublicKey,
-            val faceValue: Amount<Currency>,
-            val maturityDate: Instant,
-            override val notary: Party
+            val faceValue: Amount<Issued<Currency>>,
+            val maturityDate: Instant
     ) : OwnableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
+        override val participants: List<PublicKey>
+            get() = listOf(owner)
 
         fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
@@ -60,7 +60,7 @@ class CommercialPaper : Contract {
         override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
 
         override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
-        override fun withFaceValue(newFaceValue: Amount<Currency>): ICommercialPaperState = copy(faceValue = newFaceValue)
+        override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
     }
 
@@ -72,7 +72,7 @@ class CommercialPaper : Contract {
         class Issue : TypeOnlyCommandData(), Commands
     }
 
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
         // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
         val groups = tx.groupStates() { it: State -> it.withoutOwner() }
 
@@ -100,7 +100,7 @@ class CommercialPaper : Contract {
             // Redemption of the paper requires movement of on-ledger cash.
                 is Commands.Redeem -> {
                     val input = inputs.single()
-                    val received = tx.outStates.sumCashBy(input.owner)
+                    val received = tx.outputs.sumCashBy(input.owner)
                     val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                     requireThat {
                         "the paper must have matured" by (time >= input.maturityDate)
@@ -136,18 +136,19 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Currency>, maturityDate: Instant, notary: Party): TransactionBuilder {
-        val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate, notary)
-        return TransactionBuilder().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+    fun generateIssue(faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
+        val issuance = faceValue.token.issuer
+        val state = TransactionState(State(issuance, issuance.party.owningKey, faceValue, maturityDate), notary)
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
      * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
      */
     fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
-        tx.addInputState(paper.ref)
-        tx.addOutputState(paper.state.copy(owner = newOwner))
-        tx.addCommand(Commands.Move(), paper.state.owner)
+        tx.addInputState(paper)
+        tx.addOutputState(TransactionState(paper.state.data.copy(owner = newOwner), paper.state.notary))
+        tx.addCommand(Commands.Move(), paper.state.data.owner)
     }
 
     /**
@@ -160,9 +161,10 @@ class CommercialPaper : Contract {
     @Throws(InsufficientBalanceException::class)
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         // Add the cash movement using the states in our wallet.
-        Cash().generateSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
-        tx.addInputState(paper.ref)
-        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.owner)
+        val amount = paper.state.data.faceValue.let { amount -> Amount<Currency>(amount.quantity, amount.token.product) }
+        Cash().generateSpend(tx, amount, paper.state.data.owner, wallet)
+        tx.addInputState(paper)
+        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.data.owner)
     }
 }
 

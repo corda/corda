@@ -21,12 +21,16 @@ import org.slf4j.LoggerFactory
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberScheduler, private val loggerName: String) : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
+class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
+                                  scheduler: FiberScheduler,
+                                  private val loggerName: String)
+: Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
 
     // These fields shouldn't be serialised, so they are marked @Transient.
-    @Transient private var suspendAction: ((result: StateMachineManager.FiberRequest, fiber: ProtocolStateMachineImpl<*>) -> Unit)? = null
-    @Transient private var receivedPayload: Any? = null
     @Transient lateinit override var serviceHub: ServiceHubInternal
+    @Transient internal lateinit var suspendAction: (StateMachineManager.FiberRequest) -> Unit
+    @Transient internal lateinit var actionOnEnd: () -> Unit
+    @Transient internal var receivedPayload: Any? = null
 
     @Transient private var _logger: Logger? = null
     override val logger: Logger get() {
@@ -51,25 +55,20 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
         logic.psm = this
     }
 
-    fun prepareForResumeWith(serviceHub: ServiceHubInternal,
-                             receivedPayload: Any?,
-                             suspendAction: (StateMachineManager.FiberRequest, ProtocolStateMachineImpl<*>) -> Unit) {
-        this.serviceHub = serviceHub
-        this.receivedPayload = receivedPayload
-        this.suspendAction = suspendAction
-    }
-
     @Suspendable @Suppress("UNCHECKED_CAST")
     override fun run(): R {
-        try {
-            val result = logic.call()
-            if (result != null)
-                _resultFuture?.set(result)
-            return result
-        } catch (e: Throwable) {
-            _resultFuture?.setException(e)
-            throw e
+        val result = try {
+            logic.call()
+        } catch (t: Throwable) {
+            actionOnEnd()
+            _resultFuture?.setException(t)
+            throw t
         }
+
+        // This is to prevent actionOnEnd being called twice if it throws an exception
+        actionOnEnd()
+        _resultFuture?.set(result)
+        return result
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
@@ -104,7 +103,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>, scheduler: FiberS
     private fun suspend(with: StateMachineManager.FiberRequest) {
         parkAndSerialize { fiber, serializer ->
             try {
-                suspendAction!!(with, this)
+                suspendAction(with)
             } catch (t: Throwable) {
                 logger.warn("Captured exception which was swallowed by Quasar", t)
                 // TODO to throw or not to throw, that is the question

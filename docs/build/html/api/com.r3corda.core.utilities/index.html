@@ -26,6 +26,14 @@
 </tr>
 <tr>
 <td>
+<a href="-non-empty-set/index.html">NonEmptySet</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NonEmptySet</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A set which is constrained to ensure it can never be empty. An initial value must be provided at
+construction, and attempting to remove the last element will cause an IllegalStateException.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-progress-tracker/index.html">ProgressTracker</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ProgressTracker</span></code><p>A progress tracker helps surface information about the progress of an operation to a user interface or API of some
@@ -60,6 +68,12 @@ first. The wrapper helps you to avoid forgetting this vital step. Things you mig
 <a href="logger-for.html">loggerFor</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">loggerFor</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="non-empty-set-of.html">nonEmptySetOf</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">nonEmptySetOf</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.utilities$nonEmptySetOf(com.r3corda.core.utilities.nonEmptySetOf.T, kotlin.Array((com.r3corda.core.utilities.nonEmptySetOf.T)))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.utilities$nonEmptySetOf(com.r3corda.core.utilities.nonEmptySetOf.T, kotlin.Array((com.r3corda.core.utilities.nonEmptySetOf.T)))/elements">elements</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><a href="-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

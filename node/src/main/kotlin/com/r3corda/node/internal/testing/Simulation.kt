@@ -1,5 +1,6 @@
 package com.r3corda.node.internal.testing
 
+import com.google.common.base.Function
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.node.CityDatabase
@@ -27,7 +28,8 @@ import java.util.*
  * Sets up some nodes that can run protocols between each other, and exposes their progress trackers. Provides banks
  * in a few cities around the world.
  */
-abstract class Simulation(val runAsync: Boolean,
+abstract class Simulation(val networkSendManuallyPumped: Boolean,
+                          val runAsync: Boolean,
                           val latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
     init {
         if (!runAsync && latencyInjector != null)
@@ -129,7 +131,7 @@ abstract class Simulation(val runAsync: Boolean,
         }
     }
 
-    val network = MockNetwork(runAsync)
+    val network = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
     val networkMap: SimulatedNode
             = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
@@ -180,11 +182,16 @@ abstract class Simulation(val runAsync: Boolean,
      * @return the message that was processed, or null if no node accepted a message in this round.
      */
     open fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
+
+        if (networkSendManuallyPumped) {
+            network.messagingNetwork.pumpSend(false)
+        }
+
         // Keep going until one of the nodes has something to do, or we have checked every node.
         val endpoints = network.messagingNetwork.endpoints
         var countDown = endpoints.size
         while (countDown > 0) {
-            val handledMessage = endpoints[pumpCursor].pump(false)
+            val handledMessage = endpoints[pumpCursor].pumpReceive(false)
             if (handledMessage != null)
                 return handledMessage
             // If this node had nothing to do, advance the cursor with wraparound and try again.
@@ -212,6 +219,9 @@ abstract class Simulation(val runAsync: Boolean,
             }
         }
     }
+
+    val networkInitialisationFinished: ListenableFuture<*> =
+            Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
 
     fun start(): ListenableFuture<Unit> {
         network.startNodes()

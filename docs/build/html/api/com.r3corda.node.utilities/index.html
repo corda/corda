@@ -12,6 +12,14 @@
 <tbody>
 <tr>
 <td>
+<a href="-a-n-s-i-progress-observer/index.html">ANSIProgressObserver</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ANSIProgressObserver</span></code><p>This observes the <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a> and follows the progress of <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a>s until they complete in the order
+they are added to the <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">StateMachineManager</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-a-n-s-i-progress-renderer/index.html">ANSIProgressRenderer</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">ANSIProgressRenderer</span></code><p>Knows how to render a <a href="../com.r3corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
@@ -36,10 +44,36 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 </tr>
 <tr>
 <td>
+<a href="-fiber-box/index.html">FiberBox</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FiberBox</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="-mutable-clock/index.html">MutableClock</a>s</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-json-support/index.html">JsonSupport</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">JsonSupport</span></code><p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
 the java.time API, some core types, and Kotlin data classes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-mutable-clock/index.html">MutableClock</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">MutableClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code><p>An abstract class with helper methods for a type of Clock that might have its concept of "now"
+adjusted externally.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="java.time.-clock/index.html">java.time.Clock</a></td>
+<td>
 </td>
 </tr>
 </tbody>

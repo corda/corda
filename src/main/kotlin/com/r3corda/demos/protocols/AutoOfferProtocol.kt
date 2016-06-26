@@ -4,15 +4,14 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.node.internal.Node
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.node.internal.Node
 import com.r3corda.protocols.TwoPartyDealProtocol
 
 /**
@@ -31,11 +30,11 @@ object AutoOfferProtocol {
     object Handler {
 
         object RECEIVED : ProgressTracker.Step("Received offer")
-        object DEALING : ProgressTracker.Step("Starting the deal protocol")
-
-        fun tracker() = ProgressTracker(RECEIVED, DEALING).apply {
-            childrenFor[DEALING] = TwoPartyDealProtocol.Primary.tracker()
+        object DEALING : ProgressTracker.Step("Starting the deal protocol") {
+            override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Primary.tracker()
         }
+
+        fun tracker() = ProgressTracker(RECEIVED, DEALING)
 
         class Callback(val success: (SignedTransaction) -> Unit) : FutureCallback<SignedTransaction> {
             override fun onFailure(t: Throwable?) {
@@ -50,7 +49,6 @@ object AutoOfferProtocol {
         fun register(node: Node) {
             node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
                 val progressTracker = tracker()
-                ANSIProgressRenderer.progressTracker = progressTracker
                 progressTracker.currentStep = RECEIVED
                 val autoOfferMessage = msg.data.deserialize<AutoOfferMessage>()
                 // Put the deal onto the ledger
@@ -58,7 +56,7 @@ object AutoOfferProtocol {
                 // TODO required as messaging layer does not currently queue messages that arrive before we expect them
                 Thread.sleep(100)
                 val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, node.services.networkMapCache.notaryNodes.first(),
-                        autoOfferMessage.dealBeingOffered, node.services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.childrenFor[DEALING]!!)
+                        autoOfferMessage.dealBeingOffered, node.services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.getChildProgressTracker(DEALING)!!)
                 val future = node.smm.add("${TwoPartyDealProtocol.DEAL_TOPIC}.seller", seller)
                 // This is required because we are doing child progress outside of a subprotocol.  In future, we should just wrap things like this in a protocol to avoid it
                 Futures.addCallback(future, Callback() {
@@ -75,14 +73,14 @@ object AutoOfferProtocol {
         companion object {
             object RECEIVED : ProgressTracker.Step("Received API call")
             object ANNOUNCING : ProgressTracker.Step("Announcing to the peer node")
-            object DEALING : ProgressTracker.Step("Starting the deal protocol")
+            object DEALING : ProgressTracker.Step("Starting the deal protocol") {
+                override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Secondary.tracker()
+            }
 
             // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
             // point: by setting up the tracker in advance, the user can see what's coming in more detail, instead of being
             // surprised when it appears as a new set of tasks below the current one.
-            fun tracker() = ProgressTracker(RECEIVED, ANNOUNCING, DEALING).apply {
-                childrenFor[DEALING] = TwoPartyDealProtocol.Secondary.tracker()
-            }
+            fun tracker() = ProgressTracker(RECEIVED, ANNOUNCING, DEALING)
         }
 
         override val progressTracker = tracker()
@@ -105,7 +103,7 @@ object AutoOfferProtocol {
             progressTracker.currentStep = ANNOUNCING
             send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.networkService.myAddress, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING
-            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, notary.identity, dealToBeOffered, ourSessionID, progressTracker.childrenFor[DEALING]!!))
+            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, notary.identity, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
             return stx
         }
 

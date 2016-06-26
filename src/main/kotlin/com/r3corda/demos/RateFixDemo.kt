@@ -1,9 +1,7 @@
 package com.r3corda.demos
 
 import com.r3corda.contracts.cash.Cash
-import com.r3corda.core.contracts.DOLLARS
-import com.r3corda.core.contracts.FixOf
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
@@ -12,13 +10,12 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.demos.api.InterestRateSwapAPI
-import joptsimple.OptionParser
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
-import com.r3corda.node.utilities.*
 import com.r3corda.protocols.RatesFixProtocol
+import joptsimple.OptionParser
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -51,12 +48,7 @@ fun main(args: Array<String>) {
     // Suppress the Artemis MQ noise, and activate the demo logging.
     BriefLogFormatter.initVerbose("+demo.ratefix", "-org.apache.activemq")
 
-    // TODO: Move this into the AbstractNode class.
     val dir = Paths.get(options.valueOf(dirArg))
-    if (!Files.exists(dir)) {
-        Files.createDirectory(dir)
-    }
-
     val networkMapAddr = ArtemisMessagingService.makeRecipient(options.valueOf(networkMapAddrArg))
     val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
     val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity)
@@ -81,15 +73,14 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
             advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).start() }
+            listOf(InterestRateSwapAPI::class.java)).setup().start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 
     // Make a garbage transaction that includes a rate fix.
-    val tx = TransactionBuilder()
-    tx.addOutputState(Cash.State(node.storage.myLegalIdentity.ref(1), 1500.DOLLARS, node.keyManagement.freshKey().public, notary.identity))
+    val tx = TransactionType.General.Builder()
+    tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.keyManagement.freshKey().public), notary.identity))
     val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance)
-    ANSIProgressRenderer.progressTracker = protocol.progressTracker
     node.smm.add("demo.ratefix", protocol).get()
     node.stop()
 

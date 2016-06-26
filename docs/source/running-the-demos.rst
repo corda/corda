@@ -12,23 +12,35 @@ so far. We have:
 The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.
 
-.. warning:: Corda is developed on MacOS and works best on UNIX systems. The trader demo is easily run on Windows but
-   you won't get the nice coloured output. The IRS demo relies on a shell script wrapper and isn't so easily run on
-   Windows currently: we will fix this soon.
+.. note:: Corda is developed on MacOS and works best on UNIX systems. Both demos are easily run on Windows but
+   you won't get the nice coloured output.
 
 Trader demo
 -----------
 
-.. note:: On Windows, use the same commands, but run the batch file instead of the shell file (add .bat to the command)
+Open two terminals, and in the first run:
 
-Open two terminals, and in the first run:::
+.. note:: If you are planning to use non-default configuration you will need to run with --role=SetupA and --role=SetupB
+   beforehand with the same parameters you plan to supply to the respective nodes.
 
-    gradle installDist && ./build/install/r3prototyping/bin/trader-demo --role=BUYER
+**Windows**::
+
+    gradlew.bat & .\build\install\r3prototyping\bin\trader-demo --role=BUYER
+
+**Other**::
+
+    Other: ./gradlew installDist && ./build/install/r3prototyping/bin/trader-demo --role=BUYER
 
 It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
 start the node. You should see it waiting for a trade to begin.
 
-In the second terminal, run::
+In the second terminal, run:
+
+**Windows**::
+
+    .\build\install\r3prototyping\bin\trader-demo --role=SELLER
+
+**Other**::
 
     ./build/install/r3prototyping/bin/trader-demo --role=SELLER
 
@@ -41,26 +53,48 @@ If it doesn't work, jump on the mailing list and let us know.
 IRS demo
 --------
 
-.. warning:: This demo currently works best on MacOS or Linux
+Open three terminals. In the first run:
 
-Open three terminals. In the first run:::
+**Windows**::
 
-    ./scripts/irs-demo.sh nodeA
+    gradlew.bat installDist & .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeA
 
-And in the second run:::
+**Other**::
 
-    ./scripts/irs-demo.sh nodeB
+    ./gradlew installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
+
+And in the second run:
+
+**Windows**::
+
+    .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
+
+**Other**::
+
+    ./build/install/r3prototyping/bin/irsdemo --role=NodeB
 
 The node in the first terminal will complain that it didn't know about nodeB, so restart it. It'll then find the
 location and identity keys of nodeA and be happy. NodeB also doubles up as the interest rates oracle and you should
 see some rates data get loaded.
 
-Now in the third terminal run:::
+Now in the third terminal run:
 
-    ./scripts/irs-demo.sh trade trade1
+**Windows**::
+
+    .\build\install\r3prototyping\bin\irsdemo.bat --role=Trade trade1
+
+**Other**::
+
+    ./build/install/r3prototyping/bin/irsdemo --role=Trade trade1
 
 You should see some activity in the other two terminals as they set up the deal. You can now run this command in
 a separate window to roll the fake clock forward and trigger lots of fixing events. Things go fast so make sure you
-can see the other terminals whilst you run this command!::
+can see the other terminals whilst you run this command!:
 
-    ./scripts/irs-demo.sh date 2017-01-30
+**Windows**::
+
+    .\build\install\r3prototyping\bin\irsdemo.bat --role=Date 2017-01-30
+
+**Other**::
+
+    ./build/install/r3prototyping/bin/irsdemo --role=Date 2017-01-30

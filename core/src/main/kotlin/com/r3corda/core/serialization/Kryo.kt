@@ -16,7 +16,14 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.node.AttachmentsClassLoader
 import com.r3corda.core.node.services.AttachmentStorage
+import com.r3corda.core.utilities.NonEmptySet
+import com.r3corda.core.utilities.NonEmptySetSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
+import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
@@ -24,6 +31,7 @@ import java.io.ObjectOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -205,6 +213,16 @@ inline fun <T> Kryo.useClassLoader(cl: ClassLoader, body: () -> T) : T {
     }
 }
 
+fun Output.writeBytesWithLength(byteArray: ByteArray) {
+    this.writeInt(byteArray.size, true)
+    this.writeBytes(byteArray)
+}
+
+fun Input.readBytesWithLength(): ByteArray {
+    val size = this.readInt(true)
+    return this.readBytes(size)
+}
+
 /** Thrown during deserialisation to indicate that an attachment needed to construct the [WireTransaction] is not found */
 class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
 
@@ -216,6 +234,8 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.attachments)
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
+        kryo.writeClassAndObject(output, obj.signers)
+        kryo.writeClassAndObject(output, obj.type)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -242,11 +262,59 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         } else javaClass.classLoader
 
         kryo.useClassLoader(classLoader) {
-            val outputs = kryo.readClassAndObject(input) as List<ContractState>
+            val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
+            val signers = kryo.readClassAndObject(input) as List<PublicKey>
+            val transactionType = kryo.readClassAndObject(input) as TransactionType
 
-            return WireTransaction(inputs, attachmentHashes, outputs, commands)
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, signers, transactionType)
         }
+    }
+}
+
+/** For serialising an ed25519 private key */
+@ThreadSafe
+object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
+    val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+
+    override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
+        check(obj.params == ed25519Curve)
+        output.writeBytesWithLength(obj.seed)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
+        val seed = input.readBytesWithLength()
+        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, ed25519Curve))
+    }
+}
+
+/** For serialising an ed25519 public key */
+@ThreadSafe
+object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
+    val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+
+    override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
+        check(obj.params == ed25519Curve)
+        output.writeBytesWithLength(obj.abyte)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
+        val A = input.readBytesWithLength()
+        return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+    }
+}
+
+/** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */
+interface DeserializeAsKotlinObjectDef
+
+/** Serializer to deserialize kotlin object definitions marked with [DeserializeAsKotlinObjectDef]. */
+object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<DeserializeAsKotlinObjectDef>): DeserializeAsKotlinObjectDef {
+        // read the public static INSTANCE field that kotlin compiler generates.
+        return type.getField("INSTANCE").get(null) as DeserializeAsKotlinObjectDef
+    }
+
+    override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {
     }
 }
 
@@ -273,8 +341,8 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // Some things where the JRE provides an efficient custom serialisation.
         val keyPair = generateKeyPair()
-        register(keyPair.public.javaClass, ReferencesAwareJavaSerializer)
-        register(keyPair.private.javaClass, ReferencesAwareJavaSerializer)
+        register(keyPair.public.javaClass, Ed25519PublicKeySerializer)
+        register(keyPair.private.javaClass, Ed25519PrivateKeySerializer)
         register(Instant::class.java, ReferencesAwareJavaSerializer)
 
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
@@ -292,6 +360,16 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // This is required to make all the unit tests pass
         register(Party::class.java)
 
+        // Work around a bug in Kryo handling nested generics
+        register(Issued::class.java, ImmutableClassSerializer(Issued::class))
+        register(TransactionState::class.java, ImmutableClassSerializer(TransactionState::class))
+
+        // This ensures a NonEmptySetSerializer is constructed with an initial value.
+        register(NonEmptySet::class.java, NonEmptySetSerializer)
+
+        /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
+        addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
+        
         noReferencesWithin<WireTransaction>()
     }
 }

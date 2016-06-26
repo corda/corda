@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
+import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
@@ -16,6 +17,7 @@ import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.api.APIServer
+import com.r3corda.node.services.NotaryChangeService
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MonitoringService
@@ -28,16 +30,15 @@ import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NodeRegistration
-import com.r3corda.node.services.persistence.DataVendingService
-import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
-import com.r3corda.node.services.persistence.StorageServiceImpl
+import com.r3corda.node.services.persistence.*
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.services.wallet.CashBalanceAsMetricsObserver
 import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.utilities.ANSIProgressObserver
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import org.slf4j.Logger
@@ -45,6 +46,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.Security
 import java.time.Clock
 import java.time.Instant
 import java.util.*
@@ -80,15 +82,18 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
     val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
-    val services = object : ServiceHubInternal {
+    val services = object : ServiceHubInternal() {
         override val networkService: MessagingService get() = net
         override val networkMapCache: NetworkMapCache = InMemoryNetworkMapCache()
-        override val storageService: StorageService get() = storage
+        override val storageService: TxWritableStorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
         override val clock: Clock = platformClock
+
+        override fun recordTransactions(txs: Iterable<SignedTransaction>) =
+                recordTransactionsInternal(storage, txs)
     }
 
     val info: NodeInfo by lazy {
@@ -97,7 +102,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
 
-    lateinit var storage: StorageService
+    lateinit var storage: TxWritableStorageService
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
@@ -110,9 +115,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     var isPreviousCheckpointsPresent = false
         private set
 
-    /** Completes once the node has successfully registered with the network map service. Null until [start] returns. */
-    @Volatile var networkMapRegistrationFuture: ListenableFuture<Unit>? = null
-        private set
+    /** Completes once the node has successfully registered with the network map service */
+    private val _networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create()
+    val networkMapRegistrationFuture: ListenableFuture<Unit>
+        get() = _networkMapRegistrationFuture
 
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
@@ -127,23 +133,41 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         checkpointStorage = storageServices.second
         net = makeMessagingService()
         wallet = NodeWalletService(services)
-        keyManagement = E2ETestKeyManagementService()
         makeInterestRatesOracleService()
         identity = makeIdentityService()
+        // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
+        // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
+        // the identity key. But the infrastructure to make that easy isn't here yet.
+        keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
         api = APIServerImpl(this)
         smm = StateMachineManager(services, listOf(storage, net, wallet, keyManagement, identity, platformClock), checkpointStorage, serverThread)
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
         DataVendingService(net, storage)
+        NotaryChangeService(net, smm)
 
         buildAdvertisedServices()
 
+        // TODO: this model might change but for now it provides some de-coupling
+        // Add SMM observers
+        ANSIProgressObserver(smm)
+        // Add wallet observers
+        CashBalanceAsMetricsObserver(services)
+
         startMessagingService()
-        networkMapRegistrationFuture = registerWithNetworkMap()
+        _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
         smm.start()
         started = true
+        return this
+    }
+
+    /**
+     * Run any tasks that are needed to ensure the node is in a correct state before running start()
+     */
+    open fun setup(): AbstractNode {
+        createNodeDir()
         return this
     }
 
@@ -254,16 +278,20 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected abstract fun startMessagingService()
 
-    protected open fun initialiseStorageService(dir: Path): Pair<StorageService, CheckpointStorage> {
+    protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
         val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
+        val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
         val (identity, keypair) = obtainKeyPair(dir)
-        return Pair(constructStorageService(attachments, keypair, identity), checkpointStorage)
+        return Pair(constructStorageService(attachments, transactionStorage, keypair, identity),checkpointStorage)
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService, keypair: KeyPair, identity: Party) =
-            StorageServiceImpl(attachments, keypair, identity)
+    protected open fun constructStorageService(attachments: NodeAttachmentService,
+                                               transactionStorage: TransactionStorage,
+                                               keypair: KeyPair,
+                                               identity: Party) =
+            StorageServiceImpl(attachments, transactionStorage, keypair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
@@ -306,5 +334,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         } catch (e: FileAlreadyExistsException) {
         }
         return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
+    }
+
+    protected fun createNodeDir() {
+        if (!Files.exists(dir)) {
+            Files.createDirectories(dir)
+        }
     }
 }

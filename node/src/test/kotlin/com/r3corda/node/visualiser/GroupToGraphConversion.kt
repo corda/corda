@@ -2,6 +2,7 @@ package com.r3corda.node.visualiser
 
 import com.r3corda.core.contracts.CommandData
 import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.testing.TransactionGroupDSL
 import org.graphstream.graph.Edge
@@ -30,7 +31,7 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
                 val node = graph.addNode<Node>(tx.outRef<ContractState>(outIndex).ref.toString())
                 val state = tx.outputs[outIndex]
                 node.label = stateToLabel(state)
-                node.styleClass = stateToCSSClass(state) + ",state"
+                node.styleClass = stateToCSSClass(state.data) + ",state"
                 node.setAttribute("state", state)
                 val edge = graph.addEdge<Edge>("tx$txIndex-out$outIndex", txNode, node, true)
                 edge.weight = 0.7
@@ -55,8 +56,8 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
         return graph
     }
 
-    private fun stateToLabel(state: ContractState): String {
-        return dsl.labelForState(state) ?: stateToTypeName(state)
+    private fun stateToLabel(state: TransactionState<*>): String {
+        return dsl.labelForState(state) ?: stateToTypeName(state.data)
     }
 
     private fun commandToTypeName(state: CommandData) = state.javaClass.canonicalName.removePrefix("contracts.").replace('$', '.')

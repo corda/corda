@@ -1,8 +1,8 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import java.security.PublicKey
 import java.util.*
 
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
@@ -30,7 +30,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
 
         val resolved = HashSet<TransactionForVerification>(transactions.size)
         for (tx in transactions) {
-            val inputs = ArrayList<ContractState>(tx.inputs.size)
+            val inputs = ArrayList<TransactionState<ContractState>>(tx.inputs.size)
             for (ref in tx.inputs) {
                 val conflict = refToConsumingTXMap[ref]
                 if (conflict != null)
@@ -42,74 +42,59 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
                 // Look up the output in that transaction by index.
                 inputs.add(ltx.outputs[ref.index])
             }
-            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.id))
+            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.attachments, tx.commands, tx.id, tx.signers, tx.type))
         }
 
         for (tx in resolved)
             tx.verify()
         return resolved
     }
-
 }
 
 /** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
-data class TransactionForVerification(val inStates: List<ContractState>,
-                                      val outStates: List<ContractState>,
+data class TransactionForVerification(val inputs: List<TransactionState<ContractState>>,
+                                      val outputs: List<TransactionState<ContractState>>,
                                       val attachments: List<Attachment>,
                                       val commands: List<AuthenticatedObject<CommandData>>,
-                                      val origHash: SecureHash) {
+                                      val origHash: SecureHash,
+                                      val signers: List<PublicKey>,
+                                      val type: TransactionType) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
 
     /**
-     * Verifies that the transaction is valid:
-     * - Checks that the input states and the timestamp point to the same Notary
-     * - Runs the contracts for this transaction. If any contract fails to verify, the whole transaction
-     *   is considered to be invalid
+     * Verifies that the transaction is valid by running type-specific validation logic.
      *
      * TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.
      *
-     * @throws TransactionVerificationException if a contract throws an exception (the original is in the cause field)
-     *                                          or the transaction has references to more than one Notary
+     * @throws TransactionVerificationException if validation logic fails or if a contract throws an exception
+     *                                          (the original is in the cause field)
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() {
-        verifySingleNotary()
-        val contracts = (inStates.map { it.contract } + outStates.map { it.contract }).toSet()
-        for (contract in contracts) {
-            try {
-                contract.verify(this)
-            } catch(e: Throwable) {
-                throw TransactionVerificationException.ContractRejection(this, contract, e)
-            }
-        }
-    }
+    fun verify() = type.verify(this)
 
-    private fun verifySingleNotary() {
-        if (inStates.isEmpty()) return
-        val notary = inStates.first().notary
-        if (inStates.any { it.notary != notary }) throw TransactionVerificationException.MoreThanOneNotary(this)
-        val timestampCmd = commands.singleOrNull { it.value is TimestampCommand } ?: return
-        if (!timestampCmd.signers.contains(notary.owningKey)) throw TransactionVerificationException.MoreThanOneNotary(this)
-    }
+    fun toTransactionForContract() = TransactionForContract(inputs.map { it.data }, outputs.map { it.data }, attachments, commands, origHash)
+}
 
-    /**
-     * Utilities for contract writers to incorporate into their logic.
-     */
+/**
+ * A transaction to be passed as input to a contract verification function. Defines helper methods to
+ * simplify verification logic in contracts.
+ */
+data class TransactionForContract(val inputs: List<ContractState>,
+                                  val outputs: List<ContractState>,
+                                  val attachments: List<Attachment>,
+                                  val commands: List<AuthenticatedObject<CommandData>>,
+                                  val origHash: SecureHash) {
+    override fun hashCode() = origHash.hashCode()
+    override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 
-    /**
-     * A set of related inputs and outputs that are connected by some common attributes. An InOutGroup is calculated
-     * using [groupStates] and is useful for handling cases where a transaction may contain similar but unrelated
-     * state evolutions, for example, a transaction that moves cash in two different currencies. The numbers must add
-     * up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
-     * be used to simplify this logic.
-     */
-    data class InOutGroup<T : ContractState, K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
+    @Deprecated("This property was renamed to inputs", ReplaceWith("inputs"))
+    val inStates: List<ContractState> get() = inputs
+    @Deprecated("This property was renamed to outputs", ReplaceWith("outputs"))
+    val outStates: List<ContractState> get() = outputs
 
-    /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
-    fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
-    /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */
-    fun getTimestampByName(vararg authorityName: String): TimestampCommand? = commands.getTimestampByName(*authorityName)
+    inline fun <reified T: CommandData, K> groupCommands(keySelector: (AuthenticatedObject<T>) -> K): Map<K, List<AuthenticatedObject<T>>>
+        = commands.select<T>().groupBy(keySelector)
 
     /**
      * Given a type and a function that returns a grouping key, associates inputs and outputs together so that they
@@ -126,8 +111,8 @@ data class TransactionForVerification(val inStates: List<ContractState>,
      * currency field: the resulting list can then be iterated over to perform the per-currency calculation.
      */
     fun <T : ContractState, K : Any> groupStates(ofType: Class<T>, selector: (T) -> K): List<InOutGroup<T, K>> {
-        val inputs = inStates.filterIsInstance(ofType)
-        val outputs = outStates.filterIsInstance(ofType)
+        val inputs = inputs.filterIsInstance(ofType)
+        val outputs = outputs.filterIsInstance(ofType)
 
         val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
         val outGroups: Map<K, List<T>> = outputs.groupBy(selector)
@@ -138,8 +123,8 @@ data class TransactionForVerification(val inStates: List<ContractState>,
 
     /** See the documentation for the reflection-based version of [groupStates] */
     inline fun <reified T : ContractState, K : Any> groupStates(selector: (T) -> K): List<InOutGroup<T, K>> {
-        val inputs = inStates.filterIsInstance<T>()
-        val outputs = outStates.filterIsInstance<T>()
+        val inputs = inputs.filterIsInstance<T>()
+        val outputs = outputs.filterIsInstance<T>()
 
         val inGroups: Map<K, List<T>> = inputs.groupBy(selector)
         val outGroups: Map<K, List<T>> = outputs.groupBy(selector)
@@ -161,6 +146,24 @@ data class TransactionForVerification(val inStates: List<ContractState>,
 
         return result
     }
+
+    /** Utilities for contract writers to incorporate into their logic. */
+
+    /**
+     * A set of related inputs and outputs that are connected by some common attributes. An InOutGroup is calculated
+     * using [groupStates] and is useful for handling cases where a transaction may contain similar but unrelated
+     * state evolutions, for example, a transaction that moves cash in two different currencies. The numbers must add
+     * up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
+     * be used to simplify this logic.
+     */
+    data class InOutGroup<T : ContractState, K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
+
+    /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
+    fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
+
+    /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */
+    fun getTimestampByName(vararg authorityName: String): TimestampCommand? = commands.getTimestampByName(*authorityName)
+
 }
 
 class TransactionResolutionException(val hash: SecureHash) : Exception()
@@ -169,4 +172,6 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
 sealed class TransactionVerificationException(val tx: TransactionForVerification, cause: Throwable?) : Exception(cause) {
     class ContractRejection(tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
+    class SignersMissing(tx: TransactionForVerification, missing: List<PublicKey>) : TransactionVerificationException(tx, null)
+    class InvalidNotaryChange(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
 }

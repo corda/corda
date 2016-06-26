@@ -3,11 +3,9 @@ package com.r3corda.core.node.services
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.AttachmentStorage
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.util.*
 
 /**
  * Postfix for base topics when sending a request to a service.
@@ -25,19 +23,45 @@ val TOPIC_DEFAULT_POSTFIX = ".0"
  * change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
  * about new transactions from our peers and generate new transactions that consume states ourselves.
  *
- * This absract class has no references to Cash contracts.
+ * This abstract class has no references to Cash contracts.
+ *
+ * [states] Holds the list of states that are *active* and *relevant*.
+ *   Active means they haven't been consumed yet (or we don't know about it).
+ *   Relevant means they contain at least one of our pubkeys
  */
-abstract class Wallet {
-    abstract val states: List<StateAndRef<ContractState>>
-
+class Wallet(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
-    inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state is T } as List<StateAndRef<T>>
+    inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
     /**
-     * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-     * which we have no cash evaluate to null (not present in map), not 0.
+     * Represents an update observed by the Wallet that will be notified to observers.  Include the [StateRef]s of
+     * transaction outputs that were consumed (inputs) and the [ContractState]s produced (outputs) to/by the transaction
+     * or transactions observed and the Wallet.
+     *
+     * If the Wallet observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
+     * other transactions observed, then the changes are observed "net" of those.
      */
-    abstract val cashBalances: Map<Currency, Amount<Currency>>
+    data class Update(val consumed: Set<StateRef>, val produced: Set<StateAndRef<ContractState>>) {
+
+        /**
+         * Combine two updates into a single update with the combined inputs and outputs of the two updates but net
+         * any outputs of the left-hand-side (this) that are consumed by the inputs of the right-hand-side (rhs).
+         *
+         * i.e. the net effect in terms of state live-ness of receiving the combined update is the same as receiving this followed by rhs.
+         */
+        operator fun plus(rhs: Update): Update {
+            val previouslyProduced = produced.map { it.ref }
+            val previouslyConsumed = consumed
+            val combined = Wallet.Update(
+                    previouslyConsumed + (rhs.consumed - previouslyProduced),
+                    rhs.produced + produced.filter { it.ref !in rhs.consumed })
+            return combined
+        }
+    }
+
+    companion object {
+        val NoUpdate = Update(emptySet(), emptySet())
+    }
 }
 
 /**
@@ -54,12 +78,6 @@ interface WalletService {
     val currentWallet: Wallet
 
     /**
-     * Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-     * which we have no cash evaluate to null, not 0.
-     */
-    val cashBalances: Map<Currency, Amount<Currency>>
-
-    /**
      * Returns a snapshot of the heads of LinearStates
      */
     val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
@@ -69,10 +87,10 @@ interface WalletService {
     /** Returns the [linearHeads] only when the type of the state would be considered an 'instanceof' the given type. */
     @Suppress("UNCHECKED_CAST")
     fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<SecureHash, StateAndRef<T>> {
-        return linearHeads.filterValues { stateType.isInstance(it.state) }.mapValues { StateAndRef(it.value.state as T, it.value.ref) }
+        return linearHeads.filterValues { stateType.isInstance(it.state.data) }.mapValues { StateAndRef(it.value.state as TransactionState<T>, it.value.ref) }
     }
 
-    fun statesForRefs(refs: List<StateRef>): Map<StateRef, ContractState?> {
+    fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
         val refsToStates = currentWallet.states.associateBy { it.ref }
         return refs.associateBy({ it }, { refsToStates[it]?.state })
     }
@@ -89,6 +107,12 @@ interface WalletService {
 
     /** Same as notifyAll but with a single transaction. */
     fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
+
+    /**
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
+     * the update.
+     */
+    val updates: rx.Observable<Wallet.Update>
 }
 
 inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
@@ -123,7 +147,7 @@ interface StorageService {
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
      * the transaction data to other nodes that need it.
      */
-    val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+    val validatedTransactions: ReadOnlyTransactionStorage
 
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
@@ -134,6 +158,18 @@ interface StorageService {
      */
     val myLegalIdentity: Party
     val myLegalIdentityKey: KeyPair
+}
+
+/**
+ * Storage service, with extensions to allow validated transactions to be added to. For use only within [ServiceHub].
+ */
+interface TxWritableStorageService : StorageService {
+    /**
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
+     */
+    override val validatedTransactions: TransactionStorage
 }
 
 

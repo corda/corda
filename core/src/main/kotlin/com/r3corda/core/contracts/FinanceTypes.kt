@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.r3corda.core.contracts.CommandData
 import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -235,41 +234,33 @@ enum class PaymentRule {
 }
 
 /**
- * Date offset that the fixing is done prior to the accrual start date.
- * Currently not used in the calculation.
- */
-enum class DateOffset {
-    // TODO: Definitely shouldn't be an enum, but let's leave it for now at T-2 is a convention.
-    ZERO,
-    TWODAYS,
-}
-
-
-/**
  * Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
  * that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).
  */
 enum class Frequency(val annualCompoundCount: Int) {
     Annual(1) {
-        override fun offset(d: LocalDate) = d.plusYears(1)
+        override fun offset(d: LocalDate, n: Long) = d.plusYears(1 * n)
     },
     SemiAnnual(2) {
-        override fun offset(d: LocalDate) = d.plusMonths(6)
+        override fun offset(d: LocalDate, n: Long) = d.plusMonths(6 * n)
     },
     Quarterly(4) {
-        override fun offset(d: LocalDate) = d.plusMonths(3)
+        override fun offset(d: LocalDate, n: Long) = d.plusMonths(3 * n)
     },
     Monthly(12) {
-        override fun offset(d: LocalDate) = d.plusMonths(1)
+        override fun offset(d: LocalDate, n: Long) = d.plusMonths(1 * n)
     },
     Weekly(52) {
-        override fun offset(d: LocalDate) = d.plusWeeks(1)
+        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(1 * n)
     },
     BiWeekly(26) {
-        override fun offset(d: LocalDate) = d.plusWeeks(2)
+        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(2 * n)
+    },
+    Daily(365) {
+        override fun offset(d: LocalDate, n: Long) = d.plusDays(1 * n)
     };
 
-    abstract fun offset(d: LocalDate): LocalDate
+    abstract fun offset(d: LocalDate, n: Long = 1): LocalDate
     // Daily() // Let's not worry about this for now.
 }
 
@@ -317,17 +308,23 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
             var currentDate = startDate
 
             while (true) {
-                currentDate = period.offset(currentDate)
-                val scheduleDate = calendar.applyRollConvention(currentDate, dateRollConvention)
-
+                currentDate = getOffsetDate(currentDate, period)
                 if (periodOffset == null || periodOffset <= ctr)
-                    ret.add(scheduleDate)
+                    ret.add(calendar.applyRollConvention(currentDate, dateRollConvention))
                 ctr += 1
                 // TODO: Fix addl period logic
-                if ((ctr > noOfAdditionalPeriods ) || (currentDate >= endDate ?: currentDate ))
+                if ((ctr > noOfAdditionalPeriods) || (currentDate >= endDate ?: currentDate))
                     break
             }
             return ret
+        }
+
+        /** Calculates the date from @startDate moving forward @steps of time size @period. Does not apply calendar
+         * logic / roll conventions.
+         */
+        fun getOffsetDate(startDate: LocalDate, period: Frequency, steps: Int = 1): LocalDate {
+            if (steps == 0) return startDate
+            return period.offset(startDate, steps.toLong())
         }
     }
 
@@ -401,4 +398,25 @@ fun calculateDaysBetween(startDate: LocalDate,
         dcbDay == DayCountBasisDay.D30 && dcbYear == DayCountBasisYear.Y360 -> ((endDate.year - startDate.year) * 360.0 + (endDate.monthValue - startDate.monthValue) * 30.0 + endDate.dayOfMonth - startDate.dayOfMonth).toInt()
         else -> TODO("Can't calculate days using convention $dcbDay / $dcbYear")
     }
+}
+
+/**
+ * Enum for the types of netting that can be applied to state objects. Exact behaviour
+ * for each type of netting is left to the contract to determine.
+ */
+enum class NetType {
+    /**
+     * Close-out netting applies where one party is bankrupt or otherwise defaults (exact terms are contract specific),
+     * and allows their counterparty to net obligations without requiring approval from all parties. For example, if
+     * Bank A owes Bank B £1m, and Bank B owes Bank A £1m, in the case of Bank B defaulting this would enable Bank A
+     * to net out the two obligations to zero, rather than being legally obliged to pay £1m without any realistic
+     * expectation of the debt to them being paid. Realistically this is limited to bilateral netting, to simplify
+     * determining which party must sign the netting transaction.
+     */
+    CLOSE_OUT,
+    /**
+     * "Payment" is used to refer to conventional netting, where all parties must confirm the netting transaction. This
+     * can be a multilateral netting transaction, and may be created by a central clearing service.
+     */
+    PAYMENT
 }

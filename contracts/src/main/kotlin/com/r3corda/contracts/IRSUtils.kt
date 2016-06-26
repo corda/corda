@@ -3,7 +3,7 @@ package com.r3corda.contracts
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Tenor
 import java.math.BigDecimal
-import java.util.Currency
+import java.util.*
 
 
 // Things in here will move to the general utils class when we've hammered out various discussions regarding amounts, dates, oracle etc.
@@ -37,8 +37,8 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
 
 /**
  * For the convenience of writing "5".percent
- * Note that we do not currently allow 10.percent (ie no quotes) as this might get a little confusing if
- * 0.1.percent was written  TODO: Discuss
+ * Note that we do not currently allow 10.percent (ie no quotes) as this might get a little confusing if 0.1.percent was
+ * written. Additionally, there is a possibility of creating a precision error in the implicit conversion.
  */
 val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 

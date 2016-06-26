@@ -49,7 +49,8 @@ class ProgressTracker(vararg steps: Step) {
 
     /** The superclass of all step objects. */
     open class Step(open val label: String) {
-        open val changes: Observable<Change> = Observable.empty()
+        open val changes: Observable<Change> get() = Observable.empty()
+        open fun childProgressTracker(): ProgressTracker? = null
     }
 
     /** This class makes it easier to relabel a step on the fly, to provide transient information. */
@@ -77,6 +78,20 @@ class ProgressTracker(vararg steps: Step) {
     /** The steps in this tracker, same as the steps passed to the constructor but with UNSTARTED and DONE inserted. */
     val steps = arrayOf(UNSTARTED, *steps, DONE)
 
+    // This field won't be serialized.
+    private val _changes by TransientProperty { PublishSubject.create<Change>() }
+
+    private val childProgressTrackers = HashMap<Step, Pair<ProgressTracker, Subscription>>()
+
+    init {
+        steps.forEach {
+            val childTracker = it.childProgressTracker()
+            if (childTracker != null) {
+                setChildProgressTracker(it, childTracker)
+            }
+        }
+    }
+
     /** The zero-based index of the current step in the [steps] array (i.e. with UNSTARTED and DONE) */
     var stepIndex: Int = 0
         private set
@@ -98,7 +113,7 @@ class ProgressTracker(vararg steps: Step) {
                     // We are going backwards: unlink and unsubscribe from any child nodes that we're rolling back
                     // through, in preparation for moving through them again.
                     for (i in stepIndex downTo index) {
-                        childrenFor.remove(steps[i])
+                        removeChildProgressTracker(steps[i])
                     }
                 }
 
@@ -113,16 +128,28 @@ class ProgressTracker(vararg steps: Step) {
 
     /** Returns the current step, descending into children to find the deepest step we are up to. */
     val currentStepRecursive: Step
-        get() = childrenFor[currentStep]?.currentStepRecursive ?: currentStep
+        get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
 
-    /**
-     * Writable map that lets you insert child [ProgressTracker]s for particular steps. It's OK to edit this even
-     * after a progress tracker has been started.
-     */
-    val childrenFor: ChildrenProgressTrackers = ChildrenProgressTrackersImpl()
+    fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.first
+
+    fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
+        val subscription = childProgressTracker.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
+        childProgressTrackers[step] = Pair(childProgressTracker, subscription)
+        childProgressTracker.parent = this
+        _changes.onNext(Change.Structural(this, step))
+    }
+
+    private fun removeChildProgressTracker(step: ProgressTracker.Step) {
+        childProgressTrackers.remove(step)?.let {
+            it.first.parent = null
+            it.second.unsubscribe()
+        }
+        _changes.onNext(Change.Structural(this, step))
+    }
 
     /** The parent of this tracker: set automatically by the parent when a tracker is added as a child */
     var parent: ProgressTracker? = null
+        private set
 
     /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this' */
     val topLevelTracker: ProgressTracker
@@ -138,7 +165,7 @@ class ProgressTracker(vararg steps: Step) {
             if (step == UNSTARTED) continue
             if (level > 0 && step == DONE) continue
             result += Pair(level, step)
-            childrenFor[step]?.let { result += it._allSteps(level + 1) }
+            getChildProgressTracker(step)?.let { result += it._allSteps(level + 1) }
         }
         return result
     }
@@ -160,44 +187,11 @@ class ProgressTracker(vararg steps: Step) {
         return currentStep
     }
 
-    // This field won't be serialized.
-    private val _changes by TransientProperty { PublishSubject.create<Change>() }
-
     /**
      * An observable stream of changes: includes child steps, resets and any changes emitted by individual steps (e.g.
      * if a step changed its label or rendering).
      */
     val changes: Observable<Change> get() = _changes
-
-
-    // TODO remove this interface and add its three methods directly into ProgressTracker
-    interface ChildrenProgressTrackers {
-        operator fun get(step: ProgressTracker.Step): ProgressTracker?
-        operator fun set(step: ProgressTracker.Step, childProgressTracker: ProgressTracker)
-        fun remove(step: ProgressTracker.Step)
-    }
-
-    private inner class ChildrenProgressTrackersImpl : ChildrenProgressTrackers {
-
-        private val map = HashMap<Step, Pair<ProgressTracker, Subscription>>()
-
-        override fun get(step: Step): ProgressTracker? = map[step]?.first
-
-        override fun set(step: Step, childProgressTracker: ProgressTracker) {
-            val subscription = childProgressTracker.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
-            map[step] = Pair(childProgressTracker, subscription)
-            childProgressTracker.parent = this@ProgressTracker
-            _changes.onNext(Change.Structural(this@ProgressTracker, step))
-        }
-
-        override fun remove(step: Step) {
-            map.remove(step)?.let {
-                it.first.parent = null
-                it.second.unsubscribe()
-            }
-            _changes.onNext(Change.Structural(this@ProgressTracker, step))
-        }
-    }
 
 }
 

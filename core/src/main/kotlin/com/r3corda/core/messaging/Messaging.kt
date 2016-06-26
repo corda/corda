@@ -1,6 +1,7 @@
 package com.r3corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.serialization.DeserializeAsKotlinObjectDef
 import com.r3corda.core.serialization.serialize
 import java.time.Instant
 import java.util.concurrent.Executor
@@ -133,3 +134,9 @@ interface MessageRecipientGroup : MessageRecipients
 
 /** A special base class for the set of all possible recipients, without having to identify who they all are. */
 interface AllPossibleRecipients : MessageRecipients
+
+/**
+ * A general Ack message that conveys no content other than it's presence for use when you want an acknowledgement
+ * from a recipient.  Using [Unit] can be ambiguous as it is similar to [Void] and so could mean no response.
+ */
+object Ack : DeserializeAsKotlinObjectDef

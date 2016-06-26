@@ -4,16 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.contracts.DealState
 import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.demos.DemoClock
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.network.MockNetworkMapCache
+import com.r3corda.node.utilities.ANSIProgressRenderer
 import com.r3corda.protocols.TwoPartyDealProtocol
 import java.time.LocalDate
 
@@ -42,12 +43,12 @@ object UpdateBusinessDayProtocol {
             // Get deals
             progressTracker.currentStep = FETCHING
             val dealStateRefs = serviceHub.walletService.linearHeadsOfType<DealState>()
-            val otherPartyToDeals = dealStateRefs.values.groupBy { otherParty(it.state) }
+            val otherPartyToDeals = dealStateRefs.values.groupBy { otherParty(it.state.data) }
 
             // TODO we need to process these in parallel to stop there being an ordering problem across more than two nodes
             val sortedParties = otherPartyToDeals.keys.sortedBy { it.identity.name }
             for (party in sortedParties) {
-                val sortedDeals = otherPartyToDeals[party]!!.sortedBy { it.state.ref }
+                val sortedDeals = otherPartyToDeals[party]!!.sortedBy { it.state.data.ref }
                 for (deal in sortedDeals) {
                     progressTracker.currentStep = ITERATING_DEALS
                     processDeal(party, deal, date, sessionID)
@@ -65,9 +66,9 @@ object UpdateBusinessDayProtocol {
         // TODO we should make this more object oriented when we can ask a state for it's contract
         @Suspendable
         fun processDeal(party: NodeInfo, deal: StateAndRef<DealState>, date: LocalDate, sessionID: Long) {
-            val s = deal.state
+            val s = deal.state.data
             when (s) {
-                is InterestRateSwap.State -> processInterestRateSwap(party, StateAndRef(s, deal.ref), date, sessionID)
+                is InterestRateSwap.State -> processInterestRateSwap(party, StateAndRef(TransactionState(s, deal.state.notary), deal.ref), date, sessionID)
             }
         }
 
@@ -75,7 +76,7 @@ object UpdateBusinessDayProtocol {
         @Suspendable
         fun processInterestRateSwap(party: NodeInfo, deal: StateAndRef<InterestRateSwap.State>, date: LocalDate, sessionID: Long) {
             var dealStateAndRef: StateAndRef<InterestRateSwap.State>? = deal
-            var nextFixingDate = deal.state.calculation.nextFixingDate()
+            var nextFixingDate = deal.state.data.calculation.nextFixingDate()
             while (nextFixingDate != null && !nextFixingDate.isAfter(date)) {
                 progressTracker.currentStep = ITERATING_FIXINGS
                 /*
@@ -84,37 +85,42 @@ object UpdateBusinessDayProtocol {
                  * One of the parties needs to take the lead in the coordination and this is a reliable deterministic way
                  * to do it.
                  */
-                if (party.identity.name == deal.state.fixedLeg.fixedRatePayer.name) {
+                if (party.identity.name == deal.state.data.fixedLeg.fixedRatePayer.name) {
                     dealStateAndRef = nextFixingFloatingLeg(dealStateAndRef!!, party, sessionID)
                 } else {
                     dealStateAndRef = nextFixingFixedLeg(dealStateAndRef!!, party, sessionID)
                 }
-                nextFixingDate = dealStateAndRef?.state?.calculation?.nextFixingDate()
+                nextFixingDate = dealStateAndRef?.state?.data?.calculation?.nextFixingDate()
             }
         }
 
         @Suspendable
         private fun nextFixingFloatingLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: NodeInfo, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
-            progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Primary.tracker()
+            progressTracker.setChildProgressTracker(FIXING, TwoPartyDealProtocol.Primary.tracker())
             progressTracker.currentStep = FIXING
 
             val myName = serviceHub.storageService.myLegalIdentity.name
-            val deal: InterestRateSwap.State = dealStateAndRef.state
+            val deal: InterestRateSwap.State = dealStateAndRef.state.data
             val myOldParty = deal.parties.single { it.name == myName }
             val keyPair = serviceHub.keyManagementService.toKeyPair(myOldParty.owningKey)
             val participant = TwoPartyDealProtocol.Floater(party.address, sessionID, serviceHub.networkMapCache.notaryNodes[0], dealStateAndRef,
                     keyPair,
-                    sessionID, progressTracker.childrenFor[FIXING]!!)
+                    sessionID, progressTracker.getChildProgressTracker(FIXING)!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
 
         @Suspendable
         private fun nextFixingFixedLeg(dealStateAndRef: StateAndRef<InterestRateSwap.State>, party: NodeInfo, sessionID: Long): StateAndRef<InterestRateSwap.State>? {
-            progressTracker.childrenFor[FIXING] = TwoPartyDealProtocol.Secondary.tracker()
+            progressTracker.setChildProgressTracker(FIXING, TwoPartyDealProtocol.Secondary.tracker())
             progressTracker.currentStep = FIXING
 
-            val participant = TwoPartyDealProtocol.Fixer(party.address, serviceHub.networkMapCache.notaryNodes[0].identity, dealStateAndRef, sessionID, progressTracker.childrenFor[FIXING]!!)
+            val participant = TwoPartyDealProtocol.Fixer(
+                    party.address,
+                    serviceHub.networkMapCache.notaryNodes[0].identity,
+                    dealStateAndRef,
+                    sessionID,
+                    progressTracker.getChildProgressTracker(FIXING)!!)
             val result = subProtocol(participant)
             return result.tx.outRef(0)
         }
@@ -129,7 +135,6 @@ object UpdateBusinessDayProtocol {
                 val updateBusinessDayMessage = msg.data.deserialize<UpdateBusinessDayMessage>()
                 if ((node.services.clock as DemoClock).updateDate(updateBusinessDayMessage.date)) {
                     val participant = Updater(updateBusinessDayMessage.date, updateBusinessDayMessage.sessionID)
-                    ANSIProgressRenderer.progressTracker = participant.progressTracker
                     node.smm.add("update.business.day", participant)
                 }
             }
@@ -141,11 +146,11 @@ object UpdateBusinessDayProtocol {
 
         companion object {
             object NOTIFYING : ProgressTracker.Step("Notifying peer")
-            object LOCAL : ProgressTracker.Step("Updating locally")
-
-            fun tracker() = ProgressTracker(NOTIFYING, LOCAL).apply {
-                childrenFor[LOCAL] = Updater.tracker()
+            object LOCAL : ProgressTracker.Step("Updating locally") {
+                override fun childProgressTracker(): ProgressTracker = Updater.tracker()
             }
+
+            fun tracker() = ProgressTracker(NOTIFYING, LOCAL)
         }
 
         @Suspendable
@@ -158,7 +163,7 @@ object UpdateBusinessDayProtocol {
             }
             if ((serviceHub.clock as DemoClock).updateDate(message.date)) {
                 progressTracker.currentStep = LOCAL
-                subProtocol(Updater(message.date, message.sessionID, progressTracker.childrenFor[LOCAL]!!))
+                subProtocol(Updater(message.date, message.sessionID, progressTracker.getChildProgressTracker(LOCAL)!!))
             }
             return true
         }

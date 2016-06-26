@@ -3,6 +3,7 @@ package com.r3corda.node.services.network
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.messaging.*
@@ -29,7 +30,7 @@ import kotlin.concurrent.thread
  * testing).
  */
 @ThreadSafe
-class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
+class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSerializeAsToken() {
     companion object {
         val MESSAGES_LOG_NAME = "messages"
         private val log = LoggerFactory.getLogger(MESSAGES_LOG_NAME)
@@ -42,11 +43,24 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         override fun toString() = "${message.topic} from '${sender.myAddress}' to '$recipients'"
     }
 
+    // All sent messages are kept here until pumpSend is called, or manuallyPumped is set to false
+    // The corresponding sentMessages stream reflects when a message was pumpSend'd
+    private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
+    private val _sentMessages = PublishSubject.create<MessageTransfer>()
+    /** A stream of (sender, message, recipients) triples */
+    val sentMessages: Observable<MessageTransfer>
+        get() = _sentMessages
+
     // All messages are kept here until the messages are pumped off the queue by a caller to the node class.
     // Queues are created on-demand when a message is sent to an address: the receiving node doesn't have to have
     // been created yet. If the node identified by the given handle has gone away/been shut down then messages
     // stack up here waiting for it to come back. The intent of this is to simulate a reliable messaging network.
-    private val messageQueues = HashMap<Handle, LinkedBlockingQueue<MessageTransfer>>()
+    // The corresponding stream reflects when a message was pumpReceive'd
+    private val messageReceiveQueues = HashMap<Handle, LinkedBlockingQueue<MessageTransfer>>()
+    private val _receivedMessages = PublishSubject.create<MessageTransfer>()
+    /** A stream of (sender, message, recipients) triples */
+    val receivedMessages: Observable<MessageTransfer>
+        get() = _receivedMessages
 
     val endpoints: List<InMemoryMessaging> @Synchronized get() = handleEndpointMap.values.toList()
 
@@ -79,10 +93,6 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"))
     }
 
-    private val _allMessages = PublishSubject.create<MessageTransfer>()
-    /** A stream of (sender, message, recipients) triples */
-    val allMessages: Observable<MessageTransfer> = _allMessages
-
     interface LatencyCalculator {
         fun between(sender: SingleMessageRecipient, receiver: SingleMessageRecipient): Duration
     }
@@ -94,31 +104,7 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
     @Synchronized
     private fun msgSend(from: InMemoryMessaging, message: Message, recipients: MessageRecipients) {
         val transfer = MessageTransfer(from, message, recipients)
-        log.trace { transfer.toString() }
-        val calc = latencyCalculator
-        if (calc != null && recipients is SingleMessageRecipient) {
-            // Inject some artificial latency.
-            timer.schedule(calc.between(from.myAddress, recipients).toMillis()) {
-                msgSendInternal(transfer)
-            }
-        } else {
-            msgSendInternal(transfer)
-        }
-        _allMessages.onNext(MessageTransfer(from, message, recipients))
-    }
-
-    private fun msgSendInternal(transfer: MessageTransfer) {
-        when (transfer.recipients) {
-            is Handle -> getQueueForHandle(transfer.recipients).add(transfer)
-
-            is AllPossibleRecipients -> {
-                // This means all possible recipients _that the network knows about at the time_, not literally everyone
-                // who joins into the indefinite future.
-                for (handle in handleEndpointMap.keys)
-                    getQueueForHandle(handle).add(transfer)
-            }
-            else -> throw IllegalArgumentException("Unknown type of recipient handle")
-        }
+        messageSendQueue.add(transfer)
     }
 
     @Synchronized
@@ -127,7 +113,7 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
     }
 
     @Synchronized
-    private fun getQueueForHandle(recipients: Handle) = messageQueues.getOrPut(recipients) { LinkedBlockingQueue() }
+    private fun getQueueForHandle(recipients: Handle) = messageReceiveQueues.getOrPut(recipients) { LinkedBlockingQueue() }
 
     val everyoneOnline: AllPossibleRecipients = object : AllPossibleRecipients {}
 
@@ -141,7 +127,7 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
             node.stop()
 
         handleEndpointMap.clear()
-        messageQueues.clear()
+        messageReceiveQueues.clear()
     }
 
     inner class Builder(val manuallyPumped: Boolean, val id: Handle) : MessagingServiceBuilder<InMemoryMessaging> {
@@ -158,6 +144,46 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         override fun toString() = description
         override fun equals(other: Any?) = other is Handle && other.id == id
         override fun hashCode() = id.hashCode()
+    }
+
+    // If block is set to true this function will only return once a message has been pushed onto the recipients' queues
+    fun pumpSend(block: Boolean): MessageTransfer? {
+        val transfer = (if (block) messageSendQueue.take() else messageSendQueue.poll()) ?: return null
+        val recipients = transfer.recipients
+        val from = transfer.sender.myAddress
+
+        log.trace { transfer.toString() }
+        val calc = latencyCalculator
+        if (calc != null && recipients is SingleMessageRecipient) {
+            val messageSent = SettableFuture.create<Unit>()
+            // Inject some artificial latency.
+            timer.schedule(calc.between(from, recipients).toMillis()) {
+                pumpSendInternal(transfer)
+                messageSent.set(Unit)
+            }
+            if (block) {
+                messageSent.get()
+            }
+        } else {
+            pumpSendInternal(transfer)
+        }
+
+        return transfer
+    }
+
+    fun pumpSendInternal(transfer: MessageTransfer) {
+        when (transfer.recipients) {
+            is Handle -> getQueueForHandle(transfer.recipients).add(transfer)
+
+            is AllPossibleRecipients -> {
+                // This means all possible recipients _that the network knows about at the time_, not literally everyone
+                // who joins into the indefinite future.
+                for (handle in handleEndpointMap.keys)
+                    getQueueForHandle(handle).add(transfer)
+            }
+            else -> throw IllegalArgumentException("Unknown type of recipient handle")
+        }
+        _sentMessages.onNext(transfer)
     }
 
     /**
@@ -188,7 +214,7 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
             thread(isDaemon = true, name = "In-memory message dispatcher") {
                 while (!Thread.currentThread().isInterrupted) {
                     try {
-                        pumpInternal(true)
+                        pumpReceiveInternal(true)
                     } catch(e: InterruptedException) {
                         break
                     }
@@ -203,8 +229,9 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
                 pendingRedelivery.clear()
                 Pair(handler, items)
             }
-            for (it in items)
-                msgSend(this, it.message, handle)
+            for (it in items) {
+                send(it.message, handle)
+            }
             return handler
         }
 
@@ -216,6 +243,9 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
         override fun send(message: Message, target: MessageRecipients) {
             check(running)
             msgSend(this, message, target)
+            if (!sendManuallyPumped) {
+                pumpSend(false)
+            }
         }
 
         override fun stop() {
@@ -247,16 +277,15 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
          *
          * @return the message that was processed, if any in this round.
          */
-        fun pump(block: Boolean): MessageTransfer? {
+        fun pumpReceive(block: Boolean): MessageTransfer? {
             check(manuallyPumped)
             check(running)
-            return pumpInternal(block)
+            return pumpReceiveInternal(block)
         }
 
-        private fun pumpInternal(block: Boolean): MessageTransfer? {
+        private fun pumpReceiveInternal(block: Boolean): MessageTransfer? {
             val q = getQueueForHandle(handle)
             val transfer = (if (block) q.take() else q.poll()) ?: return null
-
             val deliverTo = state.locked {
                 val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
 
@@ -283,6 +312,8 @@ class InMemoryMessagingNetwork() : SingletonSerializeAsToken() {
                     }
                 }
             }
+
+            _receivedMessages.onNext(transfer)
 
             return transfer
         }

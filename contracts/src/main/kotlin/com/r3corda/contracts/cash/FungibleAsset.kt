@@ -14,7 +14,7 @@ import java.util.*
 // Cash-like
 //
 
-class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception()
+class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Exception()
 
 /**
  * Superclass for contracts representing assets which are fungible, countable and issued by a specific party. States
@@ -30,43 +30,41 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception()
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.)
  */
 abstract class FungibleAsset<T> : Contract {
-    /** A state representing a claim against some party */
-    interface State<T> : FungibleAssetState<T, AssetIssuanceDefinition<T>> {
-        /** Where the underlying asset backing this ledger entry can be found (propagated) */
-        override val deposit: PartyAndReference
-        override val amount: Amount<T>
+    /** A state representing a cash claim against some party */
+    interface State<T> : FungibleAssetState<T, Issued<T>> {
+        /** Where the underlying currency backing this ledger entry can be found (propagated) */
+        val deposit: PartyAndReference
+        override val amount: Amount<Issued<T>>
         /** There must be a MoveCommand signed by this key to claim the amount */
         override val owner: PublicKey
-        override val notary: Party
     }
 
     // Just for grouping
     interface Commands : CommandData {
-        interface Move : Commands
+        interface Move : MoveCommand, Commands
 
         /**
          * Allows new asset states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        interface Issue : Commands { val nonce: Long }
+        interface Issue : IssueCommand, Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        interface Exit<T> : Commands { val amount: Amount<T> }
+        interface Exit<T> : Commands { val amount: Amount<Issued<T>> }
     }
 
     /** This is the function EVERYONE runs */
-    override fun verify(tx: TransactionForVerification) {
+    override fun verify(tx: TransactionForContract) {
         // Each group is a set of input/output states with distinct issuance definitions. These assets are not fungible
         // and must be kept separated for bookkeeping purposes.
         val groups = tx.groupStates() { it: FungibleAsset.State<T> -> it.issuanceDef }
 
-        for ((inputs, outputs, key) in groups) {
+        for ((inputs, outputs, token) in groups) {
             // Either inputs or outputs could be empty.
-            val deposit = key.deposit
-            val token = key.token
+            val deposit = token.issuer
             val issuer = deposit.party
 
             requireThat {
@@ -91,16 +89,16 @@ abstract class FungibleAsset<T> : Contract {
                             (inputAmount == outputAmount + amountExitingLedger)
                 }
 
-                verifyMoveCommands<Commands.Move>(inputs, tx)
+                verifyMoveCommand<Commands.Move>(inputs, tx)
             }
         }
     }
 
     private fun verifyIssueCommand(inputs: List<State<T>>,
                                    outputs: List<State<T>>,
-                                   tx: TransactionForVerification,
+                                   tx: TransactionForContract,
                                    issueCommand: AuthenticatedObject<Commands.Issue>,
-                                   token: T,
+                                   token: Issued<T>,
                                    issuer: Party) {
         // If we have an issue command, perform special processing: the group is allowed to have no inputs,
         // and the output states must have a deposit reference owned by the signer.
@@ -145,4 +143,4 @@ fun <T> Iterable<ContractState>.sumFungible() = filterIsInstance<FungibleAsset.S
 fun <T> Iterable<ContractState>.sumFungibleOrNull() = filterIsInstance<FungibleAsset.State<T>>().map { it.amount }.sumOrNull()
 
 /** Sums the asset states in the list, returning zero of the given token if there are none. */
-fun <T> Iterable<ContractState>.sumFungibleOrZero(token: T) = filterIsInstance<FungibleAsset.State<T>>().map { it.amount }.sumOrZero(token)
+fun <T> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>) = filterIsInstance<FungibleAsset.State<T>>().map { it.amount }.sumOrZero(token)
