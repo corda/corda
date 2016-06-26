@@ -1,4 +1,4 @@
-package com.r3corda.contracts.generic
+package com.r3corda.contracts.universal
 
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
@@ -11,15 +11,15 @@ import java.util.*
  */
 
 
-class DummyObservable<T> : Observable<T>
+class DummyPerceivable<T> : Perceivable<T>
 
 
 // observable of type T
 // example:
-val acmeCorporationHasDefaulted = DummyObservable<Boolean>()
+val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
 
 // example:
-val euribor3M = DummyObservable<BigDecimal>()
+val euribor3M = DummyPerceivable<BigDecimal>()
 
 // Test parties
 val roadRunner = Party("Road Runner", generateKeyPair().public)

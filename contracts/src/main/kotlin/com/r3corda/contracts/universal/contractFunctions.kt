@@ -1,4 +1,4 @@
-package com.r3corda.contracts.generic
+package com.r3corda.contracts.universal
 
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.crypto.Party
@@ -9,7 +9,7 @@ import java.util.*
  */
 
 fun swap(partyA: Party, amountA: Amount<Currency>, partyB: Party, amountB: Amount<Currency>) =
-    kontract {
+    arrange {
         partyA.gives(partyB, amountA)
         partyB.gives(partyA, amountB)
     }

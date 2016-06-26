@@ -1,4 +1,4 @@
-package com.r3corda.contracts.generic
+package com.r3corda.contracts.universal
 
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.transaction
@@ -18,14 +18,14 @@ class FXSwap {
                 }
             }
 
-    val transfer1 = kontract { wileECoyote.gives(roadRunner, 1200.K*USD) }
-    val transfer2 = kontract { roadRunner.gives(wileECoyote, 1.M*EUR) }
+    val transfer1 = arrange { wileECoyote.gives(roadRunner, 1200.K*USD) }
+    val transfer2 = arrange { roadRunner.gives(wileECoyote, 1.M*EUR) }
 
-    val outState1 = GenericContract.State( DUMMY_NOTARY, transfer1 )
-    val outState2 = GenericContract.State( DUMMY_NOTARY, transfer2 )
+    val outState1 = UniversalContract.State( DUMMY_NOTARY, transfer1 )
+    val outState2 = UniversalContract.State( DUMMY_NOTARY, transfer2 )
 
 
-    val inState = GenericContract.State( DUMMY_NOTARY, contract)
+    val inState = UniversalContract.State( DUMMY_NOTARY, contract)
 
     @Test
     fun `issue - signature`() {
@@ -36,15 +36,15 @@ class FXSwap {
             this `fails requirement` "transaction has a single command"
 
             tweak {
-                arg(roadRunner.owningKey) { GenericContract.Commands.Issue() }
+                arg(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails requirement` "the transaction is signed by all liable parties"
             }
             tweak {
-                arg(wileECoyote.owningKey) { GenericContract.Commands.Issue() }
+                arg(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails requirement` "the transaction is signed by all liable parties"
             }
 
-            arg(wileECoyote.owningKey, roadRunner.owningKey) { GenericContract.Commands.Issue() }
+            arg(wileECoyote.owningKey, roadRunner.owningKey) { UniversalContract.Commands.Issue() }
 
             this.accepts()
         }
@@ -58,11 +58,11 @@ class FXSwap {
             output { outState2 }
 
             tweak {
-                arg(wileECoyote.owningKey) { GenericContract.Commands.Action("some undefined name") }
+                arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails requirement` "action must be defined"
             }
 
-            arg(wileECoyote.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
 
             this.accepts()
         }
@@ -75,7 +75,7 @@ class FXSwap {
             output { outState1 }
             output { outState2 }
 
-            arg(porkyPig.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails requirement` "action must be authorized"
         }
     }
@@ -86,7 +86,7 @@ class FXSwap {
             input { inState }
             output { outState1 }
 
-            arg(roadRunner.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails requirement` "output state must match action result state"
         }
     }

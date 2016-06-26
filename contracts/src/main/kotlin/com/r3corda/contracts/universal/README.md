@@ -1,6 +1,6 @@
-# Generic contracts
+# Universal contracts
  
-This is a demonstration of how to build generic contracts or higher order contracts on top of Corda.
+This is a demonstration of how to build universal contracts or higher order contracts on top of Corda.
 
 ## Overview
 
@@ -24,15 +24,15 @@ The representation is inspired by _composing contracts_ by Simon Peyton Jones, J
  - Handling and timing of an event is a responsibility of the beneficiary of the event.
 
 ## Components
-### Observables
+### Perceivables
 
-An observable is a state that can be observed and measured at a given time. Examples of observables could be LIBOR interest rate, default of a company or an FX fixing.
+A perceivable is a state that can be perceived and measured at a given time. Examples of perceivables could be LIBOR interest rate, default of a company or an FX fixing.
 
-An observable has a underlying type - a fixing will be a numeric type, whereas default status for a company may be a boolean value.
+A perceivable has a underlying type - a fixing will be a numeric type, whereas default status for a company may be a boolean value.
 
-Observables can be based on time. A typical boolean observable on time could be ``After('2017-03-01')`` which is true only if time is after 1st of March 2017.
+Perceivables can be based on time. A typical boolean perceivable on time could be ``After('2017-03-01')`` which is true only if time is after 1st of March 2017.
 
-Simple expressions on observables can be formed. For example ``EURUSD > 1.2``is a boolean observable, whereas the EURUSD fixing itself is a numeric observable.
+Simple expressions on perceivables can be formed. For example ``EURUSD > 1.2``is a boolean perceivable, whereas the EURUSD fixing itself is a numeric perceivable.
 
 ### Building blocks
 

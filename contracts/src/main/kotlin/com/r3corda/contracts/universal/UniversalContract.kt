@@ -1,4 +1,4 @@
-package com.r3corda.contracts.generic
+package com.r3corda.contracts.universal
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
@@ -8,13 +8,13 @@ import com.r3corda.core.crypto.SecureHash
  * Created by sofusmortensen on 23/05/16.
  */
 
-val GENERIC_PROGRAM_ID = GenericContract()
+val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
-class GenericContract : Contract {
+class UniversalContract : Contract {
 
     data class State(override val notary: Party,
-                     val details: Kontract) : ContractState {
-        override val contract = GENERIC_PROGRAM_ID
+                     val details: Arrangement) : ContractState {
+        override val contract = UNIVERSAL_PROGRAM_ID
     }
 
     interface Commands : CommandData {
@@ -36,7 +36,7 @@ class GenericContract : Contract {
             "transaction has a single command".by (tx.commands.size == 1 )
         }
 
-        val cmd = tx.commands.requireSingleCommand<GenericContract.Commands>()
+        val cmd = tx.commands.requireSingleCommand<UniversalContract.Commands>()
 
         val value = cmd.value
 
@@ -55,7 +55,7 @@ class GenericContract : Contract {
                     1 -> {
                         val outState = tx.outStates.single() as State
                         requireThat {
-                            "output state must match action result state" by (actions[value.name]!!.kontract.equals(outState.details))
+                            "output state must match action result state" by (actions[value.name]!!.arrangement.equals(outState.details))
                         }
                     }
                     0 -> throw IllegalArgumentException("must have at least one out state")
@@ -64,7 +64,7 @@ class GenericContract : Contract {
                         var allContracts = And( tx.outStates.map { (it as State).details }.toSet() )
 
                         requireThat {
-                            "output states must match action result state" by (actions[value.name]!!.kontract.equals(allContracts))
+                            "output states must match action result state" by (actions[value.name]!!.arrangement.equals(allContracts))
                         }
 
                     }
@@ -94,9 +94,9 @@ class GenericContract : Contract {
     override val legalContractReference: SecureHash
         get() = throw UnsupportedOperationException()
 
-    fun generateIssue(tx: TransactionBuilder, kontract: Kontract, at: PartyAndReference, notary: Party) {
+    fun generateIssue(tx: TransactionBuilder, arrangement: Arrangement, at: PartyAndReference, notary: Party) {
         check(tx.inputStates().isEmpty())
-        tx.addOutputState( State(notary, kontract) )
+        tx.addOutputState( State(notary, arrangement) )
         tx.addCommand(Commands.Issue(), at.party.owningKey)
     }
 }

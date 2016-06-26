@@ -1,4 +1,4 @@
-package com.r3corda.contracts.generic
+package com.r3corda.contracts.universal
 
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.transaction
@@ -25,15 +25,15 @@ class ZCB {
                 }
             }
 
-    val transfer = kontract { wileECoyote.gives(roadRunner, 100.K*GBP) }
-    val transferWrong = kontract { wileECoyote.gives(roadRunner, 80.K*GBP) }
+    val transfer = arrange { wileECoyote.gives(roadRunner, 100.K*GBP) }
+    val transferWrong = arrange { wileECoyote.gives(roadRunner, 80.K*GBP) }
 
-    val inState = GenericContract.State( DUMMY_NOTARY, contract )
+    val inState = UniversalContract.State( DUMMY_NOTARY, contract )
 
-    val outState = GenericContract.State( DUMMY_NOTARY, transfer )
-    val outStateWrong = GenericContract.State( DUMMY_NOTARY, transferWrong )
+    val outState = UniversalContract.State( DUMMY_NOTARY, transfer )
+    val outStateWrong = UniversalContract.State( DUMMY_NOTARY, transferWrong )
 
-    val outStateMove = GenericContract.State( DUMMY_NOTARY, contractMove )
+    val outStateMove = UniversalContract.State( DUMMY_NOTARY, contractMove )
 
     @Test
     fun basic() {
@@ -50,11 +50,11 @@ class ZCB {
             this `fails requirement` "transaction has a single command"
 
             tweak {
-                arg(roadRunner.owningKey) { GenericContract.Commands.Issue() }
+                arg(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails requirement` "the transaction is signed by all liable parties"
             }
 
-            arg(wileECoyote.owningKey) { GenericContract.Commands.Issue() }
+            arg(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
 
             this.accepts()
         }
@@ -67,11 +67,11 @@ class ZCB {
             output { outState }
 
             tweak {
-                arg(wileECoyote.owningKey) { GenericContract.Commands.Action("some undefined name") }
+                arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails requirement` "action must be defined"
             }
 
-            arg(wileECoyote.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
 
             this.accepts()
         }
@@ -83,7 +83,7 @@ class ZCB {
             input { inState }
             output { outState }
 
-            arg(porkyPig.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails requirement` "action must be authorized"
         }
     }
@@ -94,7 +94,7 @@ class ZCB {
             input { inState }
             output { outStateWrong }
 
-            arg(roadRunner.owningKey) { GenericContract.Commands.Action("execute") }
+            arg(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails requirement` "output state must match action result state"
         }
     }
@@ -107,7 +107,7 @@ class ZCB {
             tweak {
                 output { outStateMove }
                 arg(roadRunner.owningKey) {
-                    GenericContract.Commands.Move(roadRunner, porkyPig)
+                    UniversalContract.Commands.Move(roadRunner, porkyPig)
                 }
                 this `fails requirement` "the transaction is signed by all liable parties"
             }
@@ -115,7 +115,7 @@ class ZCB {
             tweak {
                 output { inState }
                 arg(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
-                    GenericContract.Commands.Move(roadRunner, porkyPig)
+                    UniversalContract.Commands.Move(roadRunner, porkyPig)
                 }
                 this `fails requirement` "output state does not reflect move command"
             }
@@ -123,7 +123,7 @@ class ZCB {
             output { outStateMove}
 
             arg(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
-                GenericContract.Commands.Move(roadRunner, porkyPig)
+                UniversalContract.Commands.Move(roadRunner, porkyPig)
             }
             this.accepts()
         }

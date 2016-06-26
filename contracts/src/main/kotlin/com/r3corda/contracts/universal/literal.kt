@@ -1,4 +1,4 @@
-package com.r3corda.contracts.generic
+package com.r3corda.contracts.universal
 
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.crypto.Party
@@ -10,9 +10,9 @@ import java.util.*
  */
 
 
-infix fun Kontract.and(kontract: Kontract) = And( setOf(this, kontract) )
-infix fun Action.or(kontract: Action) = Or( setOf(this, kontract) )
-infix fun Or.or(kontract: Action) = Or( this.actions.plusElement( kontract ) )
+infix fun Arrangement.and(arrangement: Arrangement) = And( setOf(this, arrangement) )
+infix fun Action.or(arrangement: Action) = Or( setOf(this, arrangement) )
+infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
 infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
 
 operator fun Long.times(currency: Currency) = Amount(this.toLong(), currency)
@@ -24,13 +24,13 @@ val Int.K: Long get() = this.toLong() * 1000
 val zero = Zero()
 
 class ContractBuilder {
-    val contracts = mutableListOf<Kontract>()
+    val contracts = mutableListOf<Arrangement>()
 
     fun Party.gives(beneficiary: Party, amount: Amount<Currency>) {
         contracts.add( Transfer(amount, this, beneficiary))
     }
 
-    fun Party.gives(beneficiary: Party, amount: Observable<Long>, currency: Currency) {
+    fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
         contracts.add( Transfer(amount, currency, this, beneficiary))
     }
 
@@ -43,22 +43,22 @@ class ContractBuilder {
 }
 
 interface GivenThatResolve {
-    fun resolve(contract: Kontract)
+    fun resolve(contract: Arrangement)
 }
 
 class ActionBuilder(val actors: Set<Party>) {
     val actions = mutableListOf<Action>()
 
-    fun String.givenThat(condition: Observable<Boolean>, init: ContractBuilder.() -> Unit ) {
+    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Unit ) {
         val b = ContractBuilder()
         b.init()
         actions.add( Action(this, condition, actors, b.final() ) )
     }
 
-    fun String.givenThat(condition: Observable<Boolean> ) : GivenThatResolve {
+    fun String.givenThat(condition: Perceivable<Boolean> ) : GivenThatResolve {
         val This = this
         return object : GivenThatResolve {
-            override fun resolve(contract: Kontract) {
+            override fun resolve(contract: Arrangement) {
                 actions.add(Action(This, condition, actors, contract))
             }
         }
@@ -86,7 +86,7 @@ fun Set<Party>.may(init: ActionBuilder.() -> Unit) : Or {
 infix fun Party.or(party: Party) = setOf(this, party)
 infix fun Set<Party>.or(party: Party) = this.plus(party)
 
-fun kontract(init: ContractBuilder.() -> Unit ) : Kontract {
+fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
     val b = ContractBuilder()
     b.init()
     return b.final();
