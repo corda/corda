@@ -10,6 +10,6 @@ import java.security.PublicKey
  */
 interface FungibleAssetState<T, I> : OwnableState {
     val issuanceDef: I
-    val amount: Amount<Issued<T>>
-    fun move(amount: Amount<Issued<T>>, owner: PublicKey): FungibleAssetState<T, I>
+    val productAmount: Amount<T>
+    fun move(amount: Amount<T>, owner: PublicKey): FungibleAssetState<T, I>
 }

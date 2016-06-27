@@ -5,11 +5,11 @@ import com.r3corda.contracts.Obligation.Lifecycle
 import com.r3corda.contracts.testing.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.nonEmptySetOf
 import org.junit.Test
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.test.*
@@ -25,15 +25,15 @@ class ObligationTests {
     val sixPm = Instant.parse("2016-01-01T18:00:00.00Z")
     val notary = MEGA_CORP
     val megaCorpDollarSettlement = Obligation.StateTemplate(trustedCashContract, megaIssuedDollars, fivePm)
-    val megaCorpPoundSettlement = megaCorpDollarSettlement.copy(acceptableIssuanceDefinitions = megaIssuedPounds)
+    val megaCorpPoundSettlement = megaCorpDollarSettlement.copy(acceptableIssuedProducts = megaIssuedPounds)
     val inState = Obligation.State(
             lifecycle = Lifecycle.NORMAL,
-            issuer = MEGA_CORP,
+            obligor = MEGA_CORP,
             template = megaCorpDollarSettlement,
             quantity = 1000.DOLLARS.quantity,
-            owner = DUMMY_PUBKEY_1
+            beneficiary = DUMMY_PUBKEY_1
     )
-    val outState = inState.copy(owner = DUMMY_PUBKEY_2)
+    val outState = inState.copy(beneficiary = DUMMY_PUBKEY_2)
 
     private fun obligationTestRoots(group: TransactionGroupDSL<Obligation.State<Currency>>) = group.Roots()
             .transaction(oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `with notary` DUMMY_NOTARY label "Alice's $1,000,000 obligation to Bob")
@@ -97,9 +97,9 @@ class ObligationTests {
         transaction {
             output {
                 Obligation.State(
-                        issuer = MINI_CORP,
+                        obligor = MINI_CORP,
                         quantity = 1000.DOLLARS.quantity,
-                        owner = DUMMY_PUBKEY_1,
+                        beneficiary = DUMMY_PUBKEY_1,
                         template = megaCorpDollarSettlement
                 )
             }
@@ -114,12 +114,12 @@ class ObligationTests {
         // Test generation works.
         val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
+                beneficiary = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0].data as Obligation.State<Currency>
-        assertEquals(100.DOLLARS `issued by` MEGA_CORP.ref(1), s.amount)
-        assertEquals(MINI_CORP, s.issuer)
-        assertEquals(DUMMY_PUBKEY_1, s.owner)
+        assertEquals(100.DOLLARS, s.amount)
+        assertEquals(MINI_CORP, s.obligor)
+        assertEquals(DUMMY_PUBKEY_1, s.beneficiary)
         assertTrue(ptx.commands()[0].value is Obligation.Commands.Issue<*>)
         assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
 
@@ -131,7 +131,7 @@ class ObligationTests {
             // Move fails: not allowed to summon money.
             tweak {
                 arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
-                this `fails requirement` "at issuer MegaCorp the amounts balance"
+                this `fails requirement` "at obligor MegaCorp the amounts balance"
             }
 
             // Issue works.
@@ -189,18 +189,46 @@ class ObligationTests {
     @Test(expected = IllegalStateException::class)
     fun `reject issuance with inputs`() {
         // Issue some obligation
-        var ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-
-        Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
-        ptx.signWith(MINI_CORP_KEY)
-        val tx = ptx.toSignedTransaction()
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
+                    beneficiary = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+            signWith(MINI_CORP_KEY)
+        }.toSignedTransaction()
 
         // Include the previously issued obligation in a new issuance command
-        ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Obligation.State<Currency>>(0))
         Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+                beneficiary = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+    }
+
+    /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
+    @Test
+    fun `generate close-out net transaction`() {
+        val obligationAliceToBob = oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)
+        val obligationBobToAlice = oneMillionDollars.OBLIGATION `between` Pair(BOB, ALICE_PUBKEY)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generateCloseOutNetting(this, ALICE_PUBKEY, obligationAliceToBob, obligationBobToAlice)
+            signWith(ALICE_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction().tx
+        assertEquals(0, tx.outputs.size)
+    }
+
+    /** Test generating a transaction to net two obligations of the different sizes, and confirm the balance is correct. */
+    @Test
+    fun `generate close-out net transaction with remainder`() {
+        val obligationAliceToBob = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)
+        val obligationBobToAlice = oneMillionDollars.OBLIGATION `between` Pair(BOB, ALICE_PUBKEY)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generateCloseOutNetting(this, ALICE_PUBKEY, obligationAliceToBob, obligationBobToAlice)
+            signWith(ALICE_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction().tx
+        assertEquals(1, tx.outputs.size)
+
+        val actual = tx.outputs[0].data
+        assertEquals((1000000.DOLLARS `issued by` defaultIssuer).OBLIGATION `between` Pair(ALICE, BOB_PUBKEY), actual)
     }
 
     /** Test generating a transaction to net two obligations of the same size, and therefore there are no outputs. */
@@ -208,9 +236,13 @@ class ObligationTests {
     fun `generate payment net transaction`() {
         val obligationAliceToBob = oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)
         val obligationBobToAlice = oneMillionDollars.OBLIGATION `between` Pair(BOB, ALICE_PUBKEY)
-        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Obligation<Currency>().generatePaymentNetting(ptx, defaultUsd, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
-        assertEquals(0, ptx.outputStates().size)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generatePaymentNetting(this, defaultUsd, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
+            signWith(ALICE_KEY)
+            signWith(BOB_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction().tx
+        assertEquals(0, tx.outputs.size)
     }
 
     /** Test generating a transaction to two obligations, where one is bigger than the other and therefore there is a remainder. */
@@ -218,25 +250,27 @@ class ObligationTests {
     fun `generate payment net transaction with remainder`() {
         val obligationAliceToBob = oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)
         val obligationBobToAlice = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION `between` Pair(BOB, ALICE_PUBKEY)
-        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Obligation<Currency>().generatePaymentNetting(ptx, defaultUsd, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
-        assertEquals(1, ptx.outputStates().size)
-        val out = ptx.outputStates().single().data as Obligation.State<Currency>
-        assertEquals(1000000.DOLLARS.quantity, out.quantity)
-        assertEquals(BOB, out.issuer)
-        assertEquals(ALICE_PUBKEY, out.owner)
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generatePaymentNetting(this, defaultUsd, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
+            signWith(ALICE_KEY)
+            signWith(BOB_KEY)
+        }.toSignedTransaction().tx
+        assertEquals(1, tx.outputs.size)
+        val expected = obligationBobToAlice.copy(quantity = obligationBobToAlice.quantity - obligationAliceToBob.quantity)
+        val actual = tx.outputs[0].data
+        assertEquals(expected, actual)
     }
 
     /** Test generating a transaction to mark outputs as having defaulted. */
     @Test
     fun `generate set lifecycle`() {
-        // Issue some obligation
-        val dueBefore = Instant.parse("2010-01-01T17:00:00Z")
+        // We don't actually verify the states, this is just here to make things look sensible
+        val dueBefore = TEST_TX_TIME - Duration.ofDays(7)
 
         // Generate a transaction issuing the obligation
         var tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement.copy(dueBefore = dueBefore), 100.DOLLARS.quantity,
-                    owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+                    beneficiary = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)
         }.toSignedTransaction()
         var stateAndRef = tx.tx.outRef<Obligation.State<Currency>>(0)
@@ -245,44 +279,47 @@ class ObligationTests {
         tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Obligation.Lifecycle.DEFAULTED, DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)
-        }.toSignedTransaction(false)
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction()
         assertEquals(1, tx.tx.outputs.size)
         assertEquals(stateAndRef.state.data.copy(lifecycle = Obligation.Lifecycle.DEFAULTED), tx.tx.outputs[0].data)
+        assertTrue(tx.verify().isEmpty())
 
         // And set it back
         stateAndRef = tx.tx.outRef<Obligation.State<Currency>>(0)
         tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Obligation.Lifecycle.NORMAL, DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)
-        }.toSignedTransaction(false)
+            signWith(DUMMY_NOTARY_KEY)
+        }.toSignedTransaction()
         assertEquals(1, tx.tx.outputs.size)
         assertEquals(stateAndRef.state.data.copy(lifecycle = Obligation.Lifecycle.NORMAL), tx.tx.outputs[0].data)
+        assertTrue(tx.verify().isEmpty())
     }
 
     /** Test generating a transaction to settle an obligation. */
     @Test
     fun `generate settlement transaction`() {
-        var ptx: TransactionBuilder
-
-        // Generate a transaction to issue the cash we'll need
-        ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by` defaultIssuer, MEGA_CORP_PUBKEY, DUMMY_NOTARY)
-        ptx.signWith(MEGA_CORP_KEY)
-        val cashTx = ptx.toSignedTransaction().tx
+        val cashTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Cash().generateIssue(this, 100.DOLLARS `issued by` defaultIssuer, MINI_CORP_PUBKEY, DUMMY_NOTARY)
+            signWith(MEGA_CORP_KEY)
+        }.toSignedTransaction().tx
 
         // Generate a transaction issuing the obligation
-        ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
-        ptx.signWith(MINI_CORP_KEY)
-        val obligationTx = ptx.toSignedTransaction().tx
+        val obligationTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
+                    beneficiary = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
+            signWith(MINI_CORP_KEY)
+        }.toSignedTransaction().tx
 
         // Now generate a transaction settling the obligation
-        ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        val stateAndRef = obligationTx.outRef<Obligation.State<Currency>>(0)
-        Obligation<Currency>().generateSettle(ptx, listOf(obligationTx.outRef(0)), listOf(cashTx.outRef(0)), DUMMY_NOTARY)
-        assertEquals(2, ptx.inputStates().size)
-        assertEquals(1, ptx.outputStates().size)
+        val settleTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            Obligation<Currency>().generateSettle(this, listOf(obligationTx.outRef(0)), listOf(cashTx.outRef(0)), DUMMY_NOTARY)
+            signWith(DUMMY_NOTARY_KEY)
+            signWith(MINI_CORP_KEY)
+        }.toSignedTransaction().tx
+        assertEquals(2, settleTx.inputs.size)
+        assertEquals(1, settleTx.outputs.size)
     }
 
     @Test
@@ -397,7 +434,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
-                arg(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), oneMillionDollars) }
+                arg(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Amount(oneMillionDollars.quantity, USD)) }
                 arg(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
             }
         }.verify()
@@ -415,13 +452,30 @@ class ObligationTests {
             }
         }.expectFailureOfTx(1, "there is a timestamp from the authority")
 
-        // Try defaulting an obligation
+        // Try defaulting an obligation due in the future
+        val pastTestTime = TEST_TX_TIME - Duration.ofDays(7)
+        val futureTestTime = TEST_TX_TIME + Duration.ofDays(7)
         transactionGroupFor<Obligation.State<Currency>>() {
-            obligationTestRoots(this)
+            roots {
+                transaction(oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` futureTestTime `with notary` DUMMY_NOTARY label "Alice's $1,000,000 obligation to Bob")
+            }
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
-                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)).copy(lifecycle = Obligation.Lifecycle.DEFAULTED)  }
-                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Obligation.Lifecycle.DEFAULTED) }
+                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` futureTestTime).copy(lifecycle = Obligation.Lifecycle.DEFAULTED)  }
+                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` futureTestTime, Obligation.Lifecycle.DEFAULTED) }
+                timestamp(TEST_TX_TIME)
+            }
+        }.expectFailureOfTx(1, "the due date has passed")
+
+        // Try defaulting an obligation that is now in the past
+        transactionGroupFor<Obligation.State<Currency>>() {
+            roots {
+                transaction(oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` pastTestTime `with notary` DUMMY_NOTARY label "Alice's $1,000,000 obligation to Bob")
+            }
+            transaction("Settlement") {
+                input("Alice's $1,000,000 obligation to Bob")
+                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` pastTestTime).copy(lifecycle = Obligation.Lifecycle.DEFAULTED)  }
+                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` pastTestTime, Obligation.Lifecycle.DEFAULTED) }
                 timestamp(TEST_TX_TIME)
             }
         }.verify()
@@ -434,12 +488,12 @@ class ObligationTests {
             arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
             tweak {
                 input { inState }
-                for (i in 1..4) output { inState.copy(quantity = inState.quantity / 4) }
+                repeat(4) { output { inState.copy(quantity = inState.quantity / 4) } }
                 this.accepts()
             }
             // Merging 4 inputs into 2 outputs works.
             tweak {
-                for (i in 1..4) input { inState.copy(quantity = inState.quantity / 4) }
+                repeat(4) { input { inState.copy(quantity = inState.quantity / 4) } }
                 output { inState.copy(quantity = inState.quantity / 2) }
                 output { inState.copy(quantity = inState.quantity / 2) }
                 this.accepts()
@@ -474,7 +528,7 @@ class ObligationTests {
         transaction {
             input { inState }
             output { outState `issued by` MINI_CORP }
-            this `fails requirement` "at issuer MegaCorp the amounts balance"
+            this `fails requirement` "at obligor MegaCorp the amounts balance"
         }
         // Can't mix currencies.
         transaction {
@@ -489,7 +543,7 @@ class ObligationTests {
                 inState.copy(
                         quantity = 15000,
                         template = megaCorpPoundSettlement,
-                        owner = DUMMY_PUBKEY_2
+                        beneficiary = DUMMY_PUBKEY_2
                 )
             }
             output { outState.copy(quantity = 115000) }
@@ -502,7 +556,7 @@ class ObligationTests {
             output { outState }
             arg(DUMMY_PUBKEY_1) {Obligation.Commands.Move(inState.issuanceDef) }
             arg(DUMMY_PUBKEY_1) {Obligation.Commands.Move((inState `issued by` MINI_CORP).issuanceDef) }
-            this `fails requirement` "at issuer MiniCorp the amounts balance"
+            this `fails requirement` "at obligor MiniCorp the amounts balance"
         }
     }
 
@@ -514,13 +568,13 @@ class ObligationTests {
             output { outState.copy(quantity = inState.quantity - 200.DOLLARS.quantity) }
 
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 100.DOLLARS `issued by` defaultIssuer) }
+                arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 100.DOLLARS) }
                 arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
                 this `fails requirement` "the amounts balance"
             }
 
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 200.DOLLARS `issued by` defaultIssuer) }
+                arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 200.DOLLARS) }
                 this `fails requirement` "required com.r3corda.contracts.Obligation.Commands.Move command"
 
                 tweak {
@@ -539,15 +593,15 @@ class ObligationTests {
 
             arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
 
-            this `fails requirement` "at issuer MegaCorp the amounts balance"
+            this `fails requirement` "at obligor MegaCorp the amounts balance"
 
-            arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 200.DOLLARS `issued by` defaultIssuer) }
+            arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 200.DOLLARS) }
             tweak {
-                arg(MINI_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>((inState `issued by` MINI_CORP).issuanceDef, 0.DOLLARS `issued by` defaultIssuer) }
+                arg(MINI_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>((inState `issued by` MINI_CORP).issuanceDef, 0.DOLLARS) }
                 arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move((inState `issued by` MINI_CORP).issuanceDef) }
-                this `fails requirement` "at issuer MiniCorp the amounts balance"
+                this `fails requirement` "at obligor MiniCorp the amounts balance"
             }
-            arg(MINI_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>((inState `issued by` MINI_CORP).issuanceDef, 200.DOLLARS `issued by` defaultIssuer) }
+            arg(MINI_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>((inState `issued by` MINI_CORP).issuanceDef, 200.DOLLARS) }
             arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move((inState `issued by` MINI_CORP).issuanceDef) }
             this.accepts()
         }
@@ -562,19 +616,19 @@ class ObligationTests {
 
             // Can't merge them together.
             tweak {
-                output { inState.copy(owner = DUMMY_PUBKEY_2, quantity = 200000L) }
-                this `fails requirement` "at issuer MegaCorp the amounts balance"
+                output { inState.copy(beneficiary = DUMMY_PUBKEY_2, quantity = 200000L) }
+                this `fails requirement` "at obligor MegaCorp the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
-                output { inState.copy(owner = DUMMY_PUBKEY_2) }
-                output { inState.copy(owner = DUMMY_PUBKEY_2) }
-                this `fails requirement` "at issuer MegaCorp the amounts balance"
+                output { inState.copy(beneficiary = DUMMY_PUBKEY_2) }
+                output { inState.copy(beneficiary = DUMMY_PUBKEY_2) }
+                this `fails requirement` "at obligor MegaCorp the amounts balance"
             }
 
             // This works.
-            output { inState.copy(owner = DUMMY_PUBKEY_2) }
-            output { inState.copy(owner = DUMMY_PUBKEY_2) `issued by` MINI_CORP }
+            output { inState.copy(beneficiary = DUMMY_PUBKEY_2) }
+            output { inState.copy(beneficiary = DUMMY_PUBKEY_2) `issued by` MINI_CORP }
             arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
             arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move((inState `issued by` MINI_CORP).issuanceDef) }
             this.accepts()
@@ -631,7 +685,7 @@ class ObligationTests {
         // States must not be nettable if the trusted issuers differ
         val miniCorpIssuer = nonEmptySetOf(Issued<Currency>(MINI_CORP.ref(1), USD))
         assertNotEquals(fiveKDollarsFromMegaToMega.bilateralNetState,
-                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableIssuanceDefinitions = miniCorpIssuer)).bilateralNetState)
+                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableIssuedProducts = miniCorpIssuer)).bilateralNetState)
     }
 
     @Test(expected = IllegalStateException::class)
@@ -686,7 +740,7 @@ class ObligationTests {
         val fiveKDollarsFromMegaToMini = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
                 5000.DOLLARS.quantity, MINI_CORP_PUBKEY)
         val expected = mapOf(Pair(Pair(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY), fiveKDollarsFromMegaToMini.amount))
-        val actual = extractAmountsDue<Currency>(defaultUsd, listOf(fiveKDollarsFromMegaToMini))
+        val actual = extractAmountsDue<Currency>(USD, listOf(fiveKDollarsFromMegaToMini))
         assertEquals(expected, actual)
     }
 
@@ -697,8 +751,8 @@ class ObligationTests {
                 Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
-        val expected: Map<PublicKey, Long> = emptyMap() // Zero balances are stripped before returning
-        val actual = sumAmountsDue(balanced)
+        val expected: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = emptyMap() // Zero balances are stripped before returning
+        val actual = netAmountsDue<Currency>(balanced)
         assertEquals(expected, actual)
     }
 
@@ -706,11 +760,11 @@ class ObligationTests {
     fun `netting difference balances due between parties`() {
         // Now try it with two balances, which cancel each other out
         val balanced = mapOf(
-                Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP) `issued by` defaultIssuer),
-                Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(200000000, GBP) `issued by` defaultIssuer)
+                Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
+                Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(200000000, GBP))
         )
         val expected = mapOf(
-                Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP) `issued by` defaultIssuer)
+                Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
         var actual = netAmountsDue<Currency>(balanced)
         assertEquals(expected, actual)

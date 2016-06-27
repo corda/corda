@@ -34,7 +34,7 @@ abstract class FungibleAsset<T> : Contract {
     interface State<T> : FungibleAssetState<T, Issued<T>> {
         /** Where the underlying currency backing this ledger entry can be found (propagated) */
         val deposit: PartyAndReference
-        override val amount: Amount<Issued<T>>
+        val amount: Amount<Issued<T>>
         /** There must be a MoveCommand signed by this key to claim the amount */
         override val owner: PublicKey
     }
