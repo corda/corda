@@ -47,7 +47,7 @@ private fun waitForNodeStartup(nodeAddr: HostAndPort) {
             "IOException: ${e.toString()}"
         }
 
-        if(retries > 25) {
+        if (retries > 25) {
             throw NodeDidNotStartException("The node did not start: " + err)
         }
     } while (respCode != 200)

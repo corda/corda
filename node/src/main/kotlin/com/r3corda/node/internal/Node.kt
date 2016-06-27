@@ -71,7 +71,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
-    // Todo: Move to node config file
+    // TODO: Move to node config file
     private var webServerPort: Int = p2pAddr.port + 1
 
     override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, serverThread)

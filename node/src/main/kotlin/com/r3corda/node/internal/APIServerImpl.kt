@@ -19,7 +19,7 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
     override fun serverTime(): LocalDateTime = LocalDateTime.now(node.services.clock)
 
     override fun status(): Response {
-        return if(node.started) {
+        return if (node.started) {
             Response.ok("started").build()
         } else {
             Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("not started").build()

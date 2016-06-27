@@ -31,6 +31,7 @@ class IRSDemoTest {
         }
     }
 }
+
 private fun setupNode(dir: Path, nodeType: String) {
     println("Running setup for $nodeType")
     val args = listOf("--role", "Setup" + nodeType, "--dir", dir.toString())
@@ -74,7 +75,7 @@ private fun runDateChange(nodeAddr: HostAndPort) {
 }
 
 private fun stopNode(nodeProc: Process?) {
-    if(nodeProc != null) {
+    if (nodeProc != null) {
         println("Stopping node")
         assertAliveAndKill(nodeProc)
     }

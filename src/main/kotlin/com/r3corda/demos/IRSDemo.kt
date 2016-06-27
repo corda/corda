@@ -147,7 +147,7 @@ private fun runDateChange(demoArgs: DemoArgs, options: OptionSet): Int {
             "http://localhost:" + (Node.DEFAULT_PORT + 1)
         }
 
-        if(!changeDate(dateStr, host)) {
+        if (!changeDate(dateStr, host)) {
             return 1
         }
     } else {
@@ -161,7 +161,7 @@ private fun runDateChange(demoArgs: DemoArgs, options: OptionSet): Int {
 private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet): Int {
     // If these directory and identity file arguments aren't specified then we can assume a default setup and
     // create everything that is needed without needing to run setup.
-    if(!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
+    if (!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
         createNodeConfig(createNodeAParams());
         createNodeConfig(createNodeBParams());
     }
@@ -201,7 +201,7 @@ private fun setup(params: NodeParams): Int {
 private fun changeDate(date: String, host: String) : Boolean {
     println("Changing date to " + date)
     val url = URL(host + "/api/irs/demodate")
-    if(putJson(url, "\"" + date + "\"")) {
+    if (putJson(url, "\"" + date + "\"")) {
         println("Date changed")
         return true
     } else {
@@ -215,7 +215,7 @@ private fun uploadTrade(tradeId: String, host: String) : Boolean {
     val fileContents = IOUtils.toString(NodeParams::class.java.getResourceAsStream("example-irs-trade.json"))
     val tradeFile = fileContents.replace("tradeXXX", tradeId)
     val url = URL(host + "/api/irs/deals")
-    if(postJson(url, tradeFile)) {
+    if (postJson(url, tradeFile)) {
         println("Trade sent")
         return true
     } else {
@@ -240,9 +240,9 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     if (options.has(args.networkAddressArg)) {
         nodeParams.address = HostAndPort.fromString(options.valueOf(args.networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     }
-    if(options.has(args.apiPort)) {
+    if (options.has(args.apiPort)) {
         nodeParams.apiPort = options.valueOf(args.apiPort)
-    } else if(options.has(args.networkAddressArg)) {
+    } else if (options.has(args.networkAddressArg)) {
         nodeParams.apiPort = nodeParams.address.port + 1
     }
 
@@ -261,7 +261,7 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     return nodeParams
 }
 
-private fun runNode(nodeParams: NodeParams) : Unit {
+private fun runNode(nodeParams: NodeParams): Unit {
     val networkMap = createRecipient(nodeParams.mapAddress)
     val destinations = nodeParams.tradeWithAddrs.map({
         createRecipient(it)
@@ -273,7 +273,7 @@ private fun runNode(nodeParams: NodeParams) : Unit {
     UpdateBusinessDayProtocol.Handler.register(node)
     ExitServerProtocol.Handler.register(node)
 
-    if(nodeParams.uploadRates) {
+    if (nodeParams.uploadRates) {
         runUploadRates(HostAndPort.fromString("localhost:${nodeParams.apiPort}"))
     }
 
@@ -335,7 +335,7 @@ private fun runUploadRates(host: HostAndPort) {
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
             val url = URL("http://${host.toString()}/upload/interest-rates")
-            if(uploadFile(url, fileContents)) {
+            if (uploadFile(url, fileContents)) {
                 timer!!.cancel()
                 println("Rates uploaded successfully")
             } else {
@@ -450,7 +450,7 @@ private fun createNodeConfig(params: NodeParams) : NodeConfiguration {
 
     val configFile = params.dir.resolve("config").toFile()
     val config = loadConfigFile(configFile, params.defaultLegalName)
-    if(!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
+    if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
         createIdentities(params, config)
     }
 
@@ -458,11 +458,11 @@ private fun createNodeConfig(params: NodeParams) : NodeConfiguration {
 }
 
 private fun getNodeConfig(params: NodeParams): NodeConfiguration {
-    if(!Files.exists(params.dir)) {
+    if (!Files.exists(params.dir)) {
         throw NotSetupException("Missing config directory. Please run node setup before running the node")
     }
 
-    if(!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
+    if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
         throw NotSetupException("Missing identity file. Please run node setup before running the node")
     }
 
@@ -471,7 +471,7 @@ private fun getNodeConfig(params: NodeParams): NodeConfiguration {
 }
 
 private fun getRoleDir(role: IRSDemoRole) : Path {
-    when(role) {
+    when (role) {
         IRSDemoRole.NodeA -> return Paths.get("nodeA")
         IRSDemoRole.NodeB -> return Paths.get("nodeB")
         else -> {
