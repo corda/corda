@@ -11,10 +11,11 @@ import kotlin.test.assertEquals
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
         val buyerAddr = freeLocalHostAndPort()
+        val buyerApiAddr = freeLocalHostAndPort()
         var nodeProc: Process? = null
         try {
             cleanupFiles()
-            nodeProc = runBuyer(buyerAddr)
+            nodeProc = runBuyer(buyerAddr, buyerApiAddr)
             runSeller(buyerAddr)
         } finally {
             nodeProc?.destroy()
@@ -23,9 +24,13 @@ class TraderDemoTest {
     }
 }
 
-private fun runBuyer(buyerAddr: HostAndPort): Process {
+private fun runBuyer(buyerAddr: HostAndPort, buyerApiAddr: HostAndPort): Process {
     println("Running Buyer")
-    val args = listOf("--role", "BUYER", "--network-address", buyerAddr.toString())
+    val args = listOf(
+            "--role", "BUYER",
+            "--network-address", buyerAddr.toString(),
+            "--api-address", buyerApiAddr.toString()
+    )
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoBuyer")
     ensureNodeStartsOrKill(proc, buyerAddr)
     return proc
@@ -34,10 +39,13 @@ private fun runBuyer(buyerAddr: HostAndPort): Process {
 private fun runSeller(buyerAddr: HostAndPort) {
     println("Running Seller")
     val sellerAddr = freeLocalHostAndPort()
+    val sellerApiAddr = freeLocalHostAndPort()
     val args = listOf(
             "--role", "SELLER",
             "--network-address", sellerAddr.toString(),
-            "--other-network-address", buyerAddr.toString())
+            "--api-address", sellerApiAddr.toString(),
+            "--other-network-address", buyerAddr.toString()
+    )
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoSeller")
     assertExitOrKill(proc);
     assertEquals(proc.exitValue(), 0)

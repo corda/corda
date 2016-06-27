@@ -25,6 +25,7 @@ import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
+import java.net.InetSocketAddress
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,7 +53,7 @@ class ConfigurationException(message: String) : Exception(message)
  * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter
  * @param clock The clock used within the node and by all protocols etc
  */
-class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
+class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, configuration: NodeConfiguration,
            networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
            clock: Clock = NodeClock(),
            val clientAPIs: List<Class<*>> = listOf()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
@@ -71,9 +72,6 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
-    // TODO: Move to node config file
-    private var webServerPort: Int = p2pAddr.port + 1
-
     override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, serverThread)
 
     override fun startMessagingService() {
@@ -81,14 +79,9 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         (net as ArtemisMessagingService).start()
     }
 
-    fun setWebServerPort(port: Int): Node {
-        webServerPort = port
-        return this
-    }
-
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-        val server = Server(webServerPort)
+        val server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port))
 
         val handlerCollection = HandlerCollection()
 

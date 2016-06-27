@@ -4,7 +4,6 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
-import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
@@ -12,7 +11,6 @@ import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.clientapi.NodeInterestRates
-import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.core.serialization.deserialize
@@ -23,12 +21,10 @@ import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.testing.MockNetwork
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import joptsimple.OptionSpec
-import joptsimple.OptionSpecBuilder
 import java.io.DataOutputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -63,7 +59,7 @@ private class NodeParams() {
     var dir : Path = Paths.get("")
     var address : HostAndPort = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
     var mapAddress: String = ""
-    var apiPort : Int = Node.DEFAULT_PORT + 1
+    var apiAddress: HostAndPort = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT + 1)
     var identityFile: Path = Paths.get("")
     var tradeWithAddrs: List<String> = listOf()
     var tradeWithIdentities: List<Path> = listOf()
@@ -74,7 +70,7 @@ private class NodeParams() {
 private class DemoArgs() {
     lateinit var roleArg: OptionSpec<IRSDemoRole>
     lateinit var networkAddressArg: OptionSpec<String>
-    lateinit var apiPort: OptionSpec<Int>
+    lateinit var apiAddressArg: OptionSpec<String>
     lateinit var dirArg: OptionSpec<String>
     lateinit var networkMapIdentityFile: OptionSpec<String>
     lateinit var networkMapNetAddr: OptionSpec<String>
@@ -181,7 +177,7 @@ private fun setupArgs(parser: OptionParser): DemoArgs {
 
     args.roleArg = parser.accepts("role").withRequiredArg().ofType(IRSDemoRole::class.java).required()
     args.networkAddressArg = parser.accepts("network-address").withOptionalArg()
-    args.apiPort = parser.accepts("api-address").withOptionalArg().ofType(Int::class.java)
+    args.apiAddressArg = parser.accepts("api-address").withOptionalArg()
     args.dirArg = parser.accepts("directory").withOptionalArg()
     args.networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
     args.networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
@@ -240,10 +236,8 @@ private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: Opti
     if (options.has(args.networkAddressArg)) {
         nodeParams.address = HostAndPort.fromString(options.valueOf(args.networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     }
-    if (options.has(args.apiPort)) {
-        nodeParams.apiPort = options.valueOf(args.apiPort)
-    } else if (options.has(args.networkAddressArg)) {
-        nodeParams.apiPort = nodeParams.address.port + 1
+    if (options.has(args.apiAddressArg)) {
+        nodeParams.apiAddress = HostAndPort.fromString(options.valueOf(args.apiAddressArg)).withDefaultPort(Node.DEFAULT_PORT + 1)
     }
 
     nodeParams.identityFile = if (options.has(args.networkMapIdentityFile)) {
@@ -274,7 +268,7 @@ private fun runNode(nodeParams: NodeParams): Unit {
     ExitServerProtocol.Handler.register(node)
 
     if (nodeParams.uploadRates) {
-        runUploadRates(HostAndPort.fromString("localhost:${nodeParams.apiPort}"))
+        runUploadRates(nodeParams.apiAddress)
     }
 
     try {
@@ -301,9 +295,10 @@ private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, r
         nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
     }
 
-    val node = logElapsedTime("Node startup") {  Node(params.dir, params.address, config, networkMapId,
-            advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).setWebServerPort(params.apiPort).start() }
+    val node = logElapsedTime("Node startup") {
+        Node(params.dir, params.address, params.apiAddress, config, networkMapId, advertisedServices, DemoClock(),
+            listOf(InterestRateSwapAPI::class.java)).start()
+    }
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
@@ -424,7 +419,7 @@ private fun createNodeAParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeA")
     params.address = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
-    params.apiPort = Node.DEFAULT_PORT + 1
+    params.apiAddress = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT + 1)
     params.tradeWithAddrs = listOf("localhost:31340")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeB).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
     params.defaultLegalName = "Bank A"
@@ -435,7 +430,7 @@ private fun createNodeBParams() : NodeParams {
     val params = NodeParams()
     params.dir = Paths.get("nodeB")
     params.address = HostAndPort.fromString("localhost:31340")
-    params.apiPort = 31341
+    params.apiAddress = HostAndPort.fromString("localhost:31341")
     params.tradeWithAddrs = listOf("localhost")
     params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeA).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
     params.defaultLegalName = "Bank B"

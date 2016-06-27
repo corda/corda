@@ -52,7 +52,7 @@ private fun startNode(dir: Path,
             "--dir", dir.toString(),
             "--network-address", nodeAddr.toString(),
             "--network-map-address", networkMapAddr.toString(),
-            "--api-address", apiAddr.port.toString())
+            "--api-address", apiAddr.toString())
     val proc = spawn("com.r3corda.demos.IRSDemoKt", args, "IRSDemo$nodeType")
     ensureNodeStartsOrKill(proc, apiAddr)
     return proc

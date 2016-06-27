@@ -1,5 +1,6 @@
 package com.r3corda.demos
 
+import com.google.common.net.HostAndPort
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
@@ -71,7 +72,9 @@ fun main(args: Array<String>) {
         override val nearestCity: String = "Atlantis"
     }
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
+    val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
+
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddress,
             advertisedServices, DemoClock(),
             listOf(InterestRateSwapAPI::class.java)).setup().start() }
 

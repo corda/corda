@@ -77,6 +77,7 @@ fun runTraderDemo(args: Array<String>): Int {
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
     val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
     val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
+    val apiNetworkAddress = parser.accepts("api-address").withRequiredArg().defaultsTo("localhost")
 
     val options = try {
         parser.parse(*args)
@@ -100,6 +101,7 @@ fun runTraderDemo(args: Array<String>): Int {
                 Role.SELLER -> 31337
             }
     )
+    val apiNetAddr = HostAndPort.fromString(options.valueOf(apiNetworkAddress)).withDefaultPort(myNetAddr.port + 1)
 
     // Suppress the Artemis MQ noise, and activate the demo logging.
     //
@@ -143,7 +145,7 @@ fun runTraderDemo(args: Array<String>): Int {
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
-        Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+        Node(directory, myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
     }
 
     // TODO: Replace with a separate trusted cash issuer
