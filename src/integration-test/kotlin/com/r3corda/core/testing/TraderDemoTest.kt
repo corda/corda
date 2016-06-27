@@ -1,8 +1,8 @@
 package com.r3corda.core.testing
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.testing.utilities.NodeApi
 import com.r3corda.core.testing.utilities.assertExitOrKill
-import com.r3corda.core.testing.utilities.ensureNodeStartsOrKill
 import com.r3corda.core.testing.utilities.spawn
 import org.junit.Test
 import java.nio.file.Paths
@@ -32,7 +32,7 @@ private fun runBuyer(buyerAddr: HostAndPort, buyerApiAddr: HostAndPort): Process
             "--api-address", buyerApiAddr.toString()
     )
     val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoBuyer")
-    ensureNodeStartsOrKill(proc, buyerAddr)
+    NodeApi.ensureNodeStartsOrKill(proc, buyerApiAddr)
     return proc
 }
 
