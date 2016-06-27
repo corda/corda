@@ -10,6 +10,13 @@ repositories {
     mavenCentral()
 }
 
+compileKotlin {
+    kotlinOptions.suppressWarnings = true
+}
+compileTestKotlin {
+    kotlinOptions.suppressWarnings = true
+}
+
 dependencies {
     compile project(':core')
     compile project(':contracts')
