@@ -13,7 +13,7 @@ class NodeApi {
     class NodeDidNotStartException(message: String): Exception(message)
 
     companion object {
-        val NODE_WAIT_RETRY_COUNT: Int = 50
+        val NODE_WAIT_RETRY_COUNT: Int = 100
         val NODE_WAIT_RETRY_DELAY_MS: Long = 200
 
         fun ensureNodeStartsOrKill(proc: Process, nodeWebserverAddr: HostAndPort) {
