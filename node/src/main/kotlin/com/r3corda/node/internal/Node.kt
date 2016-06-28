@@ -25,6 +25,7 @@ import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
+import java.net.InetSocketAddress
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
@@ -52,7 +53,7 @@ class ConfigurationException(message: String) : Exception(message)
  * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter
  * @param clock The clock used within the node and by all protocols etc
  */
-class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
+class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, configuration: NodeConfiguration,
            networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
            clock: Clock = NodeClock(),
            val clientAPIs: List<Class<*>> = listOf()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
@@ -80,9 +81,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
 
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-
-        val port = p2pAddr.port + 1   // TODO: Move this into the node config file.
-        val server = Server(port)
+        val server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port))
 
         val handlerCollection = HandlerCollection()
 

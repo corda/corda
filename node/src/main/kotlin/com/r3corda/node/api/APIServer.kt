@@ -11,6 +11,7 @@ import javax.ws.rs.GET
 import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.Response
 
 /**
  * Top level interface to external interaction with the distributed ledger.
@@ -29,6 +30,14 @@ interface APIServer {
     @Path("servertime")
     @Produces(MediaType.APPLICATION_JSON)
     fun serverTime(): LocalDateTime
+
+    /**
+     * Report whether this node is started up or not
+     */
+    @GET
+    @Path("status")
+    @Produces(MediaType.TEXT_PLAIN)
+    fun status(): Response
 
     /**
      * Query your "local" states (containing only outputs involving you) and return the hashes & indexes associated with them

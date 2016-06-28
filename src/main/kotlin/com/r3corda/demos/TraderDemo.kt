@@ -31,7 +31,6 @@ import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
-import joptsimple.OptionSet
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -65,16 +64,30 @@ enum class Role {
 
 // And this is the directory under the current working directory where each node will create its own server directory,
 // which holds things like checkpoints, keys, databases, message logs etc.
-val DIRNAME = "trader-demo"
+val DEFAULT_BASE_DIRECTORY = "./build/trader-demo"
 
 fun main(args: Array<String>) {
+    exitProcess(runTraderDemo(args))
+}
+
+fun runTraderDemo(args: Array<String>): Int {
+    val cashIssuerKey = generateKeyPair()
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
     val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
     val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
+    val apiNetworkAddress = parser.accepts("api-address").withRequiredArg().defaultsTo("localhost")
+    val baseDirectoryArg = parser.accepts("base-directory").withRequiredArg().defaultsTo(DEFAULT_BASE_DIRECTORY)
 
-    val options = parseOptions(args, parser)
+    val options = try {
+        parser.parse(*args)
+    } catch (e: Exception) {
+        println(e.message)
+        println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
+        return 1
+    }
+
     val role = options.valueOf(roleArg)!!
 
     val myNetAddr = HostAndPort.fromString(options.valueOf(myNetworkAddress)).withDefaultPort(
@@ -89,6 +102,9 @@ fun main(args: Array<String>) {
                 Role.SELLER -> 31337
             }
     )
+    val apiNetAddr = HostAndPort.fromString(options.valueOf(apiNetworkAddress)).withDefaultPort(myNetAddr.port + 1)
+
+    val baseDirectory = options.valueOf(baseDirectoryArg)!!
 
     // Suppress the Artemis MQ noise, and activate the demo logging.
     //
@@ -96,7 +112,8 @@ fun main(args: Array<String>) {
     // for protocols will change in future.
     BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
-    val directory = Paths.get(DIRNAME, role.name.toLowerCase())
+    val directory = Paths.get(baseDirectory, role.name.toLowerCase())
+    println("Using base demo directory $directory")
 
     // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
@@ -123,7 +140,7 @@ fun main(args: Array<String>) {
         // be a single shared map service  (this is analagous to the DNS seeds in Bitcoin).
         //
         // TODO: AbstractNode should write out the full NodeInfo object and we should just load it here.
-        val path = Paths.get(DIRNAME, Role.BUYER.name.toLowerCase(), "identity-public")
+        val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
         cashIssuer = party
@@ -132,7 +149,7 @@ fun main(args: Array<String>) {
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup") {
-        Node(directory, myNetAddr, config, networkMapId, advertisedServices).setup().start()
+        Node(directory, myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
     }
 
     // TODO: Replace with a separate trusted cash issuer
@@ -146,21 +163,17 @@ fun main(args: Array<String>) {
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
-        runSeller(myNetAddr, node, theirNetAddr, amount)
+        val recipient = ArtemisMessagingService.makeRecipient(theirNetAddr)
+        runSeller(myNetAddr, node, recipient, amount)
     }
+
+    return 0
 }
 
-fun parseOptions(args: Array<String>, parser: OptionParser): OptionSet {
-    try {
-        return parser.parse(*args)
-    } catch (e: Exception) {
-        println(e.message)
-        println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
-        exitProcess(1)
-    }
-}
-
-fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort, amount: Amount<Issued<Currency>>) {
+private fun runSeller(myNetAddr: HostAndPort,
+                      node: Node,
+                      recipient: SingleMessageRecipient,
+                      amount: Amount<Issued<Currency>>) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -179,15 +192,14 @@ fun runSeller(myNetAddr: HostAndPort, node: Node, theirNetAddr: HostAndPort, amo
             it.second.get()
         }
     } else {
-        val otherSide = ArtemisMessagingService.makeRecipient(theirNetAddr)
-        val seller = TraderDemoProtocolSeller(myNetAddr, otherSide, amount)
+        val seller = TraderDemoProtocolSeller(myNetAddr, recipient, amount)
         node.smm.add("demo.seller", seller).get()
     }
 
     node.stop()
 }
 
-fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
+private fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
     // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
     // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
     val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
@@ -211,7 +223,7 @@ fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
 
 val DEMO_TOPIC = "initiate.demo.trade"
 
-class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
+private class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
                               val notary: Party,
                               val amount: Amount<Issued<Currency>>) : ProtocolLogic<Unit>() {
     companion object {
@@ -237,16 +249,16 @@ class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
             // As the seller initiates the two-party trade protocol, here, we will be the buyer.
             try {
                 progressTracker.currentStep = WAITING_FOR_SELLER_TO_CONNECT
-                val hostname = receive<HostAndPort>(DEMO_TOPIC, 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
-                val newPartnerAddr = ArtemisMessagingService.makeRecipient(hostname)
+                val origin = receive<HostAndPort>(DEMO_TOPIC, 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
+                val recipient = ArtemisMessagingService.makeRecipient(origin as HostAndPort)
 
                 // The session ID disambiguates the test trade.
                 val sessionID = random63BitValue()
                 progressTracker.currentStep = STARTING_BUY
-                send(DEMO_TOPIC, newPartnerAddr, 0, sessionID)
+                send(DEMO_TOPIC, recipient, 0, sessionID)
 
                 val notary = serviceHub.networkMapCache.notaryNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerAddr, notary.identity, amount,
+                val buyer = TwoPartyTradeProtocol.Buyer(recipient, notary.identity, amount,
                         CommercialPaper.State::class.java, sessionID)
 
                 // This invokes the trading protocol and out pops our finished transaction.
@@ -289,7 +301,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
     }
 }
 
-class TraderDemoProtocolSeller(val myAddress: HostAndPort,
+private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
                                val otherSide: SingleMessageRecipient,
                                val amount: Amount<Issued<Currency>>,
                                override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
