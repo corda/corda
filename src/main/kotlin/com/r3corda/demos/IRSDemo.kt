@@ -24,7 +24,6 @@ import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import joptsimple.OptionParser
 import joptsimple.OptionSet
-import joptsimple.OptionSpec
 import java.io.DataOutputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -41,11 +40,14 @@ import java.net.SocketTimeoutException
 // IRS DEMO
 //
 // Please see docs/build/html/running-the-trading-demo.html
-//
-// TODO: TBD
-//
-// The different roles in the scenario this program can adopt are:
 
+/**
+ * Roles. There are 4 modes this demo can be run:
+ *   - SetupNodeA/SetupNodeB: Creates and sets up the necessary directories for nodes
+ *   - NodeA/NodeB: Starts the nodes themselves
+ *   - Trade: Uploads an example trade
+ *   - DateChange: Changes the demo's date
+ */
 enum class IRSDemoRole {
     SetupNodeA,
     SetupNodeB,
@@ -55,28 +57,185 @@ enum class IRSDemoRole {
     Date
 }
 
-private class NodeParams() {
-    var dir : Path = Paths.get("")
-    var address : HostAndPort = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
-    var mapAddress: String = ""
-    var apiAddress: HostAndPort = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT + 1)
-    var identityFile: Path = Paths.get("")
-    var tradeWithAddrs: List<String> = listOf()
-    var tradeWithIdentities: List<Path> = listOf()
-    var uploadRates: Boolean = false
-    var defaultLegalName: String = ""
+/**
+ * Parsed command line parameters.
+ */
+sealed class CliParams {
+
+    /**
+     * Corresponds to roles 'SetupNodeA' and 'SetupNodeB'
+     */
+    class SetupNode(
+            val node: IRSDemoNode,
+            val dir: Path,
+            val defaultLegalName: String
+    ) : CliParams()
+
+    /**
+     * Corresponds to roles 'NodeA' and 'NodeB'
+     */
+    class RunNode(
+            val node: IRSDemoNode,
+            val dir: Path,
+            val networkAddress : HostAndPort,
+            val apiAddress: HostAndPort,
+            val mapAddress: String,
+            val identityFile: Path,
+            val tradeWithAddrs: List<String>,
+            val tradeWithIdentities: List<Path>,
+            val uploadRates: Boolean,
+            val defaultLegalName: String,
+            val autoSetup: Boolean // Run Setup for both nodes automatically with default arguments
+    ) : CliParams()
+
+    /**
+     * Corresponds to role 'Trade'
+     */
+    class Trade(
+            val apiAddress: HostAndPort,
+            val tradeId: String
+    ) : CliParams()
+
+    /**
+     * Corresponds to role 'Date'
+     */
+    class DateChange(
+            val apiAddress: HostAndPort,
+            val dateString: String
+    ) : CliParams()
+
+    companion object {
+
+        val defaultBaseDirectory = "./build/irs-demo"
+
+        fun legalName(node: IRSDemoNode) =
+                when (node) {
+                    IRSDemoNode.NodeA -> "Bank A"
+                    IRSDemoNode.NodeB -> "Bank B"
+                }
+
+        private fun nodeDirectory(options: OptionSet, node: IRSDemoNode) =
+                Paths.get(options.valueOf(CliParamsSpec.baseDirectoryArg), node.name.decapitalize())
+
+        private fun parseSetupNode(options: OptionSet, node: IRSDemoNode): SetupNode {
+            return SetupNode(
+                    node = node,
+                    dir = nodeDirectory(options, node),
+                    defaultLegalName = legalName(node)
+            )
+        }
+
+        private fun defaultNetworkPort(node: IRSDemoNode) =
+                when (node) {
+                    IRSDemoNode.NodeA -> Node.DEFAULT_PORT
+                    IRSDemoNode.NodeB -> Node.DEFAULT_PORT + 2
+                }
+
+        private fun defaultApiPort(node: IRSDemoNode) =
+                when (node) {
+                    IRSDemoNode.NodeA -> Node.DEFAULT_PORT + 1
+                    IRSDemoNode.NodeB -> Node.DEFAULT_PORT + 3
+                }
+
+        private fun parseRunNode(options: OptionSet, node: IRSDemoNode): RunNode {
+            val dir = nodeDirectory(options, node)
+
+            return RunNode(
+                    node = node,
+                    dir = dir,
+                    networkAddress = HostAndPort.fromString(options.valueOf(
+                            CliParamsSpec.networkAddressArg.defaultsTo("localhost:${defaultNetworkPort(node)}")
+                    )),
+                    apiAddress = HostAndPort.fromString(options.valueOf(
+                            CliParamsSpec.apiAddressArg.defaultsTo("localhost:${defaultApiPort(node)}")
+                    )),
+                    mapAddress = options.valueOf(CliParamsSpec.networkMapNetAddr),
+                    identityFile = if (options.has(CliParamsSpec.networkMapIdentityFile)) {
+                        Paths.get(options.valueOf(CliParamsSpec.networkMapIdentityFile))
+                    } else {
+                        dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME)
+                    },
+                    tradeWithAddrs = if (options.has(CliParamsSpec.fakeTradeWithAddr)) {
+                        options.valuesOf(CliParamsSpec.fakeTradeWithAddr)
+                    } else  {
+                        listOf("localhost:${defaultNetworkPort(node.other)}")
+                    },
+                    tradeWithIdentities = if (options.has(CliParamsSpec.fakeTradeWithIdentityFile)) {
+                        options.valuesOf(CliParamsSpec.fakeTradeWithIdentityFile).map { Paths.get(it) }
+                    } else {
+                        listOf(nodeDirectory(options, node.other).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
+                    },
+                    uploadRates = node == IRSDemoNode.NodeB,
+                    defaultLegalName = legalName(node),
+                    autoSetup = !options.has(CliParamsSpec.baseDirectoryArg) && !options.has(CliParamsSpec.fakeTradeWithIdentityFile)
+            )
+        }
+
+        private fun parseTrade(options: OptionSet): Trade {
+            return Trade(
+                    apiAddress = HostAndPort.fromString(options.valueOf(
+                            CliParamsSpec.apiAddressArg.defaultsTo("localhost:${defaultApiPort(IRSDemoNode.NodeA)}")
+                    )),
+                    tradeId = options.valuesOf(CliParamsSpec.nonOptions).let {
+                        if (it.size > 0) {
+                            it[0]
+                        } else {
+                            throw IllegalArgumentException("Please provide a trade ID")
+                        }
+                    }
+            )
+        }
+
+        private fun parseDateChange(options: OptionSet): DateChange {
+            return DateChange(
+                    apiAddress = HostAndPort.fromString(options.valueOf(CliParamsSpec.apiAddressArg)),
+                    dateString = options.valuesOf(CliParamsSpec.nonOptions).let {
+                        if (it.size > 0) {
+                            it[0]
+                        } else {
+                            throw IllegalArgumentException("Please provide a date string")
+                        }
+                    }
+            )
+        }
+
+        fun parse(options: OptionSet): CliParams {
+            val role = options.valueOf(CliParamsSpec.roleArg)!!
+            return when (role) {
+                IRSDemoRole.SetupNodeA -> parseSetupNode(options, IRSDemoNode.NodeA)
+                IRSDemoRole.SetupNodeB -> parseSetupNode(options, IRSDemoNode.NodeB)
+                IRSDemoRole.NodeA -> parseRunNode(options, IRSDemoNode.NodeA)
+                IRSDemoRole.NodeB -> parseRunNode(options, IRSDemoNode.NodeB)
+                IRSDemoRole.Trade -> parseTrade(options)
+                IRSDemoRole.Date -> parseDateChange(options)
+            }
+        }
+    }
 }
 
-private class DemoArgs() {
-    lateinit var roleArg: OptionSpec<IRSDemoRole>
-    lateinit var networkAddressArg: OptionSpec<String>
-    lateinit var apiAddressArg: OptionSpec<String>
-    lateinit var dirArg: OptionSpec<String>
-    lateinit var networkMapIdentityFile: OptionSpec<String>
-    lateinit var networkMapNetAddr: OptionSpec<String>
-    lateinit var fakeTradeWithAddr: OptionSpec<String>
-    lateinit var fakeTradeWithIdentityFile: OptionSpec<String>
-    lateinit var nonOptions: OptionSpec<String>
+enum class IRSDemoNode {
+    NodeA,
+    NodeB;
+
+    val other: IRSDemoNode get() {
+        return when (this) {
+            NodeA -> NodeB
+            NodeB -> NodeA
+        }
+    }
+}
+
+object CliParamsSpec {
+    val parser = OptionParser()
+    val roleArg = parser.accepts("role").withRequiredArg().ofType(IRSDemoRole::class.java)
+    val networkAddressArg = parser.accepts("network-address").withOptionalArg().ofType(String::class.java)
+    val apiAddressArg = parser.accepts("api-address").withOptionalArg().ofType(String::class.java)
+    val baseDirectoryArg = parser.accepts("base-directory").withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
+    val networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
+    val networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
+    val fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withOptionalArg()
+    val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
+    val nonOptions = parser.nonOptions()
 }
 
 private class NotSetupException: Throwable {
@@ -88,12 +247,10 @@ fun main(args: Array<String>) {
 }
 
 fun runIRSDemo(args: Array<String>): Int {
-    val parser = OptionParser()
-    val demoArgs = setupArgs(parser)
-    val options = try {
-        parser.parse(*args)
+    val cliParams = try {
+        CliParams.parse(CliParamsSpec.parser.parse(*args))
     } catch (e: Exception) {
-        println(e.message)
+        println(e)
         printHelp()
         return 1
     }
@@ -101,69 +258,62 @@ fun runIRSDemo(args: Array<String>): Int {
     // Suppress the Artemis MQ noise, and activate the demo logging.
     BriefLogFormatter.initVerbose("+demo.irsdemo", "+api-call", "+platform.deal", "-org.apache.activemq")
 
-    val role = options.valueOf(demoArgs.roleArg)!!
-    return when (role) {
-        IRSDemoRole.SetupNodeA -> setup(configureNodeParams(IRSDemoRole.NodeA, demoArgs, options))
-        IRSDemoRole.SetupNodeB -> setup(configureNodeParams(IRSDemoRole.NodeB, demoArgs, options))
-        IRSDemoRole.NodeA -> runNode(role, demoArgs, options)
-        IRSDemoRole.NodeB -> runNode(role, demoArgs, options)
-        IRSDemoRole.Trade -> runTrade(demoArgs, options)
-        IRSDemoRole.Date -> runDateChange(demoArgs, options)
+    return when (cliParams) {
+        is CliParams.SetupNode -> setup(cliParams)
+        is CliParams.RunNode -> runNode(cliParams)
+        is CliParams.Trade -> runTrade(cliParams)
+        is CliParams.DateChange -> runDateChange(cliParams)
     }
 }
 
-private fun runTrade(demoArgs: DemoArgs, options: OptionSet): Int {
-    val tradeIdArgs = options.valuesOf(demoArgs.nonOptions)
-    if (tradeIdArgs.size > 0) {
-        val tradeId = tradeIdArgs[0]
-        val host = if (options.has(demoArgs.networkAddressArg)) {
-            options.valueOf(demoArgs.networkAddressArg)
-        } else {
-            "http://localhost:" + (Node.DEFAULT_PORT + 1)
-        }
-
-        if (!uploadTrade(tradeId, host)) {
-            return 1
-        }
-    } else {
-        println("Please provide a trade ID")
-        return 1
+private fun setup(params: CliParams.SetupNode): Int {
+    val dirFile = params.dir.toFile()
+    if (!dirFile.exists()) {
+        dirFile.mkdirs()
     }
 
+    val configFile = params.dir.resolve("config").toFile()
+    val config = loadConfigFile(configFile, params.defaultLegalName)
+    if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
+        createIdentities(params, config)
+    }
     return 0
 }
 
-private fun runDateChange(demoArgs: DemoArgs, options: OptionSet): Int {
-    val dateStrArgs = options.valuesOf(demoArgs.nonOptions)
-    if (dateStrArgs.size > 0) {
-        val dateStr = dateStrArgs[0]
-        val host = if (options.has(demoArgs.networkAddressArg)) {
-            options.valueOf(demoArgs.networkAddressArg)
-        } else {
-            "http://localhost:" + (Node.DEFAULT_PORT + 1)
-        }
+private fun defaultNodeSetupParams(node: IRSDemoNode): CliParams.SetupNode =
+        CliParams.SetupNode(
+                node = node,
+                dir = Paths.get(CliParams.defaultBaseDirectory, node.name.decapitalize()),
+                defaultLegalName = CliParams.legalName(node)
+        )
 
-        if (!changeDate(dateStr, host)) {
-            return 1
-        }
-    } else {
-        println("Please provide a date")
-        return 1
-    }
-
-    return 0
-}
-
-private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet): Int {
-    // If these directory and identity file arguments aren't specified then we can assume a default setup and
-    // create everything that is needed without needing to run setup.
-    if (!options.has(demoArgs.dirArg) && !options.has(demoArgs.fakeTradeWithIdentityFile)) {
-        createNodeConfig(createNodeAParams());
-        createNodeConfig(createNodeBParams());
+private fun runNode(cliParams: CliParams.RunNode): Int {
+    if (cliParams.autoSetup) {
+        setup(defaultNodeSetupParams(IRSDemoNode.NodeA))
+        setup(defaultNodeSetupParams(IRSDemoNode.NodeB))
     }
 
     try {
-        runNode(configureNodeParams(role, demoArgs, options))
+        val networkMap = createRecipient(cliParams.mapAddress)
+        val destinations = cliParams.tradeWithAddrs.map({
+            createRecipient(it)
+        })
+
+        val node = startNode(cliParams, networkMap, destinations)
+        // Register handlers for the demo
+        AutoOfferProtocol.Handler.register(node)
+        UpdateBusinessDayProtocol.Handler.register(node)
+        ExitServerProtocol.Handler.register(node)
+
+        if (cliParams.uploadRates) {
+            runUploadRates(cliParams.apiAddress)
+        }
+
+        try {
+            while (true) Thread.sleep(Long.MAX_VALUE)
+        } catch(e: InterruptedException) {
+            node.stop()
+        }
     } catch (e: NotSetupException) {
         println(e.message)
         return 1
@@ -172,109 +322,30 @@ private fun runNode(role: IRSDemoRole, demoArgs: DemoArgs, options: OptionSet): 
     return 0
 }
 
-private fun setupArgs(parser: OptionParser): DemoArgs {
-    val args = DemoArgs()
-
-    args.roleArg = parser.accepts("role").withRequiredArg().ofType(IRSDemoRole::class.java).required()
-    args.networkAddressArg = parser.accepts("network-address").withOptionalArg()
-    args.apiAddressArg = parser.accepts("api-address").withOptionalArg()
-    args.dirArg = parser.accepts("directory").withOptionalArg()
-    args.networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
-    args.networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
-    // Use these to list one or more peers (again, will be superseded by discovery implementation)
-    args.fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withOptionalArg()
-    args.fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
-    args.nonOptions = parser.nonOptions().ofType(String::class.java)
-
-    return args
-}
-
-private fun setup(params: NodeParams): Int {
-    createNodeConfig(params)
-    return 0
-}
-
-private fun changeDate(date: String, host: String) : Boolean {
-    println("Changing date to " + date)
-    val url = URL(host + "/api/irs/demodate")
-    if (putJson(url, "\"" + date + "\"")) {
+private fun runDateChange(cliParams: CliParams.DateChange): Int {
+    println("Changing date to " + cliParams.dateString)
+    val url = URL("http://${cliParams.apiAddress}/api/irs/demodate")
+    if (putJson(url, "\"" + cliParams.dateString + "\"")) {
         println("Date changed")
-        return true
+        return 0
     } else {
         println("Date failed to change")
-        return false
+        return 1
     }
 }
 
-private fun uploadTrade(tradeId: String, host: String) : Boolean {
-    println("Uploading tradeID " + tradeId)
-    val fileContents = IOUtils.toString(NodeParams::class.java.getResourceAsStream("example-irs-trade.json"))
-    val tradeFile = fileContents.replace("tradeXXX", tradeId)
-    val url = URL(host + "/api/irs/deals")
+private fun runTrade(cliParams: CliParams.Trade): Int {
+    println("Uploading tradeID " + cliParams.tradeId)
+    // Note: the getResourceAsStream is an ugly hack to get the jvm to search in the right location
+    val fileContents = IOUtils.toString(CliParams::class.java.getResourceAsStream("example-irs-trade.json"))
+    val tradeFile = fileContents.replace("tradeXXX", cliParams.tradeId)
+    val url = URL("http://${cliParams.apiAddress}/api/irs/deals")
     if (postJson(url, tradeFile)) {
         println("Trade sent")
-        return true
+        return 0
     } else {
         println("Trade failed to send")
-        return false
-    }
-}
-
-private fun configureNodeParams(role: IRSDemoRole, args: DemoArgs, options: OptionSet): NodeParams {
-    val nodeParams = when (role) {
-        IRSDemoRole.NodeA -> createNodeAParams()
-        IRSDemoRole.NodeB -> createNodeBParams()
-        else -> {
-            throw IllegalArgumentException()
-        }
-    }
-
-    nodeParams.mapAddress = options.valueOf(args.networkMapNetAddr)
-    if (options.has(args.dirArg)) {
-        nodeParams.dir = Paths.get(options.valueOf(args.dirArg))
-    }
-    if (options.has(args.networkAddressArg)) {
-        nodeParams.address = HostAndPort.fromString(options.valueOf(args.networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
-    }
-    if (options.has(args.apiAddressArg)) {
-        nodeParams.apiAddress = HostAndPort.fromString(options.valueOf(args.apiAddressArg)).withDefaultPort(Node.DEFAULT_PORT + 1)
-    }
-
-    nodeParams.identityFile = if (options.has(args.networkMapIdentityFile)) {
-        Paths.get(options.valueOf(args.networkMapIdentityFile))
-    } else {
-        nodeParams.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME)
-    }
-    if (options.has(args.fakeTradeWithIdentityFile)) {
-        nodeParams.tradeWithIdentities = options.valuesOf(args.fakeTradeWithIdentityFile).map { Paths.get(it) }
-    }
-    if (options.has(args.fakeTradeWithAddr)) {
-        nodeParams.tradeWithAddrs = options.valuesOf(args.fakeTradeWithAddr)
-    }
-
-    return nodeParams
-}
-
-private fun runNode(nodeParams: NodeParams): Unit {
-    val networkMap = createRecipient(nodeParams.mapAddress)
-    val destinations = nodeParams.tradeWithAddrs.map({
-        createRecipient(it)
-    })
-
-    val node = startNode(nodeParams, networkMap, destinations)
-    // Register handlers for the demo
-    AutoOfferProtocol.Handler.register(node)
-    UpdateBusinessDayProtocol.Handler.register(node)
-    ExitServerProtocol.Handler.register(node)
-
-    if (nodeParams.uploadRates) {
-        runUploadRates(nodeParams.apiAddress)
-    }
-
-    try {
-        while (true) Thread.sleep(Long.MAX_VALUE)
-    } catch(e: InterruptedException) {
-        node.stop()
+        return 1
     }
 }
 
@@ -283,7 +354,7 @@ private fun createRecipient(addr: String) : SingleMessageRecipient {
     return ArtemisMessagingService.makeRecipient(hostAndPort)
 }
 
-private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
+private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
     val networkMapId = if (params.mapAddress.equals(params.address.toString())) {
@@ -296,7 +367,7 @@ private fun startNode(params : NodeParams, networkMap: SingleMessageRecipient, r
     }
 
     val node = logElapsedTime("Node startup") {
-        Node(params.dir, params.address, params.apiAddress, config, networkMapId, advertisedServices, DemoClock(),
+        Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock(),
             listOf(InterestRateSwapAPI::class.java)).start()
     }
 
@@ -325,7 +396,8 @@ private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, adve
 }
 
 private fun runUploadRates(host: HostAndPort) {
-    val fileContents = IOUtils.toString(NodeParams::class.java.getResource("example.rates.txt"))
+    // Note: the getResourceAsStream is an ugly hack to get the jvm to search in the right location
+    val fileContents = IOUtils.toString(CliParams::class.java.getResourceAsStream("example.rates.txt"))
     var timer : Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
@@ -364,7 +436,7 @@ private fun sendJson(url: URL, data: String, method: String) : Boolean {
             200 -> true
             201 -> true
             else -> {
-                println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Mesage: " + connection.responseMessage)
+                println("Failed to " + method + " data. Status Code: " + connection.responseCode + ". Message: " + connection.responseMessage)
                 false
             }
         }
@@ -401,7 +473,7 @@ private fun uploadFile(url: URL, file: String) : Boolean {
 
     val request = DataOutputStream(connection.outputStream)
     request.writeBytes(hyphens + boundary + clrf)
-    request.writeBytes("Content-Disposition: form-data; name=\"rates\" filename=\"example.rates.txt\"" + clrf)
+    request.writeBytes("Content-Disposition: form-data; name=\"rates\" filename=\"example.rates.txt\"$clrf")
     request.writeBytes(clrf)
     request.writeBytes(file)
     request.writeBytes(clrf)
@@ -410,69 +482,22 @@ private fun uploadFile(url: URL, file: String) : Boolean {
     if (connection.responseCode == 200) {
         return true
     } else {
-        println("Could not upload file. Status Code: " + connection + ". Mesage: " + connection.responseMessage)
+        println("Could not upload file. Status Code: " + connection + ". Message: " + connection.responseMessage)
         return false
     }
 }
 
-private fun createNodeAParams() : NodeParams {
-    val params = NodeParams()
-    params.dir = Paths.get("nodeA")
-    params.address = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT)
-    params.apiAddress = HostAndPort.fromString("localhost").withDefaultPort(Node.DEFAULT_PORT + 1)
-    params.tradeWithAddrs = listOf("localhost:31340")
-    params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeB).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
-    params.defaultLegalName = "Bank A"
-    return params
-}
-
-private fun createNodeBParams() : NodeParams {
-    val params = NodeParams()
-    params.dir = Paths.get("nodeB")
-    params.address = HostAndPort.fromString("localhost:31340")
-    params.apiAddress = HostAndPort.fromString("localhost:31341")
-    params.tradeWithAddrs = listOf("localhost")
-    params.tradeWithIdentities = listOf(getRoleDir(IRSDemoRole.NodeA).resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))
-    params.defaultLegalName = "Bank B"
-    params.uploadRates = true
-    return params
-}
-
-private fun createNodeConfig(params: NodeParams) : NodeConfiguration {
-    if (!Files.exists(params.dir)) {
-        Files.createDirectory(params.dir)
-    }
-
-    val configFile = params.dir.resolve("config").toFile()
-    val config = loadConfigFile(configFile, params.defaultLegalName)
-    if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
-        createIdentities(params, config)
-    }
-
-    return config
-}
-
-private fun getNodeConfig(params: NodeParams): NodeConfiguration {
-    if (!Files.exists(params.dir)) {
+private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
+    if (!Files.exists(cliParams.dir)) {
         throw NotSetupException("Missing config directory. Please run node setup before running the node")
     }
 
-    if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
+    if (!Files.exists(cliParams.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
         throw NotSetupException("Missing identity file. Please run node setup before running the node")
     }
 
-    val configFile = params.dir.resolve("config").toFile()
-    return loadConfigFile(configFile, params.defaultLegalName)
-}
-
-private fun getRoleDir(role: IRSDemoRole) : Path {
-    when (role) {
-        IRSDemoRole.NodeA -> return Paths.get("nodeA")
-        IRSDemoRole.NodeB -> return Paths.get("nodeB")
-        else -> {
-            throw IllegalArgumentException()
-        }
-    }
+    val configFile = cliParams.dir.resolve("config").toFile()
+    return loadConfigFile(configFile, cliParams.defaultLegalName)
 }
 
 private fun loadConfigFile(configFile: File, defaultLegalName: String): NodeConfiguration {
@@ -485,7 +510,7 @@ private fun loadConfigFile(configFile: File, defaultLegalName: String): NodeConf
     return NodeConfigurationFromConfig(config)
 }
 
-private fun createIdentities(params: NodeParams, nodeConf: NodeConfiguration) {
+private fun createIdentities(params: CliParams.SetupNode, nodeConf: NodeConfiguration) {
     val mockNetwork = MockNetwork(false)
     val node = MockNetwork.MockNode(params.dir, nodeConf, mockNetwork, null, setOf(NetworkMapService.Type, SimpleNotaryService.Type), 0, null)
     node.start()
