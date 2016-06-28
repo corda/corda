@@ -153,8 +153,8 @@ class Obligation<P> : Contract {
         override val owner: PublicKey
             get() = beneficiary
 
-        override fun move(amount: Amount<P>, beneficiary: PublicKey): Obligation.State<P>
-                = copy(quantity = amount.quantity, beneficiary = beneficiary)
+        override fun move(newAmount: Amount<P>, newOwner: PublicKey): Obligation.State<P>
+                = copy(quantity = newAmount.quantity, beneficiary = newOwner)
 
         override fun toString() = when (lifecycle) {
             Lifecycle.NORMAL -> "${Emoji.bagOfCash}Debt($amount due $dueBefore to ${beneficiary.toStringShort()})"
@@ -272,13 +272,12 @@ class Obligation<P> : Contract {
             for ((inputs, outputs, key) in groups) {
                 // Either inputs or outputs could be empty.
                 val obligor = key.obligor
-                val commands = commandGroups[key] ?: emptyList()
 
                 requireThat {
                     "there are no zero sized outputs" by outputs.none { it.amount.quantity == 0L }
                 }
 
-                verifyCommandGroup(tx, commands, inputs, outputs, obligor, key)
+                verifyCommandGroup(tx, commandGroups[key] ?: emptyList(), inputs, outputs, obligor, key)
             }
         }
     }
@@ -318,7 +317,7 @@ class Obligation<P> : Contract {
                 "all outputs are in the normal state " by outputs.all { it.lifecycle == Lifecycle.NORMAL }
             }
             if (issueCommand != null) {
-                verifyIssueCommand(inputs, outputs, tx, issueCommand, issued, obligor)
+                verifyIssueCommand(inputs, outputs, issueCommand, issued, obligor)
             } else if (settleCommand != null) {
                 // Perhaps through an abundance of caution, settlement is enforced as its own command.
                 // This could perhaps be merged into verifyBalanceChange() later, however doing so introduces a lot
@@ -414,7 +413,6 @@ class Obligation<P> : Contract {
     @VisibleForTesting
     protected fun verifyIssueCommand(inputs: List<State<P>>,
                                      outputs: List<State<P>>,
-                                     tx: TransactionForContract,
                                      issueCommand: AuthenticatedObject<Commands.Issue<P>>,
                                      issued: Issued<P>,
                                      obligor: Party) {
@@ -794,7 +792,7 @@ fun <P> sumAmountsDue(balances: Map<Pair<PublicKey, PublicKey>, Amount<P>>): Map
     // Strip zero balances
     val iterator = sum.iterator()
     while (iterator.hasNext()) {
-        val (key, amount) = iterator.next()
+        val amount = iterator.next().value
         if (amount == 0L) {
             iterator.remove()
         }
