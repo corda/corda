@@ -357,14 +357,17 @@ private fun createRecipient(addr: String) : SingleMessageRecipient {
 private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
-    val networkMapId = if (params.mapAddress.equals(params.address.toString())) {
-        // This node provides network map and notary services
-        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
-        null
-    } else {
-        advertisedServices = setOf(NodeInterestRates.Type)
-        nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
-    }
+    val networkMapId =
+            when (params.node) {
+                IRSDemoNode.NodeA -> {
+                    advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
+                    null
+                }
+                IRSDemoNode.NodeB -> {
+                    advertisedServices = setOf(NodeInterestRates.Type)
+                    nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
+                }
+            }
 
     val node = logElapsedTime("Node startup") {
         Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock(),
