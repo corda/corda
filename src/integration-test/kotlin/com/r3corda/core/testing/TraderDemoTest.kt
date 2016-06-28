@@ -2,58 +2,58 @@ package com.r3corda.core.testing
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.testing.utilities.NodeApi
+import com.r3corda.core.testing.utilities.TestTimestamp
 import com.r3corda.core.testing.utilities.assertExitOrKill
 import com.r3corda.core.testing.utilities.spawn
 import org.junit.Test
 import java.nio.file.Paths
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.test.assertEquals
 
 class TraderDemoTest {
     @Test fun `runs trader demo`() {
         val buyerAddr = freeLocalHostAndPort()
         val buyerApiAddr = freeLocalHostAndPort()
+        val directory = "./build/integration-test/${TestTimestamp.timestamp}/trader-demo"
         var nodeProc: Process? = null
         try {
-            cleanupFiles()
-            nodeProc = runBuyer(buyerAddr, buyerApiAddr)
-            runSeller(buyerAddr)
+            nodeProc = runBuyer(directory, buyerAddr, buyerApiAddr)
+            runSeller(directory, buyerAddr)
         } finally {
             nodeProc?.destroy()
-            cleanupFiles()
         }
     }
-}
 
-private fun runBuyer(buyerAddr: HostAndPort, buyerApiAddr: HostAndPort): Process {
-    println("Running Buyer")
-    val args = listOf(
-            "--role", "BUYER",
-            "--network-address", buyerAddr.toString(),
-            "--api-address", buyerApiAddr.toString()
-    )
-    val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoBuyer")
-    NodeApi.ensureNodeStartsOrKill(proc, buyerApiAddr)
-    return proc
-}
+    companion object {
+        private fun runBuyer(baseDirectory: String, buyerAddr: HostAndPort, buyerApiAddr: HostAndPort): Process {
+            println("Running Buyer")
+            val args = listOf(
+                    "--role", "BUYER",
+                    "--network-address", buyerAddr.toString(),
+                    "--api-address", buyerApiAddr.toString(),
+                    "--base-directory", baseDirectory
+            )
+            val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoBuyer")
+            NodeApi.ensureNodeStartsOrKill(proc, buyerApiAddr)
+            return proc
+        }
 
-private fun runSeller(buyerAddr: HostAndPort) {
-    println("Running Seller")
-    val sellerAddr = freeLocalHostAndPort()
-    val sellerApiAddr = freeLocalHostAndPort()
-    val args = listOf(
-            "--role", "SELLER",
-            "--network-address", sellerAddr.toString(),
-            "--api-address", sellerApiAddr.toString(),
-            "--other-network-address", buyerAddr.toString()
-    )
-    val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoSeller")
-    assertExitOrKill(proc);
-    assertEquals(proc.exitValue(), 0)
-}
+        private fun runSeller(baseDirectory: String, buyerAddr: HostAndPort) {
+            println("Running Seller")
+            val sellerAddr = freeLocalHostAndPort()
+            val sellerApiAddr = freeLocalHostAndPort()
+            val args = listOf(
+                    "--role", "SELLER",
+                    "--network-address", sellerAddr.toString(),
+                    "--api-address", sellerApiAddr.toString(),
+                    "--other-network-address", buyerAddr.toString(),
+                    "--base-directory", baseDirectory
+            )
+            val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoSeller")
+            assertExitOrKill(proc);
+            assertEquals(proc.exitValue(), 0)
+        }
 
-private fun cleanupFiles() {
-    println("Cleaning up TraderDemoTest files")
-    val dir = Paths.get("trader-demo")
-    println("Erasing " + dir)
-    dir.toFile().deleteRecursively()
+    }
 }
