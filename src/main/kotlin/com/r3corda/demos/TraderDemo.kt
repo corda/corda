@@ -64,7 +64,7 @@ enum class Role {
 
 // And this is the directory under the current working directory where each node will create its own server directory,
 // which holds things like checkpoints, keys, databases, message logs etc.
-val DIRNAME = "trader-demo"
+val DEFAULT_BASE_DIRECTORY = "./build/trader-demo"
 
 fun main(args: Array<String>) {
     exitProcess(runTraderDemo(args))
@@ -78,6 +78,7 @@ fun runTraderDemo(args: Array<String>): Int {
     val myNetworkAddress = parser.accepts("network-address").withRequiredArg().defaultsTo("localhost")
     val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
     val apiNetworkAddress = parser.accepts("api-address").withRequiredArg().defaultsTo("localhost")
+    val baseDirectoryArg = parser.accepts("base-directory").withRequiredArg().defaultsTo(DEFAULT_BASE_DIRECTORY)
 
     val options = try {
         parser.parse(*args)
@@ -103,13 +104,16 @@ fun runTraderDemo(args: Array<String>): Int {
     )
     val apiNetAddr = HostAndPort.fromString(options.valueOf(apiNetworkAddress)).withDefaultPort(myNetAddr.port + 1)
 
+    val baseDirectory = options.valueOf(baseDirectoryArg)!!
+
     // Suppress the Artemis MQ noise, and activate the demo logging.
     //
     // The first two strings correspond to the first argument to StateMachineManager.add() but the way we handle logging
     // for protocols will change in future.
     BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
-    val directory = Paths.get(DIRNAME, role.name.toLowerCase())
+    val directory = Paths.get(baseDirectory, role.name.toLowerCase())
+    println("Using base demo directory $directory")
 
     // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
@@ -136,7 +140,7 @@ fun runTraderDemo(args: Array<String>): Int {
         // be a single shared map service  (this is analagous to the DNS seeds in Bitcoin).
         //
         // TODO: AbstractNode should write out the full NodeInfo object and we should just load it here.
-        val path = Paths.get(DIRNAME, Role.BUYER.name.toLowerCase(), "identity-public")
+        val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
         cashIssuer = party
