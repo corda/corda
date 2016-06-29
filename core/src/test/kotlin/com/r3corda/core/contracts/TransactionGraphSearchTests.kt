@@ -28,12 +28,12 @@ class TransactionGraphSearchTests {
      */
     fun buildTransactions(command: CommandData, signer: KeyPair): GraphTransactionStorage {
         val originTx = TransactionType.General.Builder().apply {
-            addOutputState(DummyContract.State(random31BitValue()), DUMMY_NOTARY)
+            addOutputState(DummyState(random31BitValue()), DUMMY_NOTARY)
             addCommand(command, signer.public)
             signWith(signer)
         }.toSignedTransaction(false)
         val inputTx = TransactionType.General.Builder().apply {
-            addInputState(originTx.tx.outRef<DummyContract.State>(0))
+            addInputState(originTx.tx.outRef<DummyState>(0))
             signWith(signer)
         }.toSignedTransaction(false)
         return GraphTransactionStorage(originTx, inputTx)

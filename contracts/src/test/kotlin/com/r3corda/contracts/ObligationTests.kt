@@ -80,7 +80,7 @@ class ObligationTests {
     fun `issue debt`() {
         // Check we can't "move" debt into existence.
         transaction {
-            input { DummyContract.State() }
+            input { DummyState() }
             output { outState }
             arg(MINI_CORP_PUBKEY) { Obligation.Commands.Move(outState.issuanceDef) }
 

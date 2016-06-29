@@ -11,10 +11,10 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import org.junit.Before
 import org.junit.Test
-import protocols.NotaryChangeException
+import protocols.StateReplacementException
+import protocols.StateReplacementRefused
 import protocols.NotaryChangeProtocol
 import protocols.NotaryChangeProtocol.Instigator
-import protocols.NotaryChangeRefused
 import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -80,8 +80,8 @@ class NotaryChangeTests {
         net.runNetwork()
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
-        val error = (ex.cause as NotaryChangeException).error
-        assertTrue(error is NotaryChangeRefused)
+        val error = (ex.cause as StateReplacementException).error
+        assertTrue(error is StateReplacementRefused)
     }
 
     // TODO: Add more test cases once we have a general protocol/service exception handling mechanism:

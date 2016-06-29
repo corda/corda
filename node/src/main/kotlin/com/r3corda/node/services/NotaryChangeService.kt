@@ -5,6 +5,7 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.statemachine.StateMachineManager
+import protocols.AbstractStateReplacementProtocol
 import protocols.NotaryChangeProtocol
 
 /**
@@ -14,11 +15,11 @@ import protocols.NotaryChangeProtocol
 class NotaryChangeService(net: MessagingService, val smm: StateMachineManager) : AbstractNodeService(net) {
     init {
         addMessageHandler(NotaryChangeProtocol.TOPIC_INITIATE,
-                { req: NotaryChangeProtocol.Handshake -> handleChangeNotaryRequest(req) }
+                { req: AbstractStateReplacementProtocol.Handshake -> handleChangeNotaryRequest(req) }
         )
     }
 
-    private fun handleChangeNotaryRequest(req: NotaryChangeProtocol.Handshake): Ack {
+    private fun handleChangeNotaryRequest(req: AbstractStateReplacementProtocol.Handshake): Ack {
         val protocol = NotaryChangeProtocol.Acceptor(
                 req.replyTo as SingleMessageRecipient,
                 req.sessionID!!,
