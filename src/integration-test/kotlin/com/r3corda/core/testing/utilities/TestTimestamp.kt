@@ -11,7 +11,7 @@ class TestTimestamp {
     companion object {
         val timestamp: String = {
             val tz = TimeZone.getTimeZone("UTC")
-            val df = SimpleDateFormat("yyyy-MM-dd-HH:mm:ss")
+            val df = SimpleDateFormat("yyyyMMddHHmmss")
             df.timeZone = tz
             df.format(Date())
         }()
