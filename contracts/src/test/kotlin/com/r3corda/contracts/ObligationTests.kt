@@ -116,10 +116,13 @@ class ObligationTests {
         Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                 beneficiary = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(ptx.inputStates().isEmpty())
-        val s = ptx.outputStates()[0].data as Obligation.State<Currency>
-        assertEquals(100.DOLLARS, s.amount)
-        assertEquals(MINI_CORP, s.obligor)
-        assertEquals(DUMMY_PUBKEY_1, s.beneficiary)
+        val expected = Obligation.State(
+                obligor = MINI_CORP,
+                quantity = 100.DOLLARS.quantity,
+                beneficiary = DUMMY_PUBKEY_1,
+                template = megaCorpDollarSettlement
+        )
+        assertEquals(ptx.outputStates()[0].data, expected)
         assertTrue(ptx.commands()[0].value is Obligation.Commands.Issue<*>)
         assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
 
