@@ -11,7 +11,6 @@ import java.io.InputStream
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.SecureRandom
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.Executor
@@ -177,16 +176,17 @@ class TransientProperty<T>(private val initializer: () -> T) {
  * Given a path to a zip file, extracts it to the given directory.
  */
 fun extractZipFile(zipPath: Path, toPath: Path) {
-    if (!Files.exists(toPath))
-        Files.createDirectories(toPath)
+    val normalisedToPath = toPath.normalize()
+    if (!Files.exists(normalisedToPath))
+        Files.createDirectories(normalisedToPath)
 
     ZipInputStream(BufferedInputStream(Files.newInputStream(zipPath))).use { zip ->
         while (true) {
             val e = zip.nextEntry ?: break
-            val outPath = toPath.resolve(e.name)
+            val outPath = normalisedToPath.resolve(e.name)
 
             // Security checks: we should reject a zip that contains tricksy paths that try to escape toPath.
-            if (!outPath.normalize().startsWith(toPath))
+            if (!outPath.normalize().startsWith(normalisedToPath))
                 throw IllegalStateException("ZIP contained a path that resolved incorrectly: ${e.name}")
 
             if (e.isDirectory) {
