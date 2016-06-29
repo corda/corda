@@ -57,7 +57,7 @@ interface ContractState {
      * is a miniature file system in which each file can be precisely mapped to the defining attachment.
      *
      * Attachments may contain many things (data files, legal documents, etc) but mostly they contain JVM bytecode.
-     * The classfiles inside define not only [Contract] implementations but also the classes that define the states.
+     * The class files inside define not only [Contract] implementations but also the classes that define the states.
      * Within the rest of a transaction, user-providable components are referenced by name only.
      *
      * This means that a smart contract in Corda does two things:
