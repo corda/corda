@@ -15,6 +15,10 @@ import java.util.*
  *
  * The builder can be customised for specific transaction types, e.g. where additional processing is needed
  * before adding a state/command.
+ *
+ * @param notary The default notary that will be used for outputs that don't have a notary specified. When this is set,
+ *               an output state can be added by just passing in a [ContractState] – a [TransactionState] with the
+ *               default notary will be generated automatically.
  */
 abstract class TransactionBuilder(protected val type: TransactionType = TransactionType.General(),
                                   protected val notary: Party? = null) {
@@ -129,6 +133,7 @@ abstract class TransactionBuilder(protected val type: TransactionType = Transact
 
     fun addOutputState(state: ContractState, notary: Party) = addOutputState(TransactionState(state, notary))
 
+    /** A default notary must be specified during builder construction to use this method */
     fun addOutputState(state: ContractState) {
         checkNotNull(notary) { "Need to specify a Notary for the state, or set a default one on TransactionBuilder initialisation" }
         addOutputState(state, notary!!)
