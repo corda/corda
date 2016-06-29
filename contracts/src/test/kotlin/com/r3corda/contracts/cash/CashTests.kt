@@ -66,7 +66,7 @@ class CashTests {
     fun issueMoney() {
         // Check we can't "move" money into existence.
         transaction {
-            input { DummyContract.State() }
+            input { DummyState() }
             output { outState }
             arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 

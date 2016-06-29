@@ -5,11 +5,12 @@ import com.r3corda.contracts.cash.CASH_PROGRAM_ID
 import com.r3corda.contracts.cash.Cash
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Contract
+import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.DUMMY_PROGRAM_ID
 import com.r3corda.core.contracts.DummyContract
+import com.r3corda.core.contracts.DummyState
 import com.r3corda.core.contracts.PartyAndReference
 import com.r3corda.core.contracts.Issued
-import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
@@ -31,7 +32,7 @@ val TEST_PROGRAM_MAP: Map<Contract, Class<out Contract>> = mapOf(
         IRS_PROGRAM_ID to InterestRateSwap::class.java
 )
 
-fun generateState() = DummyContract.State(Random().nextInt())
+fun generateState() = DummyState(Random().nextInt())
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
