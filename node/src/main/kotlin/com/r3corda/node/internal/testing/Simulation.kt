@@ -1,6 +1,5 @@
 package com.r3corda.node.internal.testing
 
-import com.google.common.base.Function
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.node.CityDatabase
@@ -15,11 +14,14 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.utilities.AddOrRemove
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 /**
@@ -145,6 +147,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
     val banks: List<SimulatedNode> = bankFactory.createAll()
 
+    val clocks = (serviceProviders + regulators + banks).map { it.services.clock as TestClock }
+
     private val _allProtocolSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()
     val allProtocolSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allProtocolSteps
@@ -156,14 +160,21 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
      * The current simulated date. By default this never changes. If you want it to change, you should do so from
      * within your overridden [iterate] call. Changes in the current day surface in the [dateChanges] observable.
      */
-    var currentDay: LocalDate = LocalDate.now()
+    var currentDateAndTime: LocalDateTime = LocalDate.now().atStartOfDay()
         protected set(value) {
             field = value
             _dateChanges.onNext(value)
         }
 
-    private val _dateChanges = PublishSubject.create<LocalDate>()
-    val dateChanges: Observable<LocalDate> = _dateChanges
+    private val _dateChanges = PublishSubject.create<LocalDateTime>()
+    val dateChanges: Observable<LocalDateTime> get() = _dateChanges
+
+    init {
+        // Advance node clocks when current time is changed
+        dateChanges.subscribe {
+            clocks.setTo(currentDateAndTime.toInstant(ZoneOffset.UTC))
+        }
+    }
 
     /**
      * A place for simulations to stash human meaningful text about what the node is "thinking", which might appear
@@ -201,7 +212,15 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         return null
     }
 
-    protected fun linkProtocolProgress(node: SimulatedNode, protocol: ProtocolLogic<*>) {
+    protected fun showProgressFor(nodes: List<SimulatedNode>) {
+        nodes.forEach { node ->
+            node.smm.changes.filter { it.second == AddOrRemove.ADD }.first().subscribe {
+                linkProtocolProgress(node, it.first)
+            }
+        }
+    }
+
+    private fun linkProtocolProgress(node: SimulatedNode, protocol: ProtocolLogic<*>) {
         val pt = protocol.progressTracker ?: return
         pt.changes.subscribe { change: ProgressTracker.Change ->
             // Runs on node thread.
@@ -211,7 +230,15 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         _allProtocolSteps.onNext(Pair(node, ProgressTracker.Change.Position(pt, pt.steps[1])))
     }
 
-    protected fun linkConsensus(nodes: Collection<SimulatedNode>, protocol: ProtocolLogic<*>) {
+
+    protected fun showConsensusFor(nodes: List<SimulatedNode>) {
+        val node = nodes.first()
+        node.smm.changes.filter { it.second == AddOrRemove.ADD }.first().subscribe {
+            linkConsensus(nodes, it.first)
+        }
+    }
+
+    private fun linkConsensus(nodes: Collection<SimulatedNode>, protocol: ProtocolLogic<*>) {
         protocol.progressTracker?.changes?.subscribe { change: ProgressTracker.Change ->
             // Runs on node thread.
             if (protocol.progressTracker!!.currentStep == ProgressTracker.DONE) {

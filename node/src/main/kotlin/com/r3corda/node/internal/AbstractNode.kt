@@ -12,6 +12,8 @@ import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.*
+import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
@@ -24,6 +26,8 @@ import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.events.NodeSchedulerService
+import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
@@ -48,7 +52,6 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.security.Security
 import java.time.Clock
-import java.time.Instant
 import java.util.*
 
 /**
@@ -89,8 +92,16 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
-        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
+        override val schedulerService: SchedulerService get() = scheduler
         override val clock: Clock = platformClock
+
+        // Internal only
+        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
+        override val protocolLogicRefFactory = ProtocolLogicRefFactory()
+
+        override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
+            return smm.add(loggerName, logic)
+        }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) =
                 recordTransactionsInternal(storage, txs)
@@ -112,6 +123,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
     lateinit var api: APIServer
+    lateinit var scheduler: SchedulerService
     var isPreviousCheckpointsPresent = false
         private set
 
@@ -140,7 +152,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // the identity key. But the infrastructure to make that easy isn't here yet.
         keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
         api = APIServerImpl(this)
-        smm = StateMachineManager(services, listOf(storage, net, wallet, keyManagement, identity, platformClock), checkpointStorage, serverThread)
+        scheduler = NodeSchedulerService(services)
+        smm = StateMachineManager(services,
+                listOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler, interestRatesService),
+                checkpointStorage,
+                serverThread)
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
@@ -154,6 +170,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         ANSIProgressObserver(smm)
         // Add wallet observers
         CashBalanceAsMetricsObserver(services)
+        ScheduledActivityObserver(services)
 
         startMessagingService()
         _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
@@ -210,7 +227,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     private fun updateRegistration(serviceInfo: NodeInfo, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
         // Register this node against the network
-        val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, networkMapSeq++, type, expires)
         val sessionID = random63BitValue()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
@@ -227,7 +244,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     open protected fun makeNetworkMapService() {
-        val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
         inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }

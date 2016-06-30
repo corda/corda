@@ -14,7 +14,6 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.Executor
-import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.withLock
@@ -143,9 +142,13 @@ inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () ->
  *
  * val ii = state.locked { i }
  */
-class ThreadBox<T>(content: T, val lock: Lock = ReentrantLock()) {
+class ThreadBox<T>(content: T, val lock: ReentrantLock = ReentrantLock()) {
     val content = content
     inline fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
+    inline fun <R> alreadyLocked(body: T.() -> R): R {
+        check(lock.isHeldByCurrentThread, { "Expected $lock to already be locked." })
+        return body(content)
+    }
 }
 
 /**

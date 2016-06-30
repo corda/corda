@@ -20,6 +20,7 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapCache: NetworkMapCache
+    val schedulerService: SchedulerService
     val clock: Clock
 
     /**

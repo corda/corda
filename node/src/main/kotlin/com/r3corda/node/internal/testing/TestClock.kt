@@ -49,3 +49,9 @@ class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableC
         return delegateClock.zone
     }
 }
+
+/**
+ * A helper method to set several [TestClock]s to approximately the same time.  The clocks may drift by the time it
+ * takes for each [TestClock] to have it's time set and any observers to execute.
+ */
+fun Iterable<TestClock>.setTo(instant: Instant) = this.forEach { it.setTo(instant) }
