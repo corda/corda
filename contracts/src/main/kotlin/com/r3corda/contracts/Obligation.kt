@@ -1,7 +1,8 @@
 package com.r3corda.contracts
 
 import com.google.common.annotations.VisibleForTesting
-import com.r3corda.contracts.cash.*
+import com.r3corda.contracts.cash.FungibleAssetState
+import com.r3corda.contracts.cash.sumFungibleOrNull
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -18,12 +19,10 @@ import java.util.*
 val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
 
 /**
- * A cash settlement contract commits the obligor to delivering a specified amount of cash (represented as the [Cash]
- * contract) at a specified future point in time. Similarly to cash, settlement transactions may split and merge
- * contracts across multiple input and output states.
- *
- * The goal of this design is to handle money owed, and these contracts are expected to be netted/merged, with
- * settlement only for any remainder amount.
+ * An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
+ * [Cash] contract) at a specified future point in time. Settlement transactions may split and merge contracts across
+ * multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
+ * to be netted/merged, with settlement only for any remainder amount.
  *
  * @param P the product the obligation is for payment of.
  */
@@ -92,9 +91,9 @@ class Obligation<P> : Contract {
      * @param P the product the obligation is for payment of.
      */
     data class StateTemplate<P>(
-            /** The hash of the cash contract we're willing to accept in payment for this debt. */
+            /** The hash of the asset contract we're willing to accept in payment for this debt. */
             val acceptableContracts: NonEmptySet<SecureHash>,
-            /** The parties whose cash we are willing to accept in payment for this debt. */
+            /** The parties whose assets we are willing to accept in payment for this debt. */
             val acceptableIssuedProducts: NonEmptySet<Issued<P>>,
 
             /** When the contract must be settled by. */
@@ -119,7 +118,7 @@ class Obligation<P> : Contract {
 
     /**
      * A state representing the obligation of one party (obligor) to deliver a specified number of
-     * units of an underlying asset (described as issuanceDef.acceptableCashIssuance) to the beneficiary
+     * units of an underlying asset (described as issuanceDef.acceptableIssuedProducts) to the beneficiary
      * no later than the specified time.
      *
      * @param P the product the obligation is for payment of.
@@ -197,7 +196,7 @@ class Obligation<P> : Contract {
     // Just for grouping
     interface Commands : CommandData {
         /**
-         * Net two or more cash settlement states together in a close-out netting style. Limited to bilateral netting
+         * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting
          * as only the beneficiary (not the obligor) needs to sign.
          */
         data class Net(val type: NetType) : Commands
@@ -222,7 +221,7 @@ class Obligation<P> : Contract {
         /**
          * A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
-         * @see [Cash.Commands.Move]
+         * @see [MoveCommand]
          */
         data class Settle<P>(override val aggregateState: IssuanceDefinition<P>,
                              val amount: Amount<P>) : Commands, IssuanceCommands<P>
@@ -288,9 +287,9 @@ class Obligation<P> : Contract {
                                    outputs: List<State<P>>,
                                    obligor: Party,
                                    key: IssuanceDefinition<P>) {
-        // We've already pre-grouped by currency amongst other fields, and verified above that every state specifies
+        // We've already pre-grouped by product amongst other fields, and verified above that every state specifies
         // at least one acceptable issuance definition, so we can just use the first issuance definition to
-        // determine currency
+        // determine product
         val issued = key.template.acceptableIssuedProducts.first()
 
         // Issue, default, net and settle commands are all single commands (there's only ever one of them, and
@@ -482,13 +481,13 @@ class Obligation<P> : Contract {
         val inputAmount: Amount<P> = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
         val outputAmount: Amount<P> = outputs.sumObligationsOrZero(issued.product)
 
-        // Sum up all cash state objects that are moving and fulfil our requirements
+        // Sum up all asset state objects that are moving and fulfil our requirements
 
-        // The cash contract verification handles ensuring there's inputs enough to cover the output states, we only
-        // care about counting how much cash is output in this transaction. We then calculate the difference in
+        // The fungible asset contract verification handles ensuring there's inputs enough to cover the output states,
+        // we only care about counting how much is output in this transaction. We then calculate the difference in
         // settlement amounts between the transaction inputs and outputs, and the two must match. No elimination is
-        // done of amounts paid in by each beneficiary, as it's presumed the beneficiarys have enough sense to do that themselves.
-        // Therefore if someone actually signed the following transaction:
+        // done of amounts paid in by each beneficiary, as it's presumed the beneficiaries have enough sense to do that
+        // themselves. Therefore if someone actually signed the following transaction (using cash just for an example):
         //
         // Inputs:
         //  £1m cash owned by B
@@ -500,23 +499,23 @@ class Obligation<P> : Contract {
         //  Move (signed by B)
         //
         // That would pass this check. Ensuring they do not is best addressed in the transaction generation stage.
-        val cashStates = tx.outputs.filterIsInstance<FungibleAssetState<*, *>>()
-        val acceptableCashStates = cashStates
-                // TODO: This filter is nonsense, because it just checks there is a cash contract loaded, we need to
-                // verify the cash contract is the cash contract we expect.
+        val assetStates = tx.outputs.filterIsInstance<FungibleAssetState<*, *>>()
+        val acceptableAssetStates = assetStates
+                // TODO: This filter is nonsense, because it just checks there is an asset contract loaded, we need to
+                // verify the asset contract is the asset contract we expect.
                 // Something like:
-                //    attachments.mustHaveOneOf(key.acceptableCashContract)
+                //    attachments.mustHaveOneOf(key.acceptableAssetContract)
                 .filter { it.contract.legalContractReference in template.acceptableContracts }
                 // Restrict the states to those of the correct issuance definition (this normally
-                // covers currency and obligor, but is opaque to us)
+                // covers issued product and obligor, but is opaque to us)
                 .filter { it.issuanceDef in template.acceptableIssuedProducts }
         // Catch that there's nothing useful here, so we can dump out a useful error
         requireThat {
-            "there are cash state outputs" by (cashStates.size > 0)
-            "there are defined acceptable cash states" by (acceptableCashStates.size > 0)
+            "there are fungible asset state outputs" by (assetStates.size > 0)
+            "there are defined acceptable fungible asset states" by (acceptableAssetStates.size > 0)
         }
 
-        val amountReceivedByOwner = acceptableCashStates.groupBy { it.owner }
+        val amountReceivedByOwner = acceptableAssetStates.groupBy { it.owner }
         // Note we really do want to search all commands, because we want move commands of other contracts, not just
         // this one.
         val moveCommands = tx.commands.select<MoveCommand>()
@@ -524,7 +523,7 @@ class Obligation<P> : Contract {
         val requiredSigners = inputs.map { it.obligor.owningKey }.toSet()
 
         for ((beneficiary, obligations) in inputs.groupBy { it.beneficiary }) {
-            val settled = amountReceivedByOwner[beneficiary]?.sumCashOrNull()
+            val settled = amountReceivedByOwner[beneficiary]?.sumFungibleOrNull<P>()
             if (settled != null) {
                 val debt = obligations.sumObligationsOrZero(issued)
                 require(settled.quantity <= debt.quantity) { "Payment of $settled must not exceed debt $debt" }
@@ -655,20 +654,22 @@ class Obligation<P> : Contract {
     /**
      * @param statesAndRefs a list of state objects, which MUST all have the same aggregate state. This is done as
      * only a single settlement command can be present in a transaction, to avoid potential problems with allocating
-     * cash to different obligation issuances.
-     * @param cashStatesAndRefs a list of cash state objects, which MUST all be in the same currency. It is strongly
-     * encouraged that these all have the same beneficiary.
+     * assets to different obligation issuances.
+     * @param assetStatesAndRefs a list of fungible asset state objects, which MUST all be of the same issued product.
+     * It is strongly encouraged that these all have the same beneficiary.
+     * @param moveCommand the command used to move the asset state objects to their new owner.
      */
     fun generateSettle(tx: TransactionBuilder,
                        statesAndRefs: Iterable<StateAndRef<State<P>>>,
-                       cashStatesAndRefs: Iterable<StateAndRef<FungibleAssetState<P, *>>>,
+                       assetStatesAndRefs: Iterable<StateAndRef<FungibleAssetState<P, *>>>,
+                       moveCommand: MoveCommand,
                        notary: Party) {
         val states = statesAndRefs.map { it.state }
         val obligationIssuer = states.first().data.obligor
         val obligationOwner = states.first().data.beneficiary
 
         requireThat {
-            "all cash states use the same notary" by (cashStatesAndRefs.all { it.state.notary == notary })
+            "all fungible asset states use the same notary" by (assetStatesAndRefs.all { it.state.notary == notary })
             "all obligation states are in the normal state" by (statesAndRefs.all { it.state.data.lifecycle == Lifecycle.NORMAL })
             "all obligation states use the same notary" by (statesAndRefs.all { it.state.notary == notary })
             "all obligation states have the same obligor" by (statesAndRefs.all { it.state.data.obligor == obligationIssuer })
@@ -676,32 +677,32 @@ class Obligation<P> : Contract {
         }
 
         // TODO: A much better (but more complex) solution would be to have two iterators, one for obligations,
-        // one for cash, and step through each in a semi-synced manner. For now however we just bundle all the states
+        // one for the assets, and step through each in a semi-synced manner. For now however we just bundle all the states
         // on each side together
 
         val issuanceDef = getIssuanceDefinitionOrThrow(statesAndRefs.map { it.state.data })
         val template = issuanceDef.template
         val obligationTotal: Amount<P> = states.map { it.data }.sumObligations<P>()
         var obligationRemaining: Amount<P> = obligationTotal
-        val cashSigners = HashSet<PublicKey>()
+        val assetSigners = HashSet<PublicKey>()
 
         statesAndRefs.forEach { tx.addInputState(it) }
 
-        // Move the cash to the new beneficiary
-        cashStatesAndRefs.forEach {
+        // Move the assets to the new beneficiary
+        assetStatesAndRefs.forEach {
             if (obligationRemaining.quantity > 0L) {
-                val cashState = it.state
+                val assetState = it.state
                 tx.addInputState(it)
-                if (obligationRemaining >= cashState.data.productAmount) {
-                    tx.addOutputState(cashState.data.move(cashState.data.productAmount, obligationOwner), notary)
-                    obligationRemaining -= cashState.data.productAmount
+                if (obligationRemaining >= assetState.data.productAmount) {
+                    tx.addOutputState(assetState.data.move(assetState.data.productAmount, obligationOwner), notary)
+                    obligationRemaining -= assetState.data.productAmount
                 } else {
                     // Split the state in two, sending the change back to the previous beneficiary
-                    tx.addOutputState(cashState.data.move(obligationRemaining, obligationOwner), notary)
-                    tx.addOutputState(cashState.data.move(cashState.data.productAmount - obligationRemaining, cashState.data.owner), notary)
+                    tx.addOutputState(assetState.data.move(obligationRemaining, obligationOwner), notary)
+                    tx.addOutputState(assetState.data.move(assetState.data.productAmount - obligationRemaining, assetState.data.owner), notary)
                     obligationRemaining -= Amount(0L, obligationRemaining.token)
                 }
-                cashSigners.add(cashState.data.owner)
+                assetSigners.add(assetState.data.owner)
             }
         }
 
@@ -712,8 +713,8 @@ class Obligation<P> : Contract {
             // Destroy all of the states
         }
 
-        // Add the cash move command and obligation settle
-        tx.addCommand(Cash.Commands.Move(), cashSigners.toList())
+        // Add the asset move command and obligation settle
+        tx.addCommand(moveCommand, assetSigners.toList())
         tx.addCommand(Commands.Settle(issuanceDef, obligationTotal - obligationRemaining), obligationOwner)
     }
 
@@ -801,17 +802,15 @@ fun <P> sumAmountsDue(balances: Map<Pair<PublicKey, PublicKey>, Amount<P>>): Map
     return sum
 }
 
-/** Sums the cash states in the list, throwing an exception if there are none.
- * All cash states in the list are presumed to be nettable.
- */
+/** Sums the obligation states in the list, throwing an exception if there are none. All state objects in the list are presumed to be nettable. */
 fun <P> Iterable<ContractState>.sumObligations(): Amount<P>
         = filterIsInstance<Obligation.State<P>>().map { it.amount }.sumOrThrow()
 
-/** Sums the cash settlement states in the list, returning null if there are none. */
+/** Sums the obligation states in the list, returning null if there are none. */
 fun <P> Iterable<ContractState>.sumObligationsOrNull(): Amount<P>?
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrNull()
 
-/** Sums the cash settlement states in the list, returning zero of the given currency if there are none. */
+/** Sums the obligation states in the list, returning zero of the given product if there are none. */
 fun <P> Iterable<ContractState>.sumObligationsOrZero(product: P): Amount<P>
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(product)
 

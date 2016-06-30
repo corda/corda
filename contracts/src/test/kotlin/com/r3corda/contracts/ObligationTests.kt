@@ -317,7 +317,7 @@ class ObligationTests {
 
         // Now generate a transaction settling the obligation
         val settleTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-            Obligation<Currency>().generateSettle(this, listOf(obligationTx.outRef(0)), listOf(cashTx.outRef(0)), DUMMY_NOTARY)
+            Obligation<Currency>().generateSettle(this, listOf(obligationTx.outRef(0)), listOf(cashTx.outRef(0)), Cash.Commands.Move(), DUMMY_NOTARY)
             signWith(DUMMY_NOTARY_KEY)
             signWith(MINI_CORP_KEY)
         }.toSignedTransaction().tx
