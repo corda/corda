@@ -189,7 +189,9 @@ sealed class CliParams {
 
         private fun parseDateChange(options: OptionSet): DateChange {
             return DateChange(
-                    apiAddress = HostAndPort.fromString(options.valueOf(CliParamsSpec.apiAddressArg)),
+                    apiAddress = HostAndPort.fromString(options.valueOf(
+                            CliParamsSpec.apiAddressArg.defaultsTo("localhost:${defaultApiPort(IRSDemoNode.NodeA)}")
+                    )),
                     dateString = options.valuesOf(CliParamsSpec.nonOptions).let {
                         if (it.size > 0) {
                             it[0]
