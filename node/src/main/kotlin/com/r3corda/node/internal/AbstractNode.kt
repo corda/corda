@@ -33,6 +33,7 @@ import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.persistence.*
 import com.r3corda.node.services.statemachine.StateMachineManager
@@ -50,7 +51,6 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.Security
 import java.time.Clock
 import java.util.*
 
@@ -160,8 +160,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
-        DataVendingService(net, storage)
-        NotaryChangeService(net, smm)
+        DataVendingService(net, storage, services.networkMapCache)
+        NotaryChangeService(net, smm, services.networkMapCache)
 
         buildAdvertisedServices()
 
@@ -231,9 +231,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val reg = NodeRegistration(info, networkMapSeq++, type, expires)
         val sessionID = random63BitValue()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
-        val message = net.createMessage(NetworkMapService.REGISTER_PROTOCOL_TOPIC + ".0", request.serialize().bits)
+        val message = net.createMessage("$REGISTER_PROTOCOL_TOPIC.0", request.serialize().bits)
         val future = SettableFuture.create<NetworkMapService.RegistrationResponse>()
-        val topic = NetworkMapService.REGISTER_PROTOCOL_TOPIC + "." + sessionID
+        val topic = "$REGISTER_PROTOCOL_TOPIC.$sessionID"
 
         net.runOnNextMessage(topic, RunOnCallerThread) { message ->
             future.set(message.data.deserialize())
@@ -254,8 +254,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
         inNodeNotaryService = when (type) {
-            is SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider)
-            is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider)
+            is SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
+            is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
             else -> null
         }
     }

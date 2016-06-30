@@ -11,7 +11,6 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.days
 import com.r3corda.core.logElapsedTime
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
@@ -163,17 +162,13 @@ fun runTraderDemo(args: Array<String>): Int {
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
-        val recipient = ArtemisMessagingService.makeRecipient(theirNetAddr)
-        runSeller(myNetAddr, node, recipient, amount)
+        runSeller(node, amount, cashIssuer)
     }
 
     return 0
 }
 
-private fun runSeller(myNetAddr: HostAndPort,
-                      node: Node,
-                      recipient: SingleMessageRecipient,
-                      amount: Amount<Issued<Currency>>) {
+private fun runSeller(node: Node, amount: Amount<Issued<Currency>>, otherSide: Party) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -192,7 +187,7 @@ private fun runSeller(myNetAddr: HostAndPort,
             it.second.get()
         }
     } else {
-        val seller = TraderDemoProtocolSeller(myNetAddr, recipient, amount)
+        val seller = TraderDemoProtocolSeller(otherSide, amount)
         node.smm.add("demo.seller", seller).get()
     }
 
@@ -208,8 +203,7 @@ private fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
     }
 
     val future = if (node.isPreviousCheckpointsPresent) {
-        val (@Suppress("UNUSED_VARIABLE") buyer, future) = node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single()
-        future
+        node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single().second
     } else {
         // We use a simple scenario-specific wrapper protocol to make things happen.
         val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity, amount)
@@ -249,16 +243,19 @@ private class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
             // As the seller initiates the two-party trade protocol, here, we will be the buyer.
             try {
                 progressTracker.currentStep = WAITING_FOR_SELLER_TO_CONNECT
-                val origin = receive<HostAndPort>(DEMO_TOPIC, 0).validate { it.withDefaultPort(Node.DEFAULT_PORT) }
-                val recipient = ArtemisMessagingService.makeRecipient(origin as HostAndPort)
+                val newPartnerParty = receive<Party>(DEMO_TOPIC, 0).validate {
+                    val ourVersionOfParty = serviceHub.networkMapCache.getNodeByLegalName(it.name)!!.identity
+                    require(ourVersionOfParty == it)
+                    it
+                }
 
                 // The session ID disambiguates the test trade.
                 val sessionID = random63BitValue()
                 progressTracker.currentStep = STARTING_BUY
-                send(DEMO_TOPIC, recipient, 0, sessionID)
+                send(DEMO_TOPIC, newPartnerParty, 0, sessionID)
 
                 val notary = serviceHub.networkMapCache.notaryNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(recipient, notary.identity, amount,
+                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerParty, notary.identity, amount,
                         CommercialPaper.State::class.java, sessionID)
 
                 // This invokes the trading protocol and out pops our finished transaction.
@@ -301,10 +298,9 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
     }
 }
 
-private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
-                               val otherSide: SingleMessageRecipient,
-                               val amount: Amount<Issued<Currency>>,
-                               override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
+private class TraderDemoProtocolSeller(val otherSide: Party,
+                                       val amount: Amount<Issued<Currency>>,
+                                       override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
     companion object {
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
 
@@ -326,7 +322,7 @@ private class TraderDemoProtocolSeller(val myAddress: HostAndPort,
     override fun call() {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>(DEMO_TOPIC, otherSide, 0, 0, myAddress).validate { it }
+        val sessionID = sendAndReceive<Long>(DEMO_TOPIC, otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).validate { it }
 
         progressTracker.currentStep = SELF_ISSUING
 

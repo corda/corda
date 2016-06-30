@@ -41,7 +41,7 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(node: AbstractNode) : AcceptsFileUpload, AbstractNodeService(node.services.networkService) {
+    class Service(node: AbstractNode) : AcceptsFileUpload, AbstractNodeService(node.services.networkService, node.services.networkMapCache) {
         val ss = node.services.storageService
         val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey, node.services.clock)
 
@@ -84,7 +84,7 @@ object NodeInterestRates {
             override fun call(): Unit {
                 val answers = service.oracle.query(request.queries, request.deadline)
                 progressTracker.currentStep = SENDING
-                send("${RatesFixProtocol.TOPIC}.query", request.replyTo, request.sessionID!!, answers)
+                send("${RatesFixProtocol.TOPIC}.query", request.replyToParty, request.sessionID, answers)
             }
 
         }

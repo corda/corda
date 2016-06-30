@@ -6,7 +6,6 @@ import com.r3corda.core.contracts.TransactionVerificationException
 import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.contracts.toLedgerTransaction
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessProvider
 import java.security.SignatureException
@@ -17,7 +16,7 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid
  */
-class ValidatingNotaryProtocol(otherSide: SingleMessageRecipient,
+class ValidatingNotaryProtocol(otherSide: Party,
                                sessionIdForSend: Long,
                                sessionIdForReceive: Long,
                                timestampChecker: TimestampChecker,
@@ -52,7 +51,6 @@ class ValidatingNotaryProtocol(otherSide: SingleMessageRecipient,
 
     @Suspendable
     private fun validateDependencies(reqIdentity: Party, wtx: WireTransaction) {
-        val otherSide = serviceHub.networkMapCache.getNodeByPublicKey(reqIdentity.owningKey)!!.address
-        subProtocol(ResolveTransactionsProtocol(wtx, otherSide))
+        subProtocol(ResolveTransactionsProtocol(wtx, reqIdentity))
     }
 }

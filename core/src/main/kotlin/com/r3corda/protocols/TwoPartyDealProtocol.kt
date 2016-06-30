@@ -6,7 +6,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -72,7 +71,7 @@ object TwoPartyDealProtocol {
 
         abstract val payload: U
         abstract val notaryNode: NodeInfo
-        abstract val otherSide: SingleMessageRecipient
+        abstract val otherSide: Party
         abstract val otherSessionID: Long
         abstract val myKeyPair: KeyPair
 
@@ -153,7 +152,7 @@ object TwoPartyDealProtocol {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
                 for (regulator in regulators) {
-                    send("regulator.all.seeing.eye", regulator.address, 0, fullySigned)
+                    send("regulator.all.seeing.eye", regulator.identity, 0, fullySigned)
                 }
             }
 
@@ -203,7 +202,7 @@ object TwoPartyDealProtocol {
             fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES, RECORDING)
         }
 
-        abstract val otherSide: SingleMessageRecipient
+        abstract val otherSide: Party
         abstract val sessionID: Long
 
         @Suspendable
@@ -276,7 +275,7 @@ object TwoPartyDealProtocol {
     /**
      * One side of the protocol for inserting a pre-agreed deal.
      */
-    open class Instigator<T : DealState>(override val otherSide: SingleMessageRecipient,
+    open class Instigator<T : DealState>(override val otherSide: Party,
                                          val notary: Party,
                                          override val payload: T,
                                          override val myKeyPair: KeyPair,
@@ -290,7 +289,7 @@ object TwoPartyDealProtocol {
     /**
      * One side of the protocol for inserting a pre-agreed deal.
      */
-    open class Acceptor<T : DealState>(override val otherSide: SingleMessageRecipient,
+    open class Acceptor<T : DealState>(override val otherSide: Party,
                                        val notary: Party,
                                        val dealToBuy: T,
                                        override val sessionID: Long,
@@ -342,7 +341,7 @@ object TwoPartyDealProtocol {
 
         override val sessionID: Long get() = initiation.sessionID
 
-        override val otherSide: SingleMessageRecipient get() = initiation.sender
+        override val otherSide: Party get() = initiation.sender
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState
@@ -360,8 +359,6 @@ object TwoPartyDealProtocol {
             val myName = serviceHub.storageService.myLegalIdentity.name
             val otherParty = deal.parties.filter { it.name != myName }.single()
             check(otherParty == initiation.party)
-            val otherPartyAddress = serviceHub.networkMapCache.getNodeByLegalName(otherParty.name)!!.address
-            check(otherPartyAddress == otherSide)
             // Also check we are one of the parties
             deal.parties.filter { it.name == myName }.single()
 
@@ -380,7 +377,7 @@ object TwoPartyDealProtocol {
             val newDeal = deal
 
             val ptx = TransactionType.General.Builder()
-            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0], fixOf, BigDecimal.ZERO, BigDecimal.ONE, initiation.timeout) {
+            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0].identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE, initiation.timeout) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload), fix)
@@ -417,11 +414,10 @@ object TwoPartyDealProtocol {
             return serviceHub.keyManagementService.toKeyPair(publicKey)
         }
 
-        override val otherSide: SingleMessageRecipient get() {
+        override val otherSide: Party get() {
             // TODO: what happens if there's no node?  Move to messaging taking Party and then handled in messaging layer
             val myName = serviceHub.storageService.myLegalIdentity.name
-            val otherParty = dealToFix.state.data.parties.filter { it.name != myName }.single()
-            return serviceHub.networkMapCache.getNodeByLegalName(otherParty.name)!!.address
+            return dealToFix.state.data.parties.filter { it.name != myName }.single()
         }
 
         override val notaryNode: NodeInfo get() =
@@ -432,7 +428,7 @@ object TwoPartyDealProtocol {
     val FIX_INITIATE_TOPIC = "platform.fix.initiate"
 
     /** Used to set up the session between [Floater] and [Fixer] */
-    data class FixingSessionInitiation(val sessionID: Long, val party: Party, val sender: SingleMessageRecipient, val timeout: Duration)
+    data class FixingSessionInitiation(val sessionID: Long, val party: Party, val sender: Party, val timeout: Duration)
 
     /**
      * This protocol looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.
@@ -459,10 +455,10 @@ object TwoPartyDealProtocol {
             if (sortedParties[0].name == serviceHub.storageService.myLegalIdentity.name) {
                 // Generate sessionID
                 val sessionID = random63BitValue()
-                val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.networkService.myAddress, timeout)
+                val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.storageService.myLegalIdentity, timeout)
 
                 // Send initiation to other side to launch one side of the fixing protocol (the Fixer).
-                send(FIX_INITIATE_TOPIC, serviceHub.networkMapCache.getNodeByLegalName(sortedParties[1].name)!!.address, 0, initation)
+                send(FIX_INITIATE_TOPIC, sortedParties[1], 0, initation)
 
                 // Then start the other side of the fixing protocol.
                 val protocol = Floater(ref, sessionID)

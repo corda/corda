@@ -6,8 +6,7 @@ import com.r3corda.core.contracts.FixOf
 import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
@@ -28,7 +27,7 @@ import java.util.*
  * @throws FixOutOfRange if the returned fix was further away from the expected rate by the given amount.
  */
 open class RatesFixProtocol(protected val tx: TransactionBuilder,
-                            private val oracle: NodeInfo,
+                            private val oracle: Party,
                             private val fixOf: FixOf,
                             private val expectedRate: BigDecimal,
                             private val rateTolerance: BigDecimal,
@@ -48,8 +47,8 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     class FixOutOfRange(val byAmount: BigDecimal) : Exception()
 
-    class QueryRequest(val queries: List<FixOf>, replyTo: SingleMessageRecipient, sessionID: Long, val deadline: Instant) : AbstractRequestMessage(replyTo, sessionID)
-    class SignRequest(val tx: WireTransaction, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class QueryRequest(val queries: List<FixOf>, replyTo: Party, override val sessionID: Long, val deadline: Instant) : AbstractRequestMessage(replyTo)
+    class SignRequest(val tx: WireTransaction, replyTo: Party, override val sessionID: Long) : AbstractRequestMessage(replyTo)
 
     @Suspendable
     override fun call() {
@@ -57,7 +56,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
         val fix = query()
         progressTracker.currentStep = WORKING
         checkFixIsNearExpected(fix)
-        tx.addCommand(fix, oracle.identity.owningKey)
+        tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
         tx.addSignatureUnchecked(sign())
@@ -83,11 +82,11 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
     fun sign(): DigitalSignature.LegallyIdentifiable {
         val sessionID = random63BitValue()
         val wtx = tx.toWireTransaction()
-        val req = SignRequest(wtx, serviceHub.networkService.myAddress, sessionID)
-        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(TOPIC_SIGN, oracle.address, 0, sessionID, req)
+        val req = SignRequest(wtx, serviceHub.storageService.myLegalIdentity, sessionID)
+        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(TOPIC_SIGN, oracle, 0, sessionID, req)
 
         return resp.validate { sig ->
-            check(sig.signer == oracle.identity)
+            check(sig.signer == oracle)
             tx.checkSignature(sig)
             sig
         }
@@ -96,10 +95,10 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
     @Suspendable
     fun query(): Fix {
         val sessionID = random63BitValue()
-        val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.identity.name, fixOf.forDay).end
-        val req = QueryRequest(listOf(fixOf), serviceHub.networkService.myAddress, sessionID, deadline)
+        val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name, fixOf.forDay).end
+        val req = QueryRequest(listOf(fixOf), serviceHub.storageService.myLegalIdentity, sessionID, deadline)
         // TODO: add deadline to receive
-        val resp = sendAndReceive<ArrayList<Fix>>(TOPIC_QUERY, oracle.address, 0, sessionID, req)
+        val resp = sendAndReceive<ArrayList<Fix>>(TOPIC_QUERY, oracle, 0, sessionID, req)
 
         return resp.validate {
             val fix = it.first()

@@ -7,7 +7,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -61,7 +60,7 @@ object TwoPartyTradeProtocol {
     class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
                                val notarySig: DigitalSignature.LegallyIdentifiable)
 
-    open class Seller(val otherSide: SingleMessageRecipient,
+    open class Seller(val otherSide: Party,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Issued<Currency>>,
@@ -172,7 +171,7 @@ object TwoPartyTradeProtocol {
         }
     }
 
-    open class Buyer(val otherSide: SingleMessageRecipient,
+    open class Buyer(val otherSide: Party,
                      val notary: Party,
                      val acceptablePrice: Amount<Issued<Currency>>,
                      val typeToBuy: Class<out OwnableState>,

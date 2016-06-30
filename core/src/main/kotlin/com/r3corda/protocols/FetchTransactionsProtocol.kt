@@ -1,8 +1,8 @@
 package com.r3corda.protocols
 
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.messaging.SingleMessageRecipient
 
 /**
  * Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.
@@ -12,7 +12,7 @@ import com.r3corda.core.messaging.SingleMessageRecipient
  * results in a [FetchDataProtocol.HashNotFound] exception. Note that returned transactions are not inserted into
  * the database, because it's up to the caller to actually verify the transactions are valid.
  */
-class FetchTransactionsProtocol(requests: Set<SecureHash>, otherSide: SingleMessageRecipient) :
+class FetchTransactionsProtocol(requests: Set<SecureHash>, otherSide: Party) :
         FetchDataProtocol<SignedTransaction, SignedTransaction>(requests, otherSide) {
     companion object {
         const val TOPIC = "platform.fetch.tx"

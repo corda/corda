@@ -11,7 +11,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -56,14 +55,14 @@ class TwoPartyTradeProtocolTests {
     lateinit var net: MockNetwork
 
     private fun runSeller(smm: StateMachineManager, notary: NodeInfo,
-                          otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount<Issued<Currency>>,
+                          otherSide: Party, assetToSell: StateAndRef<OwnableState>, price: Amount<Issued<Currency>>,
                           myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
         return smm.add("${TwoPartyTradeProtocol.TRADE_TOPIC}.seller", seller)
     }
 
     private fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
-                         otherSide: SingleMessageRecipient, acceptablePrice: Amount<Issued<Currency>>, typeToBuy: Class<out OwnableState>,
+                         otherSide: Party, acceptablePrice: Amount<Issued<Currency>>, typeToBuy: Class<out OwnableState>,
                          sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = TwoPartyTradeProtocol.Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
         return smm.add("${TwoPartyTradeProtocol.TRADE_TOPIC}.buyer", buyer)
@@ -105,7 +104,7 @@ class TwoPartyTradeProtocolTests {
             val bobResult = runBuyer(
                     bobNode.smm,
                     notaryNode.info,
-                    aliceNode.net.myAddress,
+                    aliceNode.info.identity,
                     1000.DOLLARS `issued by` issuer,
                     CommercialPaper.State::class.java,
                     buyerSessionID
@@ -113,7 +112,7 @@ class TwoPartyTradeProtocolTests {
             val aliceResult = runSeller(
                     aliceNode.smm,
                     notaryNode.info,
-                    bobNode.net.myAddress,
+                    bobNode.info.identity,
                     lookup("alice's paper"),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
@@ -139,7 +138,6 @@ class TwoPartyTradeProtocolTests {
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
             var bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
 
-            val aliceAddr = aliceNode.net.myAddress
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
             val networkMapAddr = notaryNode.info
             val issuer = bobNode.services.storageService.myLegalIdentity.ref(0)
@@ -156,7 +154,7 @@ class TwoPartyTradeProtocolTests {
             val aliceFuture = runSeller(
                     aliceNode.smm,
                     notaryNode.info,
-                    bobAddr,
+                    bobNode.info.identity,
                     lookup("alice's paper"),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
@@ -165,7 +163,7 @@ class TwoPartyTradeProtocolTests {
             runBuyer(
                     bobNode.smm,
                     notaryNode.info,
-                    aliceAddr,
+                    aliceNode.info.identity,
                     1000.DOLLARS `issued by` issuer,
                     CommercialPaper.State::class.java,
                     buyerSessionID
@@ -276,7 +274,7 @@ class TwoPartyTradeProtocolTests {
             runSeller(
                     aliceNode.smm,
                     notaryNode.info,
-                    bobNode.net.myAddress,
+                    bobNode.info.identity,
                     lookup("alice's paper"),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
@@ -285,7 +283,7 @@ class TwoPartyTradeProtocolTests {
             runBuyer(
                     bobNode.smm,
                     notaryNode.info,
-                    aliceNode.net.myAddress,
+                    aliceNode.info.identity,
                     1000.DOLLARS `issued by` issuer,
                     CommercialPaper.State::class.java,
                     buyerSessionID
@@ -371,9 +369,6 @@ class TwoPartyTradeProtocolTests {
         val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val aliceAddr = aliceNode.net.myAddress
-        val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-
         val bobKey = bobNode.keyManagement.freshKey()
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public).second
         val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.storage.myLegalIdentity.owningKey,
@@ -389,7 +384,7 @@ class TwoPartyTradeProtocolTests {
         val aliceResult = runSeller(
                 aliceNode.smm,
                 notaryNode.info,
-                bobAddr,
+                bobNode.info.identity,
                 lookup("alice's paper"),
                 1000.DOLLARS `issued by` issuer,
                 ALICE_KEY,
@@ -398,7 +393,7 @@ class TwoPartyTradeProtocolTests {
         val bobResult = runBuyer(
                 bobNode.smm,
                 notaryNode.info,
-                aliceAddr,
+                aliceNode.info.identity,
                 1000.DOLLARS `issued by` issuer,
                 CommercialPaper.State::class.java,
                 buyerSessionID

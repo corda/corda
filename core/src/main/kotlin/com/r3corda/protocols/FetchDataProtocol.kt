@@ -2,8 +2,8 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.NamedByHash
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.UntrustworthyData
@@ -27,13 +27,13 @@ import java.util.*
  */
 abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
         protected val requests: Set<SecureHash>,
-        protected val otherSide: SingleMessageRecipient) : ProtocolLogic<FetchDataProtocol.Result<T>>() {
+        protected val otherSide: Party) : ProtocolLogic<FetchDataProtocol.Result<T>>() {
 
     open class BadAnswer : Exception()
     class HashNotFound(val requested: SecureHash) : BadAnswer()
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
 
-    class Request(val hashes: List<SecureHash>, replyTo: SingleMessageRecipient, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class Request(val hashes: List<SecureHash>, replyTo: Party, override val sessionID: Long) : AbstractRequestMessage(replyTo)
     data class Result<T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     protected abstract val queryTopic: String
@@ -49,7 +49,7 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
             logger.trace("Requesting ${toFetch.size} dependency(s) for verification")
 
             val sid = random63BitValue()
-            val fetchReq = Request(toFetch, serviceHub.networkService.myAddress, sid)
+            val fetchReq = Request(toFetch, serviceHub.storageService.myLegalIdentity, sid)
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
             val maybeItems = sendAndReceive<ArrayList<W?>>(queryTopic, otherSide, 0, sid, fetchReq)
             // Check for a buggy/malicious peer answering with something that we didn't ask for.

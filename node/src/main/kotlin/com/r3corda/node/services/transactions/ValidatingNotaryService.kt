@@ -1,7 +1,8 @@
 package com.r3corda.node.services.transactions
 
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
-import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessProvider
@@ -15,14 +16,15 @@ class ValidatingNotaryService(
         smm: StateMachineManager,
         net: MessagingService,
         timestampChecker: TimestampChecker,
-        uniquenessProvider: UniquenessProvider
-) : NotaryService(smm, net, timestampChecker, uniquenessProvider) {
+        uniquenessProvider: UniquenessProvider,
+        networkMapCache: NetworkMapCache
+) : NotaryService(smm, net, timestampChecker, uniquenessProvider, networkMapCache) {
     object Type : ServiceType("corda.notary.validating")
 
     override val logger = loggerFor<ValidatingNotaryService>()
 
     override val protocolFactory = object : NotaryProtocol.Factory {
-        override fun create(otherSide: SingleMessageRecipient,
+        override fun create(otherSide: Party,
                             sendSessionID: Long,
                             receiveSessionID: Long,
                             timestampChecker: TimestampChecker,

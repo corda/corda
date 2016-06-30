@@ -1,7 +1,7 @@
 package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.messaging.MessageRecipients
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -12,14 +12,14 @@ import org.slf4j.Logger
  */
 interface ProtocolStateMachine<R> {
     @Suspendable
-    fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
-                                 obj: Any, recvType: Class<T>): UntrustworthyData<T>
+    fun <T : Any> sendAndReceive(topic: String, destination: Party, sessionIDForSend: Long, sessionIDForReceive: Long,
+                                 payload: Any, recvType: Class<T>): UntrustworthyData<T>
 
     @Suspendable
     fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T>
 
     @Suspendable
-    fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any)
+    fun send(topic: String, destination: Party, sessionID: Long, payload: Any)
 
     val serviceHub: ServiceHub
     val logger: Logger

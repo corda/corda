@@ -1,9 +1,9 @@
 package com.r3corda.protocols
 
 import com.r3corda.core.contracts.Attachment
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.sha256
-import com.r3corda.core.messaging.SingleMessageRecipient
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
@@ -12,7 +12,7 @@ import java.io.InputStream
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsProtocol(requests: Set<SecureHash>,
-                               otherSide: SingleMessageRecipient) : FetchDataProtocol<Attachment, ByteArray>(requests, otherSide) {
+                               otherSide: Party) : FetchDataProtocol<Attachment, ByteArray>(requests, otherSide) {
     companion object {
         const val TOPIC = "platform.fetch.attachment"
     }

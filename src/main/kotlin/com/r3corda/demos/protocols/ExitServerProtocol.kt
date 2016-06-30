@@ -22,7 +22,7 @@ object ExitServerProtocol {
     object Handler {
 
         fun register(node: Node) {
-            node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
+            node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
                 // Just to validate we got the message
                 if (enabled) {
                     val message = msg.data.deserialize<ExitMessage>()
@@ -62,7 +62,7 @@ object ExitServerProtocol {
             } else {
                 // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages
                 if (recipient.identity != serviceHub.storageService.myLegalIdentity) {
-                    send(TOPIC, recipient.address, 0, message)
+                    send(TOPIC, recipient.identity, 0, message)
                 }
             }
         }

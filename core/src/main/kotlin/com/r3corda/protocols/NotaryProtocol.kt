@@ -9,8 +9,6 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.messaging.Ack
-import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessException
 import com.r3corda.core.node.services.UniquenessProvider
@@ -45,21 +43,21 @@ object NotaryProtocol {
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
         }
 
-        lateinit var notaryNode: NodeInfo
+        lateinit var notaryParty: Party
 
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             progressTracker.currentStep = REQUESTING
-            notaryNode = findNotaryNode()
+            notaryParty = findNotaryParty()
 
             val sendSessionID = random63BitValue()
             val receiveSessionID = random63BitValue()
 
-            val handshake = Handshake(serviceHub.networkService.myAddress, sendSessionID, receiveSessionID)
-            sendAndReceive<Ack>(TOPIC_INITIATE, notaryNode.address, 0, receiveSessionID, handshake)
+            val handshake = Handshake(serviceHub.storageService.myLegalIdentity, sendSessionID, receiveSessionID)
+            sendAndReceive<Ack>(TOPIC_INITIATE, notaryParty, 0, receiveSessionID, handshake)
 
             val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
-            val response = sendAndReceive<Result>(TOPIC, notaryNode.address, sendSessionID, receiveSessionID, request)
+            val response = sendAndReceive<Result>(TOPIC, notaryParty, sendSessionID, receiveSessionID, request)
 
             val notaryResult = validateResponse(response)
             return notaryResult.sig ?: throw NotaryException(notaryResult.error!!)
@@ -72,17 +70,17 @@ object NotaryProtocol {
                 if (it.sig != null) validateSignature(it.sig, stx.txBits)
                 else if (it.error is NotaryError.Conflict) it.error.conflict.verified()
                 else if (it.error == null || it.error !is NotaryError)
-                    throw IllegalStateException("Received invalid result from Notary service '${notaryNode.identity}'")
+                    throw IllegalStateException("Received invalid result from Notary service '$notaryParty'")
                 return it
             }
         }
 
         private fun validateSignature(sig: DigitalSignature.LegallyIdentifiable, data: SerializedBytes<WireTransaction>) {
-            check(sig.signer == notaryNode.identity) { "Notary result not signed by the correct service" }
+            check(sig.signer == notaryParty) { "Notary result not signed by the correct service" }
             sig.verifyWithECDSA(data)
         }
 
-        private fun findNotaryNode(): NodeInfo {
+        private fun findNotaryParty(): Party {
             var maybeNotaryKey: PublicKey? = null
             val wtx = stx.tx
 
@@ -97,8 +95,8 @@ object NotaryProtocol {
             }
 
             val notaryKey = maybeNotaryKey ?: throw IllegalStateException("Transaction does not specify a Notary")
-            val notaryNode = serviceHub.networkMapCache.getNodeByPublicKey(notaryKey)
-            return notaryNode ?: throw IllegalStateException("No Notary node can be found with the specified public key")
+            val notaryParty = serviceHub.networkMapCache.getNodeByPublicKey(notaryKey)?.identity
+            return notaryParty ?: throw IllegalStateException("No Notary node can be found with the specified public key")
         }
     }
 
@@ -110,7 +108,7 @@ object NotaryProtocol {
      *
      * TODO: the notary service should only be able to see timestamp commands and inputs
      */
-    open class Service(val otherSide: SingleMessageRecipient,
+    open class Service(val otherSide: Party,
                        val sendSessionID: Long,
                        val receiveSessionID: Long,
                        val timestampChecker: TimestampChecker,
@@ -181,9 +179,9 @@ object NotaryProtocol {
     }
 
     class Handshake(
-            replyTo: SingleMessageRecipient,
+            replyTo: Party,
             val sendSessionID: Long,
-            sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+            override val sessionID: Long) : AbstractRequestMessage(replyTo)
 
     /** TODO: The caller must authenticate instead of just specifying its identity */
     class SignRequest(val tx: SignedTransaction,
@@ -197,7 +195,7 @@ object NotaryProtocol {
     }
 
     interface Factory {
-        fun create(otherSide: SingleMessageRecipient,
+        fun create(otherSide: Party,
                    sendSessionID: Long,
                    receiveSessionID: Long,
                    timestampChecker: TimestampChecker,
@@ -205,7 +203,7 @@ object NotaryProtocol {
     }
 
     object DefaultFactory : Factory {
-        override fun create(otherSide: SingleMessageRecipient,
+        override fun create(otherSide: Party,
                             sendSessionID: Long,
                             receiveSessionID: Long,
                             timestampChecker: TimestampChecker,

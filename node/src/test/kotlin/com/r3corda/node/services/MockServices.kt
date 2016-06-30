@@ -1,8 +1,8 @@
 package com.r3corda.node.services
 
 import com.codahale.metrics.MetricRegistry
-import com.r3corda.core.contracts.SignedTransaction
 import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.testing.MockStorageService
@@ -68,7 +68,7 @@ open class MockServices(
         if (net != null && storage != null) {
             // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
             // on the networking service, so that will keep it from being collected.
-            DataVendingService(net, storage)
+            DataVendingService(net, storage, networkMapCache)
         }
     }
 }

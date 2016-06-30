@@ -44,10 +44,19 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val cashIssuerKey = generateKeyPair()
         val amount = 1000.DOLLARS `issued by` Party("Big friendly bank", cashIssuerKey.public).ref(1)
         val sessionID = random63BitValue()
-        val buyerProtocol = TwoPartyTradeProtocol.Buyer(seller.net.myAddress, notary.info.identity,
-                amount, CommercialPaper.State::class.java, sessionID)
-        val sellerProtocol = TwoPartyTradeProtocol.Seller(buyer.net.myAddress, notary.info,
-                issuance.tx.outRef(0), amount, seller.storage.myLegalIdentityKey, sessionID)
+        val buyerProtocol = TwoPartyTradeProtocol.Buyer(
+                seller.info.identity,
+                notary.info.identity,
+                amount,
+                CommercialPaper.State::class.java,
+                sessionID)
+        val sellerProtocol = TwoPartyTradeProtocol.Seller(
+                buyer.info.identity,
+                notary.info,
+                issuance.tx.outRef(0),
+                amount,
+                seller.storage.myLegalIdentityKey,
+                sessionID)
 
         showConsensusFor(listOf(buyer, seller, notary))
         showProgressFor(listOf(buyer, seller))

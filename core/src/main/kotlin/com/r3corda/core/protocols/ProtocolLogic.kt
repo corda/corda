@@ -1,7 +1,7 @@
 package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.messaging.MessageRecipients
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
@@ -39,9 +39,12 @@ abstract class ProtocolLogic<T> {
     val serviceHub: ServiceHub get() = psm.serviceHub
 
     // Kotlin helpers that allow the use of generic types.
-    inline fun <reified T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long,
-                                                sessionIDForReceive: Long, obj: Any): UntrustworthyData<T> {
-        return psm.sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, T::class.java)
+    inline fun <reified T : Any> sendAndReceive(topic: String,
+                                                destination: Party,
+                                                sessionIDForSend: Long,
+                                                sessionIDForReceive: Long,
+                                                payload: Any): UntrustworthyData<T> {
+        return psm.sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, payload, T::class.java)
     }
 
     inline fun <reified T : Any> receive(topic: String, sessionIDForReceive: Long): UntrustworthyData<T> {
@@ -52,8 +55,8 @@ abstract class ProtocolLogic<T> {
         return psm.receive(topic, sessionIDForReceive, clazz)
     }
 
-    @Suspendable fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
-        psm.send(topic, destination, sessionID, obj)
+    @Suspendable fun send(topic: String, destination: Party, sessionID: Long, payload: Any) {
+        psm.send(topic, destination, sessionID, payload)
     }
 
     /**

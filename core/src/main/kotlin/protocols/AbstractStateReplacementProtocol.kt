@@ -6,7 +6,6 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.messaging.Ack
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -34,8 +33,8 @@ abstract class AbstractStateReplacementProtocol<T> {
     }
 
     class Handshake(val sessionIdForSend: Long,
-                    replyTo: SingleMessageRecipient,
-                    replySessionId: Long) : AbstractRequestMessage(replyTo, replySessionId)
+                    replyTo: Party,
+                    override val sessionID: Long) : AbstractRequestMessage(replyTo)
 
     abstract class Instigator<S : ContractState, T>(val originalState: StateAndRef<S>,
                                                     val modification: T,
@@ -89,7 +88,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             }
 
             val allSignatures = participantSignatures + getNotarySignature(stx)
-            sessions.forEach { send(TOPIC_CHANGE, it.key.address, it.value, allSignatures) }
+            sessions.forEach { send(TOPIC_CHANGE, it.key.identity, it.value, allSignatures) }
 
             return allSignatures
         }
@@ -99,10 +98,10 @@ abstract class AbstractStateReplacementProtocol<T> {
             val sessionIdForReceive = random63BitValue()
             val proposal = assembleProposal(originalState.ref, modification, stx)
 
-            val handshake = Handshake(sessionIdForSend, serviceHub.networkService.myAddress, sessionIdForReceive)
-            sendAndReceive<Ack>(TOPIC_INITIATE, node.address, 0, sessionIdForReceive, handshake)
+            val handshake = Handshake(sessionIdForSend, serviceHub.storageService.myLegalIdentity, sessionIdForReceive)
+            sendAndReceive<Ack>(TOPIC_INITIATE, node.identity, 0, sessionIdForReceive, handshake)
 
-            val response = sendAndReceive<Result>(TOPIC_CHANGE, node.address, sessionIdForSend, sessionIdForReceive, proposal)
+            val response = sendAndReceive<Result>(TOPIC_CHANGE, node.identity, sessionIdForSend, sessionIdForReceive, proposal)
             val participantSignature = response.validate {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
@@ -122,7 +121,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
     }
 
-    abstract class Acceptor<T>(val otherSide: SingleMessageRecipient,
+    abstract class Acceptor<T>(val otherSide: Party,
                                val sessionIdForSend: Long,
                                val sessionIdForReceive: Long,
                                override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
@@ -241,4 +240,4 @@ class StateReplacementRefused(val identity: Party, val state: StateRef, val deta
 }
 
 class StateReplacementException(val error: StateReplacementRefused)
-: Exception("State change failed - ${error}")
+: Exception("State change failed - $error")

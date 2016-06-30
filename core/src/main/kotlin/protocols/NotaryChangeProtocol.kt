@@ -2,18 +2,8 @@ package protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.messaging.Ack
-import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.protocols.AbstractRequestMessage
-import com.r3corda.protocols.NotaryProtocol
-import com.r3corda.protocols.ResolveTransactionsProtocol
 import java.security.PublicKey
 
 /**
@@ -58,7 +48,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
         }
     }
 
-    class Acceptor(otherSide: SingleMessageRecipient,
+    class Acceptor(otherSide: Party,
                    sessionIdForSend: Long,
                    sessionIdForReceive: Long,
                    override val progressTracker: ProgressTracker = tracker())

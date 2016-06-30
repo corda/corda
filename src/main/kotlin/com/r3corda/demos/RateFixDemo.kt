@@ -65,7 +65,7 @@ fun main(args: Array<String>) {
     val rateTolerance = BigDecimal(options.valueOf(rateToleranceArg))
 
     // Bring up node.
-    var advertisedServices: Set<ServiceType> = emptySet()
+    val advertisedServices: Set<ServiceType> = emptySet()
     val myNetAddr = ArtemisMessagingService.toHostAndPort(options.valueOf(networkAddressArg))
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
@@ -84,7 +84,7 @@ fun main(args: Array<String>) {
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionType.General.Builder()
     tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.keyManagement.freshKey().public), notary.identity))
-    val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance, 24.hours)
+    val protocol = RatesFixProtocol(tx, oracleNode.identity, fixOf, expectedRate, rateTolerance, 24.hours)
     node.smm.add("demo.ratefix", protocol).get()
     node.stop()
 

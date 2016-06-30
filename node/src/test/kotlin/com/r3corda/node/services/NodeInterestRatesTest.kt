@@ -8,9 +8,9 @@ import com.r3corda.contracts.testing.`with notary`
 import com.r3corda.core.bd
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.Fix
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
-import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.testing.ALICE_PUBKEY
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
@@ -109,8 +109,9 @@ class NodeInterestRatesTest {
 
         val tx = TransactionType.General.Builder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.info, fixOf, "0.675".bd, "0.1".bd, Duration.ofNanos(1))
+        val protocol = RatesFixProtocol(tx, n2.info.identity, fixOf, "0.675".bd, "0.1".bd, Duration.ofNanos(1))
         BriefLogFormatter.initVerbose("rates")
+        net.runNetwork()
         val future = n1.smm.add("rates", protocol)
 
         net.runNetwork()

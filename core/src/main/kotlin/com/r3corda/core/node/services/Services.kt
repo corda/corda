@@ -169,6 +169,7 @@ interface StorageService {
      * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
      * first installed.
      */
+    //TODO this should be in the IdentityService, or somewhere not here
     val myLegalIdentity: Party
     val myLegalIdentityKey: KeyPair
 }

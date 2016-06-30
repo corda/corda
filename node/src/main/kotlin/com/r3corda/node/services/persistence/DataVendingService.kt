@@ -2,6 +2,7 @@ package com.r3corda.node.services.persistence
 
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.StorageService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
@@ -24,7 +25,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.
  */
 @ThreadSafe
-class DataVendingService(net: MessagingService, private val storage: StorageService) : AbstractNodeService(net) {
+class DataVendingService(net: MessagingService, private val storage: StorageService, networkMapCache: NetworkMapCache) : AbstractNodeService(net, networkMapCache) {
     companion object {
         val logger = loggerFor<DataVendingService>()
     }

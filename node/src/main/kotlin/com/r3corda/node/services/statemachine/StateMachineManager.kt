@@ -8,7 +8,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.abbreviate
-import com.r3corda.core.messaging.MessageRecipients
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
@@ -253,7 +253,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         request.payload?.let {
             val topic = "${request.topic}.${request.sessionIDForSend}"
             psm.logger.trace { "Sending message of type ${it.javaClass.name} using topic $topic to ${request.destination} (${it.toString().abbreviate(50)})" }
-            serviceHub.networkService.send(topic, it, request.destination!!)
+            val address = serviceHub.networkMapCache.getNodeByLegalName(request.destination!!.name)!!.address
+            serviceHub.networkService.send(topic, it, address)
         }
         if (request is FiberRequest.NotExpectingResponse) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
@@ -307,7 +308,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     // TODO: Clean this up
     open class FiberRequest(val topic: String,
-                            val destination: MessageRecipients?,
+                            val destination: Party?,
                             val sessionIDForSend: Long,
                             val sessionIDForReceive: Long,
                             val payload: Any?) {
@@ -317,7 +318,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
         class ExpectingResponse<R : Any>(
                 topic: String,
-                destination: MessageRecipients?,
+                destination: Party?,
                 sessionIDForSend: Long,
                 sessionIDForReceive: Long,
                 obj: Any?,
@@ -326,7 +327,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
         class NotExpectingResponse(
                 topic: String,
-                destination: MessageRecipients,
+                destination: Party,
                 sessionIDForSend: Long,
                 obj: Any?
         ) : FiberRequest(topic, destination, sessionIDForSend, -1, obj)

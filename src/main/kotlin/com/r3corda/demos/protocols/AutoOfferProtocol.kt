@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
@@ -24,7 +23,7 @@ import com.r3corda.protocols.TwoPartyDealProtocol
 object AutoOfferProtocol {
     val TOPIC = "autooffer.topic"
 
-    data class AutoOfferMessage(val otherSide: SingleMessageRecipient,
+    data class AutoOfferMessage(val otherSide: Party,
                                 val notary: Party,
                                 val otherSessionID: Long, val dealBeingOffered: DealState)
 
@@ -67,7 +66,7 @@ object AutoOfferProtocol {
 
     }
 
-    class Requester<T>(val dealToBeOffered: DealState) : ProtocolLogic<SignedTransaction>() {
+    class Requester(val dealToBeOffered: DealState) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVED : ProgressTracker.Step("Received API call")
@@ -98,9 +97,9 @@ object AutoOfferProtocol {
             val otherParty = notUs(*dealToBeOffered.parties).single()
             val otherNode = (serviceHub.networkMapCache.getNodeByLegalName(otherParty.name))
             requireNotNull(otherNode) { "Cannot identify other party " + otherParty.name + ", know about: " + serviceHub.networkMapCache.partyNodes.map { it.identity } }
-            val otherSide = otherNode!!.address
+            val otherSide = otherNode!!.identity
             progressTracker.currentStep = ANNOUNCING
-            send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.networkService.myAddress, notary, ourSessionID, dealToBeOffered))
+            send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.storageService.myLegalIdentity, notary, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING
             val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, notary, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
             return stx

@@ -52,7 +52,7 @@ object UpdateBusinessDayProtocol {
             if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
-                send(TOPIC, recipient.address, 0, message)
+                send(TOPIC, recipient.identity, 0, message)
             }
         }
     }
