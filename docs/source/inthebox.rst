@@ -40,7 +40,7 @@ four contracts in the repository:
 1. Cash
 2. Commercial paper
 3. Nettable obligations
-4. Commercial paper
+4. Interest rate swaps
 
 ``Cash`` implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
 identified by some *deposit reference*. A deposit reference is an opaque byte array which is usable by
