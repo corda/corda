@@ -53,6 +53,7 @@ Summary of API changes (not exhaustive):
       Currently two types are supported: General (runs the default build and validation logic) and NotaryChange (
       contract code is not run during validation, checks that the notary field is the only difference between the
       inputs and outputs).
+      ``TransactionBuilder()`` is now abstract, you should use ``TransactionType.General.Builder()`` for building transactions.
 
 * The cash contract has moved from ``com.r3corda.contracts`` to ``com.r3corda.contracts.cash``
 * ``Amount`` class is now generic, to support non-currency types such as physical assets. Where you previously had just
