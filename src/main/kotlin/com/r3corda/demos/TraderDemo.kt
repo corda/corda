@@ -3,7 +3,7 @@ package com.r3corda.demos
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.r3corda.contracts.CommercialPaper
-import com.r3corda.contracts.cash.cashBalances
+import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party

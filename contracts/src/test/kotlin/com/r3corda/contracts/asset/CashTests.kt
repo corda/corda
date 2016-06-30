@@ -1,4 +1,4 @@
-package com.r3corda.contracts.cash
+package com.r3corda.contracts.asset
 
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`
@@ -40,7 +40,7 @@ class CashTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "required com.r3corda.contracts.cash.FungibleAsset.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -294,7 +294,7 @@ class CashTests {
 
             tweak {
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-                this `fails requirement` "required com.r3corda.contracts.cash.FungibleAsset.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
 
                 tweak {
                     arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }

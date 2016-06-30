@@ -1,8 +1,8 @@
 package com.r3corda.contracts
 
-import com.r3corda.contracts.cash.Cash
-import com.r3corda.contracts.cash.InsufficientBalanceException
-import com.r3corda.contracts.cash.sumCashBy
+import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.InsufficientBalanceException
+import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party

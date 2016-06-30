@@ -1,7 +1,7 @@
 package com.r3corda.node.services.wallet
 
 import com.codahale.metrics.Gauge
-import com.r3corda.contracts.cash.cashBalances
+import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.node.services.api.ServiceHubInternal
 import java.util.*

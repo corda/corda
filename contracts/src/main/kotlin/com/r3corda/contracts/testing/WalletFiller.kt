@@ -1,7 +1,7 @@
 @file:JvmName("WalletFiller")
 package com.r3corda.contracts.testing
 
-import com.r3corda.contracts.cash.Cash
+import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.SignedTransaction
