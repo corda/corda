@@ -90,8 +90,8 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Transaction Data Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running the demos</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#trader-demo">Trader demo</a></li>
@@ -107,6 +107,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -228,9 +229,7 @@ happy customer!&#8221; and &#8220;Sale completed - we have a happy customer!&#82
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">irsdemo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">NodeB</span>
 </pre></div>
 </div>
-<p>The node in the first terminal will complain that it didn&#8217;t know about nodeB, so restart it. It&#8217;ll then find the
-location and identity keys of nodeA and be happy. NodeB also doubles up as the interest rates oracle and you should
-see some rates data get loaded.</p>
+<p>NodeB also doubles up as the interest rates oracle and you should see some rates data get loaded.</p>
 <p>Now in the third terminal run:</p>
 <p><strong>Windows</strong>:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>.\build\install\r3prototyping\bin\irsdemo.bat --role=Trade trade1

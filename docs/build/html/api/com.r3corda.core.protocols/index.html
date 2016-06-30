@@ -12,6 +12,14 @@
 <tbody>
 <tr>
 <td>
+<a href="-app-context/index.html">AppContext</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">AppContext</span></code><p>This is just some way to track what attachments need to be in the class loader, but may later include some app
+properties loaded from the attachments.  And perhaps the authenticated user for an API call?</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-protocol-logic/index.html">ProtocolLogic</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A sub-class of <a href="-protocol-logic/index.html">ProtocolLogic</a> implements a protocol flow using direct, straight line blocking code. Thus you
@@ -21,10 +29,35 @@ a node crash, how many instances of your protocol there are running and so on.</
 </tr>
 <tr>
 <td>
+<a href="-protocol-logic-ref/index.html">ProtocolLogicRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ProtocolLogicRef</span></code><p>A class representing a <a href="-protocol-logic/index.html">ProtocolLogic</a> instance which would be possible to safely pass out of the contract sandbox</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-protocol-logic-ref-factory/index.html">ProtocolLogicRefFactory</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ProtocolLogicRefFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>A class for conversion to and from <a href="-protocol-logic/index.html">ProtocolLogic</a> and <a href="-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-protocol-state-machine/index.html">ProtocolStateMachine</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">ProtocolStateMachine</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code><p>The interface of <a href="#">ProtocolStateMachineImpl</a> exposing methods and properties required by ProtocolLogic for compilation</p>
 </td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-illegal-protocol-logic-exception/index.html">IllegalProtocolLogicException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">IllegalProtocolLogicException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/IllegalArgumentException.html"><span class="identifier">IllegalArgumentException</span></a></code></td>
 </tr>
 </tbody>
 </table>

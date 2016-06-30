@@ -1,0 +1,24 @@
+<HTML>
+<HEAD>
+<title>InterestRateSwap.State.nextScheduledActivity - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.contracts</a>&nbsp;/&nbsp;<a href="../index.html">InterestRateSwap</a>&nbsp;/&nbsp;<a href="index.html">State</a>&nbsp;/&nbsp;<a href=".">nextScheduledActivity</a><br/>
+<br/>
+<h1>nextScheduledActivity</h1>
+<a name="com.r3corda.contracts.InterestRateSwap.State$nextScheduledActivity(com.r3corda.core.contracts.StateRef, com.r3corda.core.protocols.ProtocolLogicRefFactory)"></a>
+<code><span class="keyword">fun </span><span class="identifier">nextScheduledActivity</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$nextScheduledActivity(com.r3corda.core.contracts.StateRef, com.r3corda.core.protocols.ProtocolLogicRefFactory)/thisStateRef">thisStateRef</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$nextScheduledActivity(com.r3corda.core.contracts.StateRef, com.r3corda.core.protocols.ProtocolLogicRefFactory)/protocolLogicRefFactory">protocolLogicRefFactory</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-scheduled-activity/index.html"><span class="identifier">ScheduledActivity</span></a><span class="symbol">?</span></code><br/>
+Overrides <a href="../../../com.r3corda.core.contracts/-schedulable-state/next-scheduled-activity.html">SchedulableState.nextScheduledActivity</a><br/>
+<p>Indicate whether there is some activity to be performed at some future point in time with respect to this
+<a href="../../../com.r3corda.core.contracts/-contract-state/index.html">ContractState</a>, what that activity is and at what point in time it should be initiated.
+This can be used to implement deadlines for payment or processing of financial instruments according to a schedule.</p>
+<p>The state has no reference to its own StateRef, so supply that for use as input to any ProtocolLogic constructed.</p>
+<br/>
+<br/>
+<p><strong>Return</strong><br/>
+null if there is no activity to schedule</p>
+<br/>
+<br/>
+</BODY>
+</HTML>

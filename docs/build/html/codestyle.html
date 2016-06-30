@@ -90,8 +90,8 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Transaction Data Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -103,6 +103,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
@@ -119,6 +120,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#comments">2. Comments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#threading">3. Threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#assertions-and-errors">4. Assertions and errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#properties">5. Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#compiler-warnings">6. Compiler warnings</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
@@ -324,6 +327,38 @@ really necessary. In other words, don&#8217;t do this:</p>
 </div>
 <p>The latter is easier to catch and handle if later necessary, and the type name should explain what went wrong.</p>
 <p>Note that Kotlin does not require exception types to be declared in method prototypes like Java does.</p>
+</div>
+<div class="section" id="properties">
+<h2>5. Properties<a class="headerlink" href="#properties" title="Permalink to this headline">¶</a></h2>
+<p>Where we want a public property to have one super-type in public and another sub-type in private (or internal), perhaps
+to expose additional methods with a greater level of access to the code within the enclosing class, the style should be:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">PrivateFoo</span> <span class="p">:</span> <span class="n">PublicFoo</span>
+
+<span class="k">private</span> <span class="k">val</span> <span class="py">_foo</span> <span class="p">=</span> <span class="n">PrivateFoo</span><span class="p">()</span>
+<span class="k">val</span> <span class="py">foo</span><span class="p">:</span> <span class="n">PublicFoo</span> <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">_foo</span>
+</pre></div>
+</div>
+<p>Notably:</p>
+<ul class="simple">
+<li>The public property should have an explicit and more restrictive type, most likely a super class or interface.</li>
+<li>The private, backed property should begin with underscore but otherwise have the same name as the public property.
+The underscore resolves a potential property name clash, and avoids naming such as &#8220;privateFoo&#8221;.  If the type or use
+of the private property is different enough that there is no naming collision, prefer the distinct names without
+an underscore.</li>
+<li>The underscore prefix is not a general pattern for private properties.</li>
+<li>The public property should not have an additional backing field but use &#8220;get()&#8221; to return an appropriate copy of the
+private field.</li>
+<li>The public property should optionally wrap the returned value in an immutable wrapper, such as Guava&#8217;s immutable
+collection wrappers, if that is appropriate.</li>
+<li>If the code following &#8220;get()&#8221; is succinct, prefer a one-liner formatting of the public property as above, otherwise
+put the &#8220;get()&#8221; on the line below, indented.</li>
+</ul>
+</div>
+<div class="section" id="compiler-warnings">
+<h2>6. Compiler warnings<a class="headerlink" href="#compiler-warnings" title="Permalink to this headline">¶</a></h2>
+<p>We do not allow compiler warnings, except in the experimental module where the usual standards do not apply and warnings
+are suppressed. If a warning exists it should be either fixed or suppressed using &#64;SuppressWarnings and if suppressed
+there must be an accompanying explanation in the code for why the warning is a false positive.</p>
 </div>
 </div>
 

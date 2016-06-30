@@ -97,9 +97,9 @@ executor. The topic can be the empty string to match all messages.</p>
 </tr>
 <tr>
 <td>
-<a href="pump.html">pump</a></td>
+<a href="pump-receive.html">pumpReceive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">pump</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork.InMemoryMessaging$pump(kotlin.Boolean)/block">block</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">?</span></code><p>Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
+<code><span class="keyword">fun </span><span class="identifier">pumpReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork.InMemoryMessaging$pumpReceive(kotlin.Boolean)/block">block</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">?</span></code><p>Delivers a single message from the internal queue. If there are no messages waiting to be delivered and block
 is true, waits until one has been provided on a different thread via send. If block is false, the return
 result indicates whether a message was delivered or not.</p>
 </td>

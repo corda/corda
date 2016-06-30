@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Transaction Data Types &mdash; R3 Corda latest documentation</title>
+  <title>Data types &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Consensus Model" href="consensus.html"/>
+        <link rel="next" title="Consensus model" href="consensus.html"/>
         <link rel="prev" title="Data model" href="data-model.html"/> 
 
   
@@ -90,16 +90,16 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Transaction Data Types</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data types</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#amount">Amount</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#contract-state">Contract State</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#state">State</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#fungibleassets-and-cash">FungibleAssets and Cash</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#transaction-types">Transaction Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#transaction-lifecycle-types">Transaction lifecycle types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#party-and-publickey">Party and PublicKey</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#date-support">Date Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#date-support">Date support</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -111,6 +111,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -150,7 +151,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Transaction Data Types</li>
+    <li>Data types</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -164,8 +165,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="transaction-data-types">
-<h1>Transaction Data Types<a class="headerlink" href="#transaction-data-types" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="data-types">
+<h1>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">¶</a></h1>
 <p>There is a large library of data types used in Corda transactions and contract state objects.</p>
 <div class="section" id="amount">
 <h2>Amount<a class="headerlink" href="#amount" title="Permalink to this headline">¶</a></h2>
@@ -190,13 +191,15 @@ delivered (themselves referring to a currency), an <code class="docutils literal
 </div>
 </div>
 </div>
-<div class="section" id="contract-state">
-<h2>Contract State<a class="headerlink" href="#contract-state" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="state">
+<h2>State<a class="headerlink" href="#state" title="Permalink to this headline">¶</a></h2>
 <p>A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
 the details of the contract (see <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a> for further detail). States essentially convert the generic template
-(code and legal prose) into a specific instance. In a <code class="docutils literal"><span class="pre">WireTransaction</span></code>, outputs are provided as <code class="docutils literal"><span class="pre">ContractState</span></code>
+(code and legal prose) into a specific instance. In a <code class="docutils literal"><span class="pre">WireTransaction</span></code>, outputs are provided as <code class="docutils literal"><span class="pre">TransactionState</span></code>
 implementations, while the inputs are references to the outputs of a previous transaction. These references are then
 stored as <code class="docutils literal"><span class="pre">StateRef</span></code> objects, which are converted to <code class="docutils literal"><span class="pre">StateAndRef</span></code> on demand.</p>
+<p>The <code class="docutils literal"><span class="pre">TransactionState</span></code> is a container for a <code class="docutils literal"><span class="pre">ContractState</span></code> (the custom data used by a contract program) and additional
+platform-level state information, such as the <em>notary</em> pointer (see <a class="reference internal" href="consensus.html"><span class="doc">Consensus model</span></a>).</p>
 <p>A number of interfaces then extend <code class="docutils literal"><span class="pre">ContractState</span></code>, representing standardised functionality for states:</p>
 <blockquote>
 <div><dl class="docutils">
@@ -223,8 +226,8 @@ interface for its subclasses&#8217; state objects to implement. The clear use-ca
 intended to be readily extensible to cover other assets, for example commodities could be modelled by using a subclass
 whose state objects include further details (location of the commodity, origin, grade, etc.) as needed.</p>
 </div>
-<div class="section" id="transaction-types">
-<h2>Transaction Types<a class="headerlink" href="#transaction-types" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="transaction-lifecycle-types">
+<h2>Transaction lifecycle types<a class="headerlink" href="#transaction-lifecycle-types" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal"><span class="pre">WireTransaction</span></code> class contains the core of a transaction without signatures, and with references to attachments
 in place of the attachments themselves (see also <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a>). Once signed these are encapsulated in the
 <code class="docutils literal"><span class="pre">SignedTransaction</span></code> class. For processing a transaction (i.e. to verify it) it is first converted to a
@@ -244,7 +247,7 @@ for signatures present on the transaction, as well as list of parties for those 
 </div>
 </div>
 <div class="section" id="date-support">
-<h2>Date Support<a class="headerlink" href="#date-support" title="Permalink to this headline">¶</a></h2>
+<h2>Date support<a class="headerlink" href="#date-support" title="Permalink to this headline">¶</a></h2>
 <p>There are a number of supporting interfaces and classes for use by contract which deal with dates (especially in the
 context of deadlines). As contract negotiation typically deals with deadlines in terms such as &#8220;overnight&#8221;, &#8220;T+3&#8221;,
 etc., it&#8217;s desirable to allow conversion of these terms to their equivalent deadline. <code class="docutils literal"><span class="pre">Tenor</span></code> models the interval
@@ -265,7 +268,7 @@ dates used.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="consensus.html" class="btn btn-neutral float-right" title="Consensus Model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="consensus.html" class="btn btn-neutral float-right" title="Consensus model" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="data-model.html" class="btn btn-neutral" title="Data model" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -1,0 +1,25 @@
+<HTML>
+<HEAD>
+<title>fillWithSomeTestCash - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href="index.html">com.r3corda.contracts.testing</a>&nbsp;/&nbsp;<a href=".">fillWithSomeTestCash</a><br/>
+<br/>
+<h1>fillWithSomeTestCash</h1>
+<a name="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)"></a>
+<code><span class="keyword">fun </span><a href="../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a>&nbsp;<span class="symbol">=</span>&nbsp;OpaqueBytes(ByteArray(1, { 0 }))<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><br/>
+<p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
+to the wallet. This is intended for unit tests.</p>
+<p>The cash is self issued with the current nodes identity, as fetched from the storage service. Thus it
+would not be trusted by any sensible market participant and is effectively an IOU. If it had been issued by
+the central bank, well ... thatd be a different story altogether.</p>
+<p>The service hub needs to provide at least a key management service and a storage service.</p>
+<br/>
+<br/>
+<p><strong>Return</strong><br/>
+a wallet object that represents the generated states (it will NOT be the full wallet from the service hub)</p>
+<br/>
+<br/>
+</BODY>
+</HTML>

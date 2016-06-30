@@ -45,6 +45,13 @@ of how attachments are meant to be used include:</p>
 </tr>
 <tr>
 <td>
+<a href="-bilateral-nettable-state/index.html">BilateralNettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">BilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Interface for state objects that support being netted with other state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-business-calendar/index.html">BusinessCalendar</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">BusinessCalendar</span></code><p>A business calendar performs date calculations that take into account national holidays and weekends. This is a
@@ -82,15 +89,9 @@ timestamp attached to the transaction itself i.e. it is NOT necessarily the curr
 <td>
 <code><span class="keyword">interface </span><span class="identifier">ContractState</span></code><p>A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
 file that the program can use to persist data across transactions. States are immutable: once created they are never
-updated, instead, any changes must generate a new successor state.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-date-offset/index.html">DateOffset</a></td>
-<td>
-<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateOffset</span></code><p>Date offset that the fixing is done prior to the accrual start date.
-Currently not used in the calculation.</p>
+updated, instead, any changes must generate a new successor state. States can be updated (consumed) only once: the
+notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
+are all free.</p>
 </td>
 </tr>
 <tr>
@@ -139,6 +140,13 @@ implementation of general protocols that manipulate many agreement types.</p>
 <a href="-dummy-contract/index.html">DummyContract</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract/index.html"><span class="identifier">Contract</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-dummy-state/index.html">DummyState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code><p>Dummy state for use in testing. Not part of any real contract.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -198,6 +206,27 @@ from which the state object is initialised.</p>
 </tr>
 <tr>
 <td>
+<a href="-issue-command/index.html">IssueCommand</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">IssueCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code><p>A common issue command, to enforce that issue commands have a nonce value.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-issued/index.html">Issued</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issued</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else thats
+quantifiable with integer quantities.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-java-test-helpers/index.html">JavaTestHelpers</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">JavaTestHelpers</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-ledger-transaction/index.html">LedgerTransaction</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">LedgerTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-named-by-hash/index.html"><span class="identifier">NamedByHash</span></a></code><p>A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
@@ -214,9 +243,24 @@ with the commands from the wire, and verified/looked up.</p>
 </tr>
 <tr>
 <td>
+<a href="-move-command/index.html">MoveCommand</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MoveCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code><p>A common move command for contracts which can change owner.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-named-by-hash/index.html">NamedByHash</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">NamedByHash</span></code><p>Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-net-type/index.html">NetType</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">NetType</span></code><p>Enum for the types of netting that can be applied to state objects. Exact behaviour
+for each type of netting is left to the contract to determine.</p>
 </td>
 </tr>
 <tr>
@@ -246,6 +290,35 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 <a href="-requirements/index.html">Requirements</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Requirements</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-schedulable-state/index.html">SchedulableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SchedulableState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-scheduled/index.html">Scheduled</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Scheduled</span></code><p>Something which is scheduled to happen at a point in time</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-scheduled-activity/index.html">ScheduledActivity</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ScheduledActivity</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-scheduled/index.html"><span class="identifier">Scheduled</span></a></code><p>This class represents the lifecycle activity that a contract state of type <a href="-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
+e.g. run a fixing protocol</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-scheduled-state-ref/index.html">ScheduledStateRef</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ScheduledStateRef</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-scheduled/index.html"><span class="identifier">Scheduled</span></a></code><p>Represents a contract state (unconsumed output) of type <a href="-linear-state/index.html">LinearState</a> and a point in time that a lifecycle event is expected to take place
+for that contract state.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -288,10 +361,17 @@ public keys are identified in the containing <a href="-command/index.html">Comma
 <td>
 <a href="-transaction-builder/index.html">TransactionBuilder</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">TransactionBuilder</span></code><p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
-intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
-Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
-multiple parties.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">TransactionBuilder</span></code><p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
+intended to be passed around contracts that may edit it by adding new states/commands. Then once the states
+and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-for-contract/index.html">TransactionForContract</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionForContract</span></code><p>A transaction to be passed as input to a contract verification function. Defines helper methods to
+simplify verification logic in contracts.</p>
 </td>
 </tr>
 <tr>
@@ -316,6 +396,21 @@ the starting point down in order to find transactions that match the given query
 <code><span class="keyword">class </span><span class="identifier">TransactionGroup</span></code><p>A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
 verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
 this subgraph does not contain conflicts and is accepted by the involved contracts.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-state/index.html">TransactionState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code><p>A wrapper for <a href="-contract-state/index.html">ContractState</a> containing additional platform-level state information.
+This is the definitive state that is stored on the ledger and used in transaction outputs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-type/index.html">TransactionType</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionType</span></code><p>Defines transaction build &amp; validation logic for a specific transaction type</p>
 </td>
 </tr>
 <tr>
@@ -363,6 +458,12 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 <tr>
 <td>
 <a href="java.time.-local-date/index.html">java.time.LocalDate</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="java.util.-currency/index.html">java.util.Currency</a></td>
 <td>
 </td>
 </tr>
@@ -440,7 +541,7 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 <td>
 <a href="currency.html">currency</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">currency</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$currency(kotlin.String)/code">code</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code><p>Defines a simple domain specific language for the specificiation of financial contracts. Currently covers:</p>
+<code><span class="keyword">fun </span><span class="identifier">currency</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$currency(kotlin.String)/code">code</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code><p>Defines a simple domain specific language for the specification of financial contracts. Currently covers:</p>
 </td>
 </tr>
 <tr>
@@ -449,6 +550,12 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 <td>
 <code><span class="keyword">fun </span><a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">hash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>Returns the SHA-256 hash of the serialised contents of this state (not cached)</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="issued by.html">issued by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issued by(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -465,9 +572,10 @@ this subgraph does not contain conflicts and is accepted by the involved contrac
 </tr>
 <tr>
 <td>
-<a href="verify-move-commands.html">verifyMoveCommands</a></td>
+<a href="verify-move-command.html">verifyMoveCommand</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommands</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommands(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForVerification)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommands(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.</p>
 </td>
 </tr>
 <tr>

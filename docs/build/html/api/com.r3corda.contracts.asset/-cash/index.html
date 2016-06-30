@@ -1,0 +1,104 @@
+<HTML>
+<HEAD>
+<title>Cash - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href=".">Cash</a><br/>
+<br/>
+<h1>Cash</h1>
+<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><br/>
+<p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
+(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
+the same transaction.</p>
+<p>The goal of this design is to ensure that money can be withdrawn from the ledger easily: if you receive some money
+via this contract, you always know where to go in order to extract it from the R3 ledger, no matter how many hands
+it has passed through in the intervening time.</p>
+<p>At the same time, other contracts that just want money and dont care much who is currently holding it in their
+vaults can ignore the issuer/depositRefs and just examine the amount fields.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-commands/index.html">Commands</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Commands</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-state/index.html">State</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-fungible-asset/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><p>A state representing a cash claim against some party</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Cash</span><span class="symbol">(</span><span class="symbol">)</span></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
+(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
+the same transaction.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="legal-contract-reference.html">legalContractReference</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">legalContractReference</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>TODO:</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-issue.html">generateIssue</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateIssue</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Issued((java.util.Currency)), kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Issued((java.util.Currency)), kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party)/tokenDef">tokenDef</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Issued((java.util.Currency)), kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party)/pennies">pennies</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Issued((java.util.Currency)), kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Issued((java.util.Currency)), kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.</p>
+<code><span class="keyword">fun </span><span class="identifier">generateIssue</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, com.r3corda.core.crypto.Party)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, com.r3corda.core.crypto.Party)/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, com.r3corda.core.crypto.Party)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateIssue(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="generate-spend.html">generateSpend</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateSpend</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))))/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))))/to">to</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))))/cashStates">cashStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">generateSpend</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))), kotlin.collections.Set((com.r3corda.core.crypto.Party)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))), kotlin.collections.Set((com.r3corda.core.crypto.Party)))/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))), kotlin.collections.Set((com.r3corda.core.crypto.Party)))/to">to</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))), kotlin.collections.Set((com.r3corda.core.crypto.Party)))/cashStates">cashStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Cash$generateSpend(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.Amount((java.util.Currency)), java.security.PublicKey, kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.asset.Cash.State)))), kotlin.collections.Set((com.r3corda.core.crypto.Party)))/onlyFromParties">onlyFromParties</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
+Note that the wallet list is not updated: its up to you to do that.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-fungible-asset/verify.html">verify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.FungibleAsset$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>This is the function EVERYONE runs</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

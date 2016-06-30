@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Consensus Model &mdash; R3 Corda latest documentation</title>
+  <title>Consensus model &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Networking and messaging" href="messaging.html"/>
-        <link rel="prev" title="Transaction Data Types" href="transaction-data-types.html"/> 
+        <link rel="prev" title="Data types" href="transaction-data-types.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -90,13 +90,15 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Transaction Data Types</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Consensus Model</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Consensus model</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#notary">Notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#multiple-notaries">Multiple notaries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#validation">Validation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#multiple-notaries">Multiple Notaries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#timestamping">Timestamping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#implementation-usage">Implementation &amp; Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-a-notary-service">Running a Notary Service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#obtaining-a-signature">Obtaining a signature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#changing-notaries">Changing notaries</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
@@ -110,6 +112,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -149,7 +152,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Consensus Model</li>
+    <li>Consensus model</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -164,11 +167,11 @@
            <div itemprop="articleBody">
             
   <div class="section" id="consensus-model">
-<h1>Consensus Model<a class="headerlink" href="#consensus-model" title="Permalink to this headline">¶</a></h1>
+<h1>Consensus model<a class="headerlink" href="#consensus-model" title="Permalink to this headline">¶</a></h1>
 <p>The fundamental unit of consensus in Corda is the <strong>state</strong>. The concept of consensus can be divided into two parts:</p>
 <ol class="arabic simple">
 <li>Consensus over state <strong>validity</strong> &#8211; parties can reach certainty that a transaction defining output states is accepted by the contracts pointed to by the states and has all the required signatures. This is achieved by parties independently running the same contract code and validation logic (as described in <a class="reference internal" href="data-model.html"><span class="doc">data model</span></a>)</li>
-<li>Consensus over state <strong>uniqueness</strong> &#8211; parties can reach certainty the the output states created in a transaction are the unique successors to the input states consumed by that transaction (in other words &#8211; a state has not been used as an input by more than one transaction)</li>
+<li>Consensus over state <strong>uniqueness</strong> &#8211; parties can reach certainty the output states created in a transaction are the unique successors to the input states consumed by that transaction (in other words &#8211; a state has not been used as an input by more than one transaction)</li>
 </ol>
 <p>This article presents an initial model for addressing the <strong>uniqueness</strong> problem.</p>
 <div class="admonition note">
@@ -178,75 +181,97 @@
 <div class="section" id="notary">
 <h2>Notary<a class="headerlink" href="#notary" title="Permalink to this headline">¶</a></h2>
 <p>We introduce the concept of a <strong>Notary</strong>, which is an authority responsible for attesting that for a given transaction, it had not signed another transaction consuming any of its input states.
-The data model is extended so that every <strong>state</strong> has an appointed Notary:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">interface</span> <span class="nc">ContractState</span> <span class="p">{</span>
-    <span class="cm">/** Contract by which the state belongs */</span>
-    <span class="k">val</span> <span class="py">contract</span><span class="p">:</span> <span class="n">Contract</span>
-
-    <span class="cm">/** Identity of the notary that ensures this state is not used as an input to a transaction more than once */</span>
-    <span class="k">val</span> <span class="py">notary</span><span class="p">:</span> <span class="n">Party</span>
+The data model is extended so that every <strong>state</strong> has an appointed notary:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/**</span>
+<span class="cm"> * A wrapper for [ContractState] containing additional platform-level state information.</span>
+<span class="cm"> * This is the definitive state that is stored on the ledger and used in transaction outputs</span>
+<span class="cm"> */</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">TransactionState</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">T</span> <span class="p">:</span> <span class="n">ContractState</span><span class="p">&gt;(</span>
+        <span class="cm">/** The custom contract state */</span>
+        <span class="k">val</span> <span class="py">data</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
+        <span class="cm">/** Identity of the notary that ensures the state is not used as an input to a transaction more than once */</span>
+        <span class="k">val</span> <span class="py">notary</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>All transactions have to be signed by their input state Notary for the output states to be <strong>valid</strong> (apart from <em>issue</em> transactions, containing no input states).</p>
+<p>All transactions have to be signed by their input state notary for the output states to be <strong>valid</strong> (apart from <em>issue</em> transactions, containing no input states).</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">The Notary is a logical concept and can itself be a distributed entity, potentially a cluster maintained by mutually distrusting parties</p>
+<p class="last">The notary is a logical concept and can itself be a distributed entity, potentially a cluster maintained by mutually distrusting parties</p>
 </div>
-<p>When the Notary is requested to sign a transaction, it either signs over it, attesting that the outputs are the <strong>unique</strong> successors of the inputs,
+<p>When the notary is requested to sign a transaction, it either signs over it, attesting that the outputs are the <strong>unique</strong> successors of the inputs,
 or provides conflict information for any input state that had been consumed by another transaction it had signed before.
-In doing so, the Notary provides the point of finality in the system. Until the Notary signature is obtained, parties cannot be sure that an equally valid, but conflicting transaction,
+In doing so, the notary provides the point of finality in the system. Until the notary signature is obtained, parties cannot be sure that an equally valid, but conflicting transaction,
 will not be regarded as confirmed. After the signature is obtained, the parties know that the inputs to this transaction have been uniquely consumed by this transaction.
 Hence it is the point at which we can say finality has occurred.</p>
 </div>
-<div class="section" id="validation">
-<h2>Validation<a class="headerlink" href="#validation" title="Permalink to this headline">¶</a></h2>
-<p>The Notary <em>does not validate</em> transaction integrity (i.e. does not run contracts or check signatures) to minimise the exposed data.
-Validation would require the caller to reveal the whole transaction history chain, resulting in a privacy leak.</p>
-<p>However, this makes it open to &#8220;denial of state&#8221; attacks, where a party could submit any invalid transaction to the Notary and thus &#8220;block&#8221; someone else&#8217;s states.
-That is partially alleviated by requiring the calling party to authenticate and storing its identity for the request.
-The conflict information returned by the Notary specifies the consuming transaction id along with the identity of the party that had requested the commit.
-If the conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states of the conflicting invalid transaction are &#8220;un-committed&#8221; (to be covered by legal process).</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">At present the Notary can see the entire transaction, but we have a separate piece of work to replace the parts of the transaction it does not require knowing about with hashes (only input references, timestamp information, overall transaction ID and the necessary digests of the rest of the transaction to prove that the referenced inputs/timestamps really do form part of the stated transaction ID should be visible).</p>
-</div>
-</div>
 <div class="section" id="multiple-notaries">
-<h2>Multiple Notaries<a class="headerlink" href="#multiple-notaries" title="Permalink to this headline">¶</a></h2>
-<p>More than one Notary can exist in the network. This gives the following benefits:</p>
+<h2>Multiple notaries<a class="headerlink" href="#multiple-notaries" title="Permalink to this headline">¶</a></h2>
+<p>More than one notary can exist in the network. This gives the following benefits:</p>
 <ul class="simple">
 <li><strong>Custom behaviour</strong>. We can have both validating and privacy preserving Notaries &#8211; parties can make a choice based on their specific requirements</li>
 <li><strong>Load balancing</strong>. Spreading the transaction load over multiple Notaries will allow higher transaction throughput in the platform overall</li>
-<li><strong>Low latency</strong>. Latency could be minimised by choosing a Notary physically closer the transacting parties</li>
+<li><strong>Low latency</strong>. Latency could be minimised by choosing a notary physically closer the transacting parties</li>
 </ul>
-<p>A transaction should only be signed by a Notary if all of its input states point to it.
-In cases where a transaction involves states controlled by multiple Notaries, the states first have to be repointed to the same notary.
-This is achieved by using a special type of transaction that doesn&#8217;t modify anything but the Notary pointer of the state.
-Ensuring that all input states point to the same Notary is the responsibility of each involved party
+<p>A transaction should only be signed by a notary if all of its input states point to it.
+In cases where a transaction involves states controlled by multiple notaries, the states first have to be repointed to the same notary.
+This is achieved by using a special type of transaction that doesn&#8217;t modify anything but the notary pointer of the state.
+Ensuring that all input states point to the same notary is the responsibility of each involved party
 (it is another condition for an output state of the transaction to be <strong>valid</strong>)</p>
+</div>
+<div class="section" id="validation">
+<h2>Validation<a class="headerlink" href="#validation" title="Permalink to this headline">¶</a></h2>
+<p>One of the design decisions for a notary is whether or not to <strong>validate</strong> a transaction before committing its input states.</p>
+<p>If a transaction is not checked for validity, it opens the platform to &#8220;denial of state&#8221; attacks, where anyone can build an invalid transaction consuming someone else&#8217;s states and submit it to the notary to get the states &#8220;blocked&#8221;.
+However, validation of a transaction requires the notary to be able to see the full contents of the transaction in question and its dependencies.
+This is an obvious privacy leak.</p>
+<p>Our platform is flexible and we currently support both validating and non-validating notary implementations &#8211; a party can select which one to use based on its own privacy requirements.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the non-validating model the &#8220;denial of state&#8221; attack is partially alleviated by requiring the calling party to authenticate and storing its identity for the request.</p>
+</div>
+<dl class="docutils">
+<dt>The conflict information returned by the Notary specifies the consuming transaction id along with the identity of the party that had requested the commit.</dt>
+<dd>If the conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states of the conflicting invalid transaction are &#8220;un-committed&#8221; (to be covered by legal process).</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">At present all notaries can see the entire contents of a transaction, but we have a separate piece of work to replace the parts of the transaction it does not require knowing about with hashes (only input references, timestamp information, overall transaction ID and the necessary digests of the rest of the transaction to prove that the referenced inputs/timestamps really do form part of the stated transaction ID should be visible).</p>
+</div>
 </div>
 <div class="section" id="timestamping">
 <h2>Timestamping<a class="headerlink" href="#timestamping" title="Permalink to this headline">¶</a></h2>
-<p>In this model the Notary also acts as a <strong>Timestamping Authority</strong>, verifying the transaction timestamp command.</p>
+<p>In this model the notary also acts as a <strong>Timestamping Authority</strong>, verifying the transaction timestamp command.</p>
 <p>For a timestamp to be meaningful, its implications must be binding on the party requesting it.
 A party can obtain a timestamp signature in order to prove that some event happened before/on/or after a particular point in time.
 However, if the party is not also compelled to commit to the associated transaction, it has a choice of whether or not to reveal this fact until some point in the future.
-As a result, we need to ensure that the Notary either has to also sign the transaction within some time tolerance,
+As a result, we need to ensure that the notary either has to also sign the transaction within some time tolerance,
 or perform timestamping <em>and</em> notarisation at the same time, which is the chosen behaviour for this model.</p>
 </div>
-<div class="section" id="implementation-usage">
-<h2>Implementation &amp; Usage<a class="headerlink" href="#implementation-usage" title="Permalink to this headline">¶</a></h2>
-<p>At present we have single basic implementation of a Notary that uses a <code class="code docutils literal"><span class="pre">UniquenessProvider</span></code> storing committed input states in memory:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">InMemoryUniquenessProvider</span><span class="p">()</span> <span class="p">:</span> <span class="n">UniquenessProvider</span> <span class="p">{</span>
-    <span class="cm">/** For each input state store the consuming transaction information */</span>
-    <span class="k">private</span> <span class="k">val</span> <span class="py">committedStates</span> <span class="p">=</span> <span class="n">HashMap</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;()</span>
-
-    <span class="k">override</span> <span class="k">fun</span> <span class="nf">commit</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">,</span> <span class="n">callerIdentity</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span> <span class="p">{</span>
-        <span class="p">...</span>
-    <span class="p">}</span>
+<div class="section" id="running-a-notary-service">
+<h2>Running a Notary Service<a class="headerlink" href="#running-a-notary-service" title="Permalink to this headline">¶</a></h2>
+<p>At present we have two basic implementations that store committed input states in memory:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">SimpleNotaryService</span></code> &#8211; commits the provided transaction without any validation</li>
+<li><code class="docutils literal"><span class="pre">ValidatingNotaryService</span></code> &#8211; retrieves and validates the whole transaction history (including the given transaction) before committing</li>
+</ul>
+<p>To run one of these services the node has to simply specify either <code class="docutils literal"><span class="pre">SimpleNotaryService.Type</span></code> or <code class="docutils literal"><span class="pre">ValidatingNotaryService.Type</span></code> in its <code class="docutils literal"><span class="pre">advertisedServices</span></code> set, and the correct type will be initialised.</p>
+</div>
+<div class="section" id="obtaining-a-signature">
+<h2>Obtaining a signature<a class="headerlink" href="#obtaining-a-signature" title="Permalink to this headline">¶</a></h2>
+<p>To obtain a signature from a notary use <code class="docutils literal"><span class="pre">NotaryProtocol.Client</span></code>, passing in a <code class="docutils literal"><span class="pre">WireTransaction</span></code>.
+The protocol will work out which notary needs to be called based on the input states and the timestamp command.
+For example, the following snippet can be used when writing a custom protocol:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">NotaryProtocol</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">wtx</span><span class="p">))</span>
 <span class="p">}</span>
-<span class="p">...</span>
+</pre></div>
+</div>
+<p>On conflict the <code class="docutils literal"><span class="pre">NotaryProtocol</span></code> with throw a <code class="docutils literal"><span class="pre">NotaryException</span></code> containing the conflict details:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** Specifies the consuming transaction for the conflicting input state */</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">Conflict</span><span class="p">(</span><span class="k">val</span> <span class="py">stateHistory</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;)</span>
+
 <span class="cm">/**</span>
 <span class="cm"> * Specifies the transaction id, the position of the consumed state in the inputs, and</span>
 <span class="cm"> * the caller identity requesting the commit</span>
@@ -254,20 +279,25 @@ or perform timestamping <em>and</em> notarisation at the same time, which is the
 <span class="k">data</span> <span class="k">class</span> <span class="nc">ConsumingTx</span><span class="p">(</span><span class="k">val</span> <span class="py">id</span><span class="p">:</span> <span class="n">SecureHash</span><span class="p">,</span> <span class="k">val</span> <span class="py">inputIndex</span><span class="p">:</span> <span class="n">Int</span><span class="p">,</span> <span class="k">val</span> <span class="py">requestingParty</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>To obtain a signature from a Notary use <code class="code docutils literal"><span class="pre">NotaryProtocol</span></code>, passing in a <code class="code docutils literal"><span class="pre">WireTransaction</span></code>.
-The protocol will work out which Notary needs to be called based on the input states and the timestamp command.
-For example, the following snippet can be used when writing a custom protocol:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">private</span> <span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">NotaryProtocol</span><span class="p">(</span><span class="n">wtx</span><span class="p">))</span>
+<p>Conflict handling and resolution is currently the responsibility of the protocol author.</p>
+</div>
+<div class="section" id="changing-notaries">
+<h2>Changing notaries<a class="headerlink" href="#changing-notaries" title="Permalink to this headline">¶</a></h2>
+<p>To change the notary for an input state, use the <code class="docutils literal"><span class="pre">NotaryChangeProtocol</span></code>. For example:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">fun</span> <span class="nf">changeNotary</span><span class="p">(</span><span class="n">originalState</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;,</span>
+                 <span class="n">newNotary</span><span class="p">:</span> <span class="n">Party</span><span class="p">):</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">ContractState</span><span class="p">&gt;</span> <span class="p">{</span>
+    <span class="k">val</span> <span class="py">protocol</span> <span class="p">=</span> <span class="n">NotaryChangeProtocol</span><span class="p">.</span><span class="n">Instigator</span><span class="p">(</span><span class="n">originalState</span><span class="p">,</span> <span class="n">newNotary</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">protocol</span><span class="p">)</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>On conflict the <code class="code docutils literal"><span class="pre">NotaryProtocol</span></code> with throw a <code class="code docutils literal"><span class="pre">NotaryException</span></code> containing the conflict details:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="cm">/** Specifies the consuming transaction for the conflicting input state */</span>
-<span class="k">data</span> <span class="k">class</span> <span class="nc">Conflict</span><span class="p">(</span><span class="k">val</span> <span class="py">stateHistory</span><span class="p">:</span> <span class="n">Map</span><span class="p">&lt;</span><span class="n">StateRef</span><span class="p">,</span> <span class="n">ConsumingTx</span><span class="p">&gt;)</span>
-</pre></div>
-</div>
-<p>Conflict handling and resolution is currently the responsibility of the protocol author.</p>
+<p>The protocol will:</p>
+<ol class="arabic simple">
+<li>Construct a transaction with the old state as the input and the new state as the output</li>
+<li>Obtain signatures from all <em>participants</em> (a participant is any party that is able to consume this state in a valid transaction, as defined by the state itself)</li>
+<li>Obtain the <em>old</em> notary signature</li>
+<li>Record and distribute the final transaction to the participants so that everyone possesses the new state</li>
+</ol>
 </div>
 </div>
 
@@ -281,7 +311,7 @@ For example, the following snippet can be used when writing a custom protocol:</
         <a href="messaging.html" class="btn btn-neutral float-right" title="Networking and messaging" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="transaction-data-types.html" class="btn btn-neutral" title="Transaction Data Types" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="transaction-data-types.html" class="btn btn-neutral" title="Data types" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

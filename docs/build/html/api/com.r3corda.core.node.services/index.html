@@ -14,8 +14,7 @@
 <td>
 <a href="-attachment-storage/index.html">AttachmentStorage</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">AttachmentStorage</span></code><p>An attachment store records potentially large binary objects, identified by their hash. Note that attachments are
-immutable and can never be erased once inserted</p>
+<code><span class="keyword">interface </span><span class="identifier">AttachmentStorage</span></code><p>An attachment store records potentially large binary objects, identified by their hash.</p>
 </td>
 </tr>
 <tr>
@@ -47,6 +46,21 @@ with a specified network map service, which it fetches data from and then subscr
 </tr>
 <tr>
 <td>
+<a href="-read-only-transaction-storage/index.html">ReadOnlyTransactionStorage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ReadOnlyTransactionStorage</span></code><p>Thread-safe storage of transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-scheduler-service/index.html">SchedulerService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SchedulerService</span></code><p>Provides access to schedule activity at some point in time.  This interface might well be expanded to
+increase the feature set in the future.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-service-type/index.html">ServiceType</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ServiceType</span></code><p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
@@ -74,7 +88,14 @@ anything like that, this interface is only big enough to support the prototyping
 <td>
 <a href="-transaction-storage/index.html">TransactionStorage</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">TransactionStorage</span></code><p>Thread-safe storage of transactions.</p>
+<code><span class="keyword">interface </span><span class="identifier">TransactionStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-read-only-transaction-storage/index.html"><span class="identifier">ReadOnlyTransactionStorage</span></a></code><p>Thread-safe storage of transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-tx-writable-storage-service/index.html">TxWritableStorageService</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">TxWritableStorageService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-storage-service/index.html"><span class="identifier">StorageService</span></a></code><p>Storage service, with extensions to allow validated transactions to be added to. For use only within <a href="#">ServiceHub</a>.</p>
 </td>
 </tr>
 <tr>
@@ -89,7 +110,7 @@ if any of the inputs have already been used in another transaction</p>
 <td>
 <a href="-wallet/index.html">Wallet</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Wallet</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+<code><span class="keyword">class </span><span class="identifier">Wallet</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
 change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
 about new transactions from our peers and generate new transactions that consume states ourselves.</p>

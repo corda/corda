@@ -61,8 +61,7 @@
 <td>
 <a href="get-missing-signatures.html">getMissingSignatures</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">getMissingSignatures</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Returns the set of missing signatures - a signature must be present for every command pub key
-and the Notary (if it is specified)</p>
+<code><span class="keyword">fun </span><span class="identifier">getMissingSignatures</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Returns the set of missing signatures - a signature must be present for each signer public key</p>
 </td>
 </tr>
 <tr>
@@ -70,14 +69,14 @@ and the Notary (if it is specified)</p>
 <a href="plus.html">plus</a></td>
 <td>
 <code><span class="keyword">operator</span> <span class="keyword">fun </span><span class="identifier">plus</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$plus(com.r3corda.core.crypto.DigitalSignature.WithKey)/sig">sig</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">SignedTransaction</span></code><p>Alias for <a href="with-additional-signature.html">withAdditionalSignature</a> to let you use Kotlin operator overloading.</p>
-</td>
+<code><span class="keyword">operator</span> <span class="keyword">fun </span><span class="identifier">plus</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$plus(kotlin.collections.Collection((com.r3corda.core.crypto.DigitalSignature.WithKey)))/sigList">sigList</span><span class="symbol">:</span>&nbsp;<span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">SignedTransaction</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="verify.html">verify</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$verify(kotlin.Boolean)/throwIfSignaturesAreMissing">throwIfSignaturesAreMissing</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;true<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
-the set of pubkeys in the commands. If any signatures are missing, either throws an exception (by default) or
+the set of pubkeys in the signers list. If any signatures are missing, either throws an exception (by default) or
 returns the list of keys that have missing signatures, depending on the parameter.</p>
 </td>
 </tr>
@@ -96,6 +95,12 @@ checking a partially signed transaction being prepared by multiple co-operating 
 <td>
 <code><span class="keyword">fun </span><span class="identifier">withAdditionalSignature</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$withAdditionalSignature(com.r3corda.core.crypto.DigitalSignature.WithKey)/sig">sig</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">SignedTransaction</span></code><p>Returns the same transaction but with an additional (unchecked) signature</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="with-additional-signatures.html">withAdditionalSignatures</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withAdditionalSignatures</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$withAdditionalSignatures(kotlin.collections.Iterable((com.r3corda.core.crypto.DigitalSignature.WithKey)))/sigList">sigList</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">SignedTransaction</span></code></td>
 </tr>
 </tbody>
 </table>

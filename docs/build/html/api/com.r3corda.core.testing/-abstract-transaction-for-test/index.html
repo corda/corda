@@ -42,6 +42,18 @@
 <td>
 <code><span class="keyword">val </span><span class="identifier">outStates</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="../-labeled-output/index.html"><span class="identifier">LabeledOutput</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
+<tr>
+<td>
+<a href="signers.html">signers</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">signers</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/LinkedHashSet.html"><span class="identifier">LinkedHashSet</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="type.html">type</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">type</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-transaction-type/-general/index.html"><span class="identifier">General</span></a></code></td>
+</tr>
 </tbody>
 </table>
 <h3>Functions</h3>
@@ -49,9 +61,16 @@
 <tbody>
 <tr>
 <td>
+<a href="add-command.html">addCommand</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">addCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$addCommand(com.r3corda.core.contracts.Command)/cmd">cmd</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command/index.html"><span class="identifier">Command</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="arg.html">arg</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">arg</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$arg(kotlin.Array((java.security.PublicKey)), kotlin.Function0((com.r3corda.core.contracts.CommandData)))/key">key</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$arg(kotlin.Array((java.security.PublicKey)), kotlin.Function0((com.r3corda.core.contracts.CommandData)))/c">c</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">arg</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$arg(kotlin.Array((java.security.PublicKey)), kotlin.Function0((com.r3corda.core.contracts.CommandData)))/keys">keys</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$arg(kotlin.Array((java.security.PublicKey)), kotlin.Function0((com.r3corda.core.contracts.CommandData)))/c">c</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">arg</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$arg(java.security.PublicKey, com.r3corda.core.contracts.CommandData)/key">key</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$arg(java.security.PublicKey, com.r3corda.core.contracts.CommandData)/c">c</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
@@ -69,7 +88,8 @@
 <td>
 <a href="output.html">output</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">output</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$output(kotlin.String, kotlin.Function0((com.r3corda.core.contracts.ContractState)))/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$output(kotlin.String, kotlin.Function0((com.r3corda.core.contracts.ContractState)))/s">s</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">output</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$output(kotlin.String, kotlin.Function0((com.r3corda.core.contracts.ContractState)))/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$output(kotlin.String, kotlin.Function0((com.r3corda.core.contracts.ContractState)))/s">s</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">output</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$output(kotlin.String, com.r3corda.core.contracts.ContractState)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$output(kotlin.String, com.r3corda.core.contracts.ContractState)/s">s</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -82,7 +102,7 @@
 <td>
 <a href="transaction.html">transaction</a></td>
 <td>
-<code><span class="keyword">fun </span><s><span class="identifier">transaction</span></s><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$transaction(kotlin.Function1((com.r3corda.core.testing.TransactionForTest, kotlin.Unit)))/body">body</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-test/index.html"><span class="identifier">TransactionForTest</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><s><span class="identifier">transaction</span></s><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.AbstractTransactionForTest$transaction(kotlin.Function1((com.r3corda.core.testing.TransactionForTest, com.r3corda.core.testing.LastLineShouldTestForAcceptOrFailure)))/body">body</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-test/index.html"><span class="identifier">TransactionForTest</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../-last-line-should-test-for-accept-or-failure.html"><span class="identifier">LastLineShouldTestForAcceptOrFailure</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>

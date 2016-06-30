@@ -73,9 +73,7 @@ And in the second run:
 
     ./build/install/r3prototyping/bin/irsdemo --role=NodeB
 
-The node in the first terminal will complain that it didn't know about nodeB, so restart it. It'll then find the
-location and identity keys of nodeA and be happy. NodeB also doubles up as the interest rates oracle and you should
-see some rates data get loaded.
+NodeB also doubles up as the interest rates oracle and you should see some rates data get loaded.
 
 Now in the third terminal run:
 

@@ -14,9 +14,7 @@
 <td>
 <a href="-abstract-request-message/index.html">AbstractRequestMessage</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractRequestMessage</span></code><p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and replyToTopic.</p>
-</td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -69,6 +67,14 @@ for each step.</p>
 <code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
 their dependencies, and verifies them together using a single <a href="../com.r3corda.core.contracts/-transaction-group/index.html">TransactionGroup</a>. If no exception is thrown, then
 all the transactions have been successfully verified and inserted into the local database.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service-request-message/index.html">ServiceRequestMessage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ServiceRequestMessage</span></code><p>Abstract superclass for request messages sent to services, which includes common
+fields such as replyTo and replyToTopic.</p>
 </td>
 </tr>
 <tr>

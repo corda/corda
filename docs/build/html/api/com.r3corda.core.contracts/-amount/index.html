@@ -108,13 +108,32 @@ amount used in whatever underlying thing the amount represents.</p>
 <td>
 <a href="../../com.r3corda.contracts.testing/-c-a-s-h.html">CASH</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">CASH</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.cash/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">CASH</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><p>Allows you to write 100.DOLLARS.CASH</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.testing/-o-b-l-i-g-a-t-i-o-n.html">OBLIGATION</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">OBLIGATION</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.testing/-s-t-a-t-e.html">STATE</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">STATE</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
 </tr>
 </tbody>
 </table>
 <h3>Extension Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="../issued by.html">issued by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issued by(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="../../com.r3corda.contracts/times.html">times</a></td>

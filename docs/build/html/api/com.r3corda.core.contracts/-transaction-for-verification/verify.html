@@ -9,17 +9,14 @@
 <h1>verify</h1>
 <a name="com.r3corda.core.contracts.TransactionForVerification$verify()"></a>
 <code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
-<p>Verifies that the transaction is valid:</p>
-<ul><li><p>Checks that the input states and the timestamp point to the same Notary</p>
-</li><li><p>Runs the contracts for this transaction. If any contract fails to verify, the whole transaction
-is considered to be invalid</p>
-</li></ul><p>TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.</p>
+<p>Verifies that the transaction is valid by running type-specific validation logic.</p>
+<p>TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.</p>
 <br/>
 <br/>
 <h3>Exceptions</h3>
 <a name="TransactionVerificationException"></a>
-<code>TransactionVerificationException</code> - if a contract throws an exception (the original is in the cause field)
-or the transaction has references to more than one Notary<br/>
+<code>TransactionVerificationException</code> - if validation logic fails or if a contract throws an exception
+(the original is in the cause field)<br/>
 <br/>
 <br/>
 </BODY>

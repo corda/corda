@@ -7,9 +7,20 @@
 <a href="../index.html">com.r3corda.node.services.api</a>&nbsp;/&nbsp;<a href=".">ServiceHubInternal</a><br/>
 <br/>
 <h1>ServiceHubInternal</h1>
-<code><span class="keyword">interface </span><span class="identifier">ServiceHubInternal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ServiceHubInternal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><br/>
 <br/>
 <br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ServiceHubInternal</span><span class="symbol">(</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
 <h3>Properties</h3>
 <table>
 <tbody>
@@ -18,6 +29,12 @@
 <a href="monitoring-service.html">monitoringService</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">monitoringService</span><span class="symbol">: </span><a href="../-monitoring-service/index.html"><span class="identifier">MonitoringService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="protocol-logic-ref-factory.html">protocolLogicRefFactory</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">protocolLogicRefFactory</span><span class="symbol">: </span><a href="../../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -56,6 +73,12 @@
 </tr>
 <tr>
 <td>
+<a href="../../com.r3corda.core.node/-service-hub/scheduler-service.html">schedulerService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">schedulerService</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.core.node/-service-hub/storage-service.html">storageService</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">storageService</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
@@ -68,6 +91,20 @@
 </tr>
 </tbody>
 </table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="start-protocol.html">startProtocol</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">startProtocol</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$startProtocol(kotlin.String, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.startProtocol.T)))/loggerName">loggerName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.ServiceHubInternal$startProtocol(kotlin.String, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.ServiceHubInternal.startProtocol.T)))/logic">logic</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>TODO: borrowing this method from service manager work in another branch.  Its required to avoid circular dependency
+between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
+itself, at which point this method would not be needed (by the scheduler)</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3>Inherited Functions</h3>
 <table>
 <tbody>
@@ -75,14 +112,16 @@
 <td>
 <a href="../../com.r3corda.core.node/-service-hub/load-state.html">loadState</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">loadState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$loadState(com.r3corda.core.contracts.StateRef)/stateRef">stateRef</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a></code><p>Given a <a href="../../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> loads the referenced transaction and looks up the specified output <a href="../../com.r3corda.core.contracts/-contract-state/index.html">ContractState</a></p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">loadState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$loadState(com.r3corda.core.contracts.StateRef)/stateRef">stateRef</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code><p>Given a <a href="../../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> loads the referenced transaction and looks up the specified output <a href="../../com.r3corda.core.contracts/-contract-state/index.html">ContractState</a></p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../../com.r3corda.core.node/-service-hub/record-transactions.html">recordTransactions</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.collections.List((com.r3corda.core.contracts.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a list of <a href="../../com.r3corda.core.contracts/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.collections.Iterable((com.r3corda.core.contracts.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a list of <a href="../../com.r3corda.core.contracts/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
+sends them to the wallet for further processing.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">recordTransactions</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.node.ServiceHub$recordTransactions(kotlin.Array((com.r3corda.core.contracts.SignedTransaction)))/txs">txs</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Given some <a href="../../com.r3corda.core.contracts/-signed-transaction/index.html">SignedTransaction</a>s, writes them to the local storage for validated transactions and then
 sends them to the wallet for further processing.</p>
 </td>
 </tr>
@@ -93,6 +132,19 @@ sends them to the wallet for further processing.</p>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.ServiceHub$verifyTransaction(com.r3corda.core.contracts.LedgerTransaction)/ltx">ltx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a <a href="../../com.r3corda.core.contracts/-ledger-transaction/index.html">LedgerTransaction</a>, looks up all its dependencies in the local database, uses the identity service to map
 the <a href="../../com.r3corda.core.contracts/-signed-transaction/index.html">SignedTransaction</a>s the DB gives back into <a href="../../com.r3corda.core.contracts/-ledger-transaction/index.html">LedgerTransaction</a>s, and then runs the smart contracts for the
 transaction. If no exception is thrown, the transaction is valid.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.testing/fill-with-some-test-cash.html">fillWithSomeTestCash</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a>&nbsp;<span class="symbol">=</span>&nbsp;OpaqueBytes(ByteArray(1, { 0 }))<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
+to the wallet. This is intended for unit tests.</p>
 </td>
 </tr>
 </tbody>

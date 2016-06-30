@@ -1,0 +1,156 @@
+<HTML>
+<HEAD>
+<title>InMemoryWalletService - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.testing</a>&nbsp;/&nbsp;<a href=".">InMemoryWalletService</a><br/>
+<br/>
+<h1>InMemoryWalletService</h1>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><br/>
+<p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
+states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+<br/>
+<br/>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-clashing-threads/index.html">ClashingThreads</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ClashingThreads</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">InMemoryWalletService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.InMemoryWalletService$<init>(com.r3corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
+states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="current-wallet.html">currentWallet</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">currentWallet</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Returns a read-only snapshot of the wallet at the time the call is made. Note that if you consume states or
+keys in this wallet, you must inform the wallet service so it can update its internal state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="linear-heads.html">linearHeads</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">linearHeads</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of the heads of LinearStates</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="updates.html">updates</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">updates</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-wallet/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
+the update.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="notify-all.html">notifyAll</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notifyAll</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.InMemoryWalletService$notifyAll(kotlin.collections.Iterable((com.r3corda.core.contracts.WireTransaction)))/txns">txns</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
+new states that they create. You should only insert transactions that have been successfully verified here</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node.services/-wallet-service/linear-heads-of-type_.html">linearHeadsOfType_</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <span class="identifier">linearHeadsOfType_</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$linearHeadsOfType_(java.lang.Class((com.r3corda.core.node.services.WalletService.linearHeadsOfType_.T)))/stateType">stateType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns the <a href="../../com.r3corda.core.node.services/-wallet-service/linear-heads.html">linearHeads</a> only when the type of the state would be considered an instanceof the given type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node.services/-wallet-service/notify.html">notify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$notify(com.r3corda.core.contracts.WireTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Same as notifyAll but with a single transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node.services/-wallet-service/states-for-refs.html">statesForRefs</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$statesForRefs(kotlin.collections.List((com.r3corda.core.contracts.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node.services/-wallet-service/when-consumed.html">whenConsumed</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">whenConsumed</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$whenConsumed(com.r3corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-wallet/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Provide a <a href="#">Future</a> for when a <a href="../../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> is consumed, which can be very useful in building tests.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="clashing-threads.html">clashingThreads</a></td>
+<td>
+<code><span class="keyword">val </span><a href="../../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a><span class="symbol">.</span><span class="identifier">clashingThreads</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node.services/linear-heads-of-type.html">linearHeadsOfType</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a><span class="symbol">.</span><span class="identifier">linearHeadsOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.wallet/-node-wallet-service/index.html">NodeWalletService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">InMemoryWalletService</span></code><p>Currently, the node wallet service is just the in-memory wallet service until we have finished evaluating and
+selecting a persistence layer (probably an ORM over a SQL DB).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

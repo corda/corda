@@ -54,9 +54,15 @@ then B and C trade with each other, then C and A etc).</p>
 </tr>
 <tr>
 <td>
-<a href="../-simulation/current-day.html">currentDay</a></td>
+<a href="../-simulation/clocks.html">clocks</a></td>
 <td>
-<code><span class="keyword">var </span><span class="identifier">currentDay</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a></code><p>The current simulated date. By default this never changes. If you want it to change, you should do so from
+<code><span class="keyword">val </span><span class="identifier">clocks</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/current-date-and-time.html">currentDateAndTime</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">currentDateAndTime</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDateTime.html"><span class="identifier">LocalDateTime</span></a></code><p>The current simulated date. By default this never changes. If you want it to change, you should do so from
 within your overridden <a href="../-simulation/iterate.html">iterate</a> call. Changes in the current day surface in the <a href="../-simulation/date-changes.html">dateChanges</a> observable.</p>
 </td>
 </tr>
@@ -64,7 +70,7 @@ within your overridden <a href="../-simulation/iterate.html">iterate</a> call. C
 <td>
 <a href="../-simulation/date-changes.html">dateChanges</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">dateChanges</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">dateChanges</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDateTime.html"><span class="identifier">LocalDateTime</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -103,6 +109,12 @@ in the UI somewhere.</p>
 <a href="../-simulation/network-map.html">networkMap</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">networkMap</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network-send-manually-pumped.html">networkSendManuallyPumped</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkSendManuallyPumped</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
 </tr>
 <tr>
 <td>
@@ -161,15 +173,15 @@ network bringup has been simulated.</p>
 </tr>
 <tr>
 <td>
-<a href="../-simulation/link-consensus.html">linkConsensus</a></td>
+<a href="../-simulation/show-consensus-for.html">showConsensusFor</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">linkConsensus</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$linkConsensus(kotlin.collections.Collection((com.r3corda.node.internal.testing.Simulation.SimulatedNode)), com.r3corda.core.protocols.ProtocolLogic((kotlin.Any)))/nodes">nodes</span><span class="symbol">:</span>&nbsp;<span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$linkConsensus(kotlin.collections.Collection((com.r3corda.node.internal.testing.Simulation.SimulatedNode)), com.r3corda.core.protocols.ProtocolLogic((kotlin.Any)))/protocol">protocol</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">showConsensusFor</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$showConsensusFor(kotlin.collections.List((com.r3corda.node.internal.testing.Simulation.SimulatedNode)))/nodes">nodes</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../-simulation/link-protocol-progress.html">linkProtocolProgress</a></td>
+<a href="../-simulation/show-progress-for.html">showProgressFor</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">linkProtocolProgress</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$linkProtocolProgress(com.r3corda.node.internal.testing.Simulation.SimulatedNode, com.r3corda.core.protocols.ProtocolLogic((kotlin.Any)))/node">node</span><span class="symbol">:</span>&nbsp;<a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$linkProtocolProgress(com.r3corda.node.internal.testing.Simulation.SimulatedNode, com.r3corda.core.protocols.ProtocolLogic((kotlin.Any)))/protocol">protocol</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">showProgressFor</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$showProgressFor(kotlin.collections.List((com.r3corda.node.internal.testing.Simulation.SimulatedNode)))/nodes">nodes</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
@@ -181,7 +193,7 @@ network bringup has been simulated.</p>
 <td>
 <a href="../-simulation/start-trading-circle.html">startTradingCircle</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">startTradingCircle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$startTradingCircle(kotlin.Function2((kotlin.Int, kotlin.Int, (()))))/tradeBetween">tradeBetween</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Int</span><span class="symbol">,</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
+<code><span class="keyword">fun </span><span class="identifier">startTradingCircle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.testing.Simulation$startTradingCircle(kotlin.Function2((kotlin.Int, , (()))))/tradeBetween">tradeBetween</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Int</span><span class="symbol">,</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
 each time the returned future completes.</p>
 </td>
 </tr>

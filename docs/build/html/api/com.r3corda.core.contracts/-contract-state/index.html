@@ -10,7 +10,9 @@
 <code><span class="keyword">interface </span><span class="identifier">ContractState</span></code><br/>
 <p>A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
 file that the program can use to persist data across transactions. States are immutable: once created they are never
-updated, instead, any changes must generate a new successor state.</p>
+updated, instead, any changes must generate a new successor state. States can be updated (consumed) only once: the
+notary is responsible for ensuring there is no "double spending" by only signing a transaction if the input states
+are all free.</p>
 <br/>
 <br/>
 <h3>Properties</h3>
@@ -20,14 +22,14 @@ updated, instead, any changes must generate a new successor state.</p>
 <td>
 <a href="contract.html">contract</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../-contract/index.html"><span class="identifier">Contract</span></a></code><p>Contract by which the state belongs</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../-contract/index.html"><span class="identifier">Contract</span></a></code><p>An instance of the contract class that will verify this state.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="notary.html">notary</a></td>
+<a href="participants.html">participants</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code><p>Identity of the notary that ensures this state is not used as an input to a transaction more than once</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
 </td>
 </tr>
 </tbody>
@@ -44,9 +46,9 @@ updated, instead, any changes must generate a new successor state.</p>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.core.testing/label.html">label</a></td>
+<a href="../../com.r3corda.contracts.testing/with notary.html">with notary</a></td>
 <td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">ContractState</span><span class="symbol">.</span><span class="identifier">label</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing$label(com.r3corda.core.contracts.ContractState, kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.testing/-labeled-output/index.html"><span class="identifier">LabeledOutput</span></a></code></td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">ContractState</span><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with notary(com.r3corda.core.contracts.ContractState, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">ContractState</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -55,9 +57,25 @@ updated, instead, any changes must generate a new successor state.</p>
 <tbody>
 <tr>
 <td>
+<a href="../-dummy-state/index.html">DummyState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code><p>Dummy state for use in testing. Not part of any real contract.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../-linear-state/index.html">LinearState</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code><p>A state that evolves by superseding itself, all of which share the common "thread"</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-dummy-contract/-multi-owner-state/index.html">MultiOwnerState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">MultiOwnerState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span><span class="symbol">, </span><a href="../-dummy-contract/-state/index.html"><span class="identifier">State</span></a></code><p>Alternative state with multiple owners. This exists primarily to provide a dummy state with multiple
+participants, and could in theory be merged with <a href="../-dummy-contract/-single-owner-state/index.html">SingleOwnerState</a> by putting the additional participants
+in a different field, however this is a good example of a contract with multiple states.</p>
 </td>
 </tr>
 <tr>
@@ -69,9 +87,15 @@ updated, instead, any changes must generate a new successor state.</p>
 </tr>
 <tr>
 <td>
+<a href="../-schedulable-state/index.html">SchedulableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SchedulableState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../-dummy-contract/-state/index.html">State</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code></td>
+<code><span class="keyword">interface </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code></td>
 </tr>
 </tbody>
 </table>

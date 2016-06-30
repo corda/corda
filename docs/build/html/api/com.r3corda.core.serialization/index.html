@@ -12,10 +12,38 @@
 <tbody>
 <tr>
 <td>
+<a href="-deserialize-as-kotlin-object-def.html">DeserializeAsKotlinObjectDef</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">DeserializeAsKotlinObjectDef</span></code><p>Marker interface for kotlin object definitions so that they are deserialized as the singleton instance.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-ed25519-private-key-serializer/index.html">Ed25519PrivateKeySerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Ed25519PrivateKeySerializer</span></code><p>For serialising an ed25519 private key</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-ed25519-public-key-serializer/index.html">Ed25519PublicKeySerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Ed25519PublicKeySerializer</span></code><p>For serialising an ed25519 public key</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-immutable-class-serializer/index.html">ImmutableClassSerializer</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ImmutableClassSerializer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code><p>Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
 set via the constructor and the class is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-kotlin-object-serializer/index.html">KotlinObjectSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">KotlinObjectSerializer</span></code><p>Serializer to deserialize kotlin object definitions marked with <a href="-deserialize-as-kotlin-object-def.html">DeserializeAsKotlinObjectDef</a>.</p>
 </td>
 </tr>
 <tr>
@@ -186,6 +214,12 @@ references will throw a stack overflow exception during serialisation.</p>
 </tr>
 <tr>
 <td>
+<a href="read-bytes-with-length.html">readBytesWithLength</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">readBytesWithLength</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ByteArray</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="serialize.html">serialize</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$serialize(com.r3corda.core.serialization.serialize.T, )/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Can be called on any object to convert it to a byte array (wrapped by <a href="-serialized-bytes/index.html">SerializedBytes</a>), regardless of whether
@@ -197,6 +231,12 @@ the type is marked as serializable or was designed for it (so be careful)</p>
 <a href="use-class-loader.html">useClassLoader</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">useClassLoader</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$useClassLoader(, java.lang.ClassLoader, kotlin.Function0((com.r3corda.core.serialization.useClassLoader.T)))/cl">cl</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ClassLoader.html"><span class="identifier">ClassLoader</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.serialization$useClassLoader(, java.lang.ClassLoader, kotlin.Function0((com.r3corda.core.serialization.useClassLoader.T)))/body">body</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="write-bytes-with-length.html">writeBytesWithLength</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">writeBytesWithLength</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$writeBytesWithLength(, kotlin.ByteArray)/byteArray">byteArray</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>
