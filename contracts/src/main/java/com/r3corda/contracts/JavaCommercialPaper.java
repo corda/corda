@@ -1,9 +1,9 @@
 package com.r3corda.contracts;
 
 import com.google.common.collect.ImmutableList;
-import com.r3corda.contracts.cash.Cash;
-import com.r3corda.contracts.cash.CashKt;
-import com.r3corda.contracts.cash.InsufficientBalanceException;
+import com.r3corda.contracts.asset.Cash;
+import com.r3corda.contracts.asset.CashKt;
+import com.r3corda.contracts.asset.InsufficientBalanceException;
 import com.r3corda.core.contracts.*;
 import com.r3corda.core.contracts.TransactionForContract.InOutGroup;
 import com.r3corda.core.crypto.NullPublicKey;

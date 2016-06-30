@@ -1,4 +1,4 @@
-package com.r3corda.contracts.cash
+package com.r3corda.contracts.asset
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party

@@ -1,8 +1,8 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.contracts.cash.Cash
-import com.r3corda.contracts.cash.sumCashBy
+import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party

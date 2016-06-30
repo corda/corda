@@ -1,6 +1,6 @@
 package com.r3corda.node.services
 
-import com.r3corda.contracts.cash.Cash
+import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.testing.CASH
 import com.r3corda.contracts.testing.`issued by`
 import com.r3corda.contracts.testing.`owned by`

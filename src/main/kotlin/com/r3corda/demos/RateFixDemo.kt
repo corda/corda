@@ -1,7 +1,7 @@
 package com.r3corda.demos
 
 import com.google.common.net.HostAndPort
-import com.r3corda.contracts.cash.Cash
+import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.hours

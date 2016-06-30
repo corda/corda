@@ -1,8 +1,8 @@
-package com.r3corda.contracts
+package com.r3corda.contracts.asset
 
 import com.google.common.annotations.VisibleForTesting
-import com.r3corda.contracts.cash.FungibleAssetState
-import com.r3corda.contracts.cash.sumFungibleOrNull
+import com.r3corda.contracts.asset.FungibleAssetState
+import com.r3corda.contracts.asset.sumFungibleOrNull
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -152,7 +152,7 @@ class Obligation<P> : Contract {
         override val owner: PublicKey
             get() = beneficiary
 
-        override fun move(newAmount: Amount<P>, newOwner: PublicKey): Obligation.State<P>
+        override fun move(newAmount: Amount<P>, newOwner: PublicKey): State<P>
                 = copy(quantity = newAmount.quantity, beneficiary = newOwner)
 
         override fun toString() = when (lifecycle) {
@@ -249,10 +249,10 @@ class Obligation<P> : Contract {
 
     /** This is the function EVERYONE runs */
     override fun verify(tx: TransactionForContract) {
-        val commands = tx.commands.select<Obligation.Commands>()
+        val commands = tx.commands.select<Commands>()
 
         // Net commands are special, and cross issuance definitions, so handle them first
-        val netCommands = commands.select<Obligation.Commands.Net>()
+        val netCommands = commands.select<Commands.Net>()
         if (netCommands.isNotEmpty()) {
             val netCommand = netCommands.single()
             val groups = when (netCommand.value.type) {

@@ -1,7 +1,7 @@
-package com.r3corda.contracts
+package com.r3corda.contracts.asset
 
-import com.r3corda.contracts.cash.Cash
-import com.r3corda.contracts.Obligation.Lifecycle
+import com.r3corda.contracts.asset.*
+import com.r3corda.contracts.asset.Obligation.Lifecycle
 import com.r3corda.contracts.testing.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
@@ -18,7 +18,7 @@ class ObligationTests {
     val defaultIssuer = MEGA_CORP.ref(1)
     val defaultUsd = USD `issued by` defaultIssuer
     val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
-    val trustedCashContract = nonEmptySetOf(SecureHash.randomSHA256() as SecureHash)
+    val trustedCashContract = nonEmptySetOf(SecureHash.Companion.randomSHA256() as SecureHash)
     val megaIssuedDollars = nonEmptySetOf(Issued<Currency>(defaultIssuer, USD))
     val megaIssuedPounds = nonEmptySetOf(Issued<Currency>(defaultIssuer, GBP))
     val fivePm = Instant.parse("2016-01-01T17:00:00.00Z")
@@ -54,7 +54,7 @@ class ObligationTests {
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "required com.r3corda.contracts.Obligation.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.asset.Obligation.Commands.Move command"
             }
             tweak {
                 output { outState }
@@ -280,23 +280,23 @@ class ObligationTests {
 
         // Now generate a transaction marking the obligation as having defaulted
         tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-            Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Obligation.Lifecycle.DEFAULTED, DUMMY_NOTARY)
+            Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Lifecycle.DEFAULTED, DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
         assertEquals(1, tx.tx.outputs.size)
-        assertEquals(stateAndRef.state.data.copy(lifecycle = Obligation.Lifecycle.DEFAULTED), tx.tx.outputs[0].data)
+        assertEquals(stateAndRef.state.data.copy(lifecycle = Lifecycle.DEFAULTED), tx.tx.outputs[0].data)
         assertTrue(tx.verify().isEmpty())
 
         // And set it back
         stateAndRef = tx.tx.outRef<Obligation.State<Currency>>(0)
         tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-            Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Obligation.Lifecycle.NORMAL, DUMMY_NOTARY)
+            Obligation<Currency>().generateSetLifecycle(this, listOf(stateAndRef), Lifecycle.NORMAL, DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
         assertEquals(1, tx.tx.outputs.size)
-        assertEquals(stateAndRef.state.data.copy(lifecycle = Obligation.Lifecycle.NORMAL), tx.tx.outputs[0].data)
+        assertEquals(stateAndRef.state.data.copy(lifecycle = Lifecycle.NORMAL), tx.tx.outputs[0].data)
         assertTrue(tx.verify().isEmpty())
     }
 
@@ -450,8 +450,8 @@ class ObligationTests {
             obligationTestRoots(this)
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
-                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)).copy(lifecycle = Obligation.Lifecycle.DEFAULTED)  }
-                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Obligation.Lifecycle.DEFAULTED) }
+                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)).copy(lifecycle = Lifecycle.DEFAULTED) }
+                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Lifecycle.DEFAULTED) }
             }
         }.expectFailureOfTx(1, "there is a timestamp from the authority")
 
@@ -464,8 +464,8 @@ class ObligationTests {
             }
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
-                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` futureTestTime).copy(lifecycle = Obligation.Lifecycle.DEFAULTED)  }
-                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` futureTestTime, Obligation.Lifecycle.DEFAULTED) }
+                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
+                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` futureTestTime, Lifecycle.DEFAULTED) }
                 timestamp(TEST_TX_TIME)
             }
         }.expectFailureOfTx(1, "the due date has passed")
@@ -477,8 +477,8 @@ class ObligationTests {
             }
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
-                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` pastTestTime).copy(lifecycle = Obligation.Lifecycle.DEFAULTED)  }
-                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` pastTestTime, Obligation.Lifecycle.DEFAULTED) }
+                output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
+                arg(BOB_PUBKEY) { Obligation.Commands.SetLifecycle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` pastTestTime, Lifecycle.DEFAULTED) }
                 timestamp(TEST_TX_TIME)
             }
         }.verify()
@@ -557,8 +557,8 @@ class ObligationTests {
             input { inState }
             input { inState `issued by` MINI_CORP }
             output { outState }
-            arg(DUMMY_PUBKEY_1) {Obligation.Commands.Move(inState.issuanceDef) }
-            arg(DUMMY_PUBKEY_1) {Obligation.Commands.Move((inState `issued by` MINI_CORP).issuanceDef) }
+            arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
+            arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move((inState `issued by` MINI_CORP).issuanceDef) }
             this `fails requirement` "at obligor MiniCorp the amounts balance"
         }
     }
@@ -578,7 +578,7 @@ class ObligationTests {
 
             tweak {
                 arg(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit<Currency>(inState.issuanceDef, 200.DOLLARS) }
-                this `fails requirement` "required com.r3corda.contracts.Obligation.Commands.Move command"
+                this `fails requirement` "required com.r3corda.contracts.asset.Obligation.Commands.Move command"
 
                 tweak {
                     arg(DUMMY_PUBKEY_1) { Obligation.Commands.Move(inState.issuanceDef) }
@@ -683,7 +683,7 @@ class ObligationTests {
 
         // States must not be nettable if the cash contract differs
         assertNotEquals(fiveKDollarsFromMegaToMega.bilateralNetState,
-                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = nonEmptySetOf(SecureHash.randomSHA256()))).bilateralNetState)
+                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = nonEmptySetOf(SecureHash.Companion.randomSHA256()))).bilateralNetState)
 
         // States must not be nettable if the trusted issuers differ
         val miniCorpIssuer = nonEmptySetOf(Issued<Currency>(MINI_CORP.ref(1), USD))
