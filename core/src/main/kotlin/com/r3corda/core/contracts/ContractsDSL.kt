@@ -19,26 +19,31 @@ import java.util.*
 //// Currencies ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 fun currency(code: String) = Currency.getInstance(code)!!
+fun commodity(code: String) = Commodity.getInstance(code)!!
 
 @JvmField val USD = currency("USD")
 @JvmField val GBP = currency("GBP")
 @JvmField val CHF = currency("CHF")
+@JvmField val FCOJ = commodity("FCOJ")
 
 fun DOLLARS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, USD)
 fun DOLLARS(amount: Double): Amount<Currency> = Amount((amount * 100).toLong(), USD)
 fun POUNDS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, GBP)
 fun SWISS_FRANCS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, CHF)
+fun FCOJ(amount: Int): Amount<Commodity> = Amount(amount.toLong() * 100, FCOJ)
 
 val Int.DOLLARS: Amount<Currency> get() = DOLLARS(this)
 val Double.DOLLARS: Amount<Currency> get() = DOLLARS(this)
 val Int.POUNDS: Amount<Currency> get() = POUNDS(this)
 val Int.SWISS_FRANCS: Amount<Currency> get() = SWISS_FRANCS(this)
+val Int.FCOJ: Amount<Commodity> get() = FCOJ(this)
 
 infix fun Currency.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+infix fun Commodity.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Currency.issuedBy(deposit: PartyAndReference) = Issued<Currency>(deposit, this)
+infix fun Commodity.issuedBy(deposit: PartyAndReference) = Issued<Commodity>(deposit, this)
 infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantity, token.issuedBy(deposit))
-
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
