@@ -445,7 +445,7 @@ class ObligationTests {
 
     @Test
     fun `settlement`() {
-        // Try netting out two obligations
+        // Try settling an obligation
         ledger {
             obligationTestRoots(this)
             transaction("Settlement") {
@@ -456,7 +456,33 @@ class ObligationTests {
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this.verifies()
             }
-            this.verifies()
+        }
+
+        // Try partial settling of an obligation
+        val halfAMillionDollars = 500000.DOLLARS `issued by` defaultIssuer
+        ledger {
+            transaction("Settlement") {
+                input(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY))
+                input(500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE_PUBKEY)
+                output("Alice's $5,000,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY) }
+                output("Bob's $500,000") { 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Amount(oneMillionDollars.quantity, USD)) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                this.verifies()
+            }
+        }
+
+        // Make sure we can't settle an obligation that's defaulted
+        val defaultedObligation: Obligation.State<Currency> = (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY)).copy(lifecycle = Lifecycle.DEFAULTED)
+        ledger {
+            transaction("Settlement") {
+                input(defaultedObligation) // Alice's defaulted $1,000,000 obligation to Bob
+                input(1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE_PUBKEY)
+                output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Amount(oneMillionDollars.quantity, USD)) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                this `fails with` "all inputs are in the normal state"
+            }
         }
     }
 
