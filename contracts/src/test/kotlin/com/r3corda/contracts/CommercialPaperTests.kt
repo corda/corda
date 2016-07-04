@@ -17,10 +17,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 interface ICommercialPaperTestTemplate {
-    open fun getPaper(): ICommercialPaperState
-    open fun getIssueCommand(): CommandData
-    open fun getRedeemCommand(): CommandData
-    open fun getMoveCommand(): CommandData
+    fun getPaper(): ICommercialPaperState
+    fun getIssueCommand(): CommandData
+    fun getRedeemCommand(): CommandData
+    fun getMoveCommand(): CommandData
 }
 
 class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
@@ -63,79 +63,120 @@ class CommercialPaperTestsGeneric {
     val issuer = MEGA_CORP.ref(123)
 
     @Test
-    fun ok() {
-        trade().verify()
-    }
+    fun `trade lifecycle test`() {
+        val someProfits = 1200.DOLLARS `issued by` issuer
+        ledger {
+            nonVerifiedTransaction {
+                output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                output("some profits", someProfits.STATE `owned by` MEGA_CORP_PUBKEY)
+            }
 
-    @Test
-    fun `not matured at redemption`() {
-        trade(redemptionTime = TEST_TX_TIME + 2.days).expectFailureOfTx(3, "must have matured")
+            // Some CP is issued onto the ledger by MegaCorp.
+            transaction("Issuance") {
+                output("paper") { thisTest.getPaper() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+                timestamp(TEST_TX_TIME)
+            }
+
+            // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
+            // that sounds a bit too good to be true!
+            transaction("Trade") {
+                input("paper")
+                input("alice's $900")
+                output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
+                output("alice's paper") { "paper".output<ICommercialPaperState>().data `owned by` ALICE_PUBKEY }
+                command(ALICE_PUBKEY) { Cash.Commands.Move() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
+            }
+
+            // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
+            // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
+            transaction("Redemption") {
+                input("alice's paper")
+                input("some profits")
+
+                fun TransactionDsl<TransactionDslInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
+                    output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
+                    output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
+                }
+
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                command(ALICE_PUBKEY) { thisTest.getRedeemCommand() }
+
+                tweak {
+                    outputs(700.DOLLARS `issued by` issuer)
+                    timestamp(TEST_TX_TIME + 8.days)
+                    this `fails with` "received amount equals the face value"
+                }
+                outputs(1000.DOLLARS `issued by` issuer)
+
+
+                tweak {
+                    timestamp(TEST_TX_TIME + 2.days)
+                    this `fails with` "must have matured"
+                }
+                timestamp(TEST_TX_TIME + 8.days)
+
+                tweak {
+                    output { "paper".output<ICommercialPaperState>().data }
+                    this `fails with` "must be destroyed"
+                }
+
+                verifies()
+            }
+        }
     }
 
     @Test
     fun `key mismatch at issue`() {
-        transactionGroup {
+        ledger {
             transaction {
                 output { thisTest.getPaper() }
-                arg(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
+                command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
+                this `fails with` "signed by the claimed issuer"
             }
-
-            expectFailureOfTx(1, "signed by the claimed issuer")
         }
     }
 
     @Test
     fun `face value is not zero`() {
-        transactionGroup {
+        ledger {
             transaction {
                 output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
-                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
+                this `fails with` "face value is not zero"
             }
-
-            expectFailureOfTx(1, "face value is not zero")
         }
     }
 
     @Test
     fun `maturity date not in the past`() {
-        transactionGroup {
+        ledger {
             transaction {
                 output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
-                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
+                this `fails with` "maturity date is not in the past"
             }
-
-            expectFailureOfTx(1, "maturity date is not in the past")
         }
     }
 
     @Test
     fun `issue cannot replace an existing state`() {
-        transactionGroup {
-            roots {
-                transaction(thisTest.getPaper() `with notary` DUMMY_NOTARY label "paper")
+        ledger {
+            nonVerifiedTransaction {
+                output("paper") { thisTest.getPaper() }
             }
             transaction {
                 input("paper")
                 output { thisTest.getPaper() }
-                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
+                this `fails with` "there is no input state"
             }
-
-            expectFailureOfTx(1, "there is no input state")
         }
-    }
-
-    @Test
-    fun `did not receive enough money at redemption`() {
-        trade(aliceGetsBack = 700.DOLLARS `issued by` issuer).expectFailureOfTx(3, "received amount equals the face value")
-    }
-
-    @Test
-    fun `paper must be destroyed by redemption`() {
-        trade(destroyPaperAtRedemption = false).expectFailureOfTx(3, "must be destroyed")
     }
 
     fun <T : ContractState> cashOutputsToWallet(vararg outputs: TransactionState<T>): Pair<LedgerTransaction, List<StateAndRef<T>>> {
@@ -198,53 +239,5 @@ class CommercialPaperTestsGeneric {
         assertTrue(e.cause!!.message!!.contains("paper must have matured"))
 
         TransactionGroup(setOf(issueTX, moveTX, validRedemption), setOf(corpWalletTX, alicesWalletTX)).verify()
-    }
-
-    // Generate a trade lifecycle with various parameters.
-    fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
-              aliceGetsBack: Amount<Issued<Currency>> = 1000.DOLLARS `issued by` issuer,
-              destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<ICommercialPaperState> {
-        val someProfits = 1200.DOLLARS `issued by` issuer
-        return transactionGroupFor() {
-            roots {
-                transaction(900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY label "alice's $900")
-                transaction(someProfits.STATE `owned by` MEGA_CORP_PUBKEY `with notary` DUMMY_NOTARY label "some profits")
-            }
-
-            // Some CP is issued onto the ledger by MegaCorp.
-            transaction("Issuance") {
-                output("paper") { thisTest.getPaper() }
-                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
-                timestamp(TEST_TX_TIME)
-            }
-
-            // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
-            // that sounds a bit too good to be true!
-            transaction("Trade") {
-                input("paper")
-                input("alice's $900")
-                output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output.data `owned by` ALICE_PUBKEY }
-                arg(ALICE_PUBKEY) { Cash.Commands.Move() }
-                arg(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
-            }
-
-            // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
-            // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
-            transaction("Redemption") {
-                input("alice's paper")
-                input("some profits")
-
-                output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
-                output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
-                if (!destroyPaperAtRedemption)
-                    output { "paper".output.data }
-
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                arg(ALICE_PUBKEY) { thisTest.getRedeemCommand() }
-
-                timestamp(redemptionTime)
-            }
-        }
     }
 }
