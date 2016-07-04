@@ -122,7 +122,7 @@ class CommercialPaperTestsGeneric {
                     this `fails with` "must be destroyed"
                 }
 
-                verifies()
+                this.verifies()
             }
         }
     }

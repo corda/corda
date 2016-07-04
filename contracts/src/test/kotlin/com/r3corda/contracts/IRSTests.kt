@@ -200,12 +200,12 @@ class IRSTests {
 
     @Test
     fun ok() {
-        trade().verify()
+        trade().verifies()
     }
 
     @Test
     fun `ok with groups`() {
-        tradegroups().verify()
+        tradegroups().verifies()
     }
 
     /**
@@ -360,38 +360,38 @@ class IRSTests {
     /**
      * Generates a typical transactional history for an IRS.
      */
-    fun trade(): TransactionGroupDSL<InterestRateSwap.State> {
+    fun trade(): LedgerDsl<TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
-        val txgroup: TransactionGroupDSL<InterestRateSwap.State> = transactionGroupFor() {
+        return ledger {
             transaction("Agreement") {
                 output("irs post agreement") { singleIRS() }
-                arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
             }
 
             transaction("Fix") {
                 input("irs post agreement")
+                val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
                 output("irs post first fixing") {
-                    "irs post agreement".output.data.copy(
-                            "irs post agreement".output.data.fixedLeg,
-                            "irs post agreement".output.data.floatingLeg,
-                            "irs post agreement".output.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                            "irs post agreement".output.data.common
+                    postAgreement.data.copy(
+                            postAgreement.data.fixedLeg,
+                            postAgreement.data.floatingLeg,
+                            postAgreement.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                            postAgreement.data.common
                     )
                 }
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Fix()
                 }
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
                 timestamp(TEST_TX_TIME)
             }
         }
-        return txgroup
     }
 
     @Test
@@ -652,13 +652,13 @@ class IRSTests {
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.
      */
-    fun tradegroups(): TransactionGroupDSL<InterestRateSwap.State> {
+    fun tradegroups(): LedgerDsl<TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
         val ld1 = LocalDate.of(2016, 3, 8)
         val bd1 = BigDecimal("0.0063518")
 
         val irs = singleIRS()
 
-        val txgroup: TransactionGroupDSL<InterestRateSwap.State> = transactionGroupFor() {
+        return ledger {
             transaction("Agreement") {
                 output("irs post agreement1") {
                     irs.copy(
@@ -668,7 +668,7 @@ class IRSTests {
                             irs.common.copy(tradeID = "t1")
                     )
                 }
-                arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
             }
 
@@ -681,40 +681,41 @@ class IRSTests {
                             irs.common.copy(tradeID = "t2")
                     )
                 }
-                arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
             }
 
             transaction("Fix") {
                 input("irs post agreement1")
                 input("irs post agreement2")
+                val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
                 output("irs post first fixing1") {
-                    "irs post agreement1".output.data.copy(
-                            "irs post agreement1".output.data.fixedLeg,
-                            "irs post agreement1".output.data.floatingLeg,
-                            "irs post agreement1".output.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            "irs post agreement1".output.data.common.copy(tradeID = "t1")
+                    postAgreement1.data.copy(
+                            postAgreement1.data.fixedLeg,
+                            postAgreement1.data.floatingLeg,
+                            postAgreement1.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement1.data.common.copy(tradeID = "t1")
                     )
                 }
+                val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
                 output("irs post first fixing2") {
-                    "irs post agreement2".output.data.copy(
-                            "irs post agreement2".output.data.fixedLeg,
-                            "irs post agreement2".output.data.floatingLeg,
-                            "irs post agreement2".output.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            "irs post agreement2".output.data.common.copy(tradeID = "t2")
+                    postAgreement2.data.copy(
+                            postAgreement2.data.fixedLeg,
+                            postAgreement2.data.floatingLeg,
+                            postAgreement2.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement2.data.common.copy(tradeID = "t2")
                     )
                 }
 
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Fix()
                 }
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1)
                 }
                 timestamp(TEST_TX_TIME)
             }
         }
-        return txgroup
     }
 }
 
