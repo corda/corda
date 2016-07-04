@@ -58,7 +58,7 @@ data class TestTransactionDslInterpreter(
 ) : TransactionDslInterpreter, OutputStateLookup {
     private fun copy(): TestTransactionDslInterpreter =
             TestTransactionDslInterpreter(
-                    ledgerInterpreter = ledgerInterpreter.copy(),
+                    ledgerInterpreter = ledgerInterpreter,
                     inputStateRefs = ArrayList(inputStateRefs),
                     outputStates = ArrayList(outputStates),
                     attachments = ArrayList(attachments),
@@ -76,12 +76,6 @@ data class TestTransactionDslInterpreter(
                     signers = signers.toList(),
                     type = transactionType
             )
-
-    override fun input(stateLabel: String) {
-        val stateAndRef = retrieveOutputStateAndRef(ContractState::class.java, stateLabel)
-        signers.add(stateAndRef.state.notary.owningKey)
-        inputStateRefs.add(stateAndRef.ref)
-    }
 
     override fun input(stateRef: StateRef) {
         val notary = ledgerInterpreter.resolveStateRef<ContractState>(stateRef).notary
@@ -109,7 +103,7 @@ data class TestTransactionDslInterpreter(
 
     override fun failsWith(expectedMessage: String?) {
         val exceptionThrown = try {
-            verifies()
+            this.verifies()
             false
         } catch (exception: Exception) {
             if (expectedMessage != null) {
@@ -148,6 +142,8 @@ data class TestLedgerDslInterpreter private constructor (
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
         private val nonVerifiedTransactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
 ) : LedgerDslInterpreter<TestTransactionDslInterpreter> {
+
+    val wireTransactions: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
 
     // We specify [labelToOutputStateAndRefs] just so that Kotlin picks the primary constructor instead of cycling
     constructor(identityService: IdentityService, storageService: StorageService) : this(
@@ -344,6 +340,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        verifies()
+        this.verifies()
     }
 }

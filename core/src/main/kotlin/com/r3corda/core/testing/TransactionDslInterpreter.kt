@@ -16,7 +16,6 @@ import java.time.Instant
  * dynamically, come up with a substitute for primitives relying on early bind
  */
 interface TransactionDslInterpreter : OutputStateLookup {
-    fun input(stateLabel: String)
     fun input(stateRef: StateRef)
     fun output(label: String?, notary: Party, contractState: ContractState)
     fun attachment(attachmentId: SecureHash)
@@ -31,6 +30,8 @@ class TransactionDsl<
     out TransactionInterpreter: TransactionDslInterpreter
     > (val interpreter: TransactionInterpreter)
     : TransactionDslInterpreter by interpreter {
+
+    fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
 
     // Convenience functions
     fun output(label: String? = null, notary: Party = DUMMY_NOTARY, contractStateClosure: () -> ContractState) =

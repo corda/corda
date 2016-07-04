@@ -120,19 +120,14 @@ class TransactionGroupTests {
             }
         }
 
-        // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
-        // points nowhere.
         val input = StateAndRef(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY, generateStateRef())
-        tg.txns += TransactionType.General.Builder().apply {
-            addInputState(input)
-            addOutputState(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY)
-            addCommand(TestCash.Commands.Move(), BOB_PUBKEY)
-        }.toWireTransaction()
-
-        val e = assertFailsWith(TransactionResolutionException::class) {
-            tg.verify()
+        tg.apply {
+            transaction {
+                assertFailsWith(TransactionResolutionException::class) {
+                    input(input.ref)
+                }
+            }
         }
-        assertEquals(e.hash, input.ref.txhash)
     }
 
     @Test

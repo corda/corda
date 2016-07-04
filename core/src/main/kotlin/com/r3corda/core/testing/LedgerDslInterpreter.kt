@@ -38,4 +38,12 @@ class LedgerDsl<
     inline fun <reified State: ContractState> String.output(): TransactionState<State> =
             outputStateAndRef<State>().state
     fun String.outputRef(): StateRef = outputStateAndRef<ContractState>().ref
+
+    fun TransactionDslInterpreter.input(state: ContractState) {
+        val transaction = nonVerifiedTransaction {
+            output { state }
+        }
+        input(transaction.outRef<ContractState>(0).ref)
+    }
+    fun TransactionDslInterpreter.input(stateClosure: () -> ContractState) = input(stateClosure())
 }
