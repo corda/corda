@@ -12,15 +12,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.time.Instant
-import java.util.Currency
+import java.util.*
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 interface ICommercialPaperTestTemplate {
-    open fun getPaper(): ICommercialPaperState
-    open fun getIssueCommand(): CommandData
-    open fun getRedeemCommand(): CommandData
-    open fun getMoveCommand(): CommandData
+    fun getPaper(): ICommercialPaperState
+    fun getIssueCommand(): CommandData
+    fun getRedeemCommand(): CommandData
+    fun getMoveCommand(): CommandData
 }
 
 class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {

@@ -29,24 +29,24 @@ dependencies {
     compile project(':contracts')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
-    compile "org.slf4j:slf4j-jdk14:1.7.13"
+    compile "org.slf4j:slf4j-jdk14:${slf4j_version}"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.1"
+    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
 
     compile "com.google.guava:guava:19.0"
 
     // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:4.9"
+    compile "net.sf.jopt-simple:jopt-simple:5.0.2"
 
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
-    compile "org.fusesource.jansi:jansi:1.11"
+    compile "org.fusesource.jansi:jansi:1.13"
 
     // GraphStream: For visualisation
     compile "org.graphstream:gs-core:1.3"
@@ -63,7 +63,7 @@ dependencies {
     compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
     compile "javax.servlet:javax.servlet-api:3.1.0"
     compile "org.jolokia:jolokia-agent-war:2.0.0-M1"
-    compile "commons-fileupload:commons-fileupload:1.3.1"
+    compile "commons-fileupload:commons-fileupload:1.3.2"
 
     // Jersey for JAX-RS implementation for use in Jetty
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
@@ -76,10 +76,10 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
     }
-    compile ("com.fasterxml.jackson.module:jackson-module-kotlin:2.5.5-2") {
+    compile ("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}") {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
     }
-    compile "com.fasterxml.jackson.core:jackson-annotations:2.5.5"
+    compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"
@@ -92,7 +92,7 @@ dependencies {
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
-    testCompile 'org.assertj:assertj-core:3.4.1'
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
