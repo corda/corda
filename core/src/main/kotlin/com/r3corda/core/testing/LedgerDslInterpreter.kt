@@ -1,18 +1,21 @@
 package com.r3corda.core.testing
 
-import com.r3corda.core.contracts.Attachment
-import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.IdentityService
-import com.r3corda.core.node.services.StorageService
-import com.r3corda.core.node.services.testing.MockStorageService
 
-interface LedgerDslInterpreter<State: ContractState, out TransactionInterpreter: TransactionDslInterpreter<State>> {
-    fun transaction(dsl: TransactionDsl<State, TransactionInterpreter>.() -> Unit): Unit
-    fun nonVerifiedTransaction(dsl: TransactionDsl<State, TransactionInterpreter>.() -> Unit): Unit
-    fun tweak(dsl: LedgerDsl<State, TransactionInterpreter, LedgerDslInterpreter<State, TransactionInterpreter>>.() -> Unit)
+interface OutputStateLookup {
+    fun <State: ContractState> retrieveOutputStateAndRef(clazz: Class<State>, label: String): StateAndRef<State>
+}
+
+
+
+interface LedgerDslInterpreter<out TransactionInterpreter: TransactionDslInterpreter> :
+        OutputStateLookup {
+    fun transaction(transactionLabel: String?, dsl: TransactionDsl<TransactionInterpreter>.() -> Unit): WireTransaction
+    fun nonVerifiedTransaction(transactionLabel: String?, dsl: TransactionDsl<TransactionInterpreter>.() -> Unit): WireTransaction
+    fun tweak(dsl: LedgerDsl<TransactionInterpreter, LedgerDslInterpreter<TransactionInterpreter>>.() -> Unit)
     fun attachment(attachment: Attachment): SecureHash
-    fun _verifies(identityService: IdentityService, storageService: StorageService)
+    fun verifies()
 }
 
 /**
@@ -21,15 +24,18 @@ interface LedgerDslInterpreter<State: ContractState, out TransactionInterpreter:
  * covariance of the TransactionInterpreter parameter
  */
 class LedgerDsl<
-    State: ContractState,
-    out TransactionInterpreter: TransactionDslInterpreter<State>,
-    out LedgerInterpreter: LedgerDslInterpreter<State, TransactionInterpreter>
+    out TransactionInterpreter: TransactionDslInterpreter,
+    out LedgerInterpreter: LedgerDslInterpreter<TransactionInterpreter>
     > (val interpreter: LedgerInterpreter)
-    : LedgerDslInterpreter<State, TransactionDslInterpreter<State>> by interpreter {
+    : LedgerDslInterpreter<TransactionDslInterpreter> by interpreter {
 
-    @JvmOverloads
-    fun verifies(
-            identityService: IdentityService = MOCK_IDENTITY_SERVICE,
-            storageService: StorageService = MockStorageService()
-    ) = _verifies(identityService, storageService)
+    fun transaction(dsl: TransactionDsl<TransactionDslInterpreter>.() -> Unit) = transaction(null, dsl)
+    fun nonVerifiedTransaction(dsl: TransactionDsl<TransactionDslInterpreter>.() -> Unit) =
+            nonVerifiedTransaction(null, dsl)
+
+    inline fun <reified State: ContractState> String.outputStateAndRef(): StateAndRef<State> =
+            retrieveOutputStateAndRef(State::class.java, this)
+    inline fun <reified State: ContractState> String.output(): TransactionState<State> =
+            outputStateAndRef<State>().state
+    fun String.outputRef(): StateRef = outputStateAndRef<ContractState>().ref
 }

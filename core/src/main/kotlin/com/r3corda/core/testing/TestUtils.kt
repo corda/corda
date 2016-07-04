@@ -6,7 +6,6 @@ import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
-import com.r3corda.core.node.services.IdentityService
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.seconds
@@ -219,22 +218,21 @@ open class TransactionForTest : AbstractTransactionForTest() {
     }
     fun input(s: ContractState) = input { s }
 
-    protected fun runCommandsAndVerify(time: Instant) {
+    protected fun runCommandsAndVerify() {
         val cmds = commandsToAuthenticatedObjects()
         val tx = TransactionForVerification(inStates, outStates.map { it.state }, emptyList(), cmds, SecureHash.Companion.randomSHA256(), signers.toList(), type)
         tx.verify()
     }
 
-    @JvmOverloads
-    fun accepts(time: Instant = TEST_TX_TIME): LastLineShouldTestForAcceptOrFailure {
-        runCommandsAndVerify(time)
+    fun accepts(): LastLineShouldTestForAcceptOrFailure {
+        runCommandsAndVerify()
         return LastLineShouldTestForAcceptOrFailure.Token
     }
 
     @JvmOverloads
-    fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME): LastLineShouldTestForAcceptOrFailure {
+    fun rejects(withMessage: String? = null): LastLineShouldTestForAcceptOrFailure {
         val r = try {
-            runCommandsAndVerify(time)
+            runCommandsAndVerify()
             false
         } catch (e: Exception) {
             val m = e.message
@@ -300,7 +298,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
     }
 }
 
-class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
+class TransactionGroupDSL<out T : ContractState>(private val stateType: Class<T>) {
     open inner class WireTransactionDSL : AbstractTransactionForTest() {
         private val inStates = ArrayList<StateRef>()
 
