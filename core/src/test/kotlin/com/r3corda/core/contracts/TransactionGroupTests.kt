@@ -56,15 +56,17 @@ class TransactionGroupTests {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             transaction {
                 input("alice's £1000")
                 command(ALICE_PUBKEY) { TestCash.Commands.Move() }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
+                this.verifies()
             }
 
-            verifies()
+            this.verifies()
         }
     }
 
@@ -74,6 +76,7 @@ class TransactionGroupTests {
             val t = transaction {
                 output("cash") { A_THOUSAND_POUNDS }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                this.verifies()
             }
 
             val conflict1 = transaction {
@@ -82,6 +85,7 @@ class TransactionGroupTests {
                 output { HALF }
                 output { HALF }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             verifies()
@@ -93,6 +97,7 @@ class TransactionGroupTests {
                 output { HALF }
                 output { HALF }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             assertNotEquals(conflict1, conflict2)
@@ -112,11 +117,13 @@ class TransactionGroupTests {
             transaction {
                 output("cash") { A_THOUSAND_POUNDS }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                this.verifies()
             }
 
             transaction {
                 input("cash")
                 output { A_THOUSAND_POUNDS `owned by` BOB_PUBKEY }
+                this.verifies()
             }
         }
 
@@ -126,6 +133,7 @@ class TransactionGroupTests {
                 assertFailsWith(TransactionResolutionException::class) {
                     input(input.ref)
                 }
+                this.verifies()
             }
         }
     }
@@ -143,6 +151,7 @@ class TransactionGroupTests {
                 input("£1000")
                 output { A_THOUSAND_POUNDS.copy(amount = A_THOUSAND_POUNDS.amount * 2) }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             assertFailsWith(TransactionConflictException::class) {
@@ -157,18 +166,21 @@ class TransactionGroupTests {
             transaction {
                 output("£1000") { A_THOUSAND_POUNDS }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                this.verifies()
             }
 
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             transaction {
                 input("alice's £1000")
                 command(ALICE_PUBKEY) { TestCash.Commands.Move() }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
+                this.verifies()
             }
         }.interpreter.wireTransactions.let { signAll(it) }
 

@@ -9,7 +9,7 @@ import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
 import kotlin.reflect.memberProperties
 
-class GraphVisualiser(val dsl: LedgerDsl<TestTransactionDslInterpreter, TestLedgerDslInterpreter>) {
+class GraphVisualiser(val dsl: LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>) {
     companion object {
         val css = GraphVisualiser::class.java.getResourceAsStream("graph.css").bufferedReader().readText()
     }

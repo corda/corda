@@ -33,7 +33,9 @@ class ObligationTests {
     )
     val outState = inState.copy(beneficiary = DUMMY_PUBKEY_2)
 
-    private fun obligationTestRoots(group: LedgerDsl<TestTransactionDslInterpreter, TestLedgerDslInterpreter>) = group.apply {
+    private fun obligationTestRoots(
+            group: LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>
+    ) = group.apply {
         nonVerifiedTransaction {
             output("Alice's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY))
             output("Bob's $1,000,000 obligation to Alice", oneMillionDollars.OBLIGATION `between` Pair(BOB, ALICE_PUBKEY))
@@ -341,6 +343,7 @@ class ObligationTests {
                 // Note we can sign with either key here
                 command(ALICE_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
             this.verifies()
         }
@@ -356,6 +359,7 @@ class ObligationTests {
                 output("change") { oneMillionDollars.OBLIGATION `between` Pair(MEGA_CORP, BOB_PUBKEY) }
                 command(BOB_PUBKEY, MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
             this.verifies()
         }
@@ -397,6 +401,7 @@ class ObligationTests {
                 input("Bob's $1,000,000 obligation to Alice")
                 command(ALICE_PUBKEY, BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
             this.verifies()
         }
@@ -423,6 +428,7 @@ class ObligationTests {
                 output("MegaCorp's $1,000,000 obligation to Alice") { oneMillionDollars.OBLIGATION `between` Pair(MEGA_CORP, ALICE_PUBKEY) }
                 command(ALICE_PUBKEY, BOB_PUBKEY, MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
             this.verifies()
         }
@@ -452,6 +458,7 @@ class ObligationTests {
                 output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF), Amount(oneMillionDollars.quantity, USD)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                this.verifies()
             }
             this.verifies()
         }
@@ -496,6 +503,7 @@ class ObligationTests {
                 output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
                 command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Obligation.IssuanceDefinition(ALICE, defaultUsd.OBLIGATION_DEF) `at` pastTestTime, Lifecycle.DEFAULTED) }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
             this.verifies()
         }

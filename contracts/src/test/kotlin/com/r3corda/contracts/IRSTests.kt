@@ -360,7 +360,7 @@ class IRSTests {
     /**
      * Generates a typical transactional history for an IRS.
      */
-    fun trade(): LedgerDsl<TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
+    fun trade(): LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
@@ -370,6 +370,7 @@ class IRSTests {
                 output("irs post agreement") { singleIRS() }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             transaction("Fix") {
@@ -390,82 +391,93 @@ class IRSTests {
                     Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
         }
     }
 
     @Test
     fun `ensure failure occurs when there are inbound states for an agreement command`() {
-        transaction {
-            input() { singleIRS() }
-            output("irs post agreement") { singleIRS() }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "There are no in states for an agreement"
+        ledger {
+            transaction {
+                input() { singleIRS() }
+                output("irs post agreement") { singleIRS() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "There are no in states for an agreement"
+            }
         }
     }
 
     @Test
     fun `ensure failure occurs when no events in fix schedule`() {
-        val irs = singleIRS()
-        val emptySchedule = HashMap<LocalDate, FixedRatePaymentEvent>()
-        transaction {
-            output() {
-                irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
+        ledger {
+            val irs = singleIRS()
+            val emptySchedule = HashMap<LocalDate, FixedRatePaymentEvent>()
+            transaction {
+                output() {
+                    irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "There are events in the fix schedule"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "There are events in the fix schedule"
         }
     }
 
     @Test
     fun `ensure failure occurs when no events in floating schedule`() {
-        val irs = singleIRS()
-        val emptySchedule = HashMap<LocalDate, FloatingRatePaymentEvent>()
-        transaction {
-            output() {
-                irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))
+        ledger {
+            val irs = singleIRS()
+            val emptySchedule = HashMap<LocalDate, FloatingRatePaymentEvent>()
+            transaction {
+                output() {
+                    irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "There are events in the float schedule"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "There are events in the float schedule"
         }
     }
 
     @Test
     fun `ensure notionals are non zero`() {
-        val irs = singleIRS()
-        transaction {
-            output() {
-                irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0)))
+        ledger {
+            val irs = singleIRS()
+            transaction {
+                output() {
+                    irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0)))
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "All notionals must be non zero"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "All notionals must be non zero"
-        }
 
-        transaction {
-            output() {
-                irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0)))
+            transaction {
+                output() {
+                    irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0)))
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "All notionals must be non zero"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "All notionals must be non zero"
         }
     }
 
     @Test
     fun `ensure positive rate on fixed leg`() {
-        val irs = singleIRS()
-        val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(fixedRate = FixedRate(PercentageRatioUnit("-0.1"))))
-        transaction {
-            output() {
-                modifiedIRS
+        ledger {
+            val irs = singleIRS()
+            val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(fixedRate = FixedRate(PercentageRatioUnit("-0.1"))))
+            transaction {
+                output() {
+                    modifiedIRS
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "The fixed leg rate must be positive"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "The fixed leg rate must be positive"
         }
     }
 
@@ -474,173 +486,183 @@ class IRSTests {
      */
     @Test
     fun `ensure same currency notionals`() {
-        val irs = singleIRS()
-        val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.fixedLeg.notional.quantity, Currency.getInstance("JPY"))))
-        transaction {
-            output() {
-                modifiedIRS
+        ledger {
+            val irs = singleIRS()
+            val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.fixedLeg.notional.quantity, Currency.getInstance("JPY"))))
+            transaction {
+                output() {
+                    modifiedIRS
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "The currency of the notionals must be the same"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "The currency of the notionals must be the same"
         }
     }
 
     @Test
     fun `ensure notional amounts are equal`() {
-        val irs = singleIRS()
-        val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.quantity + 1, irs.floatingLeg.notional.token)))
-        transaction {
-            output() {
-                modifiedIRS
+        ledger {
+            val irs = singleIRS()
+            val modifiedIRS = irs.copy(fixedLeg = irs.fixedLeg.copy(notional = Amount(irs.floatingLeg.notional.quantity + 1, irs.floatingLeg.notional.token)))
+            transaction {
+                output() {
+                    modifiedIRS
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "All leg notionals must be the same"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "All leg notionals must be the same"
         }
     }
 
     @Test
     fun `ensure trade date and termination date checks are done pt1`() {
-        val irs = singleIRS()
-        val modifiedIRS1 = irs.copy(fixedLeg = irs.fixedLeg.copy(terminationDate = irs.fixedLeg.effectiveDate.minusDays(1)))
-        transaction {
-            output() {
-                modifiedIRS1
+        ledger {
+            val irs = singleIRS()
+            val modifiedIRS1 = irs.copy(fixedLeg = irs.fixedLeg.copy(terminationDate = irs.fixedLeg.effectiveDate.minusDays(1)))
+            transaction {
+                output() {
+                    modifiedIRS1
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "The effective date is before the termination date for the fixed leg"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "The effective date is before the termination date for the fixed leg"
-        }
 
-        val modifiedIRS2 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.floatingLeg.effectiveDate.minusDays(1)))
-        transaction {
-            output() {
-                modifiedIRS2
+            val modifiedIRS2 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.floatingLeg.effectiveDate.minusDays(1)))
+            transaction {
+                output() {
+                    modifiedIRS2
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "The effective date is before the termination date for the floating leg"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "The effective date is before the termination date for the floating leg"
         }
     }
 
     @Test
     fun `ensure trade date and termination date checks are done pt2`() {
-        val irs = singleIRS()
+        ledger {
+            val irs = singleIRS()
 
-        val modifiedIRS3 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.fixedLeg.terminationDate.minusDays(1)))
-        transaction {
-            output() {
-                modifiedIRS3
+            val modifiedIRS3 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.fixedLeg.terminationDate.minusDays(1)))
+            transaction {
+                output() {
+                    modifiedIRS3
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "The termination dates are aligned"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "The termination dates are aligned"
-        }
 
 
-        val modifiedIRS4 = irs.copy(floatingLeg = irs.floatingLeg.copy(effectiveDate = irs.fixedLeg.effectiveDate.minusDays(1)))
-        transaction {
-            output() {
-                modifiedIRS4
+            val modifiedIRS4 = irs.copy(floatingLeg = irs.floatingLeg.copy(effectiveDate = irs.fixedLeg.effectiveDate.minusDays(1)))
+            transaction {
+                output() {
+                    modifiedIRS4
+                }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this `fails with` "The effective dates are aligned"
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this `fails requirement` "The effective dates are aligned"
         }
     }
 
 
     @Test
     fun `various fixing tests`() {
+        ledger {
 
-        val ld = LocalDate.of(2016, 3, 8)
-        val bd = BigDecimal("0.0063518")
+            val ld = LocalDate.of(2016, 3, 8)
+            val bd = BigDecimal("0.0063518")
 
-        transaction {
-            output("irs post agreement") { singleIRS() }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
-            this.accepts()
-        }
-
-        val oldIRS = singleIRS(1)
-        val newIRS = oldIRS.copy(oldIRS.fixedLeg,
-                oldIRS.floatingLeg,
-                oldIRS.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                oldIRS.common)
-
-        transaction {
-            input() {
-                oldIRS
-
+            transaction {
+                output("irs post agreement") { singleIRS() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
-            // Templated tweak for reference. A corrent fixing applied should be ok
-            tweak {
-                arg(ORACLE_PUBKEY) {
-                    InterestRateSwap.Commands.Fix()
-                }
-                timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) {
-                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
-                }
-                output() { newIRS }
-                this.accepts()
-            }
+            val oldIRS = singleIRS(1)
+            val newIRS = oldIRS.copy(oldIRS.fixedLeg,
+                    oldIRS.floatingLeg,
+                    oldIRS.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                    oldIRS.common)
 
-            // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
-            tweak {
-                arg(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
-                timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
-                output() { oldIRS }
-                this`fails requirement` "There is at least one difference in the IRS floating leg payment schedules"
-            }
+            transaction {
+                input() {
+                    oldIRS
 
-            // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
-            tweak {
-                arg(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
-                timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) {
-                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
 
-                val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
-                val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
-                val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
-
-                output() {
-                    newIRS.copy(
-                            newIRS.fixedLeg,
-                            newIRS.floatingLeg,
-                            newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
-                                    Pair(firstResetKey, modifiedFirstResetValue))),
-                            newIRS.common
-                    )
+                // Templated tweak for reference. A corrent fixing applied should be ok
+                tweak {
+                    command(ORACLE_PUBKEY) {
+                        InterestRateSwap.Commands.Fix()
+                    }
+                    timestamp(TEST_TX_TIME)
+                    command(ORACLE_PUBKEY) {
+                        Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
+                    }
+                    output() { newIRS }
+                    this.verifies()
                 }
-                this`fails requirement` "There is only one change in the IRS floating leg payment schedule"
-            }
 
-            // This tests modifies the payment currency for the fixing
-            tweak {
-                arg(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
-                timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
-
-                val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
-                val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
-
-                output() {
-                    newIRS.copy(
-                            newIRS.fixedLeg,
-                            newIRS.floatingLeg,
-                            newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
-                                    Pair(latestReset.key, modifiedLatestResetValue))),
-                            newIRS.common
-                    )
+                // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
+                tweak {
+                    command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                    timestamp(TEST_TX_TIME)
+                    command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
+                    output() { oldIRS }
+                    this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
                 }
-                this`fails requirement` "The fix payment has the same currency as the notional"
+
+                // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
+                tweak {
+                    command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                    timestamp(TEST_TX_TIME)
+                    command(ORACLE_PUBKEY) {
+                        Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
+                    }
+
+                    val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
+                    val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
+                    val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
+
+                    output() {
+                        newIRS.copy(
+                                newIRS.fixedLeg,
+                                newIRS.floatingLeg,
+                                newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
+                                        Pair(firstResetKey, modifiedFirstResetValue))),
+                                newIRS.common
+                        )
+                    }
+                    this `fails with` "There is only one change in the IRS floating leg payment schedule"
+                }
+
+                // This tests modifies the payment currency for the fixing
+                tweak {
+                    command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                    timestamp(TEST_TX_TIME)
+                    command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
+
+                    val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
+                    val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
+
+                    output() {
+                        newIRS.copy(
+                                newIRS.fixedLeg,
+                                newIRS.floatingLeg,
+                                newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
+                                        Pair(latestReset.key, modifiedLatestResetValue))),
+                                newIRS.common
+                        )
+                    }
+                    this `fails with` "The fix payment has the same currency as the notional"
+                }
             }
         }
     }
@@ -652,7 +674,7 @@ class IRSTests {
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.
      */
-    fun tradegroups(): LedgerDsl<TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
+    fun tradegroups(): LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
         val ld1 = LocalDate.of(2016, 3, 8)
         val bd1 = BigDecimal("0.0063518")
 
@@ -670,6 +692,7 @@ class IRSTests {
                 }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             transaction("Agreement") {
@@ -683,6 +706,7 @@ class IRSTests {
                 }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             transaction("Fix") {
@@ -714,6 +738,7 @@ class IRSTests {
                     Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1)
                 }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
         }
     }

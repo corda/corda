@@ -76,6 +76,7 @@ class CommercialPaperTestsGeneric {
                 output("paper") { thisTest.getPaper() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
@@ -87,6 +88,7 @@ class CommercialPaperTestsGeneric {
                 output("alice's paper") { "paper".output<ICommercialPaperState>().data `owned by` ALICE_PUBKEY }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
+                this.verifies()
             }
 
             // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
@@ -95,7 +97,7 @@ class CommercialPaperTestsGeneric {
                 input("alice's paper")
                 input("some profits")
 
-                fun TransactionDsl<TransactionDslInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
+                fun TransactionDsl<LastLineShouldTestForVerifiesOrFails, TransactionDslInterpreter<LastLineShouldTestForVerifiesOrFails>>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
                     output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
                     output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
                 }

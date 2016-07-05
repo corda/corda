@@ -17,6 +17,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
@@ -249,10 +250,11 @@ class TwoPartyTradeProtocolTests {
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
-        ledger {
-            val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
-            val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
+        val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
+        val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
+
+        ledger(storageService = aliceNode.storage) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -261,7 +263,7 @@ class TwoPartyTradeProtocolTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = aliceNode.storage.attachments.importAttachment(ByteArrayInputStream(stream.toByteArray()))
+            val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
             val issuer = MEGA_CORP.ref(1)
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public, issuer).second
@@ -365,8 +367,11 @@ class TwoPartyTradeProtocolTests {
         }
     }
 
-    private fun LedgerDsl<TransactionDslInterpreter, LedgerDslInterpreter<TransactionDslInterpreter>>.runWithError(bobError: Boolean, aliceError: Boolean,
-                                                                expectedMessageSubstring: String) {
+    private fun LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.runWithError(
+            bobError: Boolean,
+            aliceError: Boolean,
+            expectedMessageSubstring: String
+    ) {
         val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
         val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
@@ -427,7 +432,7 @@ class TwoPartyTradeProtocolTests {
         return signed.associateBy { it.id }
     }
 
-    private fun LedgerDsl<TransactionDslInterpreter, LedgerDslInterpreter<TransactionDslInterpreter>>.fillUpForBuyer(
+    private fun LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: PublicKey = BOB_PUBKEY,
             issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
@@ -441,6 +446,11 @@ class TwoPartyTradeProtocolTests {
             if (!withError)
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             timestamp(TEST_TX_TIME)
+            if (withError) {
+                this.fails()
+            } else {
+                this.verifies()
+            }
         }
 
         // Bob gets some cash onto the ledger from BoE
@@ -448,6 +458,7 @@ class TwoPartyTradeProtocolTests {
             input("elbonian money 1")
             output("bob cash 1") { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
         }
 
         val bc2 = transaction {
@@ -455,13 +466,14 @@ class TwoPartyTradeProtocolTests {
             output("bob cash 2") { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
             output { 700.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }   // Change output.
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
         }
 
         val wallet = Wallet(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
-    private fun LedgerDsl<TransactionDslInterpreter, LedgerDslInterpreter<TransactionDslInterpreter>>.fillUpForSeller(
+    private fun LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.fillUpForSeller(
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,
@@ -476,6 +488,11 @@ class TwoPartyTradeProtocolTests {
                 command(notary.owningKey) { TimestampCommand(TEST_TX_TIME, 30.seconds) }
             if (attachmentID != null)
                 attachment(attachmentID)
+            if (withError) {
+                this.fails()
+            } else {
+                this.verifies()
+            }
         }
 
         val wallet = Wallet(listOf("alice's paper".outputStateAndRef()))
