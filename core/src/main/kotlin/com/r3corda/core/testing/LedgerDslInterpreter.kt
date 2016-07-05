@@ -2,19 +2,24 @@ package com.r3corda.core.testing
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
+import java.io.InputStream
 
 interface OutputStateLookup {
     fun <State: ContractState> retrieveOutputStateAndRef(clazz: Class<State>, label: String): StateAndRef<State>
 }
 
-
-
-interface LedgerDslInterpreter<out TransactionInterpreter: TransactionDslInterpreter> :
+interface LedgerDslInterpreter<Return, out TransactionInterpreter: TransactionDslInterpreter<Return>> :
         OutputStateLookup {
-    fun transaction(transactionLabel: String?, dsl: TransactionDsl<TransactionInterpreter>.() -> Unit): WireTransaction
-    fun nonVerifiedTransaction(transactionLabel: String?, dsl: TransactionDsl<TransactionInterpreter>.() -> Unit): WireTransaction
-    fun tweak(dsl: LedgerDsl<TransactionInterpreter, LedgerDslInterpreter<TransactionInterpreter>>.() -> Unit)
-    fun attachment(attachment: Attachment): SecureHash
+    fun transaction(
+            transactionLabel: String?,
+            dsl: TransactionDsl<Return, TransactionInterpreter>.() -> Return
+    ): WireTransaction
+    fun nonVerifiedTransaction(
+            transactionLabel: String?,
+            dsl: TransactionDsl<Return, TransactionInterpreter>.() -> Unit
+    ): WireTransaction
+    fun tweak(dsl: LedgerDsl<Return, TransactionInterpreter, LedgerDslInterpreter<Return, TransactionInterpreter>>.() -> Unit)
+    fun attachment(attachment: InputStream): SecureHash
     fun verifies()
 }
 
@@ -24,13 +29,15 @@ interface LedgerDslInterpreter<out TransactionInterpreter: TransactionDslInterpr
  * covariance of the TransactionInterpreter parameter
  */
 class LedgerDsl<
-    out TransactionInterpreter: TransactionDslInterpreter,
-    out LedgerInterpreter: LedgerDslInterpreter<TransactionInterpreter>
-    > (val interpreter: LedgerInterpreter)
-    : LedgerDslInterpreter<TransactionDslInterpreter> by interpreter {
+        Return,
+    out TransactionInterpreter: TransactionDslInterpreter<Return>,
+    out LedgerInterpreter: LedgerDslInterpreter<Return, TransactionInterpreter>
+    > (val interpreter: LedgerInterpreter
+) : LedgerDslInterpreter<Return, TransactionDslInterpreter<Return>> by interpreter {
 
-    fun transaction(dsl: TransactionDsl<TransactionDslInterpreter>.() -> Unit) = transaction(null, dsl)
-    fun nonVerifiedTransaction(dsl: TransactionDsl<TransactionDslInterpreter>.() -> Unit) =
+    fun transaction(dsl: TransactionDsl<Return, TransactionDslInterpreter<Return>>.() -> Return) =
+            transaction(null, dsl)
+    fun nonVerifiedTransaction(dsl: TransactionDsl<Return, TransactionDslInterpreter<Return>>.() -> Unit) =
             nonVerifiedTransaction(null, dsl)
 
     inline fun <reified State: ContractState> String.outputStateAndRef(): StateAndRef<State> =
@@ -38,12 +45,4 @@ class LedgerDsl<
     inline fun <reified State: ContractState> String.output(): TransactionState<State> =
             outputStateAndRef<State>().state
     fun String.outputRef(): StateRef = outputStateAndRef<ContractState>().ref
-
-    fun TransactionDslInterpreter.input(state: ContractState) {
-        val transaction = nonVerifiedTransaction {
-            output { state }
-        }
-        input(transaction.outRef<ContractState>(0).ref)
-    }
-    fun TransactionDslInterpreter.input(stateClosure: () -> ContractState) = input(stateClosure())
 }

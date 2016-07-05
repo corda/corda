@@ -3,41 +3,78 @@ package com.r3corda.core.testing
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.IdentityService
 import com.r3corda.core.seconds
 import java.security.PublicKey
 import java.time.Instant
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Defines a simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
+//
+// Define a transaction like this:
+//
+// ledger {
+//     transaction {
+//         input { someExpression }
+//         output { someExpression }
+//         command { someExpression }
+//
+//         tweak {
+//              ... same thing but works with a copy of the parent, can add inputs/outputs/commands just within this scope.
+//         }
+//
+//         contract.verifies() -> verify() should pass
+//         contract `fails with` "some substring of the error message"
+//     }
+// }
+//
 
 /**
- * [State] is bound at the top level. This allows the definition of e.g. [String.output], however it also means that we
- * cannot mix different types of states in the same transaction.
- * TODO: Move the [State] binding to the primitives' level to allow different State types, use reflection to check types
- * dynamically, come up with a substitute for primitives relying on early bind
+ * The [TransactionDslInterpreter] defines the interface DSL interpreters should satisfy. No
+ * overloading/default valuing should be done here, only the basic functions that are required to implement everything.
+ * Same goes for functions requiring reflection e.g. [OutputStateLookup.retrieveOutputStateAndRef]
+ * Put convenience functions in [TransactionDsl] instead. There are some cases where the overloads would clash with the
+ * Interpreter interface, in these cases define a "backing" function in the interface instead (e.g. [_command]).
+ *
+ * This way the responsibility of providing a nice frontend DSL and the implementation(s) are separated
  */
-interface TransactionDslInterpreter : OutputStateLookup {
+interface TransactionDslInterpreter<Return> : OutputStateLookup {
+    val ledgerInterpreter: LedgerDslInterpreter<Return, TransactionDslInterpreter<Return>>
     fun input(stateRef: StateRef)
-    fun output(label: String?, notary: Party, contractState: ContractState)
+    fun _output(label: String?, notary: Party, contractState: ContractState)
     fun attachment(attachmentId: SecureHash)
     fun _command(signers: List<PublicKey>, commandData: CommandData)
-    fun verifies()
-    fun failsWith(expectedMessage: String?)
-    fun tweak(dsl: TransactionDsl<TransactionDslInterpreter>.() -> Unit)
+    fun verifies(): Return
+    fun failsWith(expectedMessage: String?): Return
+    fun tweak(
+            dsl: TransactionDsl<Return, TransactionDslInterpreter<Return>>.() -> Return
+    ): Return
 }
 
-
 class TransactionDsl<
-    out TransactionInterpreter: TransactionDslInterpreter
+        Return,
+    out TransactionInterpreter: TransactionDslInterpreter<Return>
     > (val interpreter: TransactionInterpreter)
-    : TransactionDslInterpreter by interpreter {
+    : TransactionDslInterpreter<Return> by interpreter {
 
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
+    /**
+     * Adds the passed in state as a non-verified transaction output to the ledger and adds that as an input
+     */
+    fun input(state: ContractState) {
+        val transaction = ledgerInterpreter.nonVerifiedTransaction(null) {
+            output { state }
+        }
+        input(transaction.outRef<ContractState>(0).ref)
+    }
+    fun input(stateClosure: () -> ContractState) = input(stateClosure())
 
-    // Convenience functions
-    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, contractStateClosure: () -> ContractState) =
-            output(label, notary,  contractStateClosure())
     @JvmOverloads
-    fun output(label: String? = null, contractState: ContractState) = output(label, DUMMY_NOTARY, contractState)
+    fun output(label: String? = null, notary: Party = DUMMY_NOTARY, contractStateClosure: () -> ContractState) =
+            _output(label, notary,  contractStateClosure())
+    @JvmOverloads
+    fun output(label: String? = null, contractState: ContractState) =
+            _output(label, DUMMY_NOTARY, contractState)
 
     fun command(vararg signers: PublicKey, commandDataClosure: () -> CommandData) =
             _command(listOf(*signers), commandDataClosure())

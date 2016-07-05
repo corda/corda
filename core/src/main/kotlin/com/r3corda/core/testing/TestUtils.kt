@@ -6,6 +6,8 @@ import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
+import com.r3corda.core.node.services.IdentityService
+import com.r3corda.core.node.services.StorageService
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.seconds
@@ -94,9 +96,16 @@ object JavaTestHelpers {
 
     @JvmStatic fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
-    @JvmStatic fun transaction(body: TransactionForTest.() -> LastLineShouldTestForAcceptOrFailure): LastLineShouldTestForAcceptOrFailure {
-        return body(TransactionForTest())
+    @JvmStatic @JvmOverloads fun ledger(
+            identityService: IdentityService = MOCK_IDENTITY_SERVICE,
+            storageService: StorageService = MockStorageService(),
+            dsl: LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.() -> Unit
+    ): LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
+        val ledgerDsl = LedgerDsl(TestLedgerDslInterpreter(identityService, storageService))
+        dsl(ledgerDsl)
+        return ledgerDsl
     }
+
 }
 
 val TEST_TX_TIME = JavaTestHelpers.TEST_TX_TIME
