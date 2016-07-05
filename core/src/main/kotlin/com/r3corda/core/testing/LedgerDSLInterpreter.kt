@@ -19,7 +19,7 @@ interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : Output
 /**
  * This is the class the top-level primitives deal with. It delegates all other primitives to the contained interpreter.
  * This way we have a decoupling of the DSL "AST" and the interpretation(s) of it. Note how the delegation forces
- * covariance of the TransactionInterpreter parameter
+ * covariance of the TransactionInterpreter parameter.
  *
  * TODO (Kotlin 1.1): Use type synonyms to make the type params less unwieldy
  */

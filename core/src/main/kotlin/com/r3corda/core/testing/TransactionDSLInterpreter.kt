@@ -36,7 +36,7 @@ import java.time.Instant
  * Put convenience functions in [TransactionDSL] instead. There are some cases where the overloads would clash with the
  * Interpreter interface, in these cases define a "backing" function in the interface instead (e.g. [_command]).
  *
- * This way the responsibility of providing a nice frontend DSL and the implementation(s) are separated
+ * This way the responsibility of providing a nice frontend DSL and the implementation(s) are separated.
  */
 interface TransactionDSLInterpreter<R> : OutputStateLookup {
     val ledgerInterpreter: LedgerDSLInterpreter<R, TransactionDSLInterpreter<R>>
@@ -56,7 +56,7 @@ class TransactionDSL<R, out T : TransactionDSLInterpreter<R>> (val interpreter: 
 
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
     /**
-     * Adds the passed in state as a non-verified transaction output to the ledger and adds that as an input
+     * Adds the passed in state as a non-verified transaction output to the ledger and adds that as an input.
      */
     fun input(state: ContractState) {
         val transaction = ledgerInterpreter.unverifiedTransaction(null) {

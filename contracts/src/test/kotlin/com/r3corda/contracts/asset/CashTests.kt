@@ -39,7 +39,7 @@ class CashTests {
             }
             tweak {
                 output { outState }
-                // No command commanduments
+                // No command arguments
                 this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
             }
             tweak {
