@@ -22,8 +22,8 @@ import com.r3corda.core.utilities.UntrustworthyData
 import java.security.PublicKey
 
 object NotaryProtocol {
-    val TOPIC = "platform.notary.request"
-    val TOPIC_INITIATE = "platform.notary.initiate"
+
+    val TOPIC = "platform.notary"
 
     /**
      * A protocol to be used for obtaining a signature from a [NotaryService] ascertaining the transaction
@@ -34,6 +34,7 @@ object NotaryProtocol {
      */
     class Client(private val stx: SignedTransaction,
                  override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+
         companion object {
 
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
@@ -42,6 +43,8 @@ object NotaryProtocol {
 
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
         }
+
+        override val topic: String get() = TOPIC
 
         lateinit var notaryParty: Party
 
@@ -54,10 +57,10 @@ object NotaryProtocol {
             val receiveSessionID = random63BitValue()
 
             val handshake = Handshake(serviceHub.storageService.myLegalIdentity, sendSessionID, receiveSessionID)
-            sendAndReceive<Ack>(TOPIC_INITIATE, notaryParty, 0, receiveSessionID, handshake)
+            sendAndReceive<Ack>(notaryParty, 0, receiveSessionID, handshake)
 
             val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
-            val response = sendAndReceive<Result>(TOPIC, notaryParty, sendSessionID, receiveSessionID, request)
+            val response = sendAndReceive<Result>(notaryParty, sendSessionID, receiveSessionID, request)
 
             val notaryResult = validateResponse(response)
             return notaryResult.sig ?: throw NotaryException(notaryResult.error!!)
@@ -113,27 +116,26 @@ object NotaryProtocol {
                        val receiveSessionID: Long,
                        val timestampChecker: TimestampChecker,
                        val uniquenessProvider: UniquenessProvider) : ProtocolLogic<Unit>() {
+
+        override val topic: String get() = TOPIC
+
         @Suspendable
         override fun call() {
-            val request = receive<SignRequest>(TOPIC, receiveSessionID).validate { it }
-            val stx = request.tx
+            val (stx, reqIdentity) = receive<SignRequest>(receiveSessionID).validate { it }
             val wtx = stx.tx
-            val reqIdentity = request.callerIdentity
 
-            val result: Result
-            try {
+            val result = try {
                 validateTimestamp(wtx)
                 beforeCommit(stx, reqIdentity)
                 commitInputStates(wtx, reqIdentity)
 
                 val sig = sign(stx.txBits)
-                result = Result.noError(sig)
-
+                Result.noError(sig)
             } catch(e: NotaryException) {
-                result = Result.withError(e.error)
+                Result.withError(e.error)
             }
 
-            send(TOPIC, otherSide, sendSessionID, result)
+            send(otherSide, sendSessionID, result)
         }
 
         private fun validateTimestamp(tx: WireTransaction) {
@@ -178,14 +180,13 @@ object NotaryProtocol {
         }
     }
 
-    class Handshake(
-            replyTo: Party,
+    data class Handshake(
+            override  val replyToParty: Party,
             val sendSessionID: Long,
-            override val sessionID: Long) : AbstractRequestMessage(replyTo)
+            override val sessionID: Long) : PartyRequestMessage
 
     /** TODO: The caller must authenticate instead of just specifying its identity */
-    class SignRequest(val tx: SignedTransaction,
-                      val callerIdentity: Party)
+    data class SignRequest(val tx: SignedTransaction, val callerIdentity: Party)
 
     data class Result private constructor(val sig: DigitalSignature.LegallyIdentifiable?, val error: NotaryError?) {
         companion object {

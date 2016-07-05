@@ -81,6 +81,7 @@ object AutoOfferProtocol {
             fun tracker() = ProgressTracker(RECEIVED, ANNOUNCING, DEALING)
         }
 
+        override val topic: String get() = TOPIC
         override val progressTracker = tracker()
 
         init {
@@ -95,17 +96,14 @@ object AutoOfferProtocol {
             val notary = serviceHub.networkMapCache.notaryNodes.first().identity
             // need to pick which ever party is not us
             val otherParty = notUs(*dealToBeOffered.parties).single()
-            val otherNode = (serviceHub.networkMapCache.getNodeByLegalName(otherParty.name))
-            requireNotNull(otherNode) { "Cannot identify other party " + otherParty.name + ", know about: " + serviceHub.networkMapCache.partyNodes.map { it.identity } }
-            val otherSide = otherNode!!.identity
             progressTracker.currentStep = ANNOUNCING
-            send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.storageService.myLegalIdentity, notary, ourSessionID, dealToBeOffered))
+            send(otherParty, 0, AutoOfferMessage(serviceHub.storageService.myLegalIdentity, notary, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING
-            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, notary, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
+            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherParty, notary, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
             return stx
         }
 
-        fun notUs(vararg parties: Party): List<Party> {
+        private fun notUs(vararg parties: Party): List<Party> {
             val notUsParties: MutableList<Party> = arrayListOf()
             for (party in parties) {
                 if (serviceHub.storageService.myLegalIdentity != party) {

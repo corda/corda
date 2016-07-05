@@ -38,6 +38,8 @@ object UpdateBusinessDayProtocol {
             fun tracker() = ProgressTracker(NOTIFYING)
         }
 
+        override val topic: String get() = TOPIC
+
         @Suspendable
         override fun call(): Unit {
             progressTracker.currentStep = NOTIFYING
@@ -52,7 +54,7 @@ object UpdateBusinessDayProtocol {
             if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
-                send(TOPIC, recipient.identity, 0, message)
+                send(recipient.identity, 0, message)
             }
         }
     }

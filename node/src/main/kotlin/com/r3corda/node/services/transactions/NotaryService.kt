@@ -32,7 +32,7 @@ abstract class NotaryService(val smm: StateMachineManager,
     abstract val protocolFactory: NotaryProtocol.Factory
 
     init {
-        addMessageHandler(NotaryProtocol.TOPIC_INITIATE,
+        addMessageHandler(NotaryProtocol.TOPIC,
                 { req: NotaryProtocol.Handshake -> processRequest(req) }
         )
     }

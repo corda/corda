@@ -30,7 +30,10 @@ import java.time.Duration
  *
  */
 object TwoPartyDealProtocol {
+
     val DEAL_TOPIC = "platform.deal"
+    /** This topic exists purely for [FixingSessionInitiation] to be sent from [FixingRoleDecider] to [FixingSessionInitiationHandler] */
+    val FIX_INITIATE_TOPIC = "platform.fix.initiate"
 
     class DealMismatchException(val expectedDeal: ContractState, val actualDeal: ContractState) : Exception() {
         override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
@@ -69,6 +72,8 @@ object TwoPartyDealProtocol {
             fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS, RECORDING, COPYING_TO_REGULATOR)
         }
 
+        override val topic: String get() = DEAL_TOPIC
+
         abstract val payload: U
         abstract val notaryNode: NodeInfo
         abstract val otherSide: Party
@@ -83,7 +88,7 @@ object TwoPartyDealProtocol {
 
             // Make the first message we'll send to kick off the protocol.
             val hello = Handshake(payload, myKeyPair.public, sessionID)
-            val maybeSTX = sendAndReceive<SignedTransaction>(DEAL_TOPIC, otherSide, otherSessionID, sessionID, hello)
+            val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, otherSessionID, sessionID, hello)
 
             return maybeSTX
         }
@@ -152,7 +157,7 @@ object TwoPartyDealProtocol {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
                 for (regulator in regulators) {
-                    send("regulator.all.seeing.eye", regulator.identity, 0, fullySigned)
+                    send(regulator.identity, 0, fullySigned)
                 }
             }
 
@@ -178,7 +183,7 @@ object TwoPartyDealProtocol {
 
             logger.trace { "Built finished transaction, sending back to other party!" }
 
-            send(DEAL_TOPIC, otherSide, otherSessionID, SignaturesFromPrimary(ourSignature, notarySignature))
+            send(otherSide, otherSessionID, SignaturesFromPrimary(ourSignature, notarySignature))
             return fullySigned
         }
     }
@@ -201,6 +206,8 @@ object TwoPartyDealProtocol {
 
             fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES, RECORDING)
         }
+
+        override val topic: String get() = DEAL_TOPIC
 
         abstract val otherSide: Party
         abstract val sessionID: Long
@@ -234,7 +241,7 @@ object TwoPartyDealProtocol {
         private fun receiveAndValidateHandshake(): Handshake<U> {
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
-            val handshake = receive<Handshake<U>>(DEAL_TOPIC, sessionID)
+            val handshake = receive<Handshake<U>>(sessionID)
 
             progressTracker.currentStep = VERIFYING
             handshake.validate {
@@ -249,7 +256,7 @@ object TwoPartyDealProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromPrimary>(DEAL_TOPIC, otherSide, theirSessionID, sessionID, stx).validate { it }
+            return sendAndReceive<SignaturesFromPrimary>(otherSide, theirSessionID, sessionID, stx).validate { it }
         }
 
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
@@ -424,8 +431,6 @@ object TwoPartyDealProtocol {
             serviceHub.networkMapCache.notaryNodes.filter { it.identity == dealToFix.state.notary }.single()
     }
 
-    /** This topic exists purely for [FixingSessionInitiation] to be sent from [FixingRoleDecider] to [FixingSessionInitiationHandler] */
-    val FIX_INITIATE_TOPIC = "platform.fix.initiate"
 
     /** Used to set up the session between [Floater] and [Fixer] */
     data class FixingSessionInitiation(val sessionID: Long, val party: Party, val sender: Party, val timeout: Duration)
@@ -439,12 +444,17 @@ object TwoPartyDealProtocol {
      *
      * TODO: Replace [FixingSessionInitiation] and [FixingSessionInitiationHandler] with generic session initiation logic once it exists.
      */
-    class FixingRoleDecider(val ref: StateRef, val timeout: Duration, override val progressTracker: ProgressTracker = tracker(ref.toString())) : ProtocolLogic<Unit>() {
+    class FixingRoleDecider(val ref: StateRef,
+                            val timeout: Duration,
+                            override val progressTracker: ProgressTracker = tracker(ref.toString())) : ProtocolLogic<Unit>() {
+
         companion object {
             class LOADING(ref: String) : ProgressTracker.Step("Loading state $ref to decide fixing role")
 
             fun tracker(ref: String) = ProgressTracker(LOADING(ref))
         }
+
+        override val topic: String get() = FIX_INITIATE_TOPIC
 
         @Suspendable
         override fun call(): Unit {
@@ -458,7 +468,7 @@ object TwoPartyDealProtocol {
                 val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.storageService.myLegalIdentity, timeout)
 
                 // Send initiation to other side to launch one side of the fixing protocol (the Fixer).
-                send(FIX_INITIATE_TOPIC, sortedParties[1], 0, initation)
+                send(sortedParties[1], 0, initation)
 
                 // Then start the other side of the fixing protocol.
                 val protocol = Floater(ref, sessionID)
@@ -466,4 +476,5 @@ object TwoPartyDealProtocol {
             }
         }
     }
+
 }

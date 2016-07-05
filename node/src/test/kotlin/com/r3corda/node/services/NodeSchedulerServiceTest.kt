@@ -97,6 +97,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             (serviceHub as TestReference).testReference.calls += increment
             (serviceHub as TestReference).testReference.countDown.countDown()
         }
+        override val topic: String get() = throw UnsupportedOperationException()
     }
 
     class Command : TypeOnlyCommandData()

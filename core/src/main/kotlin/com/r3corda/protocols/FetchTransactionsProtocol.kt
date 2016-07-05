@@ -14,10 +14,12 @@ import com.r3corda.core.crypto.SecureHash
  */
 class FetchTransactionsProtocol(requests: Set<SecureHash>, otherSide: Party) :
         FetchDataProtocol<SignedTransaction, SignedTransaction>(requests, otherSide) {
+
     companion object {
         const val TOPIC = "platform.fetch.tx"
     }
 
+    override val topic: String get() = TOPIC
+
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.storageService.validatedTransactions.getTransaction(txid)
-    override val queryTopic: String = TOPIC
 }

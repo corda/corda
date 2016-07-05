@@ -6,14 +6,17 @@ import com.r3corda.core.node.services.NetworkMapCache
 
 /**
  * Abstract superclass for request messages sent to services, which includes common
- * fields such as replyTo and replyToTopic.
+ * fields such as replyTo and sessionID.
  */
 interface ServiceRequestMessage {
     val sessionID: Long
     fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients
 }
 
-abstract class AbstractRequestMessage(val replyToParty: Party): ServiceRequestMessage {
+interface PartyRequestMessage : ServiceRequestMessage {
+
+    val replyToParty: Party
+
     override fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients {
         return networkMapCache.partyNodes.single { it.identity == replyToParty }.address
     }

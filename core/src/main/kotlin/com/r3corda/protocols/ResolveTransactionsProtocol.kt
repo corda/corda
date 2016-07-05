@@ -70,6 +70,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         serviceHub.recordTransactions(downloadedSignedTxns)
     }
 
+    override val topic: String get() = throw UnsupportedOperationException()
+
     @Suspendable
     private fun fetchDependenciesAndCheckSignatures(depsToCheck: Set<SecureHash>,
                                                     toVerify: HashSet<LedgerTransaction>,

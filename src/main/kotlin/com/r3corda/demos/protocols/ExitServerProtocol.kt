@@ -39,6 +39,8 @@ object ExitServerProtocol {
      */
     class Broadcast(@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") val exitCode: Integer) : ProtocolLogic<Boolean>() {
 
+        override val topic: String get() = TOPIC
+
         @Suspendable
         override fun call(): Boolean {
             if (enabled) {
@@ -60,10 +62,7 @@ object ExitServerProtocol {
             if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
-                // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages
-                if (recipient.identity != serviceHub.storageService.myLegalIdentity) {
-                    send(TOPIC, recipient.identity, 0, message)
-                }
+                send(recipient.identity, 0, message)
             }
         }
     }

@@ -11,10 +11,10 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import org.junit.Before
 import org.junit.Test
-import protocols.StateReplacementException
-import protocols.StateReplacementRefused
 import protocols.NotaryChangeProtocol
 import protocols.NotaryChangeProtocol.Instigator
+import protocols.StateReplacementException
+import protocols.StateReplacementRefused
 import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -46,7 +46,7 @@ class NotaryChangeTests {
         val state = issueState(clientNodeA)
         val newNotary = newNotaryNode.info.identity
         val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC_CHANGE, protocol)
+        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC, protocol)
 
         net.runNetwork()
 
@@ -59,7 +59,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB)
         val newNotary = newNotaryNode.info.identity
         val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC_CHANGE, protocol)
+        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC, protocol)
 
         net.runNetwork()
 
@@ -75,7 +75,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB)
         val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
         val protocol = Instigator(state, newEvilNotary)
-        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC_CHANGE, protocol)
+        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC, protocol)
 
         net.runNetwork()
 

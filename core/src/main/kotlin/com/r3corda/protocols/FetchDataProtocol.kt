@@ -33,10 +33,8 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
     class HashNotFound(val requested: SecureHash) : BadAnswer()
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
 
-    class Request(val hashes: List<SecureHash>, replyTo: Party, override val sessionID: Long) : AbstractRequestMessage(replyTo)
+    data class Request(val hashes: List<SecureHash>, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
     data class Result<T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
-
-    protected abstract val queryTopic: String
 
     @Suspendable
     override fun call(): Result<T> {
@@ -51,7 +49,7 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
             val sid = random63BitValue()
             val fetchReq = Request(toFetch, serviceHub.storageService.myLegalIdentity, sid)
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
-            val maybeItems = sendAndReceive<ArrayList<W?>>(queryTopic, otherSide, 0, sid, fetchReq)
+            val maybeItems = sendAndReceive<ArrayList<W?>>(otherSide, 0, sid, fetchReq)
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(maybeItems, toFetch)
             maybeWriteToDisk(downloaded)

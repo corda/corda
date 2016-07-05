@@ -59,6 +59,8 @@ class StateMachineManagerTests {
             protocolStarted = true
             Fiber.park()
         }
+
+        override val topic: String get() = throw UnsupportedOperationException()
     }
 
 
@@ -68,6 +70,8 @@ class StateMachineManagerTests {
 
         @Suspendable
         override fun call() {}
+
+        override val topic: String get() = throw UnsupportedOperationException()
     }
 
 

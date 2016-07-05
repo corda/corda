@@ -16,8 +16,8 @@ import java.security.PublicKey
  * use the new updated state for future transactions.
  */
 object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
-    val TOPIC_INITIATE = "platform.notary.change.initiate"
-    val TOPIC_CHANGE = "platform.notary.change.execute"
+
+    val TOPIC = "platform.notary.change"
 
     data class Proposal(override val stateRef: StateRef,
                         override val modification: Party,
@@ -28,10 +28,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
                                         progressTracker: ProgressTracker = tracker())
         : AbstractStateReplacementProtocol.Instigator<T, Party>(originalState, newNotary, progressTracker) {
 
-        override val TOPIC_CHANGE: String
-            get() = NotaryChangeProtocol.TOPIC_CHANGE
-        override val TOPIC_INITIATE: String
-            get() = NotaryChangeProtocol.TOPIC_INITIATE
+        override val topic: String get() = TOPIC
 
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementProtocol.Proposal<Party>
             = NotaryChangeProtocol.Proposal(stateRef, modification, stx)
@@ -53,10 +50,8 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
                    sessionIdForReceive: Long,
                    override val progressTracker: ProgressTracker = tracker())
     : AbstractStateReplacementProtocol.Acceptor<Party>(otherSide, sessionIdForSend, sessionIdForReceive) {
-        override val TOPIC_CHANGE: String
-            get() = NotaryChangeProtocol.TOPIC_CHANGE
-        override val TOPIC_INITIATE: String
-            get() = NotaryChangeProtocol.TOPIC_INITIATE
+
+        override val topic: String get() = TOPIC
 
         /**
          * Check the notary change proposal.

@@ -10,8 +10,8 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.protocols.AbstractRequestMessage
 import com.r3corda.protocols.NotaryProtocol
+import com.r3corda.protocols.PartyRequestMessage
 import com.r3corda.protocols.ResolveTransactionsProtocol
 import java.security.PublicKey
 
@@ -32,9 +32,9 @@ abstract class AbstractStateReplacementProtocol<T> {
         val stx: SignedTransaction
     }
 
-    class Handshake(val sessionIdForSend: Long,
-                    replyTo: Party,
-                    override val sessionID: Long) : AbstractRequestMessage(replyTo)
+    data class Handshake(val sessionIdForSend: Long,
+                         override val replyToParty: Party,
+                         override val sessionID: Long) : PartyRequestMessage
 
     abstract class Instigator<S : ContractState, T>(val originalState: StateAndRef<S>,
                                                     val modification: T,
@@ -47,9 +47,6 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             fun tracker() = ProgressTracker(SIGNING, NOTARY)
         }
-
-        abstract val TOPIC_CHANGE: String
-        abstract val TOPIC_INITIATE: String
 
         @Suspendable
         override fun call(): StateAndRef<S> {
@@ -88,7 +85,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             }
 
             val allSignatures = participantSignatures + getNotarySignature(stx)
-            sessions.forEach { send(TOPIC_CHANGE, it.key.identity, it.value, allSignatures) }
+            sessions.forEach { send(it.key.identity, it.value, allSignatures) }
 
             return allSignatures
         }
@@ -99,9 +96,9 @@ abstract class AbstractStateReplacementProtocol<T> {
             val proposal = assembleProposal(originalState.ref, modification, stx)
 
             val handshake = Handshake(sessionIdForSend, serviceHub.storageService.myLegalIdentity, sessionIdForReceive)
-            sendAndReceive<Ack>(TOPIC_INITIATE, node.identity, 0, sessionIdForReceive, handshake)
+            sendAndReceive<Ack>(node.identity, 0, sessionIdForReceive, handshake)
 
-            val response = sendAndReceive<Result>(TOPIC_CHANGE, node.identity, sessionIdForSend, sessionIdForReceive, proposal)
+            val response = sendAndReceive<Result>(node.identity, sessionIdForSend, sessionIdForReceive, proposal)
             val participantSignature = response.validate {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
@@ -136,13 +133,10 @@ abstract class AbstractStateReplacementProtocol<T> {
             fun tracker() = ProgressTracker(VERIFYING, APPROVING, REJECTING)
         }
 
-        abstract val TOPIC_CHANGE: String
-        abstract val TOPIC_INITIATE: String
-
         @Suspendable
         override fun call() {
             progressTracker.currentStep = VERIFYING
-            val proposal = receive<Proposal<T>>(TOPIC_CHANGE, sessionIdForReceive).validate { it }
+            val proposal = receive<Proposal<T>>(sessionIdForReceive).validate { it }
 
             try {
                 verifyProposal(proposal)
@@ -168,7 +162,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             val mySignature = sign(stx)
             val response = Result.noError(mySignature)
-            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(TOPIC_CHANGE, otherSide, sessionIdForSend, sessionIdForReceive, response)
+            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, sessionIdForSend, sessionIdForReceive, response)
 
             val allSignatures = swapSignatures.validate { signatures ->
                 signatures.forEach { it.verifyWithECDSA(stx.txBits) }
@@ -184,7 +178,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         private fun reject(e: StateReplacementRefused) {
             progressTracker.currentStep = REJECTING
             val response = Result.withError(e)
-            send(TOPIC_CHANGE, otherSide, sessionIdForSend, response)
+            send(otherSide, sessionIdForSend, response)
         }
 
         /**

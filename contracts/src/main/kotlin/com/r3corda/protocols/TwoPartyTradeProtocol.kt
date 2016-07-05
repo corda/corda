@@ -42,7 +42,8 @@ import java.util.*
  * To see an example of how to use this class, look at the unit tests.
  */
 object TwoPartyTradeProtocol {
-    val TRADE_TOPIC = "platform.trade"
+
+    val TOPIC = "platform.trade"
 
     class UnacceptablePriceException(val givenPrice: Amount<Issued<Currency>>) : Exception()
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
@@ -82,6 +83,8 @@ object TwoPartyTradeProtocol {
             fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS)
         }
 
+        override val topic: String get() = TOPIC
+
         @Suspendable
         override fun call(): SignedTransaction {
             val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
@@ -108,7 +111,7 @@ object TwoPartyTradeProtocol {
             // Make the first message we'll send to kick off the protocol.
             val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
 
-            val maybeSTX = sendAndReceive<SignedTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
+            val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, buyerSessionID, sessionID, hello)
 
             progressTracker.currentStep = VERIFYING
 
@@ -166,7 +169,7 @@ object TwoPartyTradeProtocol {
 
             logger.trace { "Built finished transaction, sending back to secondary!" }
 
-            send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(ourSignature, notarySignature))
+            send(otherSide, buyerSessionID, SignaturesFromSeller(ourSignature, notarySignature))
             return fullySigned
         }
     }
@@ -185,6 +188,7 @@ object TwoPartyTradeProtocol {
 
         object SWAPPING_SIGNATURES : ProgressTracker.Step("Swapping signatures with the seller")
 
+        override val topic: String get() = TOPIC
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES)
 
         @Suspendable
@@ -194,8 +198,6 @@ object TwoPartyTradeProtocol {
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
             val stx = signWithOurKeys(cashSigningPubKeys, ptx)
-
-            // exitProcess(0)
 
             val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
@@ -215,7 +217,7 @@ object TwoPartyTradeProtocol {
         private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
-            val maybeTradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
+            val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
 
             progressTracker.currentStep = VERIFYING
             maybeTradeRequest.validate {
@@ -246,7 +248,7 @@ object TwoPartyTradeProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromSeller>(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx).validate { it }
+            return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).validate { it }
         }
 
         private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

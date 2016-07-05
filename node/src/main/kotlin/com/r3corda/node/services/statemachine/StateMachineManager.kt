@@ -253,8 +253,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         request.payload?.let {
             val topic = "${request.topic}.${request.sessionIDForSend}"
             psm.logger.trace { "Sending message of type ${it.javaClass.name} using topic $topic to ${request.destination} (${it.toString().abbreviate(50)})" }
-            val address = serviceHub.networkMapCache.getNodeByLegalName(request.destination!!.name)!!.address
-            serviceHub.networkService.send(topic, it, address)
+            val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination!!.name)
+            requireNotNull(node) { "Don't know about ${request.destination}" }
+            serviceHub.networkService.send(topic, it, node!!.address)
         }
         if (request is FiberRequest.NotExpectingResponse) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.

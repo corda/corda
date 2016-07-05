@@ -36,6 +36,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
@@ -202,77 +203,64 @@ private fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
         it.storePath
     }
 
-    val future = if (node.isPreviousCheckpointsPresent) {
-        node.smm.findStateMachines(TraderDemoProtocolBuyer::class.java).single().second
-    } else {
+    // Self issue some cash.
+    //
+    // TODO: At some point this demo should be extended to have a central bank node.
+    node.services.fillWithSomeTestCash(3000.DOLLARS, node.info.identity)
+
+    // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
+    // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the
+    // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
+    //
+    // As the seller initiates the two-party trade protocol, here, we will be the buyer.
+    node.services.networkService.addMessageHandler("$DEMO_TOPIC.0") { message, registration ->
         // We use a simple scenario-specific wrapper protocol to make things happen.
-        val buyer = TraderDemoProtocolBuyer(attachmentsPath, node.info.identity, amount)
+        val otherSide = message.data.deserialize<Party>()
+        val buyer = TraderDemoProtocolBuyer(otherSide, attachmentsPath, amount)
         node.smm.add("demo.buyer", buyer)
     }
 
-    future.get()   // This thread will halt forever here.
+    CountDownLatch(1).await()  // Prevent the application from terminating
 }
 
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
 
 val DEMO_TOPIC = "initiate.demo.trade"
 
-private class TraderDemoProtocolBuyer(private val attachmentsPath: Path,
-                              val notary: Party,
-                              val amount: Amount<Issued<Currency>>) : ProtocolLogic<Unit>() {
-    companion object {
-        object WAITING_FOR_SELLER_TO_CONNECT : ProgressTracker.Step("Waiting for seller to connect to us")
+private class TraderDemoProtocolBuyer(val otherSide: Party,
+                                      private val attachmentsPath: Path,
+                                      val amount: Amount<Issued<Currency>>,
+                                      override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : ProtocolLogic<Unit>() {
 
-        object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
-    }
+    object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
 
-    override val progressTracker = ProgressTracker(WAITING_FOR_SELLER_TO_CONNECT, STARTING_BUY)
+    override val topic: String get() = DEMO_TOPIC
 
     @Suspendable
     override fun call() {
-        // Self issue some cash.
-        //
-        // TODO: At some point this demo should be extended to have a central bank node.
-        serviceHub.fillWithSomeTestCash(3000.DOLLARS, notary)
+        // The session ID disambiguates the test trade.
+        val sessionID = random63BitValue()
+        progressTracker.currentStep = STARTING_BUY
+        send(otherSide, 0, sessionID)
 
-        while (true) {
-            // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
-            // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the
-            // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
-            //
-            // As the seller initiates the two-party trade protocol, here, we will be the buyer.
-            try {
-                progressTracker.currentStep = WAITING_FOR_SELLER_TO_CONNECT
-                val newPartnerParty = receive<Party>(DEMO_TOPIC, 0).validate {
-                    val ourVersionOfParty = serviceHub.networkMapCache.getNodeByLegalName(it.name)!!.identity
-                    require(ourVersionOfParty == it)
-                    it
-                }
+        val notary = serviceHub.networkMapCache.notaryNodes[0]
+        val buyer = TwoPartyTradeProtocol.Buyer(
+                otherSide,
+                notary.identity,
+                amount,
+                CommercialPaper.State::class.java,
+                sessionID)
 
-                // The session ID disambiguates the test trade.
-                val sessionID = random63BitValue()
-                progressTracker.currentStep = STARTING_BUY
-                send(DEMO_TOPIC, newPartnerParty, 0, sessionID)
+        // This invokes the trading protocol and out pops our finished transaction.
+        val tradeTX: SignedTransaction = subProtocol(buyer)
+        // TODO: This should be moved into the protocol itself.
+        serviceHub.recordTransactions(listOf(tradeTX))
 
-                val notary = serviceHub.networkMapCache.notaryNodes[0]
-                val buyer = TwoPartyTradeProtocol.Buyer(newPartnerParty, notary.identity, amount,
-                        CommercialPaper.State::class.java, sessionID)
+        logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
+                "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
 
-                // This invokes the trading protocol and out pops our finished transaction.
-                val tradeTX: SignedTransaction = subProtocol(buyer)
-                // TODO: This should be moved into the protocol itself.
-                serviceHub.recordTransactions(listOf(tradeTX))
-
-                logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
-                        "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
-
-                logIssuanceAttachment(tradeTX)
-                logBalance()
-
-            } catch(e: Exception) {
-                logger.error("Something went wrong whilst trading!", e)
-            }
-        }
+        logIssuanceAttachment(tradeTX)
+        logBalance()
     }
 
     private fun logBalance() {
@@ -318,11 +306,13 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
         fun tracker() = ProgressTracker(ANNOUNCING, SELF_ISSUING, TRADING)
     }
 
+    override val topic: String get() = DEMO_TOPIC
+
     @Suspendable
     override fun call() {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>(DEMO_TOPIC, otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).validate { it }
+        val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).validate { it }
 
         progressTracker.currentStep = SELF_ISSUING
 

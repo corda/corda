@@ -68,50 +68,45 @@ class InMemoryNetworkMapServiceTest {
         assert(!service.processRegistrationChangeRequest(NetworkMapService.RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
     }
 
-    class TestAcknowledgePSM(val server: NodeInfo, val hash: SecureHash)
-    : ProtocolLogic<Unit>() {
+    class TestAcknowledgePSM(val server: NodeInfo, val hash: SecureHash) : ProtocolLogic<Unit>() {
+        override val topic: String get() = NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC
         @Suspendable
         override fun call() {
             val req = NetworkMapService.UpdateAcknowledge(hash, serviceHub.networkService.myAddress)
-            send(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, server.identity, 0, req)
+            send(server.identity, 0, req)
         }
     }
 
     class TestFetchPSM(val server: NodeInfo, val subscribe: Boolean, val ifChangedSinceVersion: Int? = null)
     : ProtocolLogic<Collection<NodeRegistration>?>() {
+        override val topic: String get() = NetworkMapService.FETCH_PROTOCOL_TOPIC
         @Suspendable
         override fun call(): Collection<NodeRegistration>? {
             val sessionID = random63BitValue()
             val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVersion, serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.FetchMapResponse>(
-                    NetworkMapService.FETCH_PROTOCOL_TOPIC, server.identity, 0, sessionID, req)
-                    .validate { it.nodes }
+            return sendAndReceive<NetworkMapService.FetchMapResponse>(server.identity, 0, sessionID, req).validate { it.nodes }
         }
     }
 
     class TestRegisterPSM(val server: NodeInfo, val reg: NodeRegistration, val privateKey: PrivateKey)
     : ProtocolLogic<NetworkMapService.RegistrationResponse>() {
+        override val topic: String get() = NetworkMapService.REGISTER_PROTOCOL_TOPIC
         @Suspendable
         override fun call(): NetworkMapService.RegistrationResponse {
             val sessionID = random63BitValue()
             val req = NetworkMapService.RegistrationRequest(reg.toWire(privateKey), serviceHub.networkService.myAddress, sessionID)
-
-            return sendAndReceive<NetworkMapService.RegistrationResponse>(
-                    NetworkMapService.REGISTER_PROTOCOL_TOPIC, server.identity, 0, sessionID, req)
-                    .validate { it }
+            return sendAndReceive<NetworkMapService.RegistrationResponse>(server.identity, 0, sessionID, req).validate { it }
         }
     }
 
     class TestSubscribePSM(val server: NodeInfo, val subscribe: Boolean)
     : ProtocolLogic<NetworkMapService.SubscribeResponse>() {
+        override val topic: String get() = NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC
         @Suspendable
         override fun call(): NetworkMapService.SubscribeResponse {
             val sessionID = random63BitValue()
             val req = NetworkMapService.SubscribeRequest(subscribe, serviceHub.networkService.myAddress, sessionID)
-
-            return sendAndReceive<NetworkMapService.SubscribeResponse>(
-                    NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC, server.identity, 0, sessionID, req)
-                    .validate { it }
+            return sendAndReceive<NetworkMapService.SubscribeResponse>(server.identity, 0, sessionID, req).validate { it }
         }
     }
 

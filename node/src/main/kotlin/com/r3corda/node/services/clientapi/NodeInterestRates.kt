@@ -17,6 +17,7 @@ import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.utilities.FiberBox
 import com.r3corda.protocols.RatesFixProtocol
+import com.r3corda.protocols.ServiceRequestMessage
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.math.BigDecimal
@@ -48,32 +49,36 @@ object NodeInterestRates {
         private val logger = LoggerFactory.getLogger(Service::class.java)
 
         init {
-            addMessageHandler(RatesFixProtocol.TOPIC_SIGN,
-                    { req: RatesFixProtocol.SignRequest -> oracle.sign(req.tx) },
-                    { message, e -> logger.error("Exception during interest rate oracle request processing", e) }
-            )
-            addMessageHandler(RatesFixProtocol.TOPIC_QUERY,
-                    { req: RatesFixProtocol.QueryRequest ->
-                        /**
-                         * We put this into a protocol so that if it blocks waiting for the interest rate to become
-                         * available, we a) don't block this thread and b) allow the fact we are waiting
-                         * to be persisted/checkpointed.
-                         * Interest rates become available when they are uploaded via the web as per [DataUploadServlet],
-                         * if they haven't already been uploaded that way.
-                         */
-                        node.smm.add("fixing", FixQueryHandler(this, req))
-                        return@addMessageHandler
+            addMessageHandler(RatesFixProtocol.TOPIC,
+                    { req: ServiceRequestMessage ->
+                        if (req is RatesFixProtocol.SignRequest) {
+                            oracle.sign(req.tx)
+                        }
+                        else {
+                            /**
+                             * We put this into a protocol so that if it blocks waiting for the interest rate to become
+                             * available, we a) don't block this thread and b) allow the fact we are waiting
+                             * to be persisted/checkpointed.
+                             * Interest rates become available when they are uploaded via the web as per [DataUploadServlet],
+                             * if they haven't already been uploaded that way.
+                             */
+                            node.smm.add("fixing", FixQueryHandler(this, req as RatesFixProtocol.QueryRequest))
+                            Unit
+                        }
                     },
                     { message, e -> logger.error("Exception during interest rate oracle request processing", e) }
             )
         }
 
-        private class FixQueryHandler(val service: Service, val request: RatesFixProtocol.QueryRequest) : ProtocolLogic<Unit>() {
+        private class FixQueryHandler(val service: Service,
+                                      val request: RatesFixProtocol.QueryRequest) : ProtocolLogic<Unit>() {
+
             companion object {
                 object RECEIVED : ProgressTracker.Step("Received fix request")
-
                 object SENDING : ProgressTracker.Step("Sending fix response")
             }
+
+            override val topic: String get() = RatesFixProtocol.TOPIC
             override val progressTracker = ProgressTracker(RECEIVED, SENDING)
 
             init {
@@ -84,9 +89,8 @@ object NodeInterestRates {
             override fun call(): Unit {
                 val answers = service.oracle.query(request.queries, request.deadline)
                 progressTracker.currentStep = SENDING
-                send("${RatesFixProtocol.TOPIC}.query", request.replyToParty, request.sessionID, answers)
+                send(request.replyToParty, request.sessionID, answers)
             }
-
         }
 
         // File upload support

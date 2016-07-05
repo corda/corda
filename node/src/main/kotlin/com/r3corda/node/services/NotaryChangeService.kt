@@ -14,7 +14,7 @@ import protocols.NotaryChangeProtocol
  */
 class NotaryChangeService(net: MessagingService, val smm: StateMachineManager, networkMapCache: NetworkMapCache) : AbstractNodeService(net, networkMapCache) {
     init {
-        addMessageHandler(NotaryChangeProtocol.TOPIC_INITIATE,
+        addMessageHandler(NotaryChangeProtocol.TOPIC,
                 { req: AbstractStateReplacementProtocol.Handshake -> handleChangeNotaryRequest(req) }
         )
     }
@@ -24,7 +24,7 @@ class NotaryChangeService(net: MessagingService, val smm: StateMachineManager, n
                 req.replyToParty,
                 req.sessionID,
                 req.sessionIdForSend)
-        smm.add(NotaryChangeProtocol.TOPIC_CHANGE, protocol)
+        smm.add(NotaryChangeProtocol.TOPIC, protocol)
         return Ack
     }
 }

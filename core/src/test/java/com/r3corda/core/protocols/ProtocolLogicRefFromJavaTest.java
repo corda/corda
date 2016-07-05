@@ -2,6 +2,7 @@ package com.r3corda.core.protocols;
 
 
 import com.google.common.collect.Sets;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 public class ProtocolLogicRefFromJavaTest {
@@ -15,6 +16,12 @@ public class ProtocolLogicRefFromJavaTest {
         public Void call() {
             return null;
         }
+
+        @NotNull
+        @Override
+        protected String getTopic() {
+            throw new UnsupportedOperationException();
+        }
     }
 
     public static class JavaNoArgProtocolLogic extends ProtocolLogic<Void> {
@@ -25,6 +32,12 @@ public class ProtocolLogicRefFromJavaTest {
         @Override
         public Void call() {
             return null;
+        }
+
+        @NotNull
+        @Override
+        protected String getTopic() {
+            throw new UnsupportedOperationException();
         }
     }
 

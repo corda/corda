@@ -33,10 +33,9 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
                             private val rateTolerance: BigDecimal,
                             private val timeOut: Duration,
                             override val progressTracker: ProgressTracker = RatesFixProtocol.tracker(fixOf.name)) : ProtocolLogic<Unit>() {
+
     companion object {
         val TOPIC = "platform.rates.interest.fix"
-        val TOPIC_SIGN = TOPIC + ".sign"
-        val TOPIC_QUERY = TOPIC + ".query"
 
         class QUERYING(val name: String) : ProgressTracker.Step("Querying oracle for $name interest rate")
         object WORKING : ProgressTracker.Step("Working with data returned by oracle")
@@ -45,10 +44,12 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
         fun tracker(fixName: String) = ProgressTracker(QUERYING(fixName), WORKING, SIGNING)
     }
 
+    override val topic: String get() = TOPIC
+
     class FixOutOfRange(val byAmount: BigDecimal) : Exception()
 
-    class QueryRequest(val queries: List<FixOf>, replyTo: Party, override val sessionID: Long, val deadline: Instant) : AbstractRequestMessage(replyTo)
-    class SignRequest(val tx: WireTransaction, replyTo: Party, override val sessionID: Long) : AbstractRequestMessage(replyTo)
+    data class QueryRequest(val queries: List<FixOf>, override val replyToParty: Party, override val sessionID: Long, val deadline: Instant) : PartyRequestMessage
+    data class SignRequest(val tx: WireTransaction, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
 
     @Suspendable
     override fun call() {
@@ -79,11 +80,11 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
     }
 
     @Suspendable
-    fun sign(): DigitalSignature.LegallyIdentifiable {
+    private fun sign(): DigitalSignature.LegallyIdentifiable {
         val sessionID = random63BitValue()
         val wtx = tx.toWireTransaction()
         val req = SignRequest(wtx, serviceHub.storageService.myLegalIdentity, sessionID)
-        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(TOPIC_SIGN, oracle, 0, sessionID, req)
+        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, 0, sessionID, req)
 
         return resp.validate { sig ->
             check(sig.signer == oracle)
@@ -93,12 +94,12 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
     }
 
     @Suspendable
-    fun query(): Fix {
+    private fun query(): Fix {
         val sessionID = random63BitValue()
         val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name, fixOf.forDay).end
         val req = QueryRequest(listOf(fixOf), serviceHub.storageService.myLegalIdentity, sessionID, deadline)
         // TODO: add deadline to receive
-        val resp = sendAndReceive<ArrayList<Fix>>(TOPIC_QUERY, oracle, 0, sessionID, req)
+        val resp = sendAndReceive<ArrayList<Fix>>(oracle, 0, sessionID, req)
 
         return resp.validate {
             val fix = it.first()
