@@ -66,7 +66,7 @@ class CommercialPaperTestsGeneric {
     fun `trade lifecycle test`() {
         val someProfits = 1200.DOLLARS `issued by` issuer
         ledger {
-            nonVerifiedTransaction {
+            unverifiedTransaction {
                 output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
                 output("some profits", someProfits.STATE `owned by` MEGA_CORP_PUBKEY)
             }
@@ -97,7 +97,7 @@ class CommercialPaperTestsGeneric {
                 input("alice's paper")
                 input("some profits")
 
-                fun TransactionDsl<LastLineShouldTestForVerifiesOrFails, TransactionDslInterpreter<LastLineShouldTestForVerifiesOrFails>>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
+                fun TransactionDSL<LastLineShouldTestForVerifiesOrFails, TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
                     output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
                     output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
                 }
@@ -131,53 +131,42 @@ class CommercialPaperTestsGeneric {
 
     @Test
     fun `key mismatch at issue`() {
-        ledger {
-            transaction {
-                output { thisTest.getPaper() }
-                command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
-                timestamp(TEST_TX_TIME)
-                this `fails with` "signed by the claimed issuer"
-            }
+        transaction {
+            output { thisTest.getPaper() }
+            command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
+            timestamp(TEST_TX_TIME)
+            this `fails with` "signed by the claimed issuer"
         }
     }
 
     @Test
     fun `face value is not zero`() {
-        ledger {
-            transaction {
-                output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
-                timestamp(TEST_TX_TIME)
-                this `fails with` "face value is not zero"
-            }
+        transaction {
+            output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            timestamp(TEST_TX_TIME)
+            this `fails with` "face value is not zero"
         }
     }
 
     @Test
     fun `maturity date not in the past`() {
-        ledger {
-            transaction {
-                output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
-                timestamp(TEST_TX_TIME)
-                this `fails with` "maturity date is not in the past"
-            }
+        transaction {
+            output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            timestamp(TEST_TX_TIME)
+            this `fails with` "maturity date is not in the past"
         }
     }
 
     @Test
     fun `issue cannot replace an existing state`() {
-        ledger {
-            nonVerifiedTransaction {
-                output("paper") { thisTest.getPaper() }
-            }
-            transaction {
-                input("paper")
-                output { thisTest.getPaper() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
-                timestamp(TEST_TX_TIME)
-                this `fails with` "there is no input state"
-            }
+        transaction {
+            input(thisTest.getPaper())
+            output { thisTest.getPaper() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            timestamp(TEST_TX_TIME)
+            this `fails with` "there is no input state"
         }
     }
 

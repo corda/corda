@@ -30,39 +30,36 @@ import java.time.Instant
 //
 
 /**
- * The [TransactionDslInterpreter] defines the interface DSL interpreters should satisfy. No
+ * The [TransactionDSLInterpreter] defines the interface DSL interpreters should satisfy. No
  * overloading/default valuing should be done here, only the basic functions that are required to implement everything.
  * Same goes for functions requiring reflection e.g. [OutputStateLookup.retrieveOutputStateAndRef]
- * Put convenience functions in [TransactionDsl] instead. There are some cases where the overloads would clash with the
+ * Put convenience functions in [TransactionDSL] instead. There are some cases where the overloads would clash with the
  * Interpreter interface, in these cases define a "backing" function in the interface instead (e.g. [_command]).
  *
  * This way the responsibility of providing a nice frontend DSL and the implementation(s) are separated
  */
-interface TransactionDslInterpreter<Return> : OutputStateLookup {
-    val ledgerInterpreter: LedgerDslInterpreter<Return, TransactionDslInterpreter<Return>>
+interface TransactionDSLInterpreter<R> : OutputStateLookup {
+    val ledgerInterpreter: LedgerDSLInterpreter<R, TransactionDSLInterpreter<R>>
     fun input(stateRef: StateRef)
     fun _output(label: String?, notary: Party, contractState: ContractState)
     fun attachment(attachmentId: SecureHash)
     fun _command(signers: List<PublicKey>, commandData: CommandData)
-    fun verifies(): Return
-    fun failsWith(expectedMessage: String?): Return
+    fun verifies(): R
+    fun failsWith(expectedMessage: String?): R
     fun tweak(
-            dsl: TransactionDsl<Return, TransactionDslInterpreter<Return>>.() -> Return
-    ): Return
+            dsl: TransactionDSL<R, TransactionDSLInterpreter<R>>.() -> R
+    ): R
 }
 
-class TransactionDsl<
-        Return,
-    out TransactionInterpreter: TransactionDslInterpreter<Return>
-    > (val interpreter: TransactionInterpreter)
-    : TransactionDslInterpreter<Return> by interpreter {
+class TransactionDSL<R, out T : TransactionDSLInterpreter<R>> (val interpreter: T) :
+        TransactionDSLInterpreter<R> by interpreter {
 
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
     /**
      * Adds the passed in state as a non-verified transaction output to the ledger and adds that as an input
      */
     fun input(state: ContractState) {
-        val transaction = ledgerInterpreter.nonVerifiedTransaction(null) {
+        val transaction = ledgerInterpreter.unverifiedTransaction(null) {
             output { state }
         }
         input(transaction.outRef<ContractState>(0).ref)

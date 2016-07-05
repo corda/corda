@@ -48,7 +48,7 @@ class TransactionGroupTests {
     @Test
     fun success() {
         ledger {
-            nonVerifiedTransaction {
+            unverifiedTransaction {
                 output("£1000") { A_THOUSAND_POUNDS }
             }
 
@@ -142,7 +142,7 @@ class TransactionGroupTests {
     fun duplicatedInputs() {
         // Check that a transaction cannot refer to the same input more than once.
         ledger {
-            nonVerifiedTransaction {
+            unverifiedTransaction {
                 output("£1000") { A_THOUSAND_POUNDS }
             }
 
@@ -162,7 +162,7 @@ class TransactionGroupTests {
 
     @Test
     fun signGroup() {
-        val signedTxns: List<SignedTransaction> = ledger {
+        ledger {
             transaction {
                 output("£1000") { A_THOUSAND_POUNDS }
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
@@ -182,12 +182,14 @@ class TransactionGroupTests {
                 command(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
                 this.verifies()
             }
-        }.interpreter.wireTransactions.let { signAll(it) }
 
-        // Now go through the conversion -> verification path with them.
-        val ltxns = signedTxns.map {
-            it.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)
-        }.toSet()
-        TransactionGroup(ltxns, emptySet()).verify()
+            val signedTxns: List<SignedTransaction> = signAll()
+
+            // Now go through the conversion -> verification path with them.
+            val ltxns = signedTxns.map {
+                it.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)
+            }.toSet()
+            TransactionGroup(ltxns, emptySet()).verify()
+        }
     }
 }

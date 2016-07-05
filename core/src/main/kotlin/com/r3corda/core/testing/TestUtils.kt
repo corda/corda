@@ -93,13 +93,20 @@ object JavaTestHelpers {
     @JvmStatic @JvmOverloads fun ledger(
             identityService: IdentityService = MOCK_IDENTITY_SERVICE,
             storageService: StorageService = MockStorageService(),
-            dsl: LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.() -> Unit
-    ): LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter> {
-        val ledgerDsl = LedgerDsl(TestLedgerDslInterpreter(identityService, storageService))
+            dsl: LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
+    ): LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+        val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(identityService, storageService))
         dsl(ledgerDsl)
         return ledgerDsl
     }
 
+    @JvmStatic @JvmOverloads fun transaction(
+            transactionLabel: String? = null,
+            dsl: TransactionDSL<
+                    LastLineShouldTestForVerifiesOrFails,
+                    TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>
+                    >.() -> LastLineShouldTestForVerifiesOrFails
+    ) = ledger { transaction(transactionLabel, dsl) }
 }
 
 val TEST_TX_TIME = JavaTestHelpers.TEST_TX_TIME

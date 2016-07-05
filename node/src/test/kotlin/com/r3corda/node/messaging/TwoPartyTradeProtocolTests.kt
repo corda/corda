@@ -17,7 +17,6 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
@@ -367,7 +366,7 @@ class TwoPartyTradeProtocolTests {
         }
     }
 
-    private fun LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.runWithError(
+    private fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
             bobError: Boolean,
             aliceError: Boolean,
             expectedMessageSubstring: String
@@ -423,7 +422,7 @@ class TwoPartyTradeProtocolTests {
             wtxToSign: List<WireTransaction>,
             services: ServiceHub,
             vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val signed: List<SignedTransaction> = signAll(wtxToSign, *extraKeys)
+        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys)
         services.recordTransactions(signed)
         val validatedTransactions = services.storageService.validatedTransactions
         if (validatedTransactions is RecordingTransactionStorage) {
@@ -432,7 +431,7 @@ class TwoPartyTradeProtocolTests {
         return signed.associateBy { it.id }
     }
 
-    private fun LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.fillUpForBuyer(
+    private fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: PublicKey = BOB_PUBKEY,
             issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
@@ -473,7 +472,7 @@ class TwoPartyTradeProtocolTests {
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
-    private fun LedgerDsl<LastLineShouldTestForVerifiesOrFails, TestTransactionDslInterpreter, TestLedgerDslInterpreter>.fillUpForSeller(
+    private fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,
