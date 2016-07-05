@@ -360,7 +360,7 @@ class IRSTests {
     /**
      * Generates a typical transactional history for an IRS.
      */
-    fun trade(): LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+    fun trade(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
@@ -555,96 +555,93 @@ class IRSTests {
 
     @Test
     fun `various fixing tests`() {
-        ledger {
+        val ld = LocalDate.of(2016, 3, 8)
+        val bd = BigDecimal("0.0063518")
 
-            val ld = LocalDate.of(2016, 3, 8)
-            val bd = BigDecimal("0.0063518")
+        transaction {
+            output("irs post agreement") { singleIRS() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            timestamp(TEST_TX_TIME)
+            this.verifies()
+        }
 
-            transaction {
-                output("irs post agreement") { singleIRS() }
-                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+        val oldIRS = singleIRS(1)
+        val newIRS = oldIRS.copy(oldIRS.fixedLeg,
+                oldIRS.floatingLeg,
+                oldIRS.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                oldIRS.common)
+
+        transaction {
+            input() {
+                oldIRS
+
+            }
+
+            // Templated tweak for reference. A corrent fixing applied should be ok
+            tweak {
+                command(ORACLE_PUBKEY) {
+                    InterestRateSwap.Commands.Fix()
+                }
                 timestamp(TEST_TX_TIME)
+                command(ORACLE_PUBKEY) {
+                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
+                }
+                output() { newIRS }
                 this.verifies()
             }
 
-            val oldIRS = singleIRS(1)
-            val newIRS = oldIRS.copy(oldIRS.fixedLeg,
-                    oldIRS.floatingLeg,
-                    oldIRS.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                    oldIRS.common)
+            // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
+            tweak {
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                timestamp(TEST_TX_TIME)
+                command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
+                output() { oldIRS }
+                this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
+            }
 
-            transaction {
-                input() {
-                    oldIRS
-
+            // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
+            tweak {
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                timestamp(TEST_TX_TIME)
+                command(ORACLE_PUBKEY) {
+                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
 
-                // Templated tweak for reference. A corrent fixing applied should be ok
-                tweak {
-                    command(ORACLE_PUBKEY) {
-                        InterestRateSwap.Commands.Fix()
-                    }
-                    timestamp(TEST_TX_TIME)
-                    command(ORACLE_PUBKEY) {
-                        Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
-                    }
-                    output() { newIRS }
-                    this.verifies()
+                val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
+                val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
+                val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
+
+                output() {
+                    newIRS.copy(
+                            newIRS.fixedLeg,
+                            newIRS.floatingLeg,
+                            newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
+                                    Pair(firstResetKey, modifiedFirstResetValue))),
+                            newIRS.common
+                    )
                 }
+                this `fails with` "There is only one change in the IRS floating leg payment schedule"
+            }
 
-                // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
-                tweak {
-                    command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
-                    timestamp(TEST_TX_TIME)
-                    command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
-                    output() { oldIRS }
-                    this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
+            // This tests modifies the payment currency for the fixing
+            tweak {
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                timestamp(TEST_TX_TIME)
+                command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
+
+                val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
+                val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
+
+                output() {
+                    newIRS.copy(
+                            newIRS.fixedLeg,
+                            newIRS.floatingLeg,
+                            newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
+                                    Pair(latestReset.key, modifiedLatestResetValue))),
+                            newIRS.common
+                    )
                 }
-
-                // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
-                tweak {
-                    command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
-                    timestamp(TEST_TX_TIME)
-                    command(ORACLE_PUBKEY) {
-                        Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
-                    }
-
-                    val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
-                    val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
-                    val modifiedFirstResetValue = firstResetValue!!.copy(notional = Amount(firstResetValue.notional.quantity, Currency.getInstance("JPY")))
-
-                    output() {
-                        newIRS.copy(
-                                newIRS.fixedLeg,
-                                newIRS.floatingLeg,
-                                newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
-                                        Pair(firstResetKey, modifiedFirstResetValue))),
-                                newIRS.common
-                        )
-                    }
-                    this `fails with` "There is only one change in the IRS floating leg payment schedule"
-                }
-
-                // This tests modifies the payment currency for the fixing
-                tweak {
-                    command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
-                    timestamp(TEST_TX_TIME)
-                    command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
-
-                    val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
-                    val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
-
-                    output() {
-                        newIRS.copy(
-                                newIRS.fixedLeg,
-                                newIRS.floatingLeg,
-                                newIRS.calculation.copy(floatingLegPaymentSchedule = newIRS.calculation.floatingLegPaymentSchedule.plus(
-                                        Pair(latestReset.key, modifiedLatestResetValue))),
-                                newIRS.common
-                        )
-                    }
-                    this `fails with` "The fix payment has the same currency as the notional"
-                }
+                this `fails with` "The fix payment has the same currency as the notional"
             }
         }
     }
@@ -656,7 +653,7 @@ class IRSTests {
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.
      */
-    fun tradegroups(): LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+    fun tradegroups(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
         val ld1 = LocalDate.of(2016, 3, 8)
         val bd1 = BigDecimal("0.0063518")
 

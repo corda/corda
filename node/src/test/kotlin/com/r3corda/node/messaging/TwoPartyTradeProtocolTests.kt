@@ -366,7 +366,7 @@ class TwoPartyTradeProtocolTests {
         }
     }
 
-    private fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
+    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
             bobError: Boolean,
             aliceError: Boolean,
             expectedMessageSubstring: String
@@ -431,7 +431,7 @@ class TwoPartyTradeProtocolTests {
         return signed.associateBy { it.id }
     }
 
-    private fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
+    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: PublicKey = BOB_PUBKEY,
             issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
@@ -472,7 +472,7 @@ class TwoPartyTradeProtocolTests {
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
-    private fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
+    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,

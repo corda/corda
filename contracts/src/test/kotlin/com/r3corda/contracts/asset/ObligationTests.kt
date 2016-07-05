@@ -35,7 +35,7 @@ class ObligationTests {
     val outState = inState.copy(beneficiary = DUMMY_PUBKEY_2)
 
     private fun obligationTestRoots(
-            group: LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
+            group: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {
         unverifiedTransaction {
             output("Alice's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION `between` Pair(ALICE, BOB_PUBKEY))

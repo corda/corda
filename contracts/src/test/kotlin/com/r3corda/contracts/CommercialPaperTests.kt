@@ -97,7 +97,7 @@ class CommercialPaperTestsGeneric {
                 input("alice's paper")
                 input("some profits")
 
-                fun TransactionDSL<LastLineShouldTestForVerifiesOrFails, TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
+                fun TransactionDSL<EnforceVerifyOrFail, TransactionDSLInterpreter<EnforceVerifyOrFail>>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
                     output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
                     output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
                 }

@@ -17,15 +17,15 @@ import java.util.*
 fun transaction(
         transactionLabel: String? = null,
         dsl: TransactionDSL<
-                LastLineShouldTestForVerifiesOrFails,
-                TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>
-        >.() -> LastLineShouldTestForVerifiesOrFails
+                EnforceVerifyOrFail,
+                TransactionDSLInterpreter<EnforceVerifyOrFail>
+        >.() -> EnforceVerifyOrFail
 ) = JavaTestHelpers.transaction(transactionLabel, dsl)
 
 fun ledger(
         identityService: IdentityService = MOCK_IDENTITY_SERVICE,
         storageService: StorageService = MockStorageService(),
-        dsl: LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
+        dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ) = JavaTestHelpers.ledger(identityService, storageService, dsl)
 
 @Deprecated(
@@ -33,8 +33,8 @@ fun ledger(
         replaceWith = ReplaceWith("tweak"),
         level = DeprecationLevel.ERROR)
 @Suppress("UNUSED_PARAMETER")
-fun TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>.ledger(
-        dsl: LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
+fun TransactionDSLInterpreter<EnforceVerifyOrFail>.ledger(
+        dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
 }
 
 @Deprecated(
@@ -42,11 +42,11 @@ fun TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>.ledger(
         replaceWith = ReplaceWith("tweak"),
         level = DeprecationLevel.ERROR)
 @Suppress("UNUSED_PARAMETER")
-fun TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>.transaction(
+fun TransactionDSLInterpreter<EnforceVerifyOrFail>.transaction(
         dsl: TransactionDSL<
-                LastLineShouldTestForVerifiesOrFails,
-                TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>
-                >.() -> LastLineShouldTestForVerifiesOrFails) {
+                EnforceVerifyOrFail,
+                TransactionDSLInterpreter<EnforceVerifyOrFail>
+                >.() -> EnforceVerifyOrFail) {
 }
 
 @Deprecated(
@@ -54,8 +54,8 @@ fun TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>.transaction(
         replaceWith = ReplaceWith("tweak"),
         level = DeprecationLevel.ERROR)
 @Suppress("UNUSED_PARAMETER")
-fun LedgerDSLInterpreter<LastLineShouldTestForVerifiesOrFails, TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>>.ledger(
-        dsl: LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
+fun LedgerDSLInterpreter<EnforceVerifyOrFail, TransactionDSLInterpreter<EnforceVerifyOrFail>>.ledger(
+        dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
 }
 
 /**
@@ -64,8 +64,8 @@ fun LedgerDSLInterpreter<LastLineShouldTestForVerifiesOrFails, TransactionDSLInt
  * will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
  * the triggered diagnostic.
  */
-sealed class LastLineShouldTestForVerifiesOrFails {
-    internal object Token: LastLineShouldTestForVerifiesOrFails()
+sealed class EnforceVerifyOrFail {
+    internal object Token: EnforceVerifyOrFail()
 }
 
 /**
@@ -80,7 +80,7 @@ data class TestTransactionDSLInterpreter(
         private val commands: ArrayList<Command> = arrayListOf(),
         private val signers: LinkedHashSet<PublicKey> = LinkedHashSet(),
         private val transactionType: TransactionType = TransactionType.General()
-) : TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>, OutputStateLookup by ledgerInterpreter {
+) : TransactionDSLInterpreter<EnforceVerifyOrFail>, OutputStateLookup by ledgerInterpreter {
     private fun copy(): TestTransactionDSLInterpreter =
             TestTransactionDSLInterpreter(
                     ledgerInterpreter = ledgerInterpreter,
@@ -121,13 +121,13 @@ data class TestTransactionDSLInterpreter(
         commands.add(Command(commandData, signers))
     }
 
-    override fun verifies(): LastLineShouldTestForVerifiesOrFails {
+    override fun verifies(): EnforceVerifyOrFail {
         val resolvedTransaction = ledgerInterpreter.resolveWireTransaction(toWireTransaction())
         resolvedTransaction.verify()
-        return LastLineShouldTestForVerifiesOrFails.Token
+        return EnforceVerifyOrFail.Token
     }
 
-    override fun failsWith(expectedMessage: String?): LastLineShouldTestForVerifiesOrFails {
+    override fun failsWith(expectedMessage: String?): EnforceVerifyOrFail {
         val exceptionThrown = try {
             this.verifies()
             false
@@ -151,14 +151,14 @@ data class TestTransactionDSLInterpreter(
             throw AssertionError("Expected exception but didn't get one")
         }
 
-        return LastLineShouldTestForVerifiesOrFails.Token
+        return EnforceVerifyOrFail.Token
     }
 
     override fun tweak(
             dsl: TransactionDSL<
-                    LastLineShouldTestForVerifiesOrFails,
-                    TransactionDSLInterpreter<LastLineShouldTestForVerifiesOrFails>
-                    >.() -> LastLineShouldTestForVerifiesOrFails
+                    EnforceVerifyOrFail,
+                    TransactionDSLInterpreter<EnforceVerifyOrFail>
+                    >.() -> EnforceVerifyOrFail
     ) = dsl(TransactionDSL(copy()))
 }
 
@@ -171,7 +171,7 @@ data class TestLedgerDSLInterpreter private constructor (
         internal val labelToOutputStateAndRefs: HashMap<String, StateAndRef<ContractState>> = HashMap(),
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
         private val nonVerifiedTransactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
-) : LedgerDSLInterpreter<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter> {
+) : LedgerDSLInterpreter<EnforceVerifyOrFail, TestTransactionDSLInterpreter> {
 
     val wireTransactions: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
 
@@ -243,7 +243,7 @@ data class TestLedgerDSLInterpreter private constructor (
             storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
 
     private fun <Return> interpretTransactionDsl(
-            dsl: TransactionDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter>.() -> Return
+            dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> Return
     ): TestTransactionDSLInterpreter {
         val transactionInterpreter = TestTransactionDSLInterpreter(this)
         dsl(TransactionDSL(transactionInterpreter))
@@ -274,7 +274,7 @@ data class TestLedgerDSLInterpreter private constructor (
 
     private fun <R> recordTransactionWithTransactionMap(
             transactionLabel: String?,
-            dsl: TransactionDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter>.() -> R,
+            dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> R,
             transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
     ): WireTransaction {
         val transactionLocation = getCallerLocation(3)
@@ -296,17 +296,17 @@ data class TestLedgerDSLInterpreter private constructor (
 
     override fun transaction(
             transactionLabel: String?,
-            dsl: TransactionDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter>.() -> LastLineShouldTestForVerifiesOrFails
+            dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> EnforceVerifyOrFail
     ) = recordTransactionWithTransactionMap(transactionLabel, dsl, transactionWithLocations)
 
     override fun unverifiedTransaction(
             transactionLabel: String?,
-            dsl: TransactionDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter>.() -> Unit
+            dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> Unit
     ) = recordTransactionWithTransactionMap(transactionLabel, dsl, nonVerifiedTransactionWithLocations)
 
     override fun tweak(
-            dsl: LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter,
-                    LedgerDSLInterpreter<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter>>.() -> Unit) =
+            dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter,
+                    LedgerDSLInterpreter<EnforceVerifyOrFail, TestTransactionDSLInterpreter>>.() -> Unit) =
             dsl(LedgerDSL(copy()))
 
     override fun attachment(attachment: InputStream): SecureHash {
@@ -349,6 +349,6 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyP
     SignedTransaction(bits, signatures)
 }
 
-fun LedgerDSL<LastLineShouldTestForVerifiesOrFails, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
+fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
         transactionsToSign: List<WireTransaction> = this.interpreter.wireTransactions, vararg extraKeys: KeyPair) =
         signAll(transactionsToSign, extraKeys)
