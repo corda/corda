@@ -1,15 +1,35 @@
 package com.r3corda.core.protocols;
 
 
-import com.google.common.collect.Sets;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 public class ProtocolLogicRefFromJavaTest {
+
+    public static class ParamType1 {
+        public final int value;
+
+        ParamType1(int v) {
+            value = v;
+        }
+    }
+
+    public static class ParamType2 {
+        public final String value;
+
+        ParamType2(String v) {
+            value = v;
+        }
+    }
 
     public static class JavaProtocolLogic extends ProtocolLogic<Void> {
 
-        public JavaProtocolLogic(int A, String b) {
+        public JavaProtocolLogic(ParamType1 A, ParamType2 b) {
         }
 
         @Override
@@ -43,13 +63,21 @@ public class ProtocolLogicRefFromJavaTest {
 
     @Test
     public void test() {
-        ProtocolLogicRefFactory factory = new ProtocolLogicRefFactory(Sets.newHashSet(JavaProtocolLogic.class.getName()), Sets.newHashSet(Integer.class.getName(), String.class.getName()));
-        factory.create(JavaProtocolLogic.class, 1, "Hello Jack");
+        Map<String, Set<String>> whiteList = new HashMap<>();
+        Set<String> argsList = new HashSet<>();
+        argsList.add(ParamType1.class.getName());
+        argsList.add(ParamType2.class.getName());
+        whiteList.put(JavaProtocolLogic.class.getName(), argsList);
+        ProtocolLogicRefFactory factory = new ProtocolLogicRefFactory(whiteList);
+        factory.create(JavaProtocolLogic.class, new ParamType1(1), new ParamType2("Hello Jack"));
     }
 
     @Test
     public void testNoArg() {
-        ProtocolLogicRefFactory factory = new ProtocolLogicRefFactory(Sets.newHashSet(JavaNoArgProtocolLogic.class.getName()), Sets.newHashSet(Integer.class.getName(), String.class.getName()));
+        Map<String, Set<String>> whiteList = new HashMap<>();
+        Set<String> argsList = new HashSet<>();
+        whiteList.put(JavaNoArgProtocolLogic.class.getName(), argsList);
+        ProtocolLogicRefFactory factory = new ProtocolLogicRefFactory(whiteList);
         factory.create(JavaNoArgProtocolLogic.class);
     }
 }

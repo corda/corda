@@ -9,6 +9,7 @@ import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.math.CubicSplineInterpolator
 import com.r3corda.core.math.Interpolator
 import com.r3corda.core.math.InterpolatorFactory
+import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.utilities.ProgressTracker
@@ -23,6 +24,7 @@ import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -91,6 +93,15 @@ object NodeInterestRates {
                 progressTracker.currentStep = SENDING
                 send(request.replyToParty, request.sessionID, answers)
             }
+        }
+
+        /**
+         * Register the protocol that is used with the Fixing integration tests
+         */
+        class FixingServicePlugin : CordaPluginRegistry {
+            override val webApis: List<Class<*>> = emptyList()
+            override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
+
         }
 
         // File upload support
