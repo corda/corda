@@ -12,7 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.time.Instant
-import java.util.Currency
+import java.util.*
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 

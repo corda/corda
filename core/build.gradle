@@ -24,8 +24,7 @@ repositories {
 
 dependencies {
     testCompile 'junit:junit:4.12'
-    testCompile 'org.assertj:assertj-core:3.4.1'
-    testCompile "commons-fileupload:commons-fileupload:1.3.1"
+    testCompile "commons-fileupload:commons-fileupload:1.3.2"
 
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:19.0"
@@ -38,27 +37,27 @@ dependencies {
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
     // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:3.4.1"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // SLF4J: Logging framework.
-    compile "org.slf4j:slf4j-jdk14:1.7.13"
+    compile "org.slf4j:slf4j-jdk14:${slf4j_version}"
 
     // Guava: Google utilities library.
     compile "com.google.guava:guava:19.0"
 
     // RxJava: observable streams of events.
-    compile "io.reactivex:rxjava:1.0.17"
+    compile "io.reactivex:rxjava:1.1.6"
 
     // Kryo: object graph serialization.
-    compile "com.esotericsoftware:kryo:3.0.3"
-    compile "de.javakaffee:kryo-serializers:0.37"
+    compile "com.esotericsoftware:kryo:4.0.0"
+    compile "de.javakaffee:kryo-serializers:0.38"
 
     // Apache JEXL: An embeddable expression evaluation library.
     // This may be temporary until we experiment with other ways to do on-the-fly contract specialisation via an API.
     compile "org.apache.commons:commons-jexl3:3.0"
 
     // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:2.5.5"
+    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
     compile 'net.i2p.crypto:eddsa:0.1.0'
