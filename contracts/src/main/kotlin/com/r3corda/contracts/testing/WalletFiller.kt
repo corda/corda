@@ -66,6 +66,7 @@ private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, m
     val numStates = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
     val amounts = LongArray(numStates)
     val baseSize = howMuch.quantity / numStates
+    check(baseSize > 0) { baseSize }
     var filledSoFar = 0L
     for (i in 0..numStates - 1) {
         if (i < numStates - 1) {
@@ -76,6 +77,7 @@ private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, m
             // Handle inexact rounding.
             amounts[i] = howMuch.quantity - filledSoFar
         }
+        check(amounts[i] >= 0) { amounts[i] }
     }
     check(amounts.sum() == howMuch.quantity)
     return amounts
