@@ -59,7 +59,7 @@ class TransactionDSL<R, out T : TransactionDSLInterpreter<R>> (val interpreter: 
      * Adds the passed in state as a non-verified transaction output to the ledger and adds that as an input.
      */
     fun input(state: ContractState) {
-        val transaction = ledgerInterpreter.unverifiedTransaction(null) {
+        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder()) {
             output { state }
         }
         input(transaction.outRef<ContractState>(0).ref)

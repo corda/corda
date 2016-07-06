@@ -234,7 +234,7 @@ class AttachmentClassLoaderTests {
 
         val attachmentRef = importJar(storage)
 
-        tx.addAttachment(storage.openAttachment(attachmentRef)!!)
+        tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
 
         val wireTransaction = tx.toWireTransaction()
 
@@ -265,7 +265,7 @@ class AttachmentClassLoaderTests {
 
         val attachmentRef = importJar(storage)
 
-        tx.addAttachment(storage.openAttachment(attachmentRef)!!)
+        tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
 
         val wireTransaction = tx.toWireTransaction()
 

@@ -341,7 +341,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
             // TODO: Consider moving these two steps below into generateIssue.
 
             // Attach the prospectus.
-            tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!)
+            tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
 
             // Requesting timestamping, all CP must be timestamped.
             tx.setTime(Instant.now(), notaryNode.identity, 30.seconds)

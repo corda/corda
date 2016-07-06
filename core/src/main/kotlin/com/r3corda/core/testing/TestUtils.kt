@@ -102,11 +102,12 @@ object JavaTestHelpers {
 
     @JvmStatic @JvmOverloads fun transaction(
             transactionLabel: String? = null,
+            transactionBuilder: TransactionBuilder = TransactionBuilder(),
             dsl: TransactionDSL<
                     EnforceVerifyOrFail,
                     TransactionDSLInterpreter<EnforceVerifyOrFail>
                     >.() -> EnforceVerifyOrFail
-    ) = ledger { transaction(transactionLabel, dsl) }
+    ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
 }
 
 val TEST_TX_TIME = JavaTestHelpers.TEST_TX_TIME

@@ -16,11 +16,12 @@ import java.util.*
 
 fun transaction(
         transactionLabel: String? = null,
+        transactionBuilder: TransactionBuilder = TransactionBuilder(),
         dsl: TransactionDSL<
                 EnforceVerifyOrFail,
                 TransactionDSLInterpreter<EnforceVerifyOrFail>
         >.() -> EnforceVerifyOrFail
-) = JavaTestHelpers.transaction(transactionLabel, dsl)
+) = JavaTestHelpers.transaction(transactionLabel, transactionBuilder, dsl)
 
 fun ledger(
         identityService: IdentityService = MOCK_IDENTITY_SERVICE,
@@ -68,57 +69,55 @@ sealed class EnforceVerifyOrFail {
     internal object Token: EnforceVerifyOrFail()
 }
 
+class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
+
 /**
  * This interpreter builds a transaction, and [TransactionDSL.verifies] that the resolved transaction is correct. Note
  * that transactions corresponding to input states are not verified. Use [LedgerDSL.verifies] for that.
  */
-data class TestTransactionDSLInterpreter(
+data class TestTransactionDSLInterpreter private constructor(
         override val ledgerInterpreter: TestLedgerDSLInterpreter,
-        private val inputStateRefs: ArrayList<StateRef> = arrayListOf(),
-        internal val outputStates: ArrayList<LabeledOutput> = arrayListOf(),
-        private val attachments: ArrayList<SecureHash> = arrayListOf(),
-        private val commands: ArrayList<Command> = arrayListOf(),
-        private val signers: LinkedHashSet<PublicKey> = LinkedHashSet(),
-        private val transactionType: TransactionType = TransactionType.General()
+        val transactionBuilder: TransactionBuilder,
+        internal val labelToIndexMap: HashMap<String, Int>
 ) : TransactionDSLInterpreter<EnforceVerifyOrFail>, OutputStateLookup by ledgerInterpreter {
+
+    constructor(
+            ledgerInterpreter: TestLedgerDSLInterpreter,
+            transactionBuilder: TransactionBuilder // = TransactionBuilder()
+    ) : this(ledgerInterpreter, transactionBuilder, HashMap())
+
     private fun copy(): TestTransactionDSLInterpreter =
             TestTransactionDSLInterpreter(
                     ledgerInterpreter = ledgerInterpreter,
-                    inputStateRefs = ArrayList(inputStateRefs),
-                    outputStates = ArrayList(outputStates),
-                    attachments = ArrayList(attachments),
-                    commands = ArrayList(commands),
-                    signers = LinkedHashSet(signers),
-                    transactionType = transactionType
+                    transactionBuilder = transactionBuilder.copy(),
+                    labelToIndexMap = HashMap(labelToIndexMap)
             )
 
-    internal fun toWireTransaction(): WireTransaction =
-            WireTransaction(
-                    inputs = inputStateRefs,
-                    outputs = outputStates.map { it.state },
-                    attachments = attachments,
-                    commands = commands,
-                    signers = signers.toList(),
-                    type = transactionType
-            )
+    internal fun toWireTransaction() = transactionBuilder.toWireTransaction()
 
     override fun input(stateRef: StateRef) {
         val notary = ledgerInterpreter.resolveStateRef<ContractState>(stateRef).notary
-        signers.add(notary.owningKey)
-        inputStateRefs.add(stateRef)
+        transactionBuilder.addInputState(stateRef, notary)
     }
 
     override fun _output(label: String?, notary: Party, contractState: ContractState) {
-        outputStates.add(LabeledOutput(label, TransactionState(contractState, notary)))
+        val outputIndex = transactionBuilder.addOutputState(contractState, notary)
+        if (label != null) {
+            if (labelToIndexMap.contains(label)) {
+                throw DuplicateOutputLabel(label)
+            } else {
+                labelToIndexMap[label] = outputIndex
+            }
+        }
     }
 
     override fun attachment(attachmentId: SecureHash) {
-        attachments.add(attachmentId)
+        transactionBuilder.addAttachment(attachmentId)
     }
 
     override fun _command(signers: List<PublicKey>, commandData: CommandData) {
-        this.signers.addAll(signers)
-        commands.add(Command(commandData, signers))
+        val command = Command(commandData, signers)
+        transactionBuilder.addCommand(command)
     }
 
     override fun verifies(): EnforceVerifyOrFail {
@@ -243,9 +242,10 @@ data class TestLedgerDSLInterpreter private constructor (
             storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
 
     private fun <Return> interpretTransactionDsl(
+            transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> Return
     ): TestTransactionDSLInterpreter {
-        val transactionInterpreter = TestTransactionDSLInterpreter(this)
+        val transactionInterpreter = TestTransactionDSLInterpreter(this, transactionBuilder)
         dsl(TransactionDSL(transactionInterpreter))
         return transactionInterpreter
     }
@@ -274,18 +274,20 @@ data class TestLedgerDSLInterpreter private constructor (
 
     private fun <R> recordTransactionWithTransactionMap(
             transactionLabel: String?,
+            transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> R,
             transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
     ): WireTransaction {
         val transactionLocation = getCallerLocation(3)
-        val transactionInterpreter = interpretTransactionDsl(dsl)
+        val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
         // Create the WireTransaction
         val wireTransaction = transactionInterpreter.toWireTransaction()
         // Record the output states
-        transactionInterpreter.outputStates.forEachIndexed { index, labeledOutput ->
-            if (labeledOutput.label != null) {
-                labelToOutputStateAndRefs[labeledOutput.label] = wireTransaction.outRef(index)
+        transactionInterpreter.labelToIndexMap.forEach { label, index ->
+            if (labelToOutputStateAndRefs.contains(label)) {
+                throw DuplicateOutputLabel(label)
             }
+            labelToOutputStateAndRefs[label] = wireTransaction.outRef(index)
         }
 
         transactionMap[wireTransaction.serialized.hash] =
@@ -294,15 +296,17 @@ data class TestLedgerDSLInterpreter private constructor (
         return wireTransaction
     }
 
-    override fun transaction(
+    override fun _transaction(
             transactionLabel: String?,
+            transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-    ) = recordTransactionWithTransactionMap(transactionLabel, dsl, transactionWithLocations)
+    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, transactionWithLocations)
 
-    override fun unverifiedTransaction(
+    override fun _unverifiedTransaction(
             transactionLabel: String?,
+            transactionBuilder: TransactionBuilder,
             dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> Unit
-    ) = recordTransactionWithTransactionMap(transactionLabel, dsl, nonVerifiedTransactionWithLocations)
+    ) = recordTransactionWithTransactionMap(transactionLabel, transactionBuilder, dsl, nonVerifiedTransactionWithLocations)
 
     override fun tweak(
             dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter,
