@@ -1,6 +1,5 @@
 package com.r3corda.core.protocols
 
-import com.google.common.collect.Sets
 import com.r3corda.core.days
 import org.junit.Before
 import org.junit.Test
@@ -8,13 +7,20 @@ import java.time.Duration
 
 class ProtocolLogicRefTest {
 
+    data class ParamType1(val value: Int)
+    data class ParamType2(val value: String)
+
     @Suppress("UNUSED_PARAMETER") // We will never use A or b
-    class KotlinProtocolLogic(A: Int, b: String) : ProtocolLogic<Unit>() {
-        constructor() : this(1, "2")
+    class KotlinProtocolLogic(A: ParamType1, b: ParamType2) : ProtocolLogic<Unit>() {
+        constructor() : this(ParamType1(1), ParamType2("2"))
 
-        constructor(C: String) : this(1, C)
+        constructor(C: ParamType2) : this(ParamType1(1), C)
 
-        constructor(illegal: Duration) : this(1, illegal.toString())
+        constructor(illegal: Duration) : this(ParamType1(1), ParamType2(illegal.toString()))
+
+        constructor(primitive: String) : this(ParamType1(1), ParamType2(primitive))
+
+        constructor(kotlinType: Int) : this(ParamType1(kotlinType), ParamType2("b"))
 
         override fun call(): Unit {
         }
@@ -40,8 +46,8 @@ class ProtocolLogicRefTest {
     @Before
     fun setup() {
         // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
-        factory = ProtocolLogicRefFactory(Sets.newHashSet(KotlinProtocolLogic::class.java.name, KotlinNoArgProtocolLogic::class.java.name),
-                Sets.newHashSet(@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") Integer::class.java.name, String::class.java.name))
+        factory = ProtocolLogicRefFactory(mapOf(Pair(KotlinProtocolLogic::class.java.name, setOf(ParamType1::class.java.name, ParamType2::class.java.name)),
+                Pair(KotlinNoArgProtocolLogic::class.java.name, setOf())))
     }
 
     @Test
@@ -51,18 +57,18 @@ class ProtocolLogicRefTest {
 
     @Test
     fun testCreateKotlin() {
-        val args = mapOf(Pair("A", 1), Pair("b", "Hello Jack"))
+        val args = mapOf(Pair("A", ParamType1(1)), Pair("b", ParamType2("Hello Jack")))
         factory.createKotlin(KotlinProtocolLogic::class.java, args)
     }
 
     @Test
     fun testCreatePrimary() {
-        factory.create(KotlinProtocolLogic::class.java, 1, "Hello Jack")
+        factory.create(KotlinProtocolLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun testCreateNotWhiteListed() {
-        factory.create(NotWhiteListedKotlinProtocolLogic::class.java, 1, "Hello Jack")
+        factory.create(NotWhiteListedKotlinProtocolLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
     }
 
     @Test
@@ -72,7 +78,7 @@ class ProtocolLogicRefTest {
 
     @Test
     fun testCreateKotlinNonPrimary() {
-        val args = mapOf(Pair("C", "Hello Jack"))
+        val args = mapOf(Pair("C", ParamType2("Hello Jack")))
         factory.createKotlin(KotlinProtocolLogic::class.java, args)
     }
 
@@ -81,4 +87,17 @@ class ProtocolLogicRefTest {
         val args = mapOf(Pair("illegal", 1.days))
         factory.createKotlin(KotlinProtocolLogic::class.java, args)
     }
+
+    @Test
+    fun testCreateJavaPrimitiveNoRegistrationRequired() {
+        val args = mapOf(Pair("primitive", "A string"))
+        factory.createKotlin(KotlinProtocolLogic::class.java, args)
+    }
+
+    @Test
+    fun testCreateKotlinPrimitiveNoRegistrationRequired() {
+        val args = mapOf(Pair("kotlinType", 3))
+        factory.createKotlin(KotlinProtocolLogic::class.java, args)
+    }
+
 }

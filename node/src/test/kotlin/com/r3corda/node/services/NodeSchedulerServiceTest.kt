@@ -43,7 +43,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    val factory = ProtocolLogicRefFactory(setOf(TestProtocolLogic::class.java.name), setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))
+    val factory = ProtocolLogicRefFactory(mapOf(Pair(TestProtocolLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
     val scheduler: NodeSchedulerService
     val services: ServiceHub

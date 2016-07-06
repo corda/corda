@@ -25,22 +25,26 @@ import kotlin.reflect.primaryConstructor
  * TODO: Align with API related logic for passing in ProtocolLogic references (ProtocolRef)
  * TODO: Actual support for AppContext / AttachmentsClassLoader
  */
-class ProtocolLogicRefFactory(private val protocolLogicClassNameWhitelist: Set<String>, private val argsClassNameWhitelist: Set<String>) : SingletonSerializeAsToken() {
+class ProtocolLogicRefFactory(private val protocolWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken() {
 
-    constructor() : this(setOf(TwoPartyDealProtocol.FixingRoleDecider::class.java.name), setOf(StateRef::class.java.name, Duration::class.java.name))
+    constructor() : this(mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(StateRef::class.java.name, Duration::class.java.name))))
 
     // Pending real dependence on AppContext for class loading etc
     @Suppress("UNUSED_PARAMETER")
     private fun validateProtocolClassName(className: String, appContext: AppContext) {
         // TODO: make this specific to the attachments in the [AppContext] by including [SecureHash] in whitelist check
-        require(className in protocolLogicClassNameWhitelist) { "${ProtocolLogic::class.java.simpleName} of ${ProtocolLogicRef::class.java.simpleName} must have type on the whitelist: $className" }
+        require(protocolWhitelist.containsKey(className)) { "${ProtocolLogic::class.java.simpleName} of ${ProtocolLogicRef::class.java.simpleName} must have type on the whitelist: $className" }
     }
 
     // Pending real dependence on AppContext for class loading etc
     @Suppress("UNUSED_PARAMETER")
-    private fun validateArgClassName(className: String, appContext: AppContext) {
+    private fun validateArgClassName(className: String, argClassName: String, appContext: AppContext) {
+        // Accept standard java.lang.* and kotlin.* types
+        if (argClassName.startsWith("java.lang.") || argClassName.startsWith("kotlin.")) {
+            return
+        }
         // TODO: make this specific to the attachments in the [AppContext] by including [SecureHash] in whitelist check
-        require(className in argsClassNameWhitelist) { "Args to ${ProtocolLogicRef::class.java.simpleName} must have types on the args whitelist: $className" }
+        require(protocolWhitelist[className]!!.contains(argClassName)) { "Args to ${className} must have types on the args whitelist: $argClassName" }
     }
 
     /**
@@ -90,14 +94,14 @@ class ProtocolLogicRefFactory(private val protocolLogicClassNameWhitelist: Set<S
 
     private fun createConstructor(appContext: AppContext, clazz: Class<out ProtocolLogic<*>>, args: Map<String, Any?>): () -> ProtocolLogic<*> {
         for (constructor in clazz.kotlin.constructors) {
-            val params = buildParams(appContext, constructor, args) ?: continue
+            val params = buildParams(appContext, clazz, constructor, args) ?: continue
             // If we get here then we matched every parameter
             return { constructor.callBy(params) }
         }
         throw IllegalProtocolLogicException(clazz, "as could not find matching constructor for: $args")
     }
 
-    private fun buildParams(appContext: AppContext, constructor: KFunction<ProtocolLogic<*>>, args: Map<String, Any?>): HashMap<KParameter, Any?>? {
+    private fun buildParams(appContext: AppContext, clazz: Class<out ProtocolLogic<*>>, constructor: KFunction<ProtocolLogic<*>>, args: Map<String, Any?>): HashMap<KParameter, Any?>? {
         val params = hashMapOf<KParameter, Any?>()
         val usedKeys = hashSetOf<String>()
         for (parameter in constructor.parameters) {
@@ -111,7 +115,7 @@ class ProtocolLogicRefFactory(private val protocolLogicClassNameWhitelist: Set<S
             // Not all args were used
             return null
         }
-        params.values.forEach { if (it is Any) validateArgClassName(it.javaClass.name, appContext) }
+        params.values.forEach { if (it is Any) validateArgClassName(clazz.name, it.javaClass.name, appContext) }
         return params
     }
 

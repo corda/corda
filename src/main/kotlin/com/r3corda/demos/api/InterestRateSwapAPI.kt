@@ -1,15 +1,16 @@
 package com.r3corda.demos.api
 
 import com.r3corda.contracts.InterestRateSwap
+import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
-import com.r3corda.node.api.APIServer
-import com.r3corda.node.api.ProtocolClassRef
-import com.r3corda.node.api.StatesQuery
 import java.net.URI
 import java.time.LocalDate
+import java.time.LocalDateTime
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
@@ -35,23 +36,23 @@ import javax.ws.rs.core.Response
  * or if the demodate or population of deals should be reset (will only work while persistence is disabled).
  */
 @Path("irs")
-class InterestRateSwapAPI(val api: APIServer) {
+class InterestRateSwapAPI(val services: ServiceHub) {
 
     private val logger = loggerFor<InterestRateSwapAPI>()
 
     private fun generateDealLink(deal: InterestRateSwap.State) = "/api/irs/deals/" + deal.common.tradeID
 
     private fun getDealByRef(ref: String): InterestRateSwap.State? {
-        val states = api.queryStates(StatesQuery.selectDeal(ref))
+        val states = services.walletService.linearHeadsOfType<InterestRateSwap.State>().filterValues { it.state.data.ref == ref }
         return if (states.isEmpty()) null else {
-            val deals = api.fetchStates(states).values.map { it?.data as InterestRateSwap.State }.filterNotNull()
+            val deals = states.values.map { it.state.data }
             return if (deals.isEmpty()) null else deals[0]
         }
     }
 
     private fun getAllDeals(): Array<InterestRateSwap.State> {
-        val states = api.queryStates(StatesQuery.selectAllDeals())
-        val swaps = api.fetchStates(states).values.map { it?.data as InterestRateSwap.State }.filterNotNull().toTypedArray()
+        val states = services.walletService.linearHeadsOfType<InterestRateSwap.State>()
+        val swaps = states.values.map { it.state.data }.toTypedArray()
         return swaps
     }
 
@@ -64,7 +65,7 @@ class InterestRateSwapAPI(val api: APIServer) {
     @Path("deals")
     @Consumes(MediaType.APPLICATION_JSON)
     fun storeDeal(newDeal: InterestRateSwap.State): Response {
-        api.invokeProtocolSync(ProtocolClassRef(AutoOfferProtocol.Requester::class.java.name!!), mapOf("dealToBeOffered" to newDeal))
+        services.invokeProtocolAsync<SignedTransaction>(AutoOfferProtocol.Requester::class.java, newDeal).get()
         return Response.created(URI.create(generateDealLink(newDeal))).build()
     }
 
@@ -84,10 +85,10 @@ class InterestRateSwapAPI(val api: APIServer) {
     @Path("demodate")
     @Consumes(MediaType.APPLICATION_JSON)
     fun storeDemoDate(newDemoDate: LocalDate): Response {
-        val priorDemoDate = api.serverTime().toLocalDate()
+        val priorDemoDate = fetchDemoDate()
         // Can only move date forwards
         if (newDemoDate.isAfter(priorDemoDate)) {
-            api.invokeProtocolSync(ProtocolClassRef(UpdateBusinessDayProtocol.Broadcast::class.java.name!!), mapOf("date" to newDemoDate))
+            services.invokeProtocolAsync<Unit>(UpdateBusinessDayProtocol.Broadcast::class.java, newDemoDate).get()
             return Response.ok().build()
         }
         val msg = "demodate is already $priorDemoDate and can only be updated with a later date"
@@ -99,14 +100,14 @@ class InterestRateSwapAPI(val api: APIServer) {
     @Path("demodate")
     @Produces(MediaType.APPLICATION_JSON)
     fun fetchDemoDate(): LocalDate {
-        return api.serverTime().toLocalDate()
+        return LocalDateTime.now(services.clock).toLocalDate()
     }
 
     @PUT
     @Path("restart")
     @Consumes(MediaType.APPLICATION_JSON)
     fun exitServer(): Response {
-        api.invokeProtocolSync(ProtocolClassRef(ExitServerProtocol.Broadcast::class.java.name!!), mapOf("exitCode" to 83))
+        services.invokeProtocolAsync<Boolean>(ExitServerProtocol.Broadcast::class.java, 83).get()
         return Response.ok().build()
     }
 }

@@ -1,9 +1,11 @@
 package com.r3corda.demos
 
 import com.google.common.net.HostAndPort
+import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.deserialize
@@ -241,6 +243,14 @@ object CliParamsSpec {
     val nonOptions = parser.nonOptions()
 }
 
+class IRSDemoPluginRegistry : CordaPluginRegistry {
+    override val webApis: List<Class<*>> = listOf(InterestRateSwapAPI::class.java)
+    override val requiredProtocols: Map<String, Set<String>> = mapOf(
+            Pair(AutoOfferProtocol.Requester::class.java.name, setOf(InterestRateSwap.State::class.java.name)),
+            Pair(UpdateBusinessDayProtocol.Broadcast::class.java.name, setOf(java.time.LocalDate::class.java.name)),
+            Pair(ExitServerProtocol.Broadcast::class.java.name, setOf(kotlin.Int::class.java.name)))
+}
+
 private class NotSetupException: Throwable {
     constructor(message: String): super(message) {}
 }
@@ -374,8 +384,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
             }
 
     val node = logElapsedTime("Node startup") {
-        Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).start()
+        Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).start()
     }
 
     // TODO: This should all be replaced by the identity service being updated

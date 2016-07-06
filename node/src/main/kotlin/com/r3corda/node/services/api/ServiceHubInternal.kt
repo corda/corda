@@ -29,4 +29,11 @@ abstract class ServiceHubInternal : ServiceHub {
      *       itself, at which point this method would not be needed (by the scheduler)
      */
     abstract fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T>
+
+    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T> {
+        val logicRef = protocolLogicRefFactory.create(logicType, *args)
+        @Suppress("UNCHECKED_CAST")
+        val logic = protocolLogicRefFactory.toProtocolLogic(logicRef) as ProtocolLogic<T>
+        return startProtocol(logicType.simpleName, logic)
+    }
 }
