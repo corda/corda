@@ -31,33 +31,33 @@ class CashTests {
     fun trivial() {
         transaction {
             input { inState }
-            this `fails requirement` "the amounts balance"
+            this `fails with` "the amounts balance"
 
             tweak {
                 output { outState.copy(amount = 2000.DOLLARS `issued by` defaultIssuer) }
-                this `fails requirement` "the amounts balance"
+                this `fails with` "the amounts balance"
             }
             tweak {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
+                this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
             }
             tweak {
                 output { outState }
-                arg(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
-                this `fails requirement` "the owning keys are the same as the signing keys"
+                command(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+                this `fails with` "the owning keys are the same as the signing keys"
             }
             tweak {
                 output { outState }
                 output { outState `issued by` MINI_CORP }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this `fails requirement` "at least one asset input"
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this `fails with` "at least one asset input"
             }
             // Simple reallocation works.
             tweak {
                 output { outState }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this.accepts()
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this.verifies()
             }
         }
     }
@@ -68,17 +68,17 @@ class CashTests {
         transaction {
             input { DummyState() }
             output { outState }
-            arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
+            command(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
-            this `fails requirement` "there is at least one asset input"
+            this `fails with` "there is at least one asset input"
         }
 
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
         // institution is allowed to issue as much cash as they want.
         transaction {
             output { outState }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Issue() }
-            this `fails requirement` "output deposits are owned by a command signer"
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Issue() }
+            this `fails with` "output deposits are owned by a command signer"
         }
         transaction {
             output {
@@ -88,11 +88,11 @@ class CashTests {
                 )
             }
             tweak {
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue(0) }
-                this `fails requirement` "has a nonce"
+                command(MINI_CORP_PUBKEY) { Cash.Commands.Issue(0) }
+                this `fails with` "has a nonce"
             }
-            arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
-            this.accepts()
+            command(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
+            this.verifies()
         }
 
         // Test generation works.
@@ -120,14 +120,14 @@ class CashTests {
 
             // Move fails: not allowed to summon money.
             tweak {
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this `fails requirement` "at issuer MegaCorp the amounts balance"
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this `fails with` "at issuer MegaCorp the amounts balance"
             }
 
             // Issue works.
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
-                this.accepts()
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+                this.verifies()
             }
         }
 
@@ -135,36 +135,36 @@ class CashTests {
         transaction {
             input { inState }
             output { inState.copy(amount = inState.amount / 2) }
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
-            this `fails requirement` "output values sum to more than the inputs"
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            this `fails with` "output values sum to more than the inputs"
         }
 
         // Can't have an issue command that doesn't actually issue money.
         transaction {
             input { inState }
             output { inState }
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
-            this `fails requirement` "output values sum to more than the inputs"
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            this `fails with` "output values sum to more than the inputs"
         }
 
         // Can't have any other commands if we have an issue command (because the issue command overrules them)
         transaction {
             input { inState }
             output { inState.copy(amount = inState.amount * 2) }
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
-                this `fails requirement` "there is only a single issue command"
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+                this `fails with` "there is only a single issue command"
             }
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                this `fails requirement` "there is only a single issue command"
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                this `fails with` "there is only a single issue command"
             }
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
-                this `fails requirement` "there is only a single issue command"
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
+                this `fails with` "there is only a single issue command"
             }
-            this.accepts()
+            this.verifies()
         }
     }
 
@@ -191,25 +191,25 @@ class CashTests {
     fun testMergeSplit() {
         // Splitting value works.
         transaction {
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             tweak {
                 input { inState }
                 for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
-                this.accepts()
+                this.verifies()
             }
             // Merging 4 inputs into 2 outputs works.
             tweak {
                 for (i in 1..4) input { inState.copy(amount = inState.amount / 4) }
                 output { inState.copy(amount = inState.amount / 2) }
                 output { inState.copy(amount = inState.amount / 2) }
-                this.accepts()
+                this.verifies()
             }
             // Merging 2 inputs into 1 works.
             tweak {
                 input { inState.copy(amount = inState.amount / 2) }
                 input { inState.copy(amount = inState.amount / 2) }
                 output { inState }
-                this.accepts()
+                this.verifies()
             }
         }
     }
@@ -219,13 +219,13 @@ class CashTests {
         transaction {
             input { inState }
             input { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
-            this `fails requirement` "zero sized inputs"
+            this `fails with` "zero sized inputs"
         }
         transaction {
             input { inState }
             output { inState }
             output { inState.copy(amount = 0.DOLLARS `issued by` defaultIssuer) }
-            this `fails requirement` "zero sized outputs"
+            this `fails with` "zero sized outputs"
         }
     }
 
@@ -235,21 +235,21 @@ class CashTests {
         transaction {
             input { inState }
             output { outState `issued by` MINI_CORP }
-            this `fails requirement` "at issuer MegaCorp the amounts balance"
+            this `fails with` "at issuer MegaCorp the amounts balance"
         }
         // Can't change deposit reference when splitting.
         transaction {
             input { inState }
             output { outState.copy(amount = inState.amount / 2).editDepositRef(0) }
             output { outState.copy(amount = inState.amount / 2).editDepositRef(1) }
-            this `fails requirement` "for deposit [01] at issuer MegaCorp the amounts balance"
+            this `fails with` "for deposit [01] at issuer MegaCorp the amounts balance"
         }
         // Can't mix currencies.
         transaction {
             input { inState }
             output { outState.copy(amount = 800.DOLLARS `issued by` defaultIssuer) }
             output { outState.copy(amount = 200.POUNDS `issued by` defaultIssuer) }
-            this `fails requirement` "the amounts balance"
+            this `fails with` "the amounts balance"
         }
         transaction {
             input { inState }
@@ -260,22 +260,22 @@ class CashTests {
                 )
             }
             output { outState.copy(amount = 1150.DOLLARS `issued by` defaultIssuer) }
-            this `fails requirement` "the amounts balance"
+            this `fails with` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
         transaction {
             input { inState }
             input { inState `issued by` MINI_CORP }
             output { outState }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-            this `fails requirement` "at issuer MiniCorp the amounts balance"
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this `fails with` "at issuer MiniCorp the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
         transaction {
             input { inState }
             input { inState.editDepositRef(3) }
             output { outState.copy(amount = inState.amount * 2).editDepositRef(3) }
-            this `fails requirement` "for deposit [01]"
+            this `fails with` "for deposit [01]"
         }
     }
 
@@ -287,18 +287,18 @@ class CashTests {
             output { outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer) }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this `fails requirement` "the amounts balance"
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer) }
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this `fails with` "the amounts balance"
             }
 
             tweak {
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-                this `fails requirement` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
+                this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
 
                 tweak {
-                    arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                    this.accepts()
+                    command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                    this.verifies()
                 }
             }
         }
@@ -310,15 +310,15 @@ class CashTests {
             output { inState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) `issued by` MINI_CORP }
             output { inState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
 
-            this `fails requirement` "at issuer MegaCorp the amounts balance"
+            this `fails with` "at issuer MegaCorp the amounts balance"
 
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
-            this `fails requirement` "at issuer MiniCorp the amounts balance"
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
+            this `fails with` "at issuer MiniCorp the amounts balance"
 
-            arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)) }
-            this.accepts()
+            command(MINI_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)) }
+            this.verifies()
         }
     }
 
@@ -332,20 +332,20 @@ class CashTests {
             // Can't merge them together.
             tweak {
                 output { inState.copy(owner = DUMMY_PUBKEY_2, amount = 2000.DOLLARS `issued by` defaultIssuer) }
-                this `fails requirement` "at issuer MegaCorp the amounts balance"
+                this `fails with` "at issuer MegaCorp the amounts balance"
             }
             // Missing MiniCorp deposit
             tweak {
                 output { inState.copy(owner = DUMMY_PUBKEY_2) }
                 output { inState.copy(owner = DUMMY_PUBKEY_2) }
-                this `fails requirement` "at issuer MegaCorp the amounts balance"
+                this `fails with` "at issuer MegaCorp the amounts balance"
             }
 
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
             output { inState.copy(owner = DUMMY_PUBKEY_2) `issued by` MINI_CORP }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-            this.accepts()
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this.verifies()
         }
     }
 
@@ -358,9 +358,9 @@ class CashTests {
             input { pounds }
             output { inState `owned by` DUMMY_PUBKEY_2 }
             output { pounds `owned by` DUMMY_PUBKEY_1 }
-            arg(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+            command(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2) { Cash.Commands.Move() }
 
-            this.accepts()
+            this.verifies()
         }
     }
 

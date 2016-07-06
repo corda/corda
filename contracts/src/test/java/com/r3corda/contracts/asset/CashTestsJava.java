@@ -2,6 +2,7 @@ package com.r3corda.contracts.asset;
 
 import com.r3corda.core.contracts.PartyAndReference;
 import com.r3corda.core.serialization.OpaqueBytes;
+import kotlin.Unit;
 import org.junit.Test;
 
 import static com.r3corda.core.testing.JavaTestHelpers.*;
@@ -20,39 +21,41 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
+        ledger(lg -> {
+            lg.transaction(tx -> {
+                tx.input(inState);
+                tx.failsWith("the amounts balance");
 
-        transaction(tx -> {
-            tx.input(inState);
-            tx.failsRequirement("the amounts balance");
+                tx.tweak(tw -> {
+                    tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), getDUMMY_PUBKEY_2()));
+                    return tw.failsWith("the amounts balance");
+                });
 
-            tx.tweak(tw -> {
-                tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), getDUMMY_PUBKEY_2()));
-                return tw.failsRequirement("the amounts balance");
-            });
+                tx.tweak(tw -> {
+                    tw.output(outState);
+                    // No command arguments
+                    return tw.failsWith("required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command");
+                });
+                tx.tweak(tw -> {
+                    tw.output(outState);
+                    tw.command(getDUMMY_PUBKEY_2(), new Cash.Commands.Move());
+                    return tw.failsWith("the owning keys are the same as the signing keys");
+                });
+                tx.tweak(tw -> {
+                    tw.output(outState);
+                    tw.output(issuedBy(outState, getMINI_CORP()));
+                    tw.command(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
+                    return tw.failsWith("at least one asset input");
+                });
 
-            tx.tweak(tw -> {
-                tw.output(outState);
-                // No command arguments
-                return tw.failsRequirement("required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command");
+                // Simple reallocation works.
+                return tx.tweak(tw -> {
+                    tw.output(outState);
+                    tw.command(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
+                    return tw.verifies();
+                });
             });
-            tx.tweak(tw -> {
-                tw.output(outState);
-                tw.arg(getDUMMY_PUBKEY_2(), new Cash.Commands.Move());
-                return tw.failsRequirement("the owning keys are the same as the signing keys");
-            });
-            tx.tweak(tw -> {
-                tw.output(outState);
-                tw.output(issuedBy(outState, getMINI_CORP()));
-                tw.arg(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
-                return tw.failsRequirement("at least one asset input");
-            });
-
-            // Simple reallocation works.
-            return tx.tweak(tw -> {
-                tw.output(outState);
-                tw.arg(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
-                return tw.accepts();
-            });
+            return Unit.INSTANCE;
         });
     }
 }

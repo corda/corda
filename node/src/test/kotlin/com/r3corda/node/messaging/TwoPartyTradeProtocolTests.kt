@@ -86,7 +86,9 @@ class TwoPartyTradeProtocolTests {
         // we run in the unit test thread exclusively to speed things up, ensure deterministic results and
         // allow interruption half way through.
         net = MockNetwork(false, true)
-        transactionGroupFor<ContractState> {
+
+        ledger {
+
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
             val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
@@ -113,7 +115,7 @@ class TwoPartyTradeProtocolTests {
                     aliceNode.smm,
                     notaryNode.info,
                     bobNode.info.identity,
-                    lookup("alice's paper"),
+                    "alice's paper".outputStateAndRef(),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
                     buyerSessionID
@@ -133,7 +135,8 @@ class TwoPartyTradeProtocolTests {
 
     @Test
     fun `shutdown and restore`() {
-        transactionGroupFor<ContractState> {
+
+        ledger {
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
             var bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
@@ -155,7 +158,7 @@ class TwoPartyTradeProtocolTests {
                     aliceNode.smm,
                     notaryNode.info,
                     bobNode.info.identity,
-                    lookup("alice's paper"),
+                    "alice's paper".outputStateAndRef(),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
                     buyerSessionID
@@ -246,10 +249,11 @@ class TwoPartyTradeProtocolTests {
 
     @Test
     fun `check dependencies of sale asset are resolved`() {
-        transactionGroupFor<ContractState> {
-            val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
-            val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
+        val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
+        val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
+
+        ledger(storageService = aliceNode.storage) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -258,7 +262,7 @@ class TwoPartyTradeProtocolTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = aliceNode.storage.attachments.importAttachment(ByteArrayInputStream(stream.toByteArray()))
+            val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
             val issuer = MEGA_CORP.ref(1)
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public, issuer).second
@@ -275,7 +279,7 @@ class TwoPartyTradeProtocolTests {
                     aliceNode.smm,
                     notaryNode.info,
                     bobNode.info.identity,
-                    lookup("alice's paper"),
+                    "alice's paper".outputStateAndRef(),
                     1000.DOLLARS `issued by` issuer,
                     ALICE_KEY,
                     buyerSessionID
@@ -350,20 +354,23 @@ class TwoPartyTradeProtocolTests {
 
     @Test
     fun `dependency with error on buyer side`() {
-        transactionGroupFor<ContractState> {
+        ledger {
             runWithError(true, false, "at least one asset input")
         }
     }
 
     @Test
     fun `dependency with error on seller side`() {
-        transactionGroupFor<ContractState> {
+        ledger {
             runWithError(false, true, "must be timestamped")
         }
     }
 
-    private fun TransactionGroupDSL<ContractState>.runWithError(bobError: Boolean, aliceError: Boolean,
-                                                                expectedMessageSubstring: String) {
+    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
+            bobError: Boolean,
+            aliceError: Boolean,
+            expectedMessageSubstring: String
+    ) {
         val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
         val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
         val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
@@ -385,7 +392,7 @@ class TwoPartyTradeProtocolTests {
                 aliceNode.smm,
                 notaryNode.info,
                 bobNode.info.identity,
-                lookup("alice's paper"),
+                "alice's paper".outputStateAndRef(),
                 1000.DOLLARS `issued by` issuer,
                 ALICE_KEY,
                 buyerSessionID
@@ -411,10 +418,11 @@ class TwoPartyTradeProtocolTests {
         assertTrue(e.cause!!.cause!!.message!!.contains(expectedMessageSubstring))
     }
 
-    private fun TransactionGroupDSL<ContractState>.insertFakeTransactions(wtxToSign: List<WireTransaction>,
-                                                                          services: ServiceHub,
-                                                                          vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val signed: List<SignedTransaction> = signAll(wtxToSign, *extraKeys)
+    private fun insertFakeTransactions(
+            wtxToSign: List<WireTransaction>,
+            services: ServiceHub,
+            vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
+        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys)
         services.recordTransactions(signed)
         val validatedTransactions = services.storageService.validatedTransactions
         if (validatedTransactions is RecordingTransactionStorage) {
@@ -423,9 +431,10 @@ class TwoPartyTradeProtocolTests {
         return signed.associateBy { it.id }
     }
 
-    private fun TransactionGroupDSL<ContractState>.fillUpForBuyer(withError: Boolean,
-                                                                  owner: PublicKey = BOB_PUBKEY,
-                                                                  issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
+    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
+            withError: Boolean,
+            owner: PublicKey = BOB_PUBKEY,
+            issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
 
@@ -434,52 +443,64 @@ class TwoPartyTradeProtocolTests {
             output("elbonian money 1") { 800.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             output("elbonian money 2") { 1000.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             if (!withError)
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             timestamp(TEST_TX_TIME)
+            if (withError) {
+                this.fails()
+            } else {
+                this.verifies()
+            }
         }
 
         // Bob gets some cash onto the ledger from BoE
         val bc1 = transaction {
             input("elbonian money 1")
             output("bob cash 1") { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
         }
 
         val bc2 = transaction {
             input("elbonian money 2")
             output("bob cash 2") { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
             output { 700.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }   // Change output.
-            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+            this.verifies()
         }
 
-        val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("bob cash 1"), lookup("bob cash 2")))
+        val wallet = Wallet(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
-    private fun TransactionGroupDSL<ContractState>.fillUpForSeller(withError: Boolean,
-                                                                   owner: PublicKey,
-                                                                   amount: Amount<Issued<Currency>>,
-                                                                   notary: Party,
-                                                                   attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
+    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
+            withError: Boolean,
+            owner: PublicKey,
+            amount: Amount<Issued<Currency>>,
+            notary: Party,
+            attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
         val ap = transaction {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
-            arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)
-                arg(notary.owningKey) { TimestampCommand(TEST_TX_TIME, 30.seconds) }
+                command(notary.owningKey) { TimestampCommand(TEST_TX_TIME, 30.seconds) }
             if (attachmentID != null)
                 attachment(attachmentID)
+            if (withError) {
+                this.fails()
+            } else {
+                this.verifies()
+            }
         }
 
-        val wallet = Wallet(listOf<StateAndRef<Cash.State>>(lookup("alice's paper")))
+        val wallet = Wallet(listOf("alice's paper".outputStateAndRef()))
         return Pair(wallet, listOf(ap))
     }
 
-
     class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {
 
-        val records = Collections.synchronizedList(ArrayList<TxRecord>())
+        val records: MutableList<TxRecord> = Collections.synchronizedList(ArrayList<TxRecord>())
 
         override fun addTransaction(transaction: SignedTransaction) {
             records.add(TxRecord.Add(transaction))

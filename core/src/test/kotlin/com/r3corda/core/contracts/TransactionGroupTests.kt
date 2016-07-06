@@ -47,33 +47,36 @@ class TransactionGroupTests {
 
     @Test
     fun success() {
-        transactionGroup {
-            roots {
-                transaction(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY label "£1000")
+        ledger {
+            unverifiedTransaction {
+                output("£1000") { A_THOUSAND_POUNDS }
             }
 
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE_PUBKEY) { TestCash.Commands.Move() }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
+                command(ALICE_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
+                this.verifies()
             }
 
-            verify()
+            this.verifies()
         }
     }
 
     @Test
     fun conflict() {
-        transactionGroup {
+        ledger {
             val t = transaction {
                 output("cash") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                this.verifies()
             }
 
             val conflict1 = transaction {
@@ -81,10 +84,11 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` BOB_PUBKEY
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
-            verify()
+            verifies()
 
             // Alice tries to double spend back to herself.
             val conflict2 = transaction {
@@ -92,13 +96,14 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` ALICE_PUBKEY
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             assertNotEquals(conflict1, conflict2)
 
             val e = assertFailsWith(TransactionConflictException::class) {
-                verify()
+                verifies()
             }
             assertEquals(StateRef(t.id, 0), e.conflictRef)
             assertEquals(setOf(conflict1.id, conflict2.id), setOf(e.tx1.id, e.tx2.id))
@@ -108,79 +113,83 @@ class TransactionGroupTests {
     @Test
     fun disconnected() {
         // Check that if we have a transaction in the group that doesn't connect to anything else, it's rejected.
-        val tg = transactionGroup {
+        val tg = ledger {
             transaction {
                 output("cash") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                this.verifies()
             }
 
             transaction {
                 input("cash")
                 output { A_THOUSAND_POUNDS `owned by` BOB_PUBKEY }
+                this.verifies()
             }
         }
 
-        // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
-        // points nowhere.
         val input = StateAndRef(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY, generateStateRef())
-        tg.txns += TransactionType.General.Builder().apply {
-            addInputState(input)
-            addOutputState(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY)
-            addCommand(TestCash.Commands.Move(), BOB_PUBKEY)
-        }.toWireTransaction()
-
-        val e = assertFailsWith(TransactionResolutionException::class) {
-            tg.verify()
+        tg.apply {
+            transaction {
+                assertFailsWith(TransactionResolutionException::class) {
+                    input(input.ref)
+                }
+                this.verifies()
+            }
         }
-        assertEquals(e.hash, input.ref.txhash)
     }
 
     @Test
     fun duplicatedInputs() {
         // Check that a transaction cannot refer to the same input more than once.
-        transactionGroup {
-            roots {
-                transaction(A_THOUSAND_POUNDS `with notary` DUMMY_NOTARY label "£1000")
+        ledger {
+            unverifiedTransaction {
+                output("£1000") { A_THOUSAND_POUNDS }
             }
 
             transaction {
                 input("£1000")
                 input("£1000")
                 output { A_THOUSAND_POUNDS.copy(amount = A_THOUSAND_POUNDS.amount * 2) }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             assertFailsWith(TransactionConflictException::class) {
-                verify()
+                verifies()
             }
         }
     }
 
     @Test
     fun signGroup() {
-        val signedTxns: List<SignedTransaction> = transactionGroup {
+        ledger {
             transaction {
                 output("£1000") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Issue() }
+                this.verifies()
             }
 
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE_PUBKEY }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Move() }
+                this.verifies()
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE_PUBKEY) { TestCash.Commands.Move() }
-                arg(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
+                command(ALICE_PUBKEY) { TestCash.Commands.Move() }
+                command(MINI_CORP_PUBKEY) { TestCash.Commands.Exit(1000.POUNDS) }
+                this.verifies()
             }
-        }.signAll()
 
-        // Now go through the conversion -> verification path with them.
-        val ltxns = signedTxns.map {
-            it.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)
-        }.toSet()
-        TransactionGroup(ltxns, emptySet()).verify()
+            val signedTxns: List<SignedTransaction> = signAll()
+
+            // Now go through the conversion -> verification path with them.
+            val ltxns = signedTxns.map {
+                it.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)
+            }.toSet()
+            TransactionGroup(ltxns, emptySet()).verify()
+        }
     }
 }
