@@ -5,9 +5,9 @@ import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import net.i2p.crypto.eddsa.EdDSAEngine
+import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigInteger
 import java.security.*
-import java.security.interfaces.ECPublicKey
 import net.i2p.crypto.eddsa.KeyPairGenerator as EddsaKeyPairGenerator
 
 fun newSecureRandom(): SecureRandom {
@@ -158,8 +158,8 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
 
 /** Render a public key to a string, using a short form if it's an elliptic curve public key */
 fun PublicKey.toStringShort(): String {
-    return (this as? ECPublicKey)?.let { key ->
-        "DL" + Base58.encode(key.w.affineX.toByteArray())   // DL -> Distributed Ledger
+    return (this as? EdDSAPublicKey)?.let { key ->
+        "DL" + Base58.encode(key.abyte)   // DL -> Distributed Ledger
     } ?: toString()
 }
 
