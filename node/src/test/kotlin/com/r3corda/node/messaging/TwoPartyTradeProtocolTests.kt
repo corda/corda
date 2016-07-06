@@ -481,7 +481,7 @@ class TwoPartyTradeProtocolTests {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
-            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue(notary) }
             if (!withError)
                 timestamp(time = TEST_TX_TIME, notary = notary.owningKey)
             if (attachmentID != null)

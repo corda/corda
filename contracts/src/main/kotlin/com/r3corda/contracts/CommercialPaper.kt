@@ -65,11 +65,11 @@ class CommercialPaper : Contract {
     }
 
     interface Commands : CommandData {
-        class Move : TypeOnlyCommandData(), Commands
-        class Redeem : TypeOnlyCommandData(), Commands
+        class Move: TypeOnlyCommandData(), Commands
+        data class Redeem(val notary: Party) : Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        class Issue : TypeOnlyCommandData(), Commands
+        data class Issue(val notary: Party) : Commands
     }
 
     override fun verify(tx: TransactionForContract) {
@@ -79,11 +79,13 @@ class CommercialPaper : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
-
-        // Here, we match acceptable timestamp authorities by name. The list of acceptable TSAs (oracles) must be
-        // hard coded into the contract because otherwise we could fail to gain consensus, if nodes disagree about
-        // who or what is a trusted authority.
-        val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
+        // If it's an issue, we can't take notary from inputs, so it must be specified in the command
+        val timestamp: TimestampCommand? = if (command.value is Commands.Issue)
+            tx.getTimestampBy((command.value as Commands.Issue).notary)
+        else if (command.value is Commands.Redeem)
+            tx.getTimestampBy((command.value as Commands.Redeem).notary)
+        else
+            null
 
         for ((inputs, outputs, key) in groups) {
             when (command.value) {
@@ -139,7 +141,7 @@ class CommercialPaper : Contract {
     fun generateIssue(faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
         val issuance = faceValue.token.issuer
         val state = TransactionState(State(issuance, issuance.party.owningKey, faceValue, maturityDate), notary)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(notary), issuance.party.owningKey))
     }
 
     /**
@@ -164,7 +166,7 @@ class CommercialPaper : Contract {
         val amount = paper.state.data.faceValue.let { amount -> Amount<Currency>(amount.quantity, amount.token.product) }
         Cash().generateSpend(tx, amount, paper.state.data.owner, wallet)
         tx.addInputState(paper)
-        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.data.owner)
+        tx.addCommand(CommercialPaper.Commands.Redeem(paper.state.notary), paper.state.data.owner)
     }
 }
 

@@ -131,6 +131,12 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public static class Redeem extends Commands {
+            private final Party notary;
+
+            public  Redeem(Party setNotary) {
+                this.notary = setNotary;
+            }
+
             @Override
             public boolean equals(Object obj) {
                 return obj instanceof Redeem;
@@ -138,6 +144,12 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public static class Issue extends Commands {
+            private final Party notary;
+
+            public  Issue(Party setNotary) {
+                this.notary = setNotary;
+            }
+
             @Override
             public boolean equals(Object obj) {
                 return obj instanceof Issue;
@@ -163,6 +175,7 @@ public class JavaCommercialPaper implements Contract {
 
             // For now do not allow multiple pieces of CP to trade in a single transaction.
             if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
+                Commands.Issue issueCommand = (Commands.Issue) cmd.getValue();
                 State output = single(outputs);
                 if (!inputs.isEmpty()) {
                     throw new IllegalStateException("Failed Requirement: output values sum to more than the inputs");
@@ -171,7 +184,7 @@ public class JavaCommercialPaper implements Contract {
                     throw new IllegalStateException("Failed Requirement: output values sum to more than the inputs");
                 }
 
-                TimestampCommand timestampCommand = tx.getTimestampByName("Notary Service");
+                TimestampCommand timestampCommand = tx.getTimestampBy(issueCommand.notary);
                 if (timestampCommand == null)
                     throw new IllegalArgumentException("Failed Requirement: must be timestamped");
 
@@ -201,7 +214,7 @@ public class JavaCommercialPaper implements Contract {
                             !output.getMaturityDate().equals(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
                 } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-                    TimestampCommand timestampCommand = tx.getTimestampByName("Notary Service");
+                    TimestampCommand timestampCommand = tx.getTimestampBy(((Commands.Redeem) cmd.getValue()).notary);
                     if (timestampCommand == null)
                         throw new IllegalArgumentException("Failed Requirement: must be timestamped");
                     Instant time = timestampCommand.getBefore();
@@ -232,13 +245,13 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary);
-        return new TransactionType.General.Builder().withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
+        return new TransactionType.General.Builder().withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
         new Cash().generateSpend(tx, paper.getState().getData().getFaceValue(), paper.getState().getData().getOwner(), wallet);
         tx.addInputState(paper);
-        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
+        tx.addCommand(new Command(new Commands.Redeem(paper.getState().getNotary()), paper.getState().getData().getOwner()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
