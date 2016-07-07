@@ -109,8 +109,6 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
             resourceConfig.register(ResponseFilter())
             resourceConfig.register(api)
 
-            val serviceLoader = ServiceLoader.load(CordaPluginRegistry::class.java)
-            val pluginRegistries = serviceLoader.toList()
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
             for (webapi in webAPIsOnClasspath) {
                 log.info("Add Plugin web API from attachment ${webapi.name}")

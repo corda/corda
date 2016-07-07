@@ -134,6 +134,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     val networkMapRegistrationFuture: ListenableFuture<Unit>
         get() = _networkMapRegistrationFuture
 
+    /** fetch CordaPluginRegistry classes registered in META-INF/services/com.r3corda.core.node.CordaPluginRegistry files that exist in the classpath */
+    protected val pluginRegistries: List<CordaPluginRegistry>
+        get() = ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
         private set
@@ -185,8 +189,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     private fun initialiseProtocolLogicFactory(): ProtocolLogicRefFactory {
-        val serviceLoader = ServiceLoader.load(CordaPluginRegistry::class.java)
-        val pluginRegistries = serviceLoader.toList()
         val protocolWhitelist = HashMap<String, Set<String>>()
         for (plugin in pluginRegistries) {
             for (protocol in plugin.requiredProtocols) {
@@ -196,6 +198,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         return ProtocolLogicRefFactory(protocolWhitelist)
     }
+
 
     /**
      * Run any tasks that are needed to ensure the node is in a correct state before running start()
