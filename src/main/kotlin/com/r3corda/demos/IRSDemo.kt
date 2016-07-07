@@ -26,10 +26,7 @@ import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import org.apache.commons.io.IOUtils
-import java.io.DataOutputStream
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.SocketTimeoutException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -37,7 +34,6 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
-import org.apache.commons.io.IOUtils
 import com.r3corda.demos.utilities.*
 
 // IRS DEMO
@@ -421,8 +417,6 @@ private fun runUploadRates(host: HostAndPort) {
             println("Could not upload rates due to exception. Retrying in 5 seconds")
         }
     })
-}
-
 }
 
 private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
