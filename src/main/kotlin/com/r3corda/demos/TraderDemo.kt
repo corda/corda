@@ -71,7 +71,6 @@ fun main(args: Array<String>) {
 }
 
 fun runTraderDemo(args: Array<String>): Int {
-    val cashIssuerKey = generateKeyPair()
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()

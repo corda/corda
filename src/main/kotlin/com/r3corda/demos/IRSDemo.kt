@@ -462,4 +462,5 @@ private fun printHelp(parser: OptionParser) {
     Please refer to the documentation in docs/build/index.html for more info.
 
     """.trimIndent())
+    parser.printHelpOn(System.out)
 }
