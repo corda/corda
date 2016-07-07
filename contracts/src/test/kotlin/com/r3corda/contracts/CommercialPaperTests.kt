@@ -135,7 +135,7 @@ class CommercialPaperTestsGeneric {
             output { thisTest.getPaper() }
             command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
             timestamp(TEST_TX_TIME)
-            this `fails with` "signed by the claimed issuer"
+            this `fails with` "output states are issued by a command signer"
         }
     }
 
@@ -145,7 +145,7 @@ class CommercialPaperTestsGeneric {
             output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
             timestamp(TEST_TX_TIME)
-            this `fails with` "face value is not zero"
+            this `fails with` "output values sum to more than the inputs"
         }
     }
 
@@ -166,7 +166,7 @@ class CommercialPaperTestsGeneric {
             output { thisTest.getPaper() }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
             timestamp(TEST_TX_TIME)
-            this `fails with` "there is no input state"
+            this `fails with` "output values sum to more than the inputs"
         }
     }
 

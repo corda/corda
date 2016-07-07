@@ -115,13 +115,13 @@ class CommercialPaper : Contract {
                     val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
-                        "the issuance is signed by the claimed issuer of the paper" by
+                        "output states are issued by a command signer" by
                                 (output.issuance.party.owningKey in command.signers)
-                        "the face value is not zero" by (output.faceValue.quantity > 0)
+                        "output values sum to more than the inputs" by (output.faceValue.quantity > 0)
                         "the maturity date is not in the past" by (time < output.maturityDate)
                         // Don't allow an existing CP state to be replaced by this issuance.
                         // TODO: Consider how to handle the case of mistaken issuances, or other need to patch.
-                        "there is no input state" by inputs.isEmpty()
+                        "output values sum to more than the inputs" by inputs.isEmpty()
                     }
                 }
 

@@ -78,7 +78,7 @@ class CashTests {
         transaction {
             output { outState }
             command(DUMMY_PUBKEY_1) { Cash.Commands.Issue() }
-            this `fails with` "output deposits are owned by a command signer"
+            this `fails with` "output states are issued by a command signer"
         }
         transaction {
             output {

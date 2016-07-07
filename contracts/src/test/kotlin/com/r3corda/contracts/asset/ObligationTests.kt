@@ -96,7 +96,7 @@ class ObligationTests {
         transaction {
             output { outState }
             command(DUMMY_PUBKEY_1) { Obligation.Commands.Issue(outState.issuanceDef) }
-            this `fails with` "output deposits are owned by a command signer"
+            this `fails with` "output states are issued by a command signer"
         }
         transaction {
             output {
