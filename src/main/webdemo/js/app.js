@@ -127,6 +127,14 @@ let dealViewModel = {
   notary: "Bank A"
 };
 
+// TODO: Fill out this lookup table and use it to inject into the view.
+let dayCountBasisLookup = {
+    "30/360": {
+        "day": "D30",
+        "year": "Y360"
+    }
+}
+
 let Deal = function(dealViewModel) {
     let now = new Date();
     let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
@@ -145,8 +153,16 @@ let Deal = function(dealViewModel) {
         common.tradeID = tradeId;
         fixedLeg.effectiveDate = formatDateForNode(fixedLeg.effectiveDate);
         fixedLeg.terminationDate = formatDateForNode(fixedLeg.terminationDate);
+        fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
+        fixedLeg.dayCountBasisDay = dayCountBasisLookup[fixedLeg.dayCountBasis].day;
+        fixedLeg.dayCountBasisYear = dayCountBasisLookup[fixedLeg.dayCountBasis].year;
+        delete fixedLeg.dayCountBasis;
+
         floatingLeg.effectiveDate = formatDateForNode(floatingLeg.effectiveDate);
         floatingLeg.terminationDate = formatDateForNode(floatingLeg.terminationDate);
+        floatingLeg.dayCountBasisDay = dayCountBasisLookup[floatingLeg.dayCountBasis].day;
+        floatingLeg.dayCountBasisYear = dayCountBasisLookup[floatingLeg.dayCountBasis].year;
+        delete floatingLeg.dayCountBasis;
 
         let json = {
             fixedLeg: fixedLeg,
