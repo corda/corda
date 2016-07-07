@@ -1,15 +1,10 @@
 package com.r3corda.contracts.testing
 
 import com.r3corda.contracts.*
-import com.r3corda.contracts.asset.CASH_PROGRAM_ID
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.asset.Obligation
 import com.r3corda.core.contracts.Amount
-import com.r3corda.core.contracts.Contract
 import com.r3corda.core.contracts.ContractState
-import com.r3corda.core.contracts.DUMMY_PROGRAM_ID
-import com.r3corda.core.contracts.DummyContract
-import com.r3corda.core.contracts.DummyState
 import com.r3corda.core.contracts.PartyAndReference
 import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.TransactionState
@@ -57,8 +52,8 @@ fun generateState() = DummyState(Random().nextInt())
 // For Java compatibility please define helper methods here and then define the infix notation
 object JavaTestHelpers {
     @JvmStatic fun ownedBy(state: Cash.State, owner: PublicKey) = state.copy(owner = owner)
-    @JvmStatic fun issuedBy(state: Cash.State, party: Party) = state.copy(amount = Amount<Issued<Currency>>(state.amount.quantity, state.issuanceDef.copy(issuer = state.deposit.copy(party = party))))
-    @JvmStatic fun issuedBy(state: Cash.State, deposit: PartyAndReference) = state.copy(amount = Amount<Issued<Currency>>(state.amount.quantity, state.issuanceDef.copy(issuer = deposit)))
+    @JvmStatic fun issuedBy(state: Cash.State, party: Party) = state.copy(amount = Amount(state.amount.quantity, state.issuanceDef.copy(issuer = state.deposit.copy(party = party))))
+    @JvmStatic fun issuedBy(state: Cash.State, deposit: PartyAndReference) = state.copy(amount = Amount(state.amount.quantity, state.issuanceDef.copy(issuer = deposit)))
     @JvmStatic fun withNotary(state: Cash.State, notary: Party) = TransactionState(state, notary)
     @JvmStatic fun withDeposit(state: Cash.State, deposit: PartyAndReference) = state.copy(amount = state.amount.copy(token = state.amount.token.copy(issuer = deposit)))
 
@@ -70,12 +65,12 @@ object JavaTestHelpers {
 
     @JvmStatic fun ownedBy(state: CommercialPaper.State, owner: PublicKey) = state.copy(owner = owner)
     @JvmStatic fun withNotary(state: CommercialPaper.State, notary: Party) = TransactionState(state, notary)
-    @JvmStatic fun ownedBy(state: ICommercialPaperState, new_owner: PublicKey) = state.withOwner(new_owner)
+    @JvmStatic fun ownedBy(state: ICommercialPaperState, new_owner: PublicKey): ICommercialPaperState = state.withOwner(new_owner)
 
     @JvmStatic fun withNotary(state: ContractState, notary: Party) = TransactionState(state, notary)
 
     @JvmStatic fun CASH(amount: Amount<Currency>) = Cash.State(
-            Amount<Issued<Currency>>(amount.quantity, Issued<Currency>(DUMMY_CASH_ISSUER, amount.token)),
+            Amount(amount.quantity, Issued(DUMMY_CASH_ISSUER, amount.token)),
             NullPublicKey)
     @JvmStatic fun STATE(amount: Amount<Issued<Currency>>) = Cash.State(amount, NullPublicKey)
 
@@ -85,7 +80,6 @@ object JavaTestHelpers {
     @JvmStatic fun OBLIGATION(amount: Amount<Issued<Currency>>) = Obligation.State(Obligation.Lifecycle.NORMAL, MINI_CORP,
             OBLIGATION_DEF(amount.token), amount.quantity, NullPublicKey)
 }
-
 
 infix fun Cash.State.`owned by`(owner: PublicKey) = JavaTestHelpers.ownedBy(this, owner)
 infix fun Cash.State.`issued by`(party: Party) = JavaTestHelpers.issuedBy(this, party)

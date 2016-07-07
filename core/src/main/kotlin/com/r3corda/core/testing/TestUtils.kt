@@ -15,26 +15,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Instant
 
-/** If an exception is thrown by the body, rethrows the root cause exception. */
-inline fun <R> rootCauseExceptions(body: () -> R): R {
-    try {
-        return body()
-    } catch(e: Exception) {
-        throw Throwables.getRootCause(e)
-    }
-}
-
-fun freeLocalHostAndPort(): HostAndPort {
-    val freePort = ServerSocket(0).use { it.localPort }
-    return HostAndPort.fromParts("localhost", freePort)
-}
-
-object TestUtils {
-    val keypair = generateKeyPair()
-    val keypair2 = generateKeyPair()
-    val keypair3 = generateKeyPair()
-}
-
 /**
  *  JAVA INTEROP. Please keep the following points in mind when extending the Kotlin DSL
  *
@@ -58,17 +38,21 @@ object JavaTestHelpers {
     @JvmStatic val TEST_TX_TIME: Instant get() = Instant.parse("2015-04-17T12:00:00.00Z")
 
     // A few dummy values for testing.
-    @JvmStatic val MEGA_CORP_KEY: KeyPair get() = TestUtils.keypair
+    @JvmStatic val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
 
-    @JvmStatic val MINI_CORP_KEY: KeyPair get() = TestUtils.keypair2
+    @JvmStatic val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
 
-    @JvmStatic val ORACLE_KEY: KeyPair get() = TestUtils.keypair3
+    @JvmStatic val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
 
     @JvmStatic val DUMMY_PUBKEY_1: PublicKey get() = DummyPublicKey("x1")
     @JvmStatic val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
+
+    @JvmStatic val DUMMY_KEY_1: KeyPair by lazy { generateKeyPair() }
+    @JvmStatic val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
+    @JvmStatic val DUMMY_KEY_3: KeyPair by lazy { generateKeyPair() }
 
     @JvmStatic val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
     @JvmStatic val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
@@ -89,6 +73,20 @@ object JavaTestHelpers {
     @JvmStatic val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
     @JvmStatic fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
+
+    /** If an exception is thrown by the body, rethrows the root cause exception. */
+    @JvmStatic inline fun <R> rootCauseExceptions(body: () -> R): R {
+        try {
+            return body()
+        } catch(e: Exception) {
+            throw Throwables.getRootCause(e)
+        }
+    }
+
+    @JvmStatic fun freeLocalHostAndPort(): HostAndPort {
+        val freePort = ServerSocket(0).use { it.localPort }
+        return HostAndPort.fromParts("localhost", freePort)
+    }
 
     @JvmStatic @JvmOverloads fun ledger(
             identityService: IdentityService = MOCK_IDENTITY_SERVICE,
@@ -119,6 +117,9 @@ val ORACLE_KEY = JavaTestHelpers.ORACLE_KEY
 val ORACLE_PUBKEY = JavaTestHelpers.ORACLE_PUBKEY
 val DUMMY_PUBKEY_1 = JavaTestHelpers.DUMMY_PUBKEY_1
 val DUMMY_PUBKEY_2 = JavaTestHelpers.DUMMY_PUBKEY_2
+val DUMMY_KEY_1 = JavaTestHelpers.DUMMY_KEY_1
+val DUMMY_KEY_2 = JavaTestHelpers.DUMMY_KEY_2
+val DUMMY_KEY_3 = JavaTestHelpers.DUMMY_KEY_3
 val ALICE_KEY = JavaTestHelpers.ALICE_KEY
 val ALICE_PUBKEY = JavaTestHelpers.ALICE_PUBKEY
 val ALICE = JavaTestHelpers.ALICE
@@ -133,12 +134,5 @@ val ALL_TEST_KEYS = JavaTestHelpers.ALL_TEST_KEYS
 val MOCK_IDENTITY_SERVICE = JavaTestHelpers.MOCK_IDENTITY_SERVICE
 
 fun generateStateRef() = JavaTestHelpers.generateStateRef()
-
-class LabeledOutput(val label: String?, val state: TransactionState<*>) {
-    override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
-    override fun equals(other: Any?) = other is LabeledOutput && state.equals(other.state)
-    override fun hashCode(): Int = state.hashCode()
-}
-
-infix fun TransactionState<*>.label(label: String) = LabeledOutput(label, this)
-
+fun freeLocalHostAndPort() = JavaTestHelpers.freeLocalHostAndPort()
+inline fun <R> rootCauseExceptions(body: () -> R) = JavaTestHelpers.rootCauseExceptions(body)
