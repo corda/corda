@@ -37,7 +37,7 @@ object ExitServerProtocol {
      * This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
      * we do not support coercing numeric types in the reflective search for matching constructors
      */
-    class Broadcast(@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") val exitCode: Int) : ProtocolLogic<Boolean>() {
+    class Broadcast(val exitCode: Int) : ProtocolLogic<Boolean>() {
 
         override val topic: String get() = TOPIC
 
