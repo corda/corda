@@ -218,7 +218,6 @@ object TwoPartyDealProtocol {
 
             logger.trace { "Got signatures from other party, verifying ... " }
 
-            verifyCorrectNotary(stx.tx, signatures.notarySig)
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
@@ -261,12 +260,6 @@ object TwoPartyDealProtocol {
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
-        }
-
-        private fun verifyCorrectNotary(wtx: WireTransaction, sig: DigitalSignature.LegallyIdentifiable) {
-            if (wtx.inputs.isEmpty()) return // Can choose any Notary if there are no inputs
-            val notary = serviceHub.loadState(wtx.inputs.first()).notary
-            check(sig.signer == notary) { "Transaction not signed by the required Notary" }
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>

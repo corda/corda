@@ -305,9 +305,7 @@ class TwoPartyTradeProtocolTests {
                         TxRecord.Get(bobsFakeCash[1].id),
                         TxRecord.Get(bobsFakeCash[2].id),
                         // Alice notices that Bob's cash txns depend on a third tx she also doesn't know. She asks, Bob answers.
-                        TxRecord.Get(bobsFakeCash[0].id),
-                        // Bob wants to verify that the tx has been signed by the correct Notary, which requires looking up an input state
-                        TxRecord.Get(bobsFakeCash[1].id)
+                        TxRecord.Get(bobsFakeCash[0].id)
                 )
 
                 // Bob has downloaded the attachment.
