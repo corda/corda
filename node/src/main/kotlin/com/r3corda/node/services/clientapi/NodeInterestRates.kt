@@ -19,6 +19,7 @@ import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.utilities.FiberBox
 import com.r3corda.protocols.RatesFixProtocol
 import com.r3corda.protocols.ServiceRequestMessage
+import com.r3corda.protocols.TwoPartyDealProtocol
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.math.BigDecimal
