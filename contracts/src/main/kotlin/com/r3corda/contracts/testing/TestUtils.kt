@@ -18,38 +18,6 @@ import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
-// In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
-// a sandbox. For unit tests we just have a hard-coded list.
-val TEST_PROGRAM_MAP: Map<Contract, Class<out Contract>> = mapOf(
-        CASH_PROGRAM_ID to Cash::class.java,
-        CP_PROGRAM_ID to CommercialPaper::class.java,
-        JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper::class.java,
-        DUMMY_PROGRAM_ID to DummyContract::class.java,
-        IRS_PROGRAM_ID to InterestRateSwap::class.java
-)
-
-fun generateState() = DummyState(Random().nextInt())
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// Defines a simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
-//
-// Define a transaction like this:
-//
-// transaction {
-//    input { someExpression }
-//    output { someExpression }
-//    arg { someExpression }
-//
-//    tweak {
-//         ... same thing but works with a copy of the parent, can add inputs/outputs/args just within this scope.
-//    }
-//
-//    contract.accepts() -> should pass
-//    contract `fails requirement` "some substring of the error message"
-// }
-
-// For Java compatibility please define helper methods here and then define the infix notation
 object JavaTestHelpers {
     @JvmStatic fun ownedBy(state: Cash.State, owner: PublicKey) = state.copy(owner = owner)
     @JvmStatic fun issuedBy(state: Cash.State, party: Party) = state.copy(amount = Amount(state.amount.quantity, state.issuanceDef.copy(issuer = state.deposit.copy(party = party))))

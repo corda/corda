@@ -484,7 +484,7 @@ class TwoPartyTradeProtocolTests {
             }
             command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)
-                command(notary.owningKey) { TimestampCommand(TEST_TX_TIME, 30.seconds) }
+                timestamp(time = TEST_TX_TIME, notary = notary.owningKey)
             if (attachmentID != null)
                 attachment(attachmentID)
             if (withError) {

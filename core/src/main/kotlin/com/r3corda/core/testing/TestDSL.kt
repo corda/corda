@@ -14,6 +14,36 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Here is a simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
+//
+// Define a transaction like this:
+//
+// ledger {
+//     transaction {
+//         input { someExpression }
+//         output { someExpression }
+//         command { someExpression }
+//
+//         tweak {
+//              ... same thing but works with a copy of the parent, can add inputs/outputs/commands just within this scope.
+//         }
+//
+//         contract.verifies() -> verify() should pass
+//         contract `fails with` "some substring of the error message"
+//     }
+// }
+//
+
+/**
+ * Here follows implementations of the [LedgerDSLInterpreter] and [TransactionDSLInterpreter] interfaces to be used in
+ * tests. Top level primitives [ledger] and [transaction] that bind the interpreter types are also defined here.
+ */
+
+/**
+ * @see JavaTestHelpers.transaction
+ */
 fun transaction(
         transactionLabel: String? = null,
         transactionBuilder: TransactionBuilder = TransactionBuilder(),
@@ -23,6 +53,9 @@ fun transaction(
         >.() -> EnforceVerifyOrFail
 ) = JavaTestHelpers.transaction(transactionLabel, transactionBuilder, dsl)
 
+/**
+ * @see JavaTestHelpers.ledger
+ */
 fun ledger(
         identityService: IdentityService = MOCK_IDENTITY_SERVICE,
         storageService: StorageService = MockStorageService(),
@@ -70,6 +103,7 @@ sealed class EnforceVerifyOrFail {
 }
 
 class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
+class AttachmentResolutionException(attachmentId: SecureHash) : Exception("Attachment with id $attachmentId not found")
 
 /**
  * This interpreter builds a transaction, and [TransactionDSL.verifies] that the resolved transaction is correct. Note
@@ -83,7 +117,7 @@ data class TestTransactionDSLInterpreter private constructor(
 
     constructor(
             ledgerInterpreter: TestLedgerDSLInterpreter,
-            transactionBuilder: TransactionBuilder // = TransactionBuilder()
+            transactionBuilder: TransactionBuilder
     ) : this(ledgerInterpreter, transactionBuilder, HashMap())
 
     private fun copy(): TestTransactionDSLInterpreter =
@@ -160,9 +194,6 @@ data class TestTransactionDSLInterpreter private constructor(
                     >.() -> EnforceVerifyOrFail
     ) = dsl(TransactionDSL(copy()))
 }
-
-class AttachmentResolutionException(attachmentId: SecureHash) :
-        Exception("Attachment with id $attachmentId not found")
 
 data class TestLedgerDSLInterpreter private constructor (
         private val identityService: IdentityService,
@@ -241,9 +272,9 @@ data class TestLedgerDSLInterpreter private constructor (
     internal fun resolveAttachment(attachmentId: SecureHash): Attachment =
             storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
 
-    private fun <Return> interpretTransactionDsl(
+    private fun <R> interpretTransactionDsl(
             transactionBuilder: TransactionBuilder,
-            dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> Return
+            dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> R
     ): TestTransactionDSLInterpreter {
         val transactionInterpreter = TestTransactionDSLInterpreter(this, transactionBuilder)
         dsl(TransactionDSL(transactionInterpreter))
@@ -339,6 +370,12 @@ data class TestLedgerDSLInterpreter private constructor (
     }
 }
 
+/**
+ * Signs all transactions passed in.
+ * @param transactionsToSign: Transactions to be signed.
+ * @param extraKeys: extra keys to sign transactions with.
+ * @return: List of [SignedTransaction]s.
+ */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyPair>) = transactionsToSign.map { wtx ->
     val allPubKeys = wtx.signers.toMutableSet()
     val bits = wtx.serialize()
@@ -353,6 +390,10 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyP
     SignedTransaction(bits, signatures)
 }
 
+/**
+ * Signs all transactions in the ledger.
+ * @param extraKeys: extra keys to sign transactions with.
+ * @return: List of [SignedTransaction]s.
+ */
 fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
-        transactionsToSign: List<WireTransaction> = this.interpreter.wireTransactions, vararg extraKeys: KeyPair) =
-        signAll(transactionsToSign, extraKeys)
+        vararg extraKeys: KeyPair) = signAll(this.interpreter.wireTransactions, extraKeys)
