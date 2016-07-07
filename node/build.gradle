@@ -87,9 +87,6 @@ dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:1.3.0"
 
-    // Quasar: for the bytecode rewriting for state machines.
-    quasar "co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar"
-
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
