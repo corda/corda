@@ -1,4 +1,4 @@
-package node.services
+package com.r3corda.node.services
 
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
