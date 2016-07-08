@@ -18,6 +18,7 @@
     "angular-route": "^1.5.7",
     "lodash": "^4.13.1",
     "angular-fcsa-number": "^1.5.3",
-    "jquery.maskedinput": "^1.4.1"
+    "jquery.maskedinput": "^1.4.1",
+    "requirejs": "^2.2.0"
   }
 }
