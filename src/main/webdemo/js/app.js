@@ -145,9 +145,9 @@ let Deal = function(dealViewModel) {
         _.assign(fixedLeg, dealViewModel.fixedLeg);
         _.assign(floatingLeg, dealViewModel.floatingLeg);
         _.assign(common, dealViewModel.common);
-
-        fixedRateViewModel.fixedRate = Number(fixedLeg.fixedRate) / 100;
         _.assign(fixedLeg.fixedRate, fixedRateViewModel);
+
+        fixedLeg.fixedRate = Number(fixedLeg.fixedRate) / 100;
 
         common.tradeID = tradeId;
         fixedLeg.effectiveDate = formatDateForNode(fixedLeg.effectiveDate);
