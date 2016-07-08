@@ -39,7 +39,9 @@ class ProtocolLogicRefFactory(private val protocolWhitelist: Map<String, Set<Str
     // Pending real dependence on AppContext for class loading etc
     @Suppress("UNUSED_PARAMETER")
     private fun validateArgClassName(className: String, argClassName: String, appContext: AppContext) {
-        // Accept standard java.lang.* and kotlin.* types
+        // TODO: consider more carefully what to whitelist and how to secure protocols
+        // For now automatically accept standard java.lang.* and kotlin.* types.
+        // All other types require manual specification at ProtocolLogicRefFactory construction time.
         if (argClassName.startsWith("java.lang.") || argClassName.startsWith("kotlin.")) {
             return
         }

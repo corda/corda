@@ -137,9 +137,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     val networkMapRegistrationFuture: ListenableFuture<Unit>
         get() = _networkMapRegistrationFuture
 
-    /** fetch CordaPluginRegistry classes registered in META-INF/services/com.r3corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    protected val pluginRegistries: List<CordaPluginRegistry>
-        get() = ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+    /** Fetch CordaPluginRegistry classes registered in META-INF/services/com.r3corda.core.node.CordaPluginRegistry files that exist in the classpath */
+    protected val pluginRegistries: List<CordaPluginRegistry> by lazy {
+        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+    }
 
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
