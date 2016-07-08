@@ -7,9 +7,11 @@ import java.util.concurrent.TimeUnit
 /**
  * A small set of utilities for making HttpCalls, aimed at demos.
  */
-private val client = OkHttpClient.Builder()
+private val client by lazy {
+    OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS).build();
+}
 
 fun putJson(url: URL, data: String) : Boolean {
     val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
