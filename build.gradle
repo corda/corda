@@ -1,5 +1,4 @@
-group 'com.r3cev.prototyping'
-version '1.0-SNAPSHOT'
+group 'com.r3corda'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
@@ -41,6 +40,11 @@ buildscript {
     }
 }
 
+allprojects {
+    // Our version: bump this on release.
+    group 'com.r3corda'
+    version '0.2-SNAPSHOT'
+}
 
 repositories {
     mavenLocal()

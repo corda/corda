@@ -33,10 +33,12 @@ Steps to cut a release
    create one, bug them to do so a day or two before the release.
 4. Regenerate the docsite if necessary and commit.
 5. Create a branch with a name like `release-M0` where 0 is replaced by the number of the milestone.
-6. Tag that branch with a tag like `release-M0.0`
-7. Push the branch and the tag to git.
-8. Write up a short announcement containing the summary of new features, changes, and API breaks. Send it to the
+6. Adjust the version in the root build.gradle file to take out the -SNAPSHOT and commit it on the branch.
+7. Tag the branch with a tag like `release-M0.0`
+8. Push the branch and the tag to git.
+9. Write up a short announcement containing the summary of new features, changes, and API breaks. Send it to the
    r3dlg-awg mailing list.
+10. On master, adjust the version number in the root build.gradle file upwards.
 
 If there are serious bugs found in the release, backport the fix to the branch and then tag it with e.g. `release-M0.1`
 Minor changes to the branch don't have to be announced unless it'd be critical to get all developers updated.
