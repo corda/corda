@@ -185,6 +185,7 @@ define([
     'js/Deal'
 ],
 (angular, angularRoute, $, fcsaNumber, semantic, maskedInput, _, Deal) => {
+    Deal()
     let irsViewer = angular.module('irsViewer', ['ngRoute', 'fcsa-number'])
         .config(($routeProvider, $locationProvider) => {
             $routeProvider
