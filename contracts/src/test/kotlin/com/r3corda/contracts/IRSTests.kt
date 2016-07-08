@@ -377,11 +377,11 @@ class IRSTests {
                 input("irs post agreement")
                 val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
                 output("irs post first fixing") {
-                    postAgreement.data.copy(
-                            postAgreement.data.fixedLeg,
-                            postAgreement.data.floatingLeg,
-                            postAgreement.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                            postAgreement.data.common
+                    postAgreement.copy(
+                            postAgreement.fixedLeg,
+                            postAgreement.floatingLeg,
+                            postAgreement.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                            postAgreement.common
                     )
                 }
                 command(ORACLE_PUBKEY) {
@@ -693,20 +693,20 @@ class IRSTests {
                 input("irs post agreement2")
                 val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
                 output("irs post first fixing1") {
-                    postAgreement1.data.copy(
-                            postAgreement1.data.fixedLeg,
-                            postAgreement1.data.floatingLeg,
-                            postAgreement1.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            postAgreement1.data.common.copy(tradeID = "t1")
+                    postAgreement1.copy(
+                            postAgreement1.fixedLeg,
+                            postAgreement1.floatingLeg,
+                            postAgreement1.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement1.common.copy(tradeID = "t1")
                     )
                 }
                 val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
                 output("irs post first fixing2") {
-                    postAgreement2.data.copy(
-                            postAgreement2.data.fixedLeg,
-                            postAgreement2.data.floatingLeg,
-                            postAgreement2.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            postAgreement2.data.common.copy(tradeID = "t2")
+                    postAgreement2.copy(
+                            postAgreement2.fixedLeg,
+                            postAgreement2.floatingLeg,
+                            postAgreement2.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement2.common.copy(tradeID = "t2")
                     )
                 }
 

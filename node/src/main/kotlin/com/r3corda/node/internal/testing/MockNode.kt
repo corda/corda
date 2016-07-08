@@ -88,7 +88,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             // Nothing to do
         }
 
-        override fun generateKeyPair(): KeyPair? = keyPair ?: super.generateKeyPair()
+        override fun generateKeyPair(): KeyPair = keyPair ?: super.generateKeyPair()
 
         // It's OK to not have a network map service in the mock network.
         override fun noNetworkMapConfigured() = Futures.immediateFuture(Unit)

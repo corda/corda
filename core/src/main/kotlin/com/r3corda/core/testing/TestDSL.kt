@@ -161,27 +161,8 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun failsWith(expectedMessage: String?): EnforceVerifyOrFail {
-        val exceptionThrown = try {
+        expectExceptionContainingString(expectedMessage) {
             this.verifies()
-            false
-        } catch (exception: Exception) {
-            if (expectedMessage != null) {
-                val exceptionMessage = exception.message
-                if (exceptionMessage == null) {
-                    throw AssertionError(
-                            "Expected exception containing '$expectedMessage' but raised exception had no message"
-                    )
-                } else if (!exceptionMessage.toLowerCase().contains(expectedMessage.toLowerCase())) {
-                    throw AssertionError(
-                            "Expected exception containing '$expectedMessage' but raised exception was '$exception'"
-                    )
-                }
-            }
-            true
-        }
-
-        if (!exceptionThrown) {
-            throw AssertionError("Expected exception but didn't get one")
         }
 
         return EnforceVerifyOrFail.Token
@@ -202,7 +183,6 @@ data class TestLedgerDSLInterpreter private constructor (
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
         private val nonVerifiedTransactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
 ) : LedgerDSLInterpreter<EnforceVerifyOrFail, TestTransactionDSLInterpreter> {
-
     val wireTransactions: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
 
     // We specify [labelToOutputStateAndRefs] just so that Kotlin picks the primary constructor instead of cycling
@@ -211,19 +191,25 @@ data class TestLedgerDSLInterpreter private constructor (
     )
 
     companion object {
-        private fun getCallerLocation(offset: Int): String {
-            val stackTraceElement = Thread.currentThread().stackTrace[3 + offset]
-            return stackTraceElement.toString()
+        private fun getCallerLocation(): String? {
+            val stackTrace = Thread.currentThread().stackTrace
+            for (i in 1 .. stackTrace.size) {
+                val stackTraceElement = stackTrace[i]
+                if (!stackTraceElement.fileName.contains("DSL")) {
+                    return stackTraceElement.toString()
+                }
+            }
+            return null
         }
     }
 
     internal data class WireTransactionWithLocation(
             val label: String?,
             val transaction: WireTransaction,
-            val location: String
+            val location: String?
     )
-    class VerifiesFailed(transactionLocation: String, cause: Throwable) :
-            Exception("Transaction defined at ($transactionLocation) didn't verify: $cause", cause)
+    class VerifiesFailed(transactionName: String, cause: Throwable) :
+            Exception("Transaction ($transactionName) didn't verify: $cause", cause)
     class TypeMismatch(requested: Class<*>, actual: Class<*>) :
             Exception("Actual type $actual is not a subtype of requested type $requested")
 
@@ -309,7 +295,7 @@ data class TestLedgerDSLInterpreter private constructor (
             dsl: TransactionDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter>.() -> R,
             transactionMap: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
     ): WireTransaction {
-        val transactionLocation = getCallerLocation(3)
+        val transactionLocation = getCallerLocation()
         val transactionInterpreter = interpretTransactionDsl(transactionBuilder, dsl)
         // Create the WireTransaction
         val wireTransaction = transactionInterpreter.toWireTransaction()
@@ -353,7 +339,15 @@ data class TestLedgerDSLInterpreter private constructor (
         try {
             transactionGroup.verify()
         } catch (exception: TransactionVerificationException) {
-            throw VerifiesFailed(transactionWithLocations[exception.tx.origHash]?.location ?: "<unknown>", exception)
+            val transactionWithLocation = transactionWithLocations[exception.tx.origHash]
+            val transactionName = transactionWithLocation?.label ?: transactionWithLocation?.location ?: "<unknown>"
+            throw VerifiesFailed(transactionName, exception)
+        }
+    }
+
+    override fun failsWith(expectedMessage: String?) {
+        expectExceptionContainingString(expectedMessage) {
+            this.verifies()
         }
     }
 
@@ -397,3 +391,28 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyP
  */
 fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
         vararg extraKeys: KeyPair) = signAll(this.interpreter.wireTransactions, extraKeys)
+
+internal inline fun expectExceptionContainingString(string: String?, body:() -> Unit) {
+    val exceptionThrown = try {
+        body()
+        false
+    } catch (exception: Exception) {
+        if (string != null) {
+            val exceptionMessage = exception.message
+            if (exceptionMessage == null) {
+                throw AssertionError(
+                        "Expected exception containing '$string' but raised exception had no message"
+                )
+            } else if (!exceptionMessage.toLowerCase().contains(string.toLowerCase())) {
+                throw AssertionError(
+                        "Expected exception containing '$string' but raised exception was '$exception'"
+                )
+            }
+        }
+        true
+    }
+
+    if (!exceptionThrown) {
+        throw AssertionError("Expected exception but didn't get one")
+    }
+}

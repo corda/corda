@@ -169,4 +169,4 @@ operator fun KeyPair.component1() = this.private
 operator fun KeyPair.component2() = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
-fun generateKeyPair() = EddsaKeyPairGenerator().generateKeyPair()!!
+fun generateKeyPair(): KeyPair = EddsaKeyPairGenerator().generateKeyPair()

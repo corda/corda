@@ -61,6 +61,12 @@ interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : Output
      * Verifies the ledger using [TransactionGroup.verify], throws if the verification fails.
      */
     fun verifies()
+
+    /**
+     * Verifies the ledger, expecting an exception to be thrown.
+     * @param expectedMessage: An optional string to be searched for in the raised exception.
+     */
+    fun failsWith(expectedMessage: String?)
 }
 
 /**
@@ -97,12 +103,28 @@ class LedgerDSL<R, out T : TransactionDSLInterpreter<R>, out L : LedgerDSLInterp
      * Retrieves the output [TransactionState] based on the label.
      * @see OutputStateLookup.retrieveOutputStateAndRef
      */
-    inline fun <reified S : ContractState> String.output(): TransactionState<S> =
-            outputStateAndRef<S>().state
+    inline fun <reified S : ContractState> String.output(): S =
+            outputStateAndRef<S>().state.data
 
     /**
      * Retrieves the output [StateRef] based on the label.
      * @see OutputStateLookup.retrieveOutputStateAndRef
      */
     fun String.outputRef(): StateRef = outputStateAndRef<ContractState>().ref
+
+    /**
+     * @see OutputStateLookup.retrieveOutputStateAndRef
+     */
+    fun <S : ContractState> retrieveOutput(clazz: Class<S>, label: String) =
+            retrieveOutputStateAndRef(clazz, label).state.data
+
+    /**
+     * Asserts that the transaction will fail verification
+     */
+    fun fails() = failsWith(null)
+
+    /**
+     * @see TransactionDSLInterpreter.failsWith
+     */
+    infix fun `fails with`(msg: String) = failsWith(msg)
 }

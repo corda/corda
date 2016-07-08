@@ -96,9 +96,11 @@ class TransactionDSL<R, out T : TransactionDSLInterpreter<R>> (val interpreter: 
     /**
      * @see TransactionDSLInterpreter._output
      */
-    @JvmOverloads
-    fun output(label: String? = null, contractState: ContractState) =
+    fun output(label: String, contractState: ContractState) =
             _output(label, DUMMY_NOTARY, contractState)
+
+    fun output(contractState: ContractState) =
+            _output(null, DUMMY_NOTARY, contractState)
 
     /**
      * @see TransactionDSLInterpreter._command

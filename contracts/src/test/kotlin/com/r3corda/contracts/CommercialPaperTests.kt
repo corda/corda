@@ -85,7 +85,7 @@ class CommercialPaperTestsGeneric {
                 input("paper")
                 input("alice's $900")
                 output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output<ICommercialPaperState>().data `owned by` ALICE_PUBKEY }
+                output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
@@ -120,7 +120,7 @@ class CommercialPaperTestsGeneric {
                 timestamp(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output { "paper".output<ICommercialPaperState>().data }
+                    output { "paper".output<ICommercialPaperState>() }
                     this `fails with` "must be destroyed"
                 }
 
