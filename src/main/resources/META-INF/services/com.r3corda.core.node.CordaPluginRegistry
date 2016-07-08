@@ -1,0 +1,2 @@
+# Register a ServiceLoader service extending from com.r3corda.node.CordaPluginRegistry
+com.r3corda.demos.IRSDemoPluginRegistry
