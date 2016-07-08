@@ -71,7 +71,6 @@ fun main(args: Array<String>) {
 }
 
 fun runTraderDemo(args: Array<String>): Int {
-    val cashIssuerKey = generateKeyPair()
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
@@ -84,7 +83,7 @@ fun runTraderDemo(args: Array<String>): Int {
         parser.parse(*args)
     } catch (e: Exception) {
         println(e.message)
-        println("Please refer to the documentation in docs/build/index.html to learn how to run the demo.")
+        printHelp(parser)
         return 1
     }
 
@@ -377,3 +376,13 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
     }
 
 }
+
+private fun printHelp(parser: OptionParser) {
+    println("""
+    Usage: trader-demo --role [BUYER|SELLER] [options]
+    Please refer to the documentation in docs/build/index.html for more info.
+
+    """.trimIndent())
+    parser.printHelpOn(System.out)
+}
+
