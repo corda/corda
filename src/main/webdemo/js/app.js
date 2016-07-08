@@ -55,7 +55,7 @@ let floatingLegModel = {
    paymentDelay: 0,
    paymentCalendar: [ "London" ],
    interestPeriodAdjustment: "Adjusted",
-   fixingPeriod: "TWODAYS",
+   fixingPeriodOffset: 2,
    resetRule: "InAdvance",
    fixingsPerPayment: "Quarterly",
    fixingCalendar: [ "NewYork" ],
@@ -123,8 +123,7 @@ let commonViewModel = {
 let dealViewModel = {
   fixedLeg: fixedLegModel,
   floatingLeg: floatingLegModel,
-  common: commonViewModel,
-  notary: "Bank A"
+  common: commonViewModel
 };
 
 // TODO: Fill out this lookup table and use it to inject into the view.
@@ -168,8 +167,7 @@ let Deal = function(dealViewModel) {
             fixedLeg: fixedLeg,
             floatingLeg: floatingLeg,
             calculation: calculationModel,
-            common: common,
-            notary: dealViewModel.notary
+            common: common
         }
 
         return json;

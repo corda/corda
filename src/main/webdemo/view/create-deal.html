@@ -250,8 +250,8 @@
                     </div>
                 </div>
                 <div class="field">
-                    <label>Fixing Period</label>
-                    <input type="text" name="fixingPeriod" ng-model="deal.floatingLeg.fixingPeriod"/>
+                    <label>Fixing Period Offset</label>
+                    <input type="number" name="fixingPeriodOffset" ng-model="deal.floatingLeg.fixingPeriodOffset"/>
                 </div>
                 <div class="field">
                     <label>Reset Rule</label>
@@ -272,7 +272,7 @@
                     <input type="text" name="index" ng-model="deal.floatingLeg.index"/>
                 </div>
                 <div class="field">
-                    <label>IndexSource</label>
+                    <label>Index Source</label>
                     <input type="text" name="indexSource" ng-model="deal.floatingLeg.indexSource"/>
                 </div>
                 <div class="ui container">
@@ -285,10 +285,6 @@
             </div>
             <div class="sixteen wide column">
                 <h3>Common</h3>
-                <div class="field">
-                    <label>Notary</label>
-                    <input type="text" name="notary" ng-model="deal.notary"/>
-                </div>
                 <div class="field">
                     <label>Base Currency</label>
                     <input type="text" name="baseCurrency" ng-model="deal.common.baseCurrency"/>
