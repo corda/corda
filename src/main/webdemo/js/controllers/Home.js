@@ -3,7 +3,6 @@
 define(['angular', 'services/NodeApi'], (angular, nodeApi) => {
     angular.module('irsViewer').controller('HomeController', function HomeController($http, $scope, nodeService) {
         let handleHttpFail = (resp) => {
-            console.log(resp.data)
             $scope.httpError = resp.data
         }
 

@@ -63,7 +63,6 @@ define(['angular', 'lodash'], (angular, _) => {
                     // Do some data modification to simplify the model
                     let deal = resp.data;
                     deal.fixedLeg.fixedRate.value = (deal.fixedLeg.fixedRate.ratioUnit.value * 100).toString().slice(0, 6);
-                    console.log(deal);
                     return deal;
                 });
             };
