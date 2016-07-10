@@ -1,5 +1,6 @@
 package com.r3corda.contracts.universal
 
+import com.r3corda.core.contracts.Amount
 import java.math.BigDecimal
 import java.text.DateFormat
 import java.time.Instant
@@ -62,7 +63,16 @@ enum class Operation {
 
 data class PerceivableOperation<T>(val left: Perceivable<T>, val op: Operation, val right: Perceivable<T>) : Perceivable<T>
 
-infix fun Perceivable<BigDecimal>.plus(n: BigDecimal) = PerceivableOperation(this, Operation.PLUS, const(n))
-infix fun Perceivable<BigDecimal>.minus(n: BigDecimal) = PerceivableOperation(this, Operation.MINUS, const(n))
-infix fun Perceivable<BigDecimal>.times(n: BigDecimal) = PerceivableOperation(this, Operation.TIMES, const(n))
-infix fun Perceivable<BigDecimal>.div(n: BigDecimal) = PerceivableOperation(this, Operation.DIV, const(n))
+operator fun Perceivable<BigDecimal>.plus(n: BigDecimal) = PerceivableOperation(this, Operation.PLUS, const(n))
+operator fun Perceivable<BigDecimal>.minus(n: BigDecimal) = PerceivableOperation(this, Operation.MINUS, const(n))
+operator fun Perceivable<BigDecimal>.plus(n: Double) = PerceivableOperation(this, Operation.PLUS, const(BigDecimal(n)))
+operator fun Perceivable<BigDecimal>.minus(n: Double) = PerceivableOperation(this, Operation.MINUS, const(BigDecimal(n)))
+operator fun Perceivable<BigDecimal>.times(n: BigDecimal) = PerceivableOperation(this, Operation.TIMES, const(n))
+operator fun Perceivable<BigDecimal>.div(n: BigDecimal) = PerceivableOperation(this, Operation.DIV, const(n))
+operator fun Perceivable<BigDecimal>.times(n: Double) = PerceivableOperation(this, Operation.TIMES, const(BigDecimal(n)))
+operator fun Perceivable<BigDecimal>.div(n: Double) = PerceivableOperation(this, Operation.DIV, const(BigDecimal(n)))
+
+data class ScaleAmount<T>(val left: Perceivable<BigDecimal>, val right: Perceivable<Amount<T>>) : Perceivable<Amount<T>>
+
+operator fun Perceivable<BigDecimal>.times(n: Amount<Currency>) = ScaleAmount(this, const(n))
+        //PerceivableOperation(this, Operation.TIMES, const(BigDecimal(n)))

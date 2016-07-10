@@ -66,7 +66,7 @@ fun replaceParty(action: Action, from: Party, to: Party) : Action {
 fun replaceParty(arrangement: Arrangement, from: Party, to: Party) : Arrangement {
     return when (arrangement) {
         is Zero -> arrangement
-        is Transfer -> Transfer( arrangement.amount, arrangement.currency,
+        is Transfer -> Transfer( arrangement.amount,
                                  if (arrangement.from == from) to else arrangement.from,
                                  if (arrangement.to == from) to else arrangement.to )
         is Action -> replaceParty(arrangement, from, to)

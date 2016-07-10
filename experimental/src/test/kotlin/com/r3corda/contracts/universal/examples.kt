@@ -11,6 +11,7 @@ import java.util.*
  * Created by sofusmortensen on 23/05/16.
  */
 
+// various example arrangements using basic syntax
 
     val cds_contract = Action("payout", acmeCorporationHasDefaulted and before("2017-09-01"),
             roadRunner,

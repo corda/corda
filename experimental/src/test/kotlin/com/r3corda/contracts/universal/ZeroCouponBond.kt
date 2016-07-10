@@ -8,7 +8,7 @@ import org.junit.Test
  * Created by sofusmortensen on 01/06/16.
  */
 
-class ZCB {
+class ZeroCouponBond {
 
     val contract =
             (roadRunner or wileECoyote).may {

@@ -1,6 +1,7 @@
 package com.r3corda.contracts.universal
 
 import com.r3corda.core.contracts.Amount
+import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
 import java.util.*
@@ -30,9 +31,13 @@ class ContractBuilder {
         contracts.add( Transfer(amount, this, beneficiary))
     }
 
-    fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
-        contracts.add( Transfer(amount, currency, this, beneficiary))
+    fun Party.gives(beneficiary: Party, amount: Perceivable<Amount<Currency>>) {
+        contracts.add( Transfer(amount, this, beneficiary))
     }
+
+  /*  fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
+        contracts.add( Transfer(amount, currency, this, beneficiary))
+    }*/
 
     fun final() =
             when (contracts.size) {
@@ -89,87 +94,21 @@ infix fun Set<Party>.or(party: Party) = this.plus(party)
 fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
     val b = ContractBuilder()
     b.init()
-    return b.final();
+    return b.final()
 }
 
+class RolloutBuilder(val startDate: String, val endDate: String, val frequency: Frequency) {
 
+    val start = "start date"
+    val end = "end date"
+    fun recurse() = zero
 
-/*
-val my_cds_contract =
+    fun final() =
+            RollOut(startDate, endDate, frequency, zero)
+}
 
-        roadRunner.may {
-            "exercise".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
-                wileECoyote.gives(roadRunner, 1.M*USD)
-            }
-        } or (roadRunner or wileECoyote).may {
-            "expire".givenThat(after("2017-09-01")) {}
-        }
-
-val my_fx_swap =
-
-        (roadRunner or wileECoyote).may {
-            "execute".givenThat(after("2017-09-01")) {
-                wileECoyote.gives(roadRunner, 1200.K*USD)
-                roadRunner.gives(wileECoyote, 1.M*EUR)
-            }
-        }
-
-val my_fx_option =
-
-        roadRunner.may {
-            "exercise".anytime {
-                (roadRunner or wileECoyote).may {
-                    "execute".givenThat(after("2017-09-01")) {
-                        wileECoyote.gives(roadRunner, 1200.K*USD)
-                        roadRunner.gives(wileECoyote, 1.M*EUR)
-                    }
-                }
-            }
-        } or wileECoyote.may {
-            "expire".givenThat(after("2017-09-01")) {}
-        }
-
-val my_fx_knock_out_barrier_option =
-
-        roadRunner.may {
-            "exercise".anytime {
-                (roadRunner or wileECoyote).may {
-                    "execute".givenThat(after("2017-09-01")) {
-                        wileECoyote.gives(roadRunner, 1200.K*USD)
-                        roadRunner.gives(wileECoyote, 1.M*EUR)
-                    }
-                }
-            }
-        } or wileECoyote.may {
-            "expire".givenThat(after("2017-09-01")) {}
-            "knock out".givenThat( EUR / USD gt 1.3 ) {}
-        }
-
-val my_fx_knock_in_barrier_option =
-
-        roadRunner.may {
-            "knock in".givenThat(EUR / USD gt 1.3) {
-                roadRunner.may {
-                    "exercise".anytime {
-                        (roadRunner or wileECoyote).may {
-                            "execute".givenThat(after("2017-09-01")) {
-                                wileECoyote.gives(roadRunner, 1200.K*USD)
-                                roadRunner.gives(wileECoyote, 1.M*EUR)
-                            }
-                        }
-                    }
-                } or wileECoyote.may {
-                    "expire".givenThat(after("2017-09-01")) {}
-                }
-            }
-        } or wileECoyote.may {
-            "expire".givenThat(after("2017-09-01")) {}
-        }
-
-////
-
-fun fwd(partyA: Party, partyB: Party, maturity: String, contract: Kontract) =
-        (partyA or partyB).may {
-            "execute".givenThat(after(maturity)).resolve(contract)
-        }
-*/
+fun rollout(startDate: String, endDate: String, frequency: Frequency, init: RolloutBuilder.() -> Unit) : Arrangement {
+    val b = RolloutBuilder(startDate, endDate, frequency)
+    b.init()
+    return b.final()
+}

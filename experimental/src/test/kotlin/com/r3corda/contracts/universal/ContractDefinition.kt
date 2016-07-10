@@ -1,5 +1,6 @@
 package com.r3corda.contracts.universal
 
+import com.r3corda.core.contracts.Amount
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import org.junit.Test
@@ -18,8 +19,11 @@ class DummyPerceivable<T> : Perceivable<T>
 // example:
 val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
 
-// example:
-val euribor3M = DummyPerceivable<BigDecimal>()
+
+fun libor(amount: Amount<Currency>, start: String, end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
+
+fun interest(rate: Amount<Currency>, dayCountConvention: String, interest: Double /* todo -  appropriate type */,
+             start: String, end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
 
 // Test parties
 val roadRunner = Party("Road Runner", generateKeyPair().public)
