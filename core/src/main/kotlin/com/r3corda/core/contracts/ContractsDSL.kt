@@ -60,14 +60,22 @@ inline fun <R> requireThat(body: Requirements.() -> R) = R.body()
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
 
 /** Filters the command list by type, party and public key all at once. */
-inline fun <reified T : CommandData> List<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
                                                                                    party: Party? = null) =
         filter { it.value is T }.
-        filter { if (signer == null) true else it.signers.contains(signer) }.
-        filter { if (party == null) true else it.signingParties.contains(party) }.
+        filter { if (signer == null) true else signer in it.signers }.
+        filter { if (party == null) true else party in it.signingParties }.
         map { AuthenticatedObject<T>(it.signers, it.signingParties, it.value as T) }
 
-inline fun <reified T : CommandData> List<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
+/** Filters the command list by type, parties and public keys all at once. */
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKey>?,
+                                                                                   parties: Collection<Party>?) =
+        filter { it.value is T }.
+        filter { if (signers == null) true else it.signers.containsAll(signers)}.
+        filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
+        map { AuthenticatedObject<T>(it.signers, it.signingParties, it.value as T) }
+
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
     select<T>().single()
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
@@ -106,9 +114,10 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: Stri
  */
 @Throws(IllegalArgumentException::class)
 // TODO: Can we have a common Move command for all contracts and avoid the reified type parameter here?
-inline fun <reified T : CommandData> verifyMoveCommand(inputs: List<OwnableState>, tx: TransactionForContract) {
-    return verifyMoveCommand<T>(inputs, tx.commands)
-}
+inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,
+                                                       tx: TransactionForContract)
+        : MoveCommand
+        = verifyMoveCommand<T>(inputs, tx.commands)
 
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
@@ -116,13 +125,17 @@ inline fun <reified T : CommandData> verifyMoveCommand(inputs: List<OwnableState
  * @param T the type of the move command
  */
 @Throws(IllegalArgumentException::class)
-inline fun <reified T : CommandData> verifyMoveCommand(inputs: List<OwnableState>, commands: List<AuthenticatedObject<CommandData>>) {
+inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,
+                                                       commands: List<AuthenticatedObject<CommandData>>)
+        : MoveCommand {
     // Now check the digital signatures on the move command. Every input has an owning public key, and we must
     // see a signature from each of those keys. The actual signatures have been verified against the transaction
     // data by the platform before execution.
     val owningPubKeys = inputs.map { it.owner }.toSet()
-    val keysThatSigned = commands.requireSingleCommand<T>().signers.toSet()
+    val command = commands.requireSingleCommand<T>()
+    val keysThatSigned = command.signers.toSet()
     requireThat {
         "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
     }
+    return command.value
 }

@@ -1,0 +1,209 @@
+<HTML>
+<HEAD>
+<title>Obligation.State - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">State</a><br/>
+<br/>
+<h1>State</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-fungible-asset-state/index.html"><span class="identifier">FungibleAssetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">,</span>&nbsp;<a href="../-issuance-definition/index.html"><span class="identifier">IssuanceDefinition</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
+<p>A state representing the obligation of one party (obligor) to deliver a specified number of
+units of an underlying asset (described as issuanceDef.acceptableIssuedProducts) to the beneficiary
+no later than the specified time.</p>
+<h3>Parameters</h3>
+<a name="P"></a>
+<code>P</code> - the product the obligation is for payment of.<br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">State</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$<init>(com.r3corda.contracts.asset.Obligation.Lifecycle, com.r3corda.core.crypto.Party, com.r3corda.contracts.asset.Obligation.StateTemplate((com.r3corda.contracts.asset.Obligation.State.P)), kotlin.Long, java.security.PublicKey)/lifecycle">lifecycle</span><span class="symbol">:</span>&nbsp;<a href="../-lifecycle/index.html"><span class="identifier">Lifecycle</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Lifecycle.NORMAL<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$<init>(com.r3corda.contracts.asset.Obligation.Lifecycle, com.r3corda.core.crypto.Party, com.r3corda.contracts.asset.Obligation.StateTemplate((com.r3corda.contracts.asset.Obligation.State.P)), kotlin.Long, java.security.PublicKey)/obligor">obligor</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$<init>(com.r3corda.contracts.asset.Obligation.Lifecycle, com.r3corda.core.crypto.Party, com.r3corda.contracts.asset.Obligation.StateTemplate((com.r3corda.contracts.asset.Obligation.State.P)), kotlin.Long, java.security.PublicKey)/template">template</span><span class="symbol">:</span>&nbsp;<a href="../-state-template/index.html"><span class="identifier">StateTemplate</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$<init>(com.r3corda.contracts.asset.Obligation.Lifecycle, com.r3corda.core.crypto.Party, com.r3corda.contracts.asset.Obligation.StateTemplate((com.r3corda.contracts.asset.Obligation.State.P)), kotlin.Long, java.security.PublicKey)/quantity">quantity</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$<init>(com.r3corda.contracts.asset.Obligation.Lifecycle, com.r3corda.core.crypto.Party, com.r3corda.contracts.asset.Obligation.StateTemplate((com.r3corda.contracts.asset.Obligation.State.P)), kotlin.Long, java.security.PublicKey)/beneficiary">beneficiary</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span></code><p>A state representing the obligation of one party (obligor) to deliver a specified number of
+units of an underlying asset (described as issuanceDef.acceptableIssuedProducts) to the beneficiary
+no later than the specified time.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="acceptable-contracts.html">acceptableContracts</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">acceptableContracts</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="acceptable-issuance-definitions.html">acceptableIssuanceDefinitions</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">acceptableIssuanceDefinitions</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="aggregate-state.html">aggregateState</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">aggregateState</span><span class="symbol">: </span><a href="../-issuance-definition/index.html"><span class="identifier">IssuanceDefinition</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="amount.html">amount</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">amount</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="beneficiary.html">beneficiary</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">beneficiary</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code><p>The public key of the entity the contract pays to</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="bilateral-net-state.html">bilateralNetState</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bilateralNetState</span><span class="symbol">: </span><a href="../-bilateral-net-state/index.html"><span class="identifier">BilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>Returns an object used to determine if two states can be subject to close-out netting. If two states return
+equal objects, they can be close out netted together.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="contract.html">contract</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../index.html"><span class="identifier">Obligation</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><p>An instance of the contract class that will verify this state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="due-before.html">dueBefore</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dueBefore</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="issuance-def.html">issuanceDef</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">issuanceDef</span><span class="symbol">: </span><a href="../-issuance-definition/index.html"><span class="identifier">IssuanceDefinition</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="lifecycle.html">lifecycle</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">lifecycle</span><span class="symbol">: </span><a href="../-lifecycle/index.html"><span class="identifier">Lifecycle</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="multilateral-net-state.html">multilateralNetState</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">multilateralNetState</span><span class="symbol">: </span><a href="../-multilateral-net-state/index.html"><span class="identifier">MultilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="obligor.html">obligor</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">obligor</span><span class="symbol">: </span><a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code><p>Where the debt originates from (obligor)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="owner.html">owner</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code><p>There must be a MoveCommand signed by this key to claim the amount</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="participants.html">participants</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="product-amount.html">productAmount</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">productAmount</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="quantity.html">quantity</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">quantity</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="template.html">template</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">template</span><span class="symbol">: </span><a href="../-state-template/index.html"><span class="identifier">StateTemplate</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="move.html">move</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$move(com.r3corda.core.contracts.Amount((com.r3corda.contracts.asset.Obligation.State.P)), java.security.PublicKey)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$move(com.r3corda.core.contracts.Amount((com.r3corda.contracts.asset.Obligation.State.P)), java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="net.html">net</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">net</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$net(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.asset.Obligation.State.P)))/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>Perform bilateral netting of this state with another state. The two states must be compatible (as in
+bilateralNetState objects are equal).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with-new-owner.html">withNewOwner</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Obligation.State$withNewOwner(java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../com.r3corda.contracts.testing/at.html">at</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">at</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$at(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.at.T)), java.time.Instant)/dueBefore">dueBefore</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.contracts.testing/between.html">between</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">between</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$between(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.between.T)), ((com.r3corda.core.crypto.Party, java.security.PublicKey)))/parties">parties</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.contracts.testing/issued by.html">issued by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.issued by.T)), com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.contracts.testing/owned by.html">owned by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.owned by.T)), java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

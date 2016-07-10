@@ -60,7 +60,7 @@ when all entities on the network are being simulated in-process.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">InMemoryMessagingNetwork</span><span class="symbol">(</span><span class="symbol">)</span></code><p>An in-memory network allows you to manufacture <a href="-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
+<code><span class="identifier">InMemoryMessagingNetwork</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork$<init>(kotlin.Boolean)/sendManuallyPumped">sendManuallyPumped</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span></code><p>An in-memory network allows you to manufacture <a href="-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
 <a href="-in-memory-messaging/index.html">InMemoryMessaging</a> maintains a queue of messages it has received, and a background thread that dispatches
 messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
 case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
@@ -72,13 +72,6 @@ testing).</p>
 <h3>Properties</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="all-messages.html">allMessages</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">allMessages</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">&gt;</span></code><p>A stream of (sender, message, recipients) triples</p>
-</td>
-</tr>
 <tr>
 <td>
 <a href="endpoints.html">endpoints</a></td>
@@ -96,6 +89,26 @@ testing).</p>
 <a href="latency-calculator.html">latencyCalculator</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">latencyCalculator</span><span class="symbol">: </span><a href="-latency-calculator/index.html"><span class="identifier">LatencyCalculator</span></a><span class="symbol">?</span></code><p>This can be set to an object which can inject artificial latency between sender/recipient pairs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="received-messages.html">receivedMessages</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">receivedMessages</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">&gt;</span></code><p>A stream of (sender, message, recipients) triples</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="send-manually-pumped.html">sendManuallyPumped</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sendManuallyPumped</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="sent-messages.html">sentMessages</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sentMessages</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">&gt;</span></code><p>A stream of (sender, message, recipients) triples</p>
 </td>
 </tr>
 </tbody>
@@ -117,6 +130,18 @@ testing).</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">createNodeWithID</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork$createNodeWithID(kotlin.Boolean, kotlin.Int, kotlin.String)/manuallyPumped">manuallyPumped</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork$createNodeWithID(kotlin.Boolean, kotlin.Int, kotlin.String)/id">id</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork$createNodeWithID(kotlin.Boolean, kotlin.Int, kotlin.String)/description">description</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service-builder/index.html"><span class="identifier">MessagingServiceBuilder</span></a><span class="symbol">&lt;</span><a href="-in-memory-messaging/index.html"><span class="identifier">InMemoryMessaging</span></a><span class="symbol">&gt;</span></code><p>Creates a node at the given address: useful if you want to recreate a node to simulate a restart.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="pump-send.html">pumpSend</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">pumpSend</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork$pumpSend(kotlin.Boolean)/block">block</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><a href="-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="pump-send-internal.html">pumpSendInternal</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">pumpSendInternal</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork$pumpSendInternal(com.r3corda.node.services.network.InMemoryMessagingNetwork.MessageTransfer)/transfer">transfer</span><span class="symbol">:</span>&nbsp;<a href="-message-transfer/index.html"><span class="identifier">MessageTransfer</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>

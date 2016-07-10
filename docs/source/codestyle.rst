@@ -213,3 +213,10 @@ Notably:
   collection wrappers, if that is appropriate.
 * If the code following "get()" is succinct, prefer a one-liner formatting of the public property as above, otherwise
   put the "get()" on the line below, indented.
+
+6. Compiler warnings
+####################
+
+We do not allow compiler warnings, except in the experimental module where the usual standards do not apply and warnings
+are suppressed. If a warning exists it should be either fixed or suppressed using @SuppressWarnings and if suppressed
+there must be an accompanying explanation in the code for why the warning is a false positive.

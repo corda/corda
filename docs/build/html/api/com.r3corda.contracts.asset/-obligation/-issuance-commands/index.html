@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<title>Obligation.IssuanceCommands - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../index.html">Obligation</a>&nbsp;/&nbsp;<a href=".">IssuanceCommands</a><br/>
+<br/>
+<h1>IssuanceCommands</h1>
+<code><span class="keyword">interface </span><span class="identifier">IssuanceCommands</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a></code><br/>
+<p>Interface for commands that apply to states grouped by issuance definition</p>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="aggregate-state.html">aggregateState</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">aggregateState</span><span class="symbol">: </span><a href="../-issuance-definition/index.html"><span class="identifier">IssuanceDefinition</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-commands/-exit/index.html">Exit</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Exit</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">IssuanceCommands</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>A command stating that the debt is being released by the beneficiary. Normally would indicate
+either settlement outside of the ledger, or that the obligor is unable to pay.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-commands/-issue/index.html">Issue</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issue</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">IssuanceCommands</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>Allows new obligation states to be issued into existence: the nonce ("number used once") ensures the
+transaction has a unique ID even when there are no inputs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-commands/-move/index.html">Move</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Move</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">IssuanceCommands</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../../com.r3corda.core.contracts/-move-command/index.html"><span class="identifier">MoveCommand</span></a></code><p>A command stating that a debt has been moved, optionally to fulfil another contract.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-commands/-set-lifecycle/index.html">SetLifecycle</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SetLifecycle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">IssuanceCommands</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>A command stating that the beneficiary is moving the contract into the defaulted state as it has not been settled
+by the due date, or resetting a defaulted contract back to the issued state.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-commands/-settle/index.html">Settle</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Settle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">, </span><span class="identifier">IssuanceCommands</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
+state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

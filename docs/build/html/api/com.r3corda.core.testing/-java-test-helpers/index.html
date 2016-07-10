@@ -1,0 +1,179 @@
+<HTML>
+<HEAD>
+<title>JavaTestHelpers - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.testing</a>&nbsp;/&nbsp;<a href=".">JavaTestHelpers</a><br/>
+<br/>
+<h1>JavaTestHelpers</h1>
+<code><span class="keyword">object </span><span class="identifier">JavaTestHelpers</span></code><br/>
+<p>JAVA INTEROP. Please keep the following points in mind when extending the Kotlin DSL</p>
+<ul><li><p>Annotate functions with Kotlin defaults with @JvmOverloads. This produces the relevant overloads for Java.</p>
+</li><li><p>Void closures in arguments are inconvenient in Java, use overloading to define non-closure variants as well.</p>
+</li><li><p>Top-level funs should be defined in a JavaTestHelpers object and annotated with @JvmStatic first and should be
+referred to from the global fun. This allows static importing of JavaTestHelpers in Java tests, which mimicks
+top-level funs.</p>
+</li><li><p>Top-level vals are trickier. <emph>DO NOT USE@JvmField INSIDEJavaTestHelpers</emph>. Its surprisingly easy to
+introduce a static init cycle because of the way Kotlin compiles top-level things, which can cause
+non-deterministic behaviour, including your field not being initialized at all Instead opt for a proper Kotlin
+val either with a custom @JvmStatic get() or a lazy delegate if the initialiser has side-effects See examples below.</p>
+</li><li><p>Infix functions work as regular ones from Java, but symbols with spaces in them dont Define a camelCase variant
+as well.</p>
+</li><li><p>varargs are exposed as array types in Java. Define overloads for common cases.</p>
+</li><li><p>The Int.DOLLARS syntax doesnt work from Java. To remedy add a @JvmStatic DOLLARS(Int) function to
+JavaTestHelpers</p>
+</li></ul><br/>
+<br/>
+<br/>
+<br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-a-l-i-c-e.html">ALICE</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ALICE</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-a-l-i-c-e_-k-e-y.html">ALICE_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ALICE_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-a-l-i-c-e_-p-u-b-k-e-y.html">ALICE_PUBKEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ALICE_PUBKEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-a-l-l_-t-e-s-t_-k-e-y-s.html">ALL_TEST_KEYS</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ALL_TEST_KEYS</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-b-o-b.html">BOB</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">BOB</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-b-o-b_-k-e-y.html">BOB_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">BOB_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-b-o-b_-p-u-b-k-e-y.html">BOB_PUBKEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">BOB_PUBKEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-n-o-t-a-r-y.html">DUMMY_NOTARY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_NOTARY</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-n-o-t-a-r-y_-k-e-y.html">DUMMY_NOTARY_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_NOTARY_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-p-u-b-k-e-y_1.html">DUMMY_PUBKEY_1</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_PUBKEY_1</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-p-u-b-k-e-y_2.html">DUMMY_PUBKEY_2</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_PUBKEY_2</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-e-g-a_-c-o-r-p.html">MEGA_CORP</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MEGA_CORP</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-e-g-a_-c-o-r-p_-k-e-y.html">MEGA_CORP_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MEGA_CORP_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-e-g-a_-c-o-r-p_-p-u-b-k-e-y.html">MEGA_CORP_PUBKEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MEGA_CORP_PUBKEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-i-n-i_-c-o-r-p.html">MINI_CORP</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MINI_CORP</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-i-n-i_-c-o-r-p_-k-e-y.html">MINI_CORP_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MINI_CORP_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-i-n-i_-c-o-r-p_-p-u-b-k-e-y.html">MINI_CORP_PUBKEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MINI_CORP_PUBKEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-m-o-c-k_-i-d-e-n-t-i-t-y_-s-e-r-v-i-c-e.html">MOCK_IDENTITY_SERVICE</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">MOCK_IDENTITY_SERVICE</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services.testing/-mock-identity-service/index.html"><span class="identifier">MockIdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-o-r-a-c-l-e_-k-e-y.html">ORACLE_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ORACLE_KEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-o-r-a-c-l-e_-p-u-b-k-e-y.html">ORACLE_PUBKEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ORACLE_PUBKEY</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-t-e-s-t_-t-x_-t-i-m-e.html">TEST_TX_TIME</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">TEST_TX_TIME</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="generate-state-ref.html">generateStateRef</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">generateStateRef</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="transaction.html">transaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">transaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.JavaTestHelpers$transaction(kotlin.Function1((com.r3corda.core.testing.TransactionForTest, com.r3corda.core.testing.LastLineShouldTestForAcceptOrFailure)))/body">body</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-test/index.html"><span class="identifier">TransactionForTest</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../-last-line-should-test-for-accept-or-failure.html"><span class="identifier">LastLineShouldTestForAcceptOrFailure</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-last-line-should-test-for-accept-or-failure.html"><span class="identifier">LastLineShouldTestForAcceptOrFailure</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -1,8 +1,10 @@
 package com.r3corda.core.node
 
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
+import com.r3corda.core.protocols.ProtocolLogic
 import java.time.Clock
 
 /**
@@ -20,6 +22,7 @@ interface ServiceHub {
     val storageService: StorageService
     val networkService: MessagingService
     val networkMapCache: NetworkMapCache
+    val schedulerService: SchedulerService
     val clock: Clock
 
     /**
@@ -60,4 +63,11 @@ interface ServiceHub {
         val definingTx = storageService.validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return definingTx.tx.outputs[stateRef.index]
     }
+
+    /**
+     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the protocol.
+     *
+     * @throws IllegalProtocolLogicException or IllegalArgumentException if there are problems with the [logicType] or [args]
+     */
+    fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T>
 }

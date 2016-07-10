@@ -7,11 +7,19 @@
 <a href="../index.html">com.r3corda.core.contracts</a>&nbsp;/&nbsp;<a href=".">TransactionBuilder</a><br/>
 <br/>
 <h1>TransactionBuilder</h1>
-<code><span class="keyword">class </span><span class="identifier">TransactionBuilder</span></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">TransactionBuilder</span></code><br/>
 <p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
-intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
-Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
-multiple parties.</p>
+intended to be passed around contracts that may edit it by adding new states/commands. Then once the states
+and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.</p>
+<p>The builder can be customised for specific transaction types, e.g. where additional processing is needed
+before adding a state/command.</p>
+<br/>
+<br/>
+<h3>Parameters</h3>
+<a name="notary"></a>
+<code>notary</code> - The default notary that will be used for outputs that dont have a notary specified. When this is set,
+an output state can be added by just passing in a <a href="../-contract-state/index.html">ContractState</a> – a <a href="../-transaction-state/index.html">TransactionState</a> with the
+default notary will be generated automatically.<br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -21,10 +29,9 @@ multiple parties.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">TransactionBuilder</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$<init>(kotlin.collections.MutableList((com.r3corda.core.contracts.StateRef)), kotlin.collections.MutableList((com.r3corda.core.crypto.SecureHash)), kotlin.collections.MutableList((com.r3corda.core.contracts.ContractState)), kotlin.collections.MutableList((com.r3corda.core.contracts.Command)))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;arrayListOf()<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$<init>(kotlin.collections.MutableList((com.r3corda.core.contracts.StateRef)), kotlin.collections.MutableList((com.r3corda.core.crypto.SecureHash)), kotlin.collections.MutableList((com.r3corda.core.contracts.ContractState)), kotlin.collections.MutableList((com.r3corda.core.contracts.Command)))/attachments">attachments</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;arrayListOf()<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$<init>(kotlin.collections.MutableList((com.r3corda.core.contracts.StateRef)), kotlin.collections.MutableList((com.r3corda.core.crypto.SecureHash)), kotlin.collections.MutableList((com.r3corda.core.contracts.ContractState)), kotlin.collections.MutableList((com.r3corda.core.contracts.Command)))/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;arrayListOf()<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$<init>(kotlin.collections.MutableList((com.r3corda.core.contracts.StateRef)), kotlin.collections.MutableList((com.r3corda.core.crypto.SecureHash)), kotlin.collections.MutableList((com.r3corda.core.contracts.ContractState)), kotlin.collections.MutableList((com.r3corda.core.contracts.Command)))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../-command/index.html"><span class="identifier">Command</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;arrayListOf()<span class="symbol">)</span></code><p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
-intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
-Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
-multiple parties.</p>
+<code><span class="identifier">TransactionBuilder</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$<init>(com.r3corda.core.contracts.TransactionType, com.r3corda.core.crypto.Party)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-type/index.html"><span class="identifier">TransactionType</span></a>&nbsp;<span class="symbol">=</span>&nbsp;TransactionType.General()<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$<init>(com.r3corda.core.contracts.TransactionType, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code><p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
+intended to be passed around contracts that may edit it by adding new states/commands. Then once the states
+and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.</p>
 </td>
 </tr>
 </tbody>
@@ -34,9 +41,58 @@ multiple parties.</p>
 <tbody>
 <tr>
 <td>
+<a href="attachments.html">attachments</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">attachments</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="commands.html">commands</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">commands</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../-command/index.html"><span class="identifier">Command</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="current-sigs.html">currentSigs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">currentSigs</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>The signatures that have been collected so far - might be incomplete</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="inputs.html">inputs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">inputs</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="notary.html">notary</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="outputs.html">outputs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">outputs</span><span class="symbol">: </span><span class="identifier">MutableList</span><span class="symbol">&lt;</span><a href="../-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="signers.html">signers</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">signers</span><span class="symbol">: </span><span class="identifier">MutableSet</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="time.html">time</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">time</span><span class="symbol">: </span><a href="../-timestamp-command/index.html"><span class="identifier">TimestampCommand</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="type.html">type</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">type</span><span class="symbol">: </span><a href="../-transaction-type/index.html"><span class="identifier">TransactionType</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -61,13 +117,15 @@ multiple parties.</p>
 <td>
 <a href="add-input-state.html">addInputState</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">addInputState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addInputState(com.r3corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">addInputState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addInputState(com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)))/stateAndRef">stateAndRef</span><span class="symbol">:</span>&nbsp;<a href="../-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="add-output-state.html">addOutputState</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">addOutputState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addOutputState(com.r3corda.core.contracts.ContractState)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">addOutputState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addOutputState(com.r3corda.core.contracts.TransactionState((com.r3corda.core.contracts.ContractState)))/state">state</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">addOutputState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addOutputState(com.r3corda.core.contracts.ContractState, com.r3corda.core.crypto.Party)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addOutputState(com.r3corda.core.contracts.ContractState, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><code><span class="keyword">fun </span><span class="identifier">addOutputState</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addOutputState(com.r3corda.core.contracts.ContractState)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>A default notary must be specified during builder construction to use this method</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -113,7 +171,7 @@ adds it.</p>
 <td>
 <a href="output-states.html">outputStates</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">outputStates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">outputStates</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -147,6 +205,26 @@ The signature can be obtained using <a href="#">NotaryProtocol</a>.</p>
 <a href="with-items.html">withItems</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">withItems</span><span class="symbol">(</span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$withItems(kotlin.Array((kotlin.Any)))/items">items</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransactionBuilder</span></code><p>A more convenient way to add items to this transaction that calls the add* methods for you based on type</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-transaction-type/-general/-builder/index.html">Builder</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Builder</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransactionBuilder</span></code><p>Just uses the default TransactionBuilder with no special logic</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-transaction-type/-notary-change/-builder/index.html">Builder</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Builder</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransactionBuilder</span></code><p>A transaction builder that automatically sets the transaction type to <a href="../-transaction-type/-notary-change/index.html">NotaryChange</a>
+and adds the list of participants to the signers set for every input state.</p>
 </td>
 </tr>
 </tbody>

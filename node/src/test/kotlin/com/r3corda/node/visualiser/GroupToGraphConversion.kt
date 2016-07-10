@@ -2,35 +2,34 @@ package com.r3corda.node.visualiser
 
 import com.r3corda.core.contracts.CommandData
 import com.r3corda.core.contracts.ContractState
-import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.testing.TransactionGroupDSL
+import com.r3corda.core.testing.*
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
 import kotlin.reflect.memberProperties
 
-class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
+class GraphVisualiser(val dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>) {
     companion object {
         val css = GraphVisualiser::class.java.getResourceAsStream("graph.css").bufferedReader().readText()
     }
 
     fun convert(): SingleGraph {
-        val tg = dsl.toTransactionGroup()
+        val tg = dsl.interpreter.toTransactionGroup()
         val graph = createGraph("Transaction group", css)
 
         // Map all the transactions, including the bogus non-verified ones (with no inputs) to graph nodes.
         for ((txIndex, tx) in (tg.transactions + tg.nonVerifiedRoots).withIndex()) {
             val txNode = graph.addNode<Node>("tx$txIndex")
             if (tx !in tg.nonVerifiedRoots)
-                txNode.label = dsl.labelForTransaction(tx).let { it ?: "TX ${tx.id.prefixChars()}" }
+                txNode.label = dsl.interpreter.transactionName(tx.id).let { it ?: "TX[${tx.id.prefixChars()}]" }
             txNode.styleClass = "tx"
 
             // Now create a vertex for each output state.
             for (outIndex in tx.outputs.indices) {
                 val node = graph.addNode<Node>(tx.outRef<ContractState>(outIndex).ref.toString())
                 val state = tx.outputs[outIndex]
-                node.label = stateToLabel(state)
+                node.label = stateToLabel(state.data)
                 node.styleClass = stateToCSSClass(state.data) + ",state"
                 node.setAttribute("state", state)
                 val edge = graph.addEdge<Edge>("tx$txIndex-out$outIndex", txNode, node, true)
@@ -56,8 +55,8 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
         return graph
     }
 
-    private fun stateToLabel(state: TransactionState<*>): String {
-        return dsl.labelForState(state) ?: stateToTypeName(state.data)
+    private fun stateToLabel(state: ContractState): String {
+        return dsl.interpreter.outputToLabel(state) ?: stateToTypeName(state)
     }
 
     private fun commandToTypeName(state: CommandData) = state.javaClass.canonicalName.removePrefix("contracts.").replace('$', '.')

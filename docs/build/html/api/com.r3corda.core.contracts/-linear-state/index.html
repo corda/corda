@@ -33,14 +33,14 @@
 <td>
 <a href="../-contract-state/contract.html">contract</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../-contract/index.html"><span class="identifier">Contract</span></a></code><p>Contract by which the state belongs</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">contract</span><span class="symbol">: </span><a href="../-contract/index.html"><span class="identifier">Contract</span></a></code><p>An instance of the contract class that will verify this state.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../-contract-state/notary.html">notary</a></td>
+<a href="../-contract-state/participants.html">participants</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code><p>Identity of the notary that ensures this state is not used as an input to a transaction more than once</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
 </td>
 </tr>
 </tbody>
@@ -69,9 +69,9 @@
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.core.testing/label.html">label</a></td>
+<a href="../../com.r3corda.contracts.testing/with notary.html">with notary</a></td>
 <td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">label</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing$label(com.r3corda.core.contracts.ContractState, kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.testing/-labeled-output/index.html"><span class="identifier">LabeledOutput</span></a></code></td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with notary(com.r3corda.core.contracts.ContractState, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -85,6 +85,12 @@
 <code><span class="keyword">interface </span><span class="identifier">DealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">LinearState</span></code><p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
 implementation of general protocols that manipulate many agreement types.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.testing/-dummy-linear-state/index.html">DummyLinearState</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DummyLinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">LinearState</span></code></td>
 </tr>
 </tbody>
 </table>

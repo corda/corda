@@ -41,6 +41,7 @@ Read on to learn:
    tutorial-contract
    protocol-state-machines
    oracles
+   event-scheduling
 
 .. toctree::
    :maxdepth: 2

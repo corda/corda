@@ -9,13 +9,12 @@ import java.security.PublicKey
 val DUMMY_PROGRAM_ID = DummyContract()
 
 class DummyContract : Contract {
-    data class State(val magicNumber: Int = 0) : ContractState {
-        override val contract = DUMMY_PROGRAM_ID
-        override val participants: List<PublicKey>
-            get() = emptyList()
+
+    interface State : ContractState {
+        val magicNumber: Int
     }
 
-    data class SingleOwnerState(val magicNumber: Int = 0, override val owner: PublicKey) : OwnableState {
+    data class SingleOwnerState(override val magicNumber: Int = 0, override val owner: PublicKey) : OwnableState, State {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<PublicKey>
             get() = listOf(owner)
@@ -23,8 +22,13 @@ class DummyContract : Contract {
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
-    data class MultiOwnerState(val magicNumber: Int = 0,
-                               val owners: List<PublicKey>) : ContractState {
+    /**
+     * Alternative state with multiple owners. This exists primarily to provide a dummy state with multiple
+     * participants, and could in theory be merged with [SingleOwnerState] by putting the additional participants
+     * in a different field, however this is a good example of a contract with multiple states.
+     */
+    data class MultiOwnerState(override val magicNumber: Int = 0,
+                               val owners: List<PublicKey>) : ContractState, State {
         override val contract = DUMMY_PROGRAM_ID
         override val participants: List<PublicKey>
             get() = owners

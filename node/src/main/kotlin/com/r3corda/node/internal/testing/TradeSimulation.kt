@@ -44,17 +44,25 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val cashIssuerKey = generateKeyPair()
         val amount = 1000.DOLLARS `issued by` Party("Big friendly bank", cashIssuerKey.public).ref(1)
         val sessionID = random63BitValue()
-        val buyerProtocol = TwoPartyTradeProtocol.Buyer(seller.net.myAddress, notary.info.identity,
-                amount, CommercialPaper.State::class.java, sessionID)
-        val sellerProtocol = TwoPartyTradeProtocol.Seller(buyer.net.myAddress, notary.info,
-                issuance.tx.outRef(0), amount, seller.storage.myLegalIdentityKey, sessionID)
+        val buyerProtocol = TwoPartyTradeProtocol.Buyer(
+                seller.info.identity,
+                notary.info.identity,
+                amount,
+                CommercialPaper.State::class.java,
+                sessionID)
+        val sellerProtocol = TwoPartyTradeProtocol.Seller(
+                buyer.info.identity,
+                notary.info,
+                issuance.tx.outRef(0),
+                amount,
+                seller.storage.myLegalIdentityKey,
+                sessionID)
 
-        linkConsensus(listOf(buyer, seller, notary), sellerProtocol)
-        linkProtocolProgress(buyer, buyerProtocol)
-        linkProtocolProgress(seller, sellerProtocol)
+        showConsensusFor(listOf(buyer, seller, notary))
+        showProgressFor(listOf(buyer, seller))
 
-        val buyerFuture = buyer.smm.add("bank.$buyerBankIndex.${TwoPartyTradeProtocol.TRADE_TOPIC}.buyer", buyerProtocol)
-        val sellerFuture = seller.smm.add("bank.$sellerBankIndex.${TwoPartyTradeProtocol.TRADE_TOPIC}.seller", sellerProtocol)
+        val buyerFuture = buyer.smm.add("bank.$buyerBankIndex.${TwoPartyTradeProtocol.TOPIC}.buyer", buyerProtocol)
+        val sellerFuture = seller.smm.add("bank.$sellerBankIndex.${TwoPartyTradeProtocol.TOPIC}.seller", sellerProtocol)
 
         return Futures.successfulAsList(buyerFuture, sellerFuture)
     }

@@ -7,9 +7,7 @@
 <a href="../index.html">com.r3corda.protocols</a>&nbsp;/&nbsp;<a href=".">AbstractRequestMessage</a><br/>
 <br/>
 <h1>AbstractRequestMessage</h1>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractRequestMessage</span></code><br/>
-<p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and replyToTopic.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code><br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -19,9 +17,7 @@ fields such as replyTo and replyToTopic.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">AbstractRequestMessage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.AbstractRequestMessage$<init>(com.r3corda.core.messaging.MessageRecipients, kotlin.Long)/replyTo">replyTo</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.AbstractRequestMessage$<init>(com.r3corda.core.messaging.MessageRecipients, kotlin.Long)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">?</span><span class="symbol">)</span></code><p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and replyToTopic.</p>
-</td>
+<code><span class="identifier">AbstractRequestMessage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.AbstractRequestMessage$<init>(com.r3corda.core.crypto.Party)/replyToParty">replyToParty</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -30,15 +26,31 @@ fields such as replyTo and replyToTopic.</p>
 <tbody>
 <tr>
 <td>
-<a href="reply-to.html">replyTo</a></td>
+<a href="reply-to-party.html">replyToParty</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">replyTo</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">replyToParty</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
 </tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
 <tr>
 <td>
-<a href="session-i-d.html">sessionID</a></td>
+<a href="../-service-request-message/session-i-d.html">sessionID</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span><span class="symbol">?</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-reply-to.html">getReplyTo</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getReplyTo</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.AbstractRequestMessage$getReplyTo(com.r3corda.core.node.services.NetworkMapCache)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -47,33 +59,21 @@ fields such as replyTo and replyToTopic.</p>
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.network/-network-map-service/-fetch-map-request/index.html">FetchMapRequest</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">FetchMapRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="../-notary-protocol/-handshake/index.html">Handshake</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Handshake</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.network/-network-map-service/-query-identity-request/index.html">QueryIdentityRequest</a></td>
+<a href="../../protocols/-abstract-state-replacement-protocol/-handshake/index.html">Handshake</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">QueryIdentityRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">Handshake</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="../-rates-fix-protocol/-query-request/index.html">QueryRequest</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">QueryRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.node.services.network/-network-map-service/-registration-request/index.html">RegistrationRequest</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">RegistrationRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
 </tr>
 <tr>
 <td>
@@ -86,12 +86,6 @@ fields such as replyTo and replyToTopic.</p>
 <a href="../-rates-fix-protocol/-sign-request/index.html">SignRequest</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">SignRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.node.services.network/-network-map-service/-subscribe-request/index.html">SubscribeRequest</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">SubscribeRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractRequestMessage</span></code></td>
 </tr>
 </tbody>
 </table>

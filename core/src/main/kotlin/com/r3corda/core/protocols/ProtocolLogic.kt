@@ -1,7 +1,7 @@
 package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.messaging.MessageRecipients
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
@@ -25,6 +25,7 @@ import org.slf4j.Logger
  * it to the [subProtocol] method. It will return the result of that protocol when it completes.
  */
 abstract class ProtocolLogic<T> {
+
     /** Reference to the [Fiber] instance that is the top level controller for the entire flow. */
     lateinit var psm: ProtocolStateMachine<*>
 
@@ -38,22 +39,30 @@ abstract class ProtocolLogic<T> {
      */
     val serviceHub: ServiceHub get() = psm.serviceHub
 
+    /**
+     * The topic to use when communicating with other parties. If more than one topic is required then use sub-protocols.
+     * Note that this is temporary until protocol sessions are properly implemented.
+     */
+    protected abstract val topic: String
+
     // Kotlin helpers that allow the use of generic types.
-    inline fun <reified T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long,
-                                                sessionIDForReceive: Long, obj: Any): UntrustworthyData<T> {
-        return psm.sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, T::class.java)
+    inline fun <reified T : Any> sendAndReceive(destination: Party,
+                                                sessionIDForSend: Long,
+                                                sessionIDForReceive: Long,
+                                                payload: Any): UntrustworthyData<T> {
+        return psm.sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, payload, T::class.java)
     }
 
-    inline fun <reified T : Any> receive(topic: String, sessionIDForReceive: Long): UntrustworthyData<T> {
-        return receive(topic, sessionIDForReceive, T::class.java)
+    inline fun <reified T : Any> receive(sessionIDForReceive: Long): UntrustworthyData<T> {
+        return receive(sessionIDForReceive, T::class.java)
     }
 
-    @Suspendable fun <T : Any> receive(topic: String, sessionIDForReceive: Long, clazz: Class<T>): UntrustworthyData<T> {
-        return psm.receive(topic, sessionIDForReceive, clazz)
+    @Suspendable fun <T : Any> receive(sessionIDForReceive: Long, receiveType: Class<T>): UntrustworthyData<T> {
+        return psm.receive(topic, sessionIDForReceive, receiveType)
     }
 
-    @Suspendable fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
-        psm.send(topic, destination, sessionID, obj)
+    @Suspendable fun send(destination: Party, sessionID: Long, payload: Any) {
+        psm.send(topic, destination, sessionID, payload)
     }
 
     /**
@@ -71,9 +80,15 @@ abstract class ProtocolLogic<T> {
 
     private fun maybeWireUpProgressTracking(subLogic: ProtocolLogic<*>) {
         val ours = progressTracker
+
         val theirs = subLogic.progressTracker
-        if (ours != null && theirs != null)
+        if (ours != null && theirs != null) {
+            if (ours.currentStep == ProgressTracker.UNSTARTED) {
+                logger.warn("ProgressTracker has not been started for $this")
+                ours.nextStep()
+            }
             ours.setChildProgressTracker(ours.currentStep, theirs)
+        }
     }
 
     /**
@@ -90,4 +105,5 @@ abstract class ProtocolLogic<T> {
     /** This is where you fill out your business logic. */
     @Suspendable
     abstract fun call(): T
+
 }

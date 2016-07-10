@@ -29,7 +29,16 @@
 <a href="-non-empty-set/index.html">NonEmptySet</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">NonEmptySet</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A set which is constrained to ensure it can never be empty. An initial value must be provided at
-construction, and attempting to remove the last element will cause an IllegalStateException.</p>
+construction, and attempting to remove the last element will cause an IllegalStateException.
+The underlying set is exposed for Kryo to access, but should not be accessed directly.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-non-empty-set-serializer/index.html">NonEmptySetSerializer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NonEmptySetSerializer</span></code><p>Custom serializer which understands it has to read in an item before
+trying to construct the set.</p>
 </td>
 </tr>
 <tr>
@@ -47,6 +56,13 @@ a singleton).</p>
 <td>
 <code><span class="keyword">class </span><span class="identifier">RecordingMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">, </span><span class="identifier">V</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span></code><p>A RecordingMap wraps a regular Map&lt;K, V&gt; and records the sequence of gets and puts to it. This is useful in
 white box unit tests to ensure that code is accessing a data store as much as you expect.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-time-window/index.html">TimeWindow</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TimeWindow</span></code><p>A class representing a window in time from a particular instant, lasting a specified duration.</p>
 </td>
 </tr>
 <tr>
@@ -74,6 +90,15 @@ first. The wrapper helps you to avoid forgetting this vital step. Things you mig
 <a href="non-empty-set-of.html">nonEmptySetOf</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">nonEmptySetOf</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.utilities$nonEmptySetOf(com.r3corda.core.utilities.nonEmptySetOf.T, kotlin.Array((com.r3corda.core.utilities.nonEmptySetOf.T)))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="com.r3corda.core.utilities$nonEmptySetOf(com.r3corda.core.utilities.nonEmptySetOf.T, kotlin.Array((com.r3corda.core.utilities.nonEmptySetOf.T)))/elements">elements</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><a href="-non-empty-set/index.html"><span class="identifier">NonEmptySet</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="suggest-interest-rate-announcement-time-window.html">suggestInterestRateAnnouncementTimeWindow</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">suggestInterestRateAnnouncementTimeWindow</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.utilities$suggestInterestRateAnnouncementTimeWindow(kotlin.String, kotlin.String, java.time.LocalDate)/index">index</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.utilities$suggestInterestRateAnnouncementTimeWindow(kotlin.String, kotlin.String, java.time.LocalDate)/source">source</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.utilities$suggestInterestRateAnnouncementTimeWindow(kotlin.String, kotlin.String, java.time.LocalDate)/date">date</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-time-window/index.html"><span class="identifier">TimeWindow</span></a></code><p>This whole file exists as short cuts to get demos working.  In reality wed have static data and/or rules engine
+defining things like this.  It currently resides in the core module because it needs to be visible to the IRS
+contract.</p>
+</td>
 </tr>
 <tr>
 <td>

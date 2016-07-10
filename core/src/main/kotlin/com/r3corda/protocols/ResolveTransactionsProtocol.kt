@@ -2,8 +2,8 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
 import java.util.*
 
@@ -21,7 +21,7 @@ import java.util.*
  * protocol is helpful when resolving and verifying a finished but partially signed transaction.
  */
 class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
-                                  private val otherSide: SingleMessageRecipient) : ProtocolLogic<Unit>() {
+                                  private val otherSide: Party) : ProtocolLogic<Unit>() {
 
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
@@ -33,11 +33,11 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     private var stx: SignedTransaction? = null
     private var wtx: WireTransaction? = null
 
-    constructor(stx: SignedTransaction, otherSide: SingleMessageRecipient) : this(stx.tx, otherSide) {
+    constructor(stx: SignedTransaction, otherSide: Party) : this(stx.tx, otherSide) {
         this.stx = stx
     }
 
-    constructor(wtx: WireTransaction, otherSide: SingleMessageRecipient) : this(dependencyIDs(wtx), otherSide) {
+    constructor(wtx: WireTransaction, otherSide: Party) : this(dependencyIDs(wtx), otherSide) {
         this.wtx = wtx
     }
 
@@ -69,6 +69,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // dependencies aren't, or an unvalidated and possibly broken tx is there.
         serviceHub.recordTransactions(downloadedSignedTxns)
     }
+
+    override val topic: String get() = throw UnsupportedOperationException()
 
     @Suspendable
     private fun fetchDependenciesAndCheckSignatures(depsToCheck: Set<SecureHash>,

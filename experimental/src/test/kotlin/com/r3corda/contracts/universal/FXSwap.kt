@@ -34,20 +34,20 @@ class FXSwap {
         transaction {
             output { inState }
 
-            this `fails requirement` "transaction has a single command"
+            this `fails with` "transaction has a single command"
 
             tweak {
-                arg(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
-                this `fails requirement` "the transaction is signed by all liable parties"
+                command(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+                this `fails with` "the transaction is signed by all liable parties"
             }
             tweak {
-                arg(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
-                this `fails requirement` "the transaction is signed by all liable parties"
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
+                this `fails with` "the transaction is signed by all liable parties"
             }
 
-            arg(wileECoyote.owningKey, roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+            command(wileECoyote.owningKey, roadRunner.owningKey) { UniversalContract.Commands.Issue() }
 
-            this.accepts()
+            this.verifies()
         }
     }
 
@@ -59,13 +59,13 @@ class FXSwap {
             output { outState2 }
 
             tweak {
-                arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
-                this `fails requirement` "action must be defined"
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                this `fails with` "action must be defined"
             }
 
-            arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
 
-            this.accepts()
+            this.verifies()
         }
     }
 
@@ -76,8 +76,8 @@ class FXSwap {
             output { outState1 }
             output { outState2 }
 
-            arg(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
-            this `fails requirement` "action must be authorized"
+            command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
+            this `fails with` "action must be authorized"
         }
     }
 
@@ -87,8 +87,8 @@ class FXSwap {
             input { inState }
             output { outState1 }
 
-            arg(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
-            this `fails requirement` "output state must match action result state"
+            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            this `fails with` "output state must match action result state"
         }
     }
 }

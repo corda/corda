@@ -63,7 +63,7 @@ successful, otherwise exception is thrown.</p>
 <td>
 <a href="fetch-states.html">fetchStates</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">fetchStates</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.APIServerImpl$fetchStates(kotlin.collections.List((com.r3corda.core.contracts.StateRef)))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">fetchStates</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.APIServerImpl$fetchStates(kotlin.collections.List((com.r3corda.core.contracts.StateRef)))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -107,6 +107,13 @@ to avoid calling fetchLedgerTransactions() many times.</p>
 <a href="server-time.html">serverTime</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">serverTime</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDateTime.html"><span class="identifier">LocalDateTime</span></a></code><p>Report current UTC time as understood by the platform.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="status.html">status</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">status</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Report whether this node is started up or not</p>
 </td>
 </tr>
 </tbody>

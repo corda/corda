@@ -1,7 +1,7 @@
 package com.r3corda.node.services
 
-import com.r3corda.contracts.cash.Cash
-import com.r3corda.contracts.cash.cashBalances
+import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash

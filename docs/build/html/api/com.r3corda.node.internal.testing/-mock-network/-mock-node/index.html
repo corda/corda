@@ -176,6 +176,12 @@
 </tr>
 <tr>
 <td>
+<a href="../../../com.r3corda.node.internal/-abstract-node/scheduler.html">scheduler</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">scheduler</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../../com.r3corda.node.internal/-abstract-node/services.html">services</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../../../com.r3corda.node.services.api/-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a></code></td>
@@ -203,7 +209,7 @@
 <td>
 <a href="../../../com.r3corda.node.internal/-abstract-node/storage.html">storage</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -272,9 +278,15 @@
 </tr>
 <tr>
 <td>
+<a href="../../../com.r3corda.node.internal/-abstract-node/create-node-dir.html">createNodeDir</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createNodeDir</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../../com.r3corda.node.internal/-abstract-node/initialise-storage-service.html">initialiseStorageService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -299,6 +311,13 @@
 <a href="../../../com.r3corda.node.internal/-abstract-node/make-notary-service.html">makeNotaryService</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$makeNotaryService(com.r3corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.node.internal/-abstract-node/setup.html">setup</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">setup</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.node.internal/-abstract-node/index.html"><span class="identifier">AbstractNode</span></a></code><p>Run any tasks that are needed to ensure the node is in a correct state before running start()</p>
+</td>
 </tr>
 <tr>
 <td>

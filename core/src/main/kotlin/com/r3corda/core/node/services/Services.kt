@@ -1,5 +1,7 @@
 package com.r3corda.core.node.services
 
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -113,6 +115,17 @@ interface WalletService {
      * the update.
      */
     val updates: rx.Observable<Wallet.Update>
+
+    /**
+     * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
+     */
+    fun whenConsumed(ref: StateRef): ListenableFuture<Wallet.Update> {
+        val future = SettableFuture.create<Wallet.Update>()
+        updates.filter { ref in it.consumed }.first().subscribe {
+            future.set(it)
+        }
+        return future
+    }
 }
 
 inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
@@ -156,6 +169,7 @@ interface StorageService {
      * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
      * first installed.
      */
+    //TODO this should be in the IdentityService, or somewhere not here
     val myLegalIdentity: Party
     val myLegalIdentityKey: KeyPair
 }
@@ -172,4 +186,24 @@ interface TxWritableStorageService : StorageService {
     override val validatedTransactions: TransactionStorage
 }
 
+/**
+ * Provides access to schedule activity at some point in time.  This interface might well be expanded to
+ * increase the feature set in the future.
+ *
+ * If the point in time is in the past, the expectation is that the activity will happen shortly after it is scheduled.
+ *
+ * The main consumer initially is an observer of the wallet to schedule activities based on transactions as they are
+ * recorded.
+ */
+interface SchedulerService {
+    /**
+     * Schedule a new activity for a TX output, probably because it was just produced.
+     *
+     * Only one activity can be scheduled for a particular [StateRef] at any one time.  Scheduling a [ScheduledStateRef]
+     * replaces any previously scheduled [ScheduledStateRef] for any one [StateRef].
+     */
+    fun scheduleStateActivity(action: ScheduledStateRef)
 
+    /** Unschedule all activity for a TX output, probably because it was consumed. */
+    fun unscheduleStateActivity(ref: StateRef)
+}

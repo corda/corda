@@ -47,16 +47,16 @@ class ZeroCouponBond {
         transaction {
             output { inState }
 
-            this `fails requirement` "transaction has a single command"
+            this `fails with` "transaction has a single command"
 
             tweak {
-                arg(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
-                this `fails requirement` "the transaction is signed by all liable parties"
+                command(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+                this `fails with` "the transaction is signed by all liable parties"
             }
 
-            arg(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
+            command(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
 
-            this.accepts()
+            this.verifies()
         }
     }
 
@@ -67,13 +67,13 @@ class ZeroCouponBond {
             output { outState }
 
             tweak {
-                arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
-                this `fails requirement` "action must be defined"
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                this `fails with` "action must be defined"
             }
 
-            arg(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
 
-            this.accepts()
+            this.verifies()
         }
     }
 
@@ -83,8 +83,8 @@ class ZeroCouponBond {
             input { inState }
             output { outState }
 
-            arg(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
-            this `fails requirement` "action must be authorized"
+            command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
+            this `fails with` "action must be authorized"
         }
     }
 
@@ -94,8 +94,8 @@ class ZeroCouponBond {
             input { inState }
             output { outStateWrong }
 
-            arg(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
-            this `fails requirement` "output state must match action result state"
+            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            this `fails with` "output state must match action result state"
         }
     }
 
@@ -106,26 +106,26 @@ class ZeroCouponBond {
 
             tweak {
                 output { outStateMove }
-                arg(roadRunner.owningKey) {
+                command(roadRunner.owningKey) {
                     UniversalContract.Commands.Move(roadRunner, porkyPig)
                 }
-                this `fails requirement` "the transaction is signed by all liable parties"
+                this `fails with` "the transaction is signed by all liable parties"
             }
 
             tweak {
                 output { inState }
-                arg(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
+                command(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
                     UniversalContract.Commands.Move(roadRunner, porkyPig)
                 }
-                this `fails requirement` "output state does not reflect move command"
+                this `fails with` "output state does not reflect move command"
             }
 
             output { outStateMove}
 
-            arg(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
+            command(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
                 UniversalContract.Commands.Move(roadRunner, porkyPig)
             }
-            this.accepts()
+            this.verifies()
         }
     }
 

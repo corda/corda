@@ -90,8 +90,8 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Transaction Data Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -103,6 +103,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
@@ -110,6 +111,7 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-1">Milestone 1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-0">Milestone 0</a></li>
 </ul>
 </li>
@@ -165,12 +167,96 @@
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
 <div class="section" id="unreleased">
 <h2>Unreleased<a class="headerlink" href="#unreleased" title="Permalink to this headline">¶</a></h2>
-<p>Here are changes in git master that haven&#8217;t yet made it to a snapshot release:</p>
+<p>There are currently no unreleased changes.</p>
+</div>
+<div class="section" id="milestone-1">
+<h2>Milestone 1<a class="headerlink" href="#milestone-1" title="Permalink to this headline">¶</a></h2>
+<p>Highlights of this release:</p>
+<ul>
+<li><p class="first">Event scheduling. States in the ledger can now request protocols to be invoked at particular times, for states
+considered relevant by the wallet.</p>
+</li>
+<li><p class="first">Upgrades to the notary/consensus service support:</p>
+<blockquote>
+<div><ul class="simple">
+<li>There is now a way to change the notary controlling a state.</li>
+<li>You can pick between validating and non-validating notaries, these let you select your privacy/robustness tradeoff.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">A new obligation contract that supports bilateral and multilateral netting of obligations, default tracking and
+more.</p>
+</li>
+<li><p class="first">Improvements to the financial type system, with core classes and contracts made more generic.</p>
+</li>
+<li><p class="first">Switch to a better digital signature algorithm: ed25519 instead of the previous JDK default of secp256r1.</p>
+</li>
+<li><p class="first">A new integration test suite.</p>
+</li>
+<li><p class="first">A new Java unit testing DSL for contracts, similar in spirit to the one already developed for Kotlin users (which
+depended on Kotlin specific features).</p>
+</li>
+<li><p class="first">An experimental module, where developers who want to work with the latest Corda code can check in contracts/cordapp
+code before it&#8217;s been fully reviewed. Code in this module has compiler warnings suppressed but we will still make
+sure it compiles across refactorings.</p>
+</li>
+<li><p class="first">Persistence improvements: transaction data is now stored to disk and automatic protocol resume is now implemented.</p>
+</li>
+<li><p class="first">Many smaller bug fixes, cleanups and improvements.</p>
+</li>
+</ul>
+<p>We have new documentation on:</p>
 <ul class="simple">
-<li>The cash contract has moved from com.r3corda.contracts to com.r3corda.contracts.cash.</li>
-<li>Amount class is now generic, to support non-currency types (such as assets, or currency with additional information).</li>
-<li>Refactored the Cash contract to have a new FungibleAsset superclass, to model all countable assets that can be merged
-and split (currency, barrels of oil, etc.)</li>
+<li><a class="reference internal" href="event-scheduling.html"><span class="doc">Event scheduling</span></a></li>
+<li><a class="reference internal" href="transaction-data-types.html"><span class="doc">Data types</span></a></li>
+<li><a class="reference internal" href="consensus.html"><span class="doc">Consensus model</span></a></li>
+</ul>
+<p>Summary of API changes (not exhaustive):</p>
+<ul>
+<li><p class="first">Notary/consensus service:</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">NotaryService</span></code> is now extensible.</li>
+<li>Every <code class="docutils literal"><span class="pre">ContractState</span></code> now has to specify a <em>participants</em> field, which is a list of parties that are able to
+consume this state in a valid transaction. This is used for e.g. making sure all relevant parties obtain the updated
+state when changing a notary.</li>
+<li>Introduced <code class="docutils literal"><span class="pre">TransactionState</span></code>, which wraps <code class="docutils literal"><span class="pre">ContractState</span></code>, and is used when defining a transaction output.
+The notary field is moved from <code class="docutils literal"><span class="pre">ContractState</span></code> into <code class="docutils literal"><span class="pre">TransactionState</span></code>.</li>
+<li>Every transaction now has a <em>type</em> field, which specifies custom build &amp; validation rules for that transaction type.
+Currently two types are supported: General (runs the default build and validation logic) and NotaryChange (
+contract code is not run during validation, checks that the notary field is the only difference between the
+inputs and outputs).
+<code class="docutils literal"><span class="pre">TransactionBuilder()</span></code> is now abstract, you should use <code class="docutils literal"><span class="pre">TransactionType.General.Builder()</span></code> for building transactions.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The cash contract has moved from <code class="docutils literal"><span class="pre">com.r3corda.contracts</span></code> to <code class="docutils literal"><span class="pre">com.r3corda.contracts.cash</span></code></p>
+</li>
+<li><p class="first"><code class="docutils literal"><span class="pre">Amount</span></code> class is now generic, to support non-currency types such as physical assets. Where you previously had just
+<code class="docutils literal"><span class="pre">Amount</span></code>, you should now use <code class="docutils literal"><span class="pre">Amount&lt;Currency&gt;</span></code>.</p>
+</li>
+<li><p class="first">Refactored the Cash contract to have a new FungibleAsset superclass, to model all countable assets that can be merged
+and split (currency, barrels of oil, etc.)</p>
+</li>
+<li><p class="first">Messaging:</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal"><span class="pre">addMessageHandler</span></code> now has a different signature as part of error handling changes.</li>
+<li>If you want to return nothing to a protocol, use <code class="docutils literal"><span class="pre">Ack</span></code> instead of <code class="docutils literal"><span class="pre">Unit</span></code> from now on.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">In the IRS contract, dateOffset is now an integer instead of an enum.</p>
+</li>
+<li><p class="first">In contracts, you now use <code class="docutils literal"><span class="pre">tx.getInputs</span></code> and <code class="docutils literal"><span class="pre">tx.getOutputs</span></code> instead of <code class="docutils literal"><span class="pre">getInStates</span></code> and <code class="docutils literal"><span class="pre">getOutStates</span></code>. This is
+just a renaming.</p>
+</li>
+<li><p class="first">A new <code class="docutils literal"><span class="pre">NonEmptySet</span></code> type has been added for cases where you wish to express that you have a collection of unique
+objects which cannot be empty.</p>
+</li>
+<li><p class="first">Please use the global <code class="docutils literal"><span class="pre">newSecureRandom()</span></code> function rather than instantiating your own SecureRandom&#8217;s from now on, as
+the custom function forces the use of non-blocking random drivers on Linux.</p>
+</li>
 </ul>
 </div>
 <div class="section" id="milestone-0">

@@ -21,19 +21,8 @@
 <td>
 <a href="-node-wallet-service/index.html">NodeWalletService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
-method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
-states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-wallet-impl/index.html">WalletImpl</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">WalletImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
-because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
-change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
-about new transactions from our peers and generate new transactions that consume states ourselves.</p>
+<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.testing/-in-memory-wallet-service/index.html"><span class="identifier">InMemoryWalletService</span></a></code><p>Currently, the node wallet service is just the in-memory wallet service until we have finished evaluating and
+selecting a persistence layer (probably an ORM over a SQL DB).</p>
 </td>
 </tr>
 </tbody>

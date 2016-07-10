@@ -56,15 +56,15 @@
 <tbody>
 <tr>
 <td>
-<a href="../../../com.r3corda.demos/-trader-demo-protocol-seller/-a-n-n-o-u-n-c-i-n-g.html">ANNOUNCING</a></td>
+<a href="../../../com.r3corda.demos.protocols/-auto-offer-protocol/-requester/-a-n-n-o-u-n-c-i-n-g.html">ANNOUNCING</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">ANNOUNCING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.demos.protocols/-auto-offer-protocol/-requester/-a-n-n-o-u-n-c-i-n-g.html">ANNOUNCING</a></td>
+<a href="../../../protocols/-abstract-state-replacement-protocol/-acceptor/-a-p-p-r-o-v-i-n-g.html">APPROVING</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">ANNOUNCING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">APPROVING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -104,33 +104,9 @@
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.demos.protocols/-update-business-day-protocol/-updater/-f-e-t-c-h-i-n-g.html">FETCHING</a></td>
+<a href="../../../com.r3corda.protocols/-two-party-deal-protocol/-fixing-role-decider/-l-o-a-d-i-n-g/index.html">LOADING</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">FETCHING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../com.r3corda.demos.protocols/-update-business-day-protocol/-updater/-f-i-x-i-n-g.html">FIXING</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">FIXING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../com.r3corda.demos.protocols/-update-business-day-protocol/-updater/-i-t-e-r-a-t-i-n-g_-d-e-a-l-s.html">ITERATING_DEALS</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">ITERATING_DEALS</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../com.r3corda.demos.protocols/-update-business-day-protocol/-updater/-i-t-e-r-a-t-i-n-g_-f-i-x-i-n-g-s.html">ITERATING_FIXINGS</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">ITERATING_FIXINGS</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../com.r3corda.demos.protocols/-update-business-day-protocol/-broadcast/-l-o-c-a-l/index.html">LOCAL</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">LOCAL</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">LOADING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -141,6 +117,12 @@
 <tr>
 <td>
 <a href="../../../com.r3corda.protocols/-two-party-trade-protocol/-seller/-n-o-t-a-r-y.html">NOTARY</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../protocols/-abstract-state-replacement-protocol/-instigator/-n-o-t-a-r-y.html">NOTARY</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">NOTARY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
@@ -194,6 +176,12 @@
 </tr>
 <tr>
 <td>
+<a href="../../../protocols/-abstract-state-replacement-protocol/-acceptor/-r-e-j-e-c-t-i-n-g.html">REJECTING</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">REJECTING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../../com.r3corda.protocols/-notary-protocol/-client/-r-e-q-u-e-s-t-i-n-g.html">REQUESTING</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">REQUESTING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
@@ -204,12 +192,6 @@
 <td>
 <code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">RelabelableStep</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code><p>This class makes it easier to relabel a step on the fly, to provide transient information.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="../../../com.r3corda.demos/-trader-demo-protocol-seller/-s-e-l-f_-i-s-s-u-i-n-g.html">SELF_ISSUING</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">SELF_ISSUING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -255,9 +237,9 @@
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.demos/-trader-demo-protocol-buyer/-s-t-a-r-t-i-n-g_-b-u-y.html">STARTING_BUY</a></td>
+<a href="../../../protocols/-abstract-state-replacement-protocol/-instigator/-s-i-g-n-i-n-g.html">SIGNING</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">STARTING_BUY</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">SIGNING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -270,12 +252,6 @@
 <a href="../../../com.r3corda.protocols/-two-party-trade-protocol/-buyer/-s-w-a-p-p-i-n-g_-s-i-g-n-a-t-u-r-e-s.html">SWAPPING_SIGNATURES</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">SWAPPING_SIGNATURES</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../../com.r3corda.demos/-trader-demo-protocol-seller/-t-r-a-d-i-n-g/index.html">TRADING</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">TRADING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>
@@ -315,9 +291,9 @@
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.demos/-trader-demo-protocol-buyer/-w-a-i-t-i-n-g_-f-o-r_-s-e-l-l-e-r_-t-o_-c-o-n-n-e-c-t.html">WAITING_FOR_SELLER_TO_CONNECT</a></td>
+<a href="../../../protocols/-abstract-state-replacement-protocol/-acceptor/-v-e-r-i-f-y-i-n-g.html">VERIFYING</a></td>
 <td>
-<code><span class="keyword">object </span><span class="identifier">WAITING_FOR_SELLER_TO_CONNECT</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
+<code><span class="keyword">object </span><span class="identifier">VERIFYING</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Step</span></code></td>
 </tr>
 <tr>
 <td>

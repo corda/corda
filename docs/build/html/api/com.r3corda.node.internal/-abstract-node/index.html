@@ -145,6 +145,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="scheduler.html">scheduler</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">scheduler</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="server-thread.html">serverThread</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">serverThread</span><span class="symbol">: </span><a href="../../com.r3corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a></code></td>
@@ -178,7 +184,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="storage.html">storage</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">storage</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -199,6 +205,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="create-node-dir.html">createNodeDir</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createNodeDir</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="find-my-location.html">findMyLocation</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">findMyLocation</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-physical-location/index.html"><span class="identifier">PhysicalLocation</span></a><span class="symbol">?</span></code></td>
@@ -207,13 +219,13 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="generate-key-pair.html">generateKeyPair</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="initialise-storage-service.html">initialiseStorageService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -256,6 +268,13 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="no-network-map-configured.html">noNetworkMapConfigured</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">noNetworkMapConfigured</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This is overriden by the mock node implementation to enable operation without any network map service</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="setup.html">setup</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">setup</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">AbstractNode</span></code><p>Run any tasks that are needed to ensure the node is in a correct state before running start()</p>
 </td>
 </tr>
 <tr>

@@ -89,8 +89,8 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Transaction Data Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
@@ -102,6 +102,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -194,21 +195,23 @@ following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="data-model.html#cons">Cons</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Transaction Data Types</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#amount">Amount</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#contract-state">Contract State</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#state">State</a></li>
 <li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#fungibleassets-and-cash">FungibleAssets and Cash</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#transaction-types">Transaction Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#transaction-lifecycle-types">Transaction lifecycle types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#party-and-publickey">Party and PublicKey</a></li>
-<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#date-support">Date Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transaction-data-types.html#date-support">Date support</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus Model</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="consensus.html#notary">Notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#multiple-notaries">Multiple notaries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="consensus.html#validation">Validation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="consensus.html#multiple-notaries">Multiple Notaries</a></li>
 <li class="toctree-l2"><a class="reference internal" href="consensus.html#timestamping">Timestamping</a></li>
-<li class="toctree-l2"><a class="reference internal" href="consensus.html#implementation-usage">Implementation &amp; Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#running-a-notary-service">Running a Notary Service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#obtaining-a-signature">Obtaining a signature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="consensus.html#changing-notaries">Changing notaries</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a><ul>
@@ -274,6 +277,12 @@ following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="oracles.html#implementing-oracles-in-the-framework">Implementing oracles in the framework</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#how-to-implement-scheduled-events">How to implement scheduled events</a></li>
+<li class="toctree-l2"><a class="reference internal" href="event-scheduling.html#an-example">An example</a></li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="toctree-wrapper compound" id="appendix">
@@ -283,6 +292,7 @@ following hypothesis:</p>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#unreleased">Unreleased</a></li>
+<li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-1">Milestone 1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="release-notes.html#milestone-0">Milestone 0</a></li>
 </ul>
 </li>
@@ -292,6 +302,8 @@ following hypothesis:</p>
 <li class="toctree-l2"><a class="reference internal" href="codestyle.html#comments">2. Comments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="codestyle.html#threading">3. Threading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="codestyle.html#assertions-and-errors">4. Assertions and errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#properties">5. Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="codestyle.html#compiler-warnings">6. Compiler warnings</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a><ul>

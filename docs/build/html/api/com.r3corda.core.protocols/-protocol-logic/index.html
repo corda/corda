@@ -69,7 +69,9 @@ progress.</p>
 <td>
 <a href="service-hub.html">serviceHub</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts</p>
+<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is
+only available once the protocol has started, which means it cannnot be accessed in the constructor. Either
+access this lazily or from inside <a href="call.html">call</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -95,13 +97,13 @@ progress.</p>
 <td>
 <a href="send.html">send</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="send-and-receive.html">sendAndReceive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -118,6 +120,12 @@ progress.</p>
 <tbody>
 <tr>
 <td>
+<a href="../../protocols/-abstract-state-replacement-protocol/-acceptor/index.html">Acceptor</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Acceptor</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.demos.protocols/-exit-server-protocol/-broadcast/index.html">Broadcast</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Boolean</span><span class="symbol">&gt;</span></code><p>This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
@@ -128,7 +136,7 @@ we do not support coercing numeric types in the reflective search for matching c
 <td>
 <a href="../../com.r3corda.demos.protocols/-update-business-day-protocol/-broadcast/index.html">Broadcast</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Boolean</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -153,6 +161,19 @@ timestamp is correct and none of its inputs have been used in another completed 
 </tr>
 <tr>
 <td>
+<a href="../../com.r3corda.protocols/-two-party-deal-protocol/-fixing-role-decider/index.html">FixingRoleDecider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FixingRoleDecider</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../protocols/-abstract-state-replacement-protocol/-instigator/index.html">Instigator</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Instigator</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.protocols/-two-party-deal-protocol/-primary/index.html">Primary</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Primary</span><span class="symbol">&lt;</span><span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that initiates communication/handshake.</p>
@@ -172,7 +193,7 @@ for each step.</p>
 <td>
 <a href="../../com.r3corda.demos.protocols/-auto-offer-protocol/-requester/index.html">Requester</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Requester</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">Requester</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -203,24 +224,6 @@ all the transactions have been successfully verified and inserted into the local
 <code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
 if any of the input states have been previously committed.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos/-trader-demo-protocol-buyer/index.html">TraderDemoProtocolBuyer</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TraderDemoProtocolBuyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos/-trader-demo-protocol-seller/index.html">TraderDemoProtocolSeller</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TraderDemoProtocolSeller</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.demos.protocols/-update-business-day-protocol/-updater/index.html">Updater</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Updater</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Boolean</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

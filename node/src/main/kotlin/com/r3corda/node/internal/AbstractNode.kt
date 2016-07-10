@@ -5,13 +5,17 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CityDatabase
+import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.*
+import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
@@ -24,11 +28,14 @@ import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.events.NodeSchedulerService
+import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.persistence.*
 import com.r3corda.node.services.statemachine.StateMachineManager
@@ -41,14 +48,14 @@ import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.ANSIProgressObserver
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.protocols.TwoPartyDealProtocol
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
-import java.security.Security
 import java.time.Clock
-import java.time.Instant
+import java.time.Duration
 import java.util.*
 
 /**
@@ -89,8 +96,16 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
-        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
+        override val schedulerService: SchedulerService get() = scheduler
         override val clock: Clock = platformClock
+
+        // Internal only
+        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
+        override val protocolLogicRefFactory: ProtocolLogicRefFactory get() = protocolLogicFactory
+
+        override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
+            return smm.add(loggerName, logic)
+        }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) =
                 recordTransactionsInternal(storage, txs)
@@ -112,6 +127,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var identity: IdentityService
     lateinit var net: MessagingService
     lateinit var api: APIServer
+    lateinit var scheduler: SchedulerService
+    lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     var isPreviousCheckpointsPresent = false
         private set
 
@@ -119,6 +136,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     private val _networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create()
     val networkMapRegistrationFuture: ListenableFuture<Unit>
         get() = _networkMapRegistrationFuture
+
+    /** Fetch CordaPluginRegistry classes registered in META-INF/services/com.r3corda.core.node.CordaPluginRegistry files that exist in the classpath */
+    protected val pluginRegistries: List<CordaPluginRegistry> by lazy {
+        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+    }
 
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
@@ -140,12 +162,18 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // the identity key. But the infrastructure to make that easy isn't here yet.
         keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
         api = APIServerImpl(this)
-        smm = StateMachineManager(services, listOf(storage, net, wallet, keyManagement, identity, platformClock), checkpointStorage, serverThread)
+        scheduler = NodeSchedulerService(services)
+        smm = StateMachineManager(services,
+                listOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler, interestRatesService),
+                checkpointStorage,
+                serverThread)
+
+        protocolLogicFactory = initialiseProtocolLogicFactory()
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
-        DataVendingService(net, storage)
-        NotaryChangeService(net, smm)
+        DataVendingService(net, storage, services.networkMapCache)
+        NotaryChangeService(net, smm, services.networkMapCache)
 
         buildAdvertisedServices()
 
@@ -154,6 +182,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         ANSIProgressObserver(smm)
         // Add wallet observers
         CashBalanceAsMetricsObserver(services)
+        ScheduledActivityObserver(services)
 
         startMessagingService()
         _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
@@ -162,6 +191,18 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         started = true
         return this
     }
+
+    private fun initialiseProtocolLogicFactory(): ProtocolLogicRefFactory {
+        val protocolWhitelist = HashMap<String, Set<String>>()
+        for (plugin in pluginRegistries) {
+            for (protocol in plugin.requiredProtocols) {
+                protocolWhitelist.merge(protocol.key, protocol.value, { x, y -> x + y })
+            }
+        }
+
+        return ProtocolLogicRefFactory(protocolWhitelist)
+    }
+
 
     /**
      * Run any tasks that are needed to ensure the node is in a correct state before running start()
@@ -210,13 +251,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     private fun updateRegistration(serviceInfo: NodeInfo, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
         // Register this node against the network
-        val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, networkMapSeq++, type, expires)
         val sessionID = random63BitValue()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
-        val message = net.createMessage(NetworkMapService.REGISTER_PROTOCOL_TOPIC + ".0", request.serialize().bits)
+        val message = net.createMessage("$REGISTER_PROTOCOL_TOPIC.0", request.serialize().bits)
         val future = SettableFuture.create<NetworkMapService.RegistrationResponse>()
-        val topic = NetworkMapService.REGISTER_PROTOCOL_TOPIC + "." + sessionID
+        val topic = "$REGISTER_PROTOCOL_TOPIC.$sessionID"
 
         net.runOnNextMessage(topic, RunOnCallerThread) { message ->
             future.set(message.data.deserialize())
@@ -227,7 +268,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     open protected fun makeNetworkMapService() {
-        val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
         inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }
@@ -237,8 +278,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
         inNodeNotaryService = when (type) {
-            is SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider)
-            is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider)
+            is SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
+            is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
             else -> null
         }
     }

@@ -21,9 +21,24 @@
 </tr>
 <tr>
 <td>
+<a href="-multi-owner-state/index.html">MultiOwnerState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">MultiOwnerState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><a href="-state/index.html"><span class="identifier">State</span></a></code><p>Alternative state with multiple owners. This exists primarily to provide a dummy state with multiple
+participants, and could in theory be merged with <a href="-single-owner-state/index.html">SingleOwnerState</a> by putting the additional participants
+in a different field, however this is a good example of a contract with multiple states.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-single-owner-state/index.html">SingleOwnerState</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SingleOwnerState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">, </span><a href="-state/index.html"><span class="identifier">State</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="-state/index.html">State</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a></code></td>
+<code><span class="keyword">interface </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -64,7 +79,7 @@ the contracts contents).</p>
 <td>
 <a href="verify.html">verify</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DummyContract$verify(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DummyContract$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
 Must throw an exception if theres a problem that should prevent state transition. Takes a single object
 rather than an argument so that additional data can be added without breaking binary compatibility with
 existing contract code.</p>

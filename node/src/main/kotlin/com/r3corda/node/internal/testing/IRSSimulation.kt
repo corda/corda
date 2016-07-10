@@ -15,6 +15,7 @@ import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.success
+import com.r3corda.node.services.FixingSessionInitiationHandler
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.utilities.JsonSupport
 import com.r3corda.protocols.TwoPartyDealProtocol
@@ -30,7 +31,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     val om = JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
 
     init {
-        currentDay = LocalDate.of(2016, 3, 10)   // Should be 12th but the actual first fixing date gets rolled backwards.
+        currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()
     }
 
     private var nodeAKey: KeyPair? = null
@@ -39,6 +40,11 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): ListenableFuture<Unit> {
+
+        // TODO: until we have general session initiation
+        FixingSessionInitiationHandler.register(banks[0])
+        FixingSessionInitiationHandler.register(banks[1])
+
         val future = SettableFuture.create<Unit>()
 
         nodeAKey = banks[0].keyManagement.freshKey()
@@ -80,7 +86,6 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val sessionID = random63BitValue()
         val swaps: Map<SecureHash, StateAndRef<InterestRateSwap.State>> = node1.services.walletService.linearHeadsOfType<InterestRateSwap.State>()
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
@@ -89,30 +94,23 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         extraNodeLabels[node1] = "Fixing event on $nextFixingDate"
         extraNodeLabels[node2] = "Fixing event on $nextFixingDate"
 
-        // For some reason the first fix is always before the effective date.
-        if (nextFixingDate > currentDay)
-            currentDay = nextFixingDate
-
-        val sideA = TwoPartyDealProtocol.Floater(node2.net.myAddress, sessionID, notary.info, theDealRef, nodeAKey!!, sessionID)
-        val sideB = TwoPartyDealProtocol.Fixer(node1.net.myAddress, notary.info.identity, theDealRef, sessionID)
-
-        linkConsensus(listOf(node1, node2, regulators[0]), sideB)
-        linkProtocolProgress(node1, sideA)
-        linkProtocolProgress(node2, sideB)
-
-        // We have to start the protocols in separate iterations, as adding to the SMM effectively 'iterates' that node
-        // in the simulation, so if we don't do this then the two sides seem to act simultaneously.
-
         val retFuture = SettableFuture.create<Unit>()
-        val futA = node1.smm.add("floater", sideA)
-        val futB = node2.smm.add("fixer", sideB)
-        executeOnNextIteration += {
-            Futures.allAsList(futA, futB) success {
-                retFuture.set(null)
-            } failure { throwable ->
-                retFuture.setException(throwable)
-            }
+        // Complete the future when the state has been consumed on both nodes
+        val futA = node1.services.walletService.whenConsumed(theDealRef.ref)
+        val futB = node2.services.walletService.whenConsumed(theDealRef.ref)
+        Futures.allAsList(futA, futB) success {
+            retFuture.set(null)
+        } failure { throwable ->
+            retFuture.setException(throwable)
         }
+
+        showProgressFor(listOf(node1, node2))
+        showConsensusFor(listOf(node1, node2, regulators[0]))
+
+        // For some reason the first fix is always before the effective date.
+        if (nextFixingDate > currentDateAndTime.toLocalDate())
+            currentDateAndTime = nextFixingDate.atTime(15, 0)
+
         return retFuture
     }
 
@@ -132,13 +130,11 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val sessionID = random63BitValue()
 
-        val instigator = TwoPartyDealProtocol.Instigator(node2.net.myAddress, notary.info, irs, nodeAKey!!, sessionID)
-        val acceptor = TwoPartyDealProtocol.Acceptor(node1.net.myAddress, notary.info.identity, irs, sessionID)
+        val instigator = TwoPartyDealProtocol.Instigator(node2.info.identity, notary.info.identity, irs, nodeAKey!!, sessionID)
+        val acceptor = TwoPartyDealProtocol.Acceptor(node1.info.identity, notary.info.identity, irs, sessionID)
 
-        // TODO: Eliminate the need for linkProtocolProgress
-        linkConsensus(listOf(node1, node2, regulators[0]), acceptor)
-        linkProtocolProgress(node1, instigator)
-        linkProtocolProgress(node2, acceptor)
+        showProgressFor(listOf(node1, node2))
+        showConsensusFor(listOf(node1, node2, regulators[0]))
 
         val instigatorFuture: ListenableFuture<SignedTransaction> = node1.smm.add("instigator", instigator)
 

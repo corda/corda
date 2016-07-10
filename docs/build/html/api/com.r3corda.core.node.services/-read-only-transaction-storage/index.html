@@ -1,0 +1,39 @@
+<HTML>
+<HEAD>
+<title>ReadOnlyTransactionStorage - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.node.services</a>&nbsp;/&nbsp;<a href=".">ReadOnlyTransactionStorage</a><br/>
+<br/>
+<h1>ReadOnlyTransactionStorage</h1>
+<code><span class="keyword">interface </span><span class="identifier">ReadOnlyTransactionStorage</span></code><br/>
+<p>Thread-safe storage of transactions.</p>
+<br/>
+<br/>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="get-transaction.html">getTransaction</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.ReadOnlyTransactionStorage$getTransaction(com.r3corda.core.crypto.SecureHash)/id">id</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">?</span></code><p>Return the transaction with the given <a href="get-transaction.html#com.r3corda.core.node.services.ReadOnlyTransactionStorage$getTransaction(com.r3corda.core.crypto.SecureHash)/id">id</a>, or null if no such transaction exists.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-transaction-storage/index.html">TransactionStorage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">TransactionStorage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ReadOnlyTransactionStorage</span></code><p>Thread-safe storage of transactions.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

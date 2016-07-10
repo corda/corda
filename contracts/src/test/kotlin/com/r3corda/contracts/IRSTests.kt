@@ -200,12 +200,12 @@ class IRSTests {
 
     @Test
     fun ok() {
-        trade().verify()
+        trade().verifies()
     }
 
     @Test
     fun `ok with groups`() {
-        tradegroups().verify()
+        tradegroups().verifies()
     }
 
     /**
@@ -360,38 +360,40 @@ class IRSTests {
     /**
      * Generates a typical transactional history for an IRS.
      */
-    fun trade(): TransactionGroupDSL<InterestRateSwap.State> {
+    fun trade(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
-        val txgroup: TransactionGroupDSL<InterestRateSwap.State> = transactionGroupFor() {
+        return ledger {
             transaction("Agreement") {
                 output("irs post agreement") { singleIRS() }
-                arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             transaction("Fix") {
                 input("irs post agreement")
+                val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
                 output("irs post first fixing") {
-                    "irs post agreement".output.data.copy(
-                            "irs post agreement".output.data.fixedLeg,
-                            "irs post agreement".output.data.floatingLeg,
-                            "irs post agreement".output.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                            "irs post agreement".output.data.common
+                    postAgreement.data.copy(
+                            postAgreement.data.fixedLeg,
+                            postAgreement.data.floatingLeg,
+                            postAgreement.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                            postAgreement.data.common
                     )
                 }
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Fix()
                 }
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
         }
-        return txgroup
     }
 
     @Test
@@ -399,9 +401,9 @@ class IRSTests {
         transaction {
             input() { singleIRS() }
             output("irs post agreement") { singleIRS() }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "There are no in states for an agreement"
+            this `fails with` "There are no in states for an agreement"
         }
     }
 
@@ -413,9 +415,9 @@ class IRSTests {
             output() {
                 irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "There are events in the fix schedule"
+            this `fails with` "There are events in the fix schedule"
         }
     }
 
@@ -427,9 +429,9 @@ class IRSTests {
             output() {
                 irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "There are events in the float schedule"
+            this `fails with` "There are events in the float schedule"
         }
     }
 
@@ -440,18 +442,18 @@ class IRSTests {
             output() {
                 irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0)))
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "All notionals must be non zero"
+            this `fails with` "All notionals must be non zero"
         }
 
         transaction {
             output() {
                 irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0)))
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "All notionals must be non zero"
+            this `fails with` "All notionals must be non zero"
         }
     }
 
@@ -463,9 +465,9 @@ class IRSTests {
             output() {
                 modifiedIRS
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "The fixed leg rate must be positive"
+            this `fails with` "The fixed leg rate must be positive"
         }
     }
 
@@ -480,9 +482,9 @@ class IRSTests {
             output() {
                 modifiedIRS
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "The currency of the notionals must be the same"
+            this `fails with` "The currency of the notionals must be the same"
         }
     }
 
@@ -494,9 +496,9 @@ class IRSTests {
             output() {
                 modifiedIRS
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "All leg notionals must be the same"
+            this `fails with` "All leg notionals must be the same"
         }
     }
 
@@ -508,9 +510,9 @@ class IRSTests {
             output() {
                 modifiedIRS1
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "The effective date is before the termination date for the fixed leg"
+            this `fails with` "The effective date is before the termination date for the fixed leg"
         }
 
         val modifiedIRS2 = irs.copy(floatingLeg = irs.floatingLeg.copy(terminationDate = irs.floatingLeg.effectiveDate.minusDays(1)))
@@ -518,9 +520,9 @@ class IRSTests {
             output() {
                 modifiedIRS2
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "The effective date is before the termination date for the floating leg"
+            this `fails with` "The effective date is before the termination date for the floating leg"
         }
     }
 
@@ -533,9 +535,9 @@ class IRSTests {
             output() {
                 modifiedIRS3
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "The termination dates are aligned"
+            this `fails with` "The termination dates are aligned"
         }
 
 
@@ -544,24 +546,23 @@ class IRSTests {
             output() {
                 modifiedIRS4
             }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this `fails requirement` "The effective dates are aligned"
+            this `fails with` "The effective dates are aligned"
         }
     }
 
 
     @Test
     fun `various fixing tests`() {
-
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
 
         transaction {
             output("irs post agreement") { singleIRS() }
-            arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+            command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
-            this.accepts()
+            this.verifies()
         }
 
         val oldIRS = singleIRS(1)
@@ -578,31 +579,31 @@ class IRSTests {
 
             // Templated tweak for reference. A corrent fixing applied should be ok
             tweak {
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Fix()
                 }
                 timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
                 output() { newIRS }
-                this.accepts()
+                this.verifies()
             }
 
             // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
             tweak {
-                arg(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
                 timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
+                command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
                 output() { oldIRS }
-                this`fails requirement` "There is at least one difference in the IRS floating leg payment schedules"
+                this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
             }
 
             // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
             tweak {
-                arg(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
                 timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
                 }
 
@@ -619,14 +620,14 @@ class IRSTests {
                             newIRS.common
                     )
                 }
-                this`fails requirement` "There is only one change in the IRS floating leg payment schedule"
+                this `fails with` "There is only one change in the IRS floating leg payment schedule"
             }
 
             // This tests modifies the payment currency for the fixing
             tweak {
-                arg(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
                 timestamp(TEST_TX_TIME)
-                arg(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
+                command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
 
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
                 val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
@@ -640,7 +641,7 @@ class IRSTests {
                             newIRS.common
                     )
                 }
-                this`fails requirement` "The fix payment has the same currency as the notional"
+                this `fails with` "The fix payment has the same currency as the notional"
             }
         }
     }
@@ -652,13 +653,13 @@ class IRSTests {
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.
      */
-    fun tradegroups(): TransactionGroupDSL<InterestRateSwap.State> {
+    fun tradegroups(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
         val ld1 = LocalDate.of(2016, 3, 8)
         val bd1 = BigDecimal("0.0063518")
 
         val irs = singleIRS()
 
-        val txgroup: TransactionGroupDSL<InterestRateSwap.State> = transactionGroupFor() {
+        return ledger {
             transaction("Agreement") {
                 output("irs post agreement1") {
                     irs.copy(
@@ -668,8 +669,9 @@ class IRSTests {
                             irs.common.copy(tradeID = "t1")
                     )
                 }
-                arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             transaction("Agreement") {
@@ -681,40 +683,43 @@ class IRSTests {
                             irs.common.copy(tradeID = "t2")
                     )
                 }
-                arg(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
+                command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
 
             transaction("Fix") {
                 input("irs post agreement1")
                 input("irs post agreement2")
+                val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
                 output("irs post first fixing1") {
-                    "irs post agreement1".output.data.copy(
-                            "irs post agreement1".output.data.fixedLeg,
-                            "irs post agreement1".output.data.floatingLeg,
-                            "irs post agreement1".output.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            "irs post agreement1".output.data.common.copy(tradeID = "t1")
+                    postAgreement1.data.copy(
+                            postAgreement1.data.fixedLeg,
+                            postAgreement1.data.floatingLeg,
+                            postAgreement1.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement1.data.common.copy(tradeID = "t1")
                     )
                 }
+                val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
                 output("irs post first fixing2") {
-                    "irs post agreement2".output.data.copy(
-                            "irs post agreement2".output.data.fixedLeg,
-                            "irs post agreement2".output.data.floatingLeg,
-                            "irs post agreement2".output.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            "irs post agreement2".output.data.common.copy(tradeID = "t2")
+                    postAgreement2.data.copy(
+                            postAgreement2.data.fixedLeg,
+                            postAgreement2.data.floatingLeg,
+                            postAgreement2.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement2.data.common.copy(tradeID = "t2")
                     )
                 }
 
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Fix()
                 }
-                arg(ORACLE_PUBKEY) {
+                command(ORACLE_PUBKEY) {
                     Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1)
                 }
                 timestamp(TEST_TX_TIME)
+                this.verifies()
             }
         }
-        return txgroup
     }
 }
 

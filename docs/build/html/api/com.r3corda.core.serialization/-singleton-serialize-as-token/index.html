@@ -41,6 +41,13 @@ to indicate which instance the token is a serialized form of.</p>
 <tbody>
 <tr>
 <td>
+<a href="../../com.r3corda.node.services.api/-abstract-node-service/index.html">AbstractNodeService</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNodeService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
@@ -92,6 +99,15 @@ testing).</p>
 </tr>
 <tr>
 <td>
+<a href="../../com.r3corda.core.testing/-in-memory-wallet-service/index.html">InMemoryWalletService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
+states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.core.node.services.testing/-mock-identity-service/index.html">MockIdentityService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">MockIdentityService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code></td>
@@ -106,7 +122,7 @@ testing).</p>
 <td>
 <a href="../../com.r3corda.core.node.services.testing/-mock-storage-service/index.html">MockStorageService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">MockStorageService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">MockStorageService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -118,18 +134,24 @@ This is not an interface because it is too lightweight to bother mocking out.</p
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.wallet/-node-wallet-service/index.html">NodeWalletService</a></td>
+<a href="../../com.r3corda.node.services.events/-node-scheduler-service/index.html">NodeSchedulerService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
-method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
-states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
+<code><span class="keyword">class </span><span class="identifier">NodeSchedulerService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-scheduler-service/index.html"><span class="identifier">SchedulerService</span></a><span class="symbol">, </span><span class="identifier">SingletonSerializeAsToken</span></code><p>A first pass of a simple <a href="../../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="#">MutableClock</a>s for testing, demonstrations and simulations
+that also encompasses the <a href="#">Wallet</a> observer for processing transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html">ProtocolLogicRefFactory</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ProtocolLogicRefFactory</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A class for conversion to and from <a href="../../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> and <a href="../../com.r3corda.core.protocols/-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../../com.r3corda.node.services.persistence/-storage-service-impl/index.html">StorageServiceImpl</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">StorageServiceImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">StorageServiceImpl</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a></code></td>
 </tr>
 </tbody>
 </table>

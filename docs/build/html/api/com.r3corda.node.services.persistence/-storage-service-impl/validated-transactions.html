@@ -9,7 +9,7 @@
 <h1>validatedTransactions</h1>
 <a name="com.r3corda.node.services.persistence.StorageServiceImpl$validatedTransactions"></a>
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">validatedTransactions</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-transaction-storage/index.html"><span class="identifier">TransactionStorage</span></a></code><br/>
-Overrides <a href="../../com.r3corda.core.node.services/-storage-service/validated-transactions.html">StorageService.validatedTransactions</a><br/>
+Overrides <a href="../../com.r3corda.core.node.services/-tx-writable-storage-service/validated-transactions.html">TxWritableStorageService.validatedTransactions</a><br/>
 <p>A map of hash-&gt;tx where tx has been signature/contract validated and the states are known to be correct.
 The signatures arent technically needed after that point, but we keep them around so that we can relay
 the transaction data to other nodes that need it.</p>

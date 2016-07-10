@@ -5,7 +5,7 @@ import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.messaging.MessageRecipients
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.utilities.UntrustworthyData
@@ -81,9 +81,13 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
-    override fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
-                                          obj: Any, recvType: Class<T>): UntrustworthyData<T> {
-        val result = StateMachineManager.FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, obj, recvType)
+    override fun <T : Any> sendAndReceive(topic: String,
+                                          destination: Party,
+                                          sessionIDForSend: Long,
+                                          sessionIDForReceive: Long,
+                                          payload: Any,
+                                          recvType: Class<T>): UntrustworthyData<T> {
+        val result = StateMachineManager.FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, payload, recvType)
         return suspendAndExpectReceive(result)
     }
 
@@ -94,8 +98,8 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
     }
 
     @Suspendable
-    override fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
-        val result = StateMachineManager.FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
+    override fun send(topic: String, destination: Party, sessionID: Long, payload: Any) {
+        val result = StateMachineManager.FiberRequest.NotExpectingResponse(topic, destination, sessionID, payload)
         suspend(result)
     }
 

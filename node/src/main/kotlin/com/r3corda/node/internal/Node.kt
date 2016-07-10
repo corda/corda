@@ -3,10 +3,11 @@ package com.r3corda.node.internal
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.node.api.APIServer
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
@@ -25,10 +26,11 @@ import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
+import java.net.InetSocketAddress
 import java.nio.channels.FileLock
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
+import java.util.*
 import javax.management.ObjectName
 
 class ConfigurationException(message: String) : Exception(message)
@@ -52,10 +54,9 @@ class ConfigurationException(message: String) : Exception(message)
  * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter
  * @param clock The clock used within the node and by all protocols etc
  */
-class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration,
+class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, configuration: NodeConfiguration,
            networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
-           clock: Clock = NodeClock(),
-           val clientAPIs: List<Class<*>> = listOf()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
+           clock: Clock = NodeClock()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         val DEFAULT_PORT = 31337
@@ -80,9 +81,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
 
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-
-        val port = p2pAddr.port + 1   // TODO: Move this into the node config file.
-        val server = Server(port)
+        val server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port))
 
         val handlerCollection = HandlerCollection()
 
@@ -110,11 +109,12 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
             resourceConfig.register(ResponseFilter())
             resourceConfig.register(api)
 
-            for(customAPIClass in clientAPIs) {
-                val customAPI = customAPIClass.getConstructor(APIServer::class.java).newInstance(api)
+            val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
+            for (webapi in webAPIsOnClasspath) {
+                log.info("Add Plugin web API from attachment ${webapi.name}")
+                val customAPI = webapi.getConstructor(ServiceHub::class.java).newInstance(services)
                 resourceConfig.register(customAPI)
             }
-
 
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
@@ -188,5 +188,5 @@ class Node(dir: Path, val p2pAddr: HostAndPort, configuration: NodeConfiguration
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         f.setLength(0)
         f.write(ourProcessID.toByteArray())
-     }
+    }
 }

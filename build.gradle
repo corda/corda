@@ -1,11 +1,11 @@
-group 'com.r3cev.prototyping'
-version '1.0-SNAPSHOT'
+group 'com.r3corda'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'project-report'
 apply plugin: QuasarPlugin
+apply plugin: 'com.github.ben-manes.versions'
 
 allprojects {
     sourceCompatibility = 1.8
@@ -17,13 +17,16 @@ allprojects {
 }
 
 buildscript {
-    ext.kotlin_version = '1.0.2'
+    ext.kotlin_version = '1.0.3'
     ext.quasar_version = '0.7.5'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.3.0'
-    ext.jetty_version = '9.1.1.v20140108'
-    ext.jersey_version = '2.22.2'
+    ext.jackson_version = '2.8.0.rc2'
+    ext.jetty_version = '9.3.9.v20160517'
+    ext.jersey_version = '2.23.1'
 	ext.jolokia_version = '2.0.0-M1'
+    ext.slf4j_version = '1.7.21'
+    ext.assertj_version = '3.5.1'
 
     repositories {
         mavenCentral()
@@ -31,9 +34,17 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+
+        // Can run 'gradle dependencyUpdates' to find new versions of things.
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
     }
 }
 
+allprojects {
+    // Our version: bump this on release.
+    group 'com.r3corda'
+    version '0.2-SNAPSHOT'
+}
 
 repositories {
     mavenLocal()
@@ -44,10 +55,23 @@ repositories {
     jcenter()
 }
 
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
+}
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
     runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 // This is required for quasar. I think.
@@ -64,12 +88,17 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.1"
+    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
+    compile 'com.squareup.okhttp3:okhttp:3.3.1'
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.4.1'
     testCompile 'com.pholser:junit-quickcheck-core:0.6'
+
+    // Integration test helpers
+    integrationTestCompile 'junit:junit:4.12'
+    integrationTestCompile 'org.assertj:assertj-core:${assertj_version}'
 }
 
 // Package up the demo programs.
@@ -99,14 +128,23 @@ task getTraderDemo(type: CreateStartScripts) {
 
 // Force windows script classpath to wildcard path to avoid the 'Command Line Is Too Long' issues
 // with generated scripts. Include Jolokia .war explicitly as this isn't picked up by wildcard
-tasks.withType(CreateStartScripts)
-{
+tasks.withType(CreateStartScripts) {
     doLast {
         windowsScript.text = windowsScript
                 .readLines()
                 .collect { line -> line.replaceAll(~/^set CLASSPATH=.*$/, 'set CLASSPATH=%APP_HOME%/lib/*;%APP_HOME%/lib/jolokia-agent-war-'+project.ext.jolokia_version+'.war') }
                 .join('\r\n')
     }
+}
+
+task integrationTest(type: Test) {
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+test.finalizedBy(integrationTest)
+
+tasks.withType(Test) {
+    reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
 quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')

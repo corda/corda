@@ -19,14 +19,6 @@ consumed by someone else first</p>
 <tbody>
 <tr>
 <td>
-<a href="cash-balances.html">cashBalances</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a snapshot of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
-which we have no cash evaluate to null, not 0.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="current-wallet.html">currentWallet</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">currentWallet</span><span class="symbol">: </span><a href="../-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Returns a read-only snapshot of the wallet at the time the call is made. Note that if you consume states or
@@ -79,7 +71,14 @@ new states that they create. You should only insert transactions that have been 
 <td>
 <a href="states-for-refs.html">statesForRefs</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$statesForRefs(kotlin.collections.List((com.r3corda.core.contracts.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">statesForRefs</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$statesForRefs(kotlin.collections.List((com.r3corda.core.contracts.StateRef)))/refs">refs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">?</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="when-consumed.html">whenConsumed</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">whenConsumed</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.WalletService$whenConsumed(com.r3corda.core.contracts.StateRef)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-wallet/-update/index.html"><span class="identifier">Update</span></a><span class="symbol">&gt;</span></code><p>Provide a <a href="#">Future</a> for when a <a href="../../com.r3corda.core.contracts/-state-ref/index.html">StateRef</a> is consumed, which can be very useful in building tests.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -99,9 +98,9 @@ new states that they create. You should only insert transactions that have been 
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.wallet/-node-wallet-service/index.html">NodeWalletService</a></td>
+<a href="../../com.r3corda.core.testing/-in-memory-wallet-service/index.html">InMemoryWalletService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">NodeWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">WalletService</span></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">InMemoryWalletService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">WalletService</span></code><p>This class implements a simple, in memory wallet that tracks states that are owned by us, and also has a convenience
 method to auto-generate some self-issued cash states that can be used for test trading. A real wallet would persist
 states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.</p>
 </td>

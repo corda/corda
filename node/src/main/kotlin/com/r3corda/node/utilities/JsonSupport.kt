@@ -73,7 +73,7 @@ object JsonSupport {
             return try {
                 LocalDate.parse(parser.text)
             } catch (e: Exception) {
-                throw JsonParseException("Invalid LocalDate ${parser.text}: ${e.message}", parser.currentLocation)
+                throw JsonParseException(parser, "Invalid LocalDate ${parser.text}: ${e.message}")
             }
         }
     }
@@ -98,7 +98,7 @@ object JsonSupport {
             }
             val mapper = parser.codec as ServiceHubObjectMapper
             // TODO this needs to use some industry identifier(s) not just these human readable names
-            return mapper.identities.partyFromName(parser.text) ?: throw JsonParseException("Could not find a Party with name: ${parser.text}", parser.currentLocation)
+            return mapper.identities.partyFromName(parser.text) ?: throw JsonParseException(parser, "Could not find a Party with name: ${parser.text}")
         }
     }
 
@@ -120,7 +120,7 @@ object JsonSupport {
                 @Suppress("UNCHECKED_CAST")
                 return SecureHash.parse(parser.text) as T
             } catch (e: Exception) {
-                throw JsonParseException("Invalid hash ${parser.text}: ${e.message}", parser.currentLocation)
+                throw JsonParseException(parser, "Invalid hash ${parser.text}: ${e.message}")
             }
         }
     }
@@ -131,7 +131,7 @@ object JsonSupport {
                 val array = StringArrayDeserializer.instance.deserialize(parser, context)
                 BusinessCalendar.getInstance(*array)
             } catch (e: Exception) {
-                throw JsonParseException("Invalid calendar(s) ${parser.text}: ${e.message}", parser.currentLocation)
+                throw JsonParseException(parser, "Invalid calendar(s) ${parser.text}: ${e.message}")
             }
         }
     }
@@ -151,7 +151,7 @@ object JsonSupport {
                 val A = Base58.decode(parser.text)
                 EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
             } catch (e: Exception) {
-                throw JsonParseException("Invalid public key ${parser.text}: ${e.message}", parser.currentLocation)
+                throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
             }
         }
     }

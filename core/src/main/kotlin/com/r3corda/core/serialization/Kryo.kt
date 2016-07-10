@@ -360,10 +360,6 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // This is required to make all the unit tests pass
         register(Party::class.java)
 
-        // Work around a bug in Kryo handling nested generics
-        register(Issued::class.java, ImmutableClassSerializer(Issued::class))
-        register(TransactionState::class.java, ImmutableClassSerializer(TransactionState::class))
-
         // This ensures a NonEmptySetSerializer is constructed with an initial value.
         register(NonEmptySet::class.java, NonEmptySetSerializer)
 

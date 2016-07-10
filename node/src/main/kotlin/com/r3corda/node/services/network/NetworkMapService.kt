@@ -7,16 +7,16 @@ import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TOPIC_DEFAULT_POSTFIX
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.protocols.ServiceRequestMessage
 import org.slf4j.LoggerFactory
-import com.r3corda.protocols.AbstractRequestMessage
 import java.security.PrivateKey
 import java.security.SignatureException
 import java.time.Instant
@@ -61,20 +61,25 @@ interface NetworkMapService {
 
     val nodes: List<NodeInfo>
 
-    class FetchMapRequest(val subscribe: Boolean, val ifChangedSinceVersion: Int?, replyTo: MessageRecipients, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    abstract class NetworkMapRequestMessage(val replyTo: MessageRecipients) : ServiceRequestMessage {
+        override fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients = replyTo
+    }
+
+    class FetchMapRequest(val subscribe: Boolean, val ifChangedSinceVersion: Int?, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
     data class FetchMapResponse(val nodes: Collection<NodeRegistration>?, val version: Int)
-    class QueryIdentityRequest(val identity: Party, replyTo: MessageRecipients, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class QueryIdentityRequest(val identity: Party, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
     data class QueryIdentityResponse(val node: NodeInfo?)
-    class RegistrationRequest(val wireReg: WireNodeRegistration, replyTo: MessageRecipients, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class RegistrationRequest(val wireReg: WireNodeRegistration, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
     data class RegistrationResponse(val success: Boolean)
-    class SubscribeRequest(val subscribe: Boolean, replyTo: MessageRecipients, sessionID: Long) : AbstractRequestMessage(replyTo, sessionID)
+    class SubscribeRequest(val subscribe: Boolean, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
     data class SubscribeResponse(val confirmed: Boolean)
     data class Update(val wireReg: WireNodeRegistration, val replyTo: MessageRecipients)
     data class UpdateAcknowledge(val wireRegHash: SecureHash, val replyTo: MessageRecipients)
 }
 
+
 @ThreadSafe
-class InMemoryNetworkMapService(net: MessagingService, home: NodeRegistration, val cache: NetworkMapCache) : NetworkMapService, AbstractNodeService(net) {
+class InMemoryNetworkMapService(net: MessagingService, home: NodeRegistration, val cache: NetworkMapCache) : NetworkMapService, AbstractNodeService(net, cache) {
     private val registeredNodes = ConcurrentHashMap<Party, NodeRegistration>()
     // Map from subscriber address, to a list of unacknowledged updates
     private val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, MutableList<SecureHash>>())

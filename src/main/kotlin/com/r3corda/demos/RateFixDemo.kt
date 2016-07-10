@@ -1,8 +1,10 @@
 package com.r3corda.demos
 
-import com.r3corda.contracts.cash.Cash
+import com.google.common.net.HostAndPort
+import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.hours
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
@@ -63,7 +65,7 @@ fun main(args: Array<String>) {
     val rateTolerance = BigDecimal(options.valueOf(rateToleranceArg))
 
     // Bring up node.
-    var advertisedServices: Set<ServiceType> = emptySet()
+    val advertisedServices: Set<ServiceType> = emptySet()
     val myNetAddr = ArtemisMessagingService.toHostAndPort(options.valueOf(networkAddressArg))
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
@@ -71,16 +73,17 @@ fun main(args: Array<String>) {
         override val nearestCity: String = "Atlantis"
     }
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, config, networkMapAddress,
-            advertisedServices, DemoClock(),
-            listOf(InterestRateSwapAPI::class.java)).setup().start() }
+    val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
+
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddress,
+            advertisedServices, DemoClock()).setup().start() }
 
     val notary = node.services.networkMapCache.notaryNodes[0]
 
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionType.General.Builder()
     tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.keyManagement.freshKey().public), notary.identity))
-    val protocol = RatesFixProtocol(tx, oracleNode, fixOf, expectedRate, rateTolerance)
+    val protocol = RatesFixProtocol(tx, oracleNode.identity, fixOf, expectedRate, rateTolerance, 24.hours)
     node.smm.add("demo.ratefix", protocol).get()
     node.stop()
 

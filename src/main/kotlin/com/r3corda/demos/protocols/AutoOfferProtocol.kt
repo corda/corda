@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
@@ -24,7 +23,8 @@ import com.r3corda.protocols.TwoPartyDealProtocol
 object AutoOfferProtocol {
     val TOPIC = "autooffer.topic"
 
-    data class AutoOfferMessage(val otherSide: SingleMessageRecipient,
+    data class AutoOfferMessage(val otherSide: Party,
+                                val notary: Party,
                                 val otherSessionID: Long, val dealBeingOffered: DealState)
 
     object Handler {
@@ -53,9 +53,7 @@ object AutoOfferProtocol {
                 val autoOfferMessage = msg.data.deserialize<AutoOfferMessage>()
                 // Put the deal onto the ledger
                 progressTracker.currentStep = DEALING
-                // TODO required as messaging layer does not currently queue messages that arrive before we expect them
-                Thread.sleep(100)
-                val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, node.services.networkMapCache.notaryNodes.first(),
+                val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, autoOfferMessage.notary,
                         autoOfferMessage.dealBeingOffered, node.services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.getChildProgressTracker(DEALING)!!)
                 val future = node.smm.add("${TwoPartyDealProtocol.DEAL_TOPIC}.seller", seller)
                 // This is required because we are doing child progress outside of a subprotocol.  In future, we should just wrap things like this in a protocol to avoid it
@@ -68,7 +66,7 @@ object AutoOfferProtocol {
 
     }
 
-    class Requester<T>(val dealToBeOffered: DealState) : ProtocolLogic<SignedTransaction>() {
+    class Requester(val dealToBeOffered: DealState) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVED : ProgressTracker.Step("Received API call")
@@ -83,6 +81,7 @@ object AutoOfferProtocol {
             fun tracker() = ProgressTracker(RECEIVED, ANNOUNCING, DEALING)
         }
 
+        override val topic: String get() = TOPIC
         override val progressTracker = tracker()
 
         init {
@@ -94,20 +93,17 @@ object AutoOfferProtocol {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             val ourSessionID = random63BitValue()
 
-            val notary = serviceHub.networkMapCache.notaryNodes.first()
+            val notary = serviceHub.networkMapCache.notaryNodes.first().identity
             // need to pick which ever party is not us
             val otherParty = notUs(*dealToBeOffered.parties).single()
-            val otherNode = (serviceHub.networkMapCache.getNodeByLegalName(otherParty.name))
-            requireNotNull(otherNode) { "Cannot identify other party " + otherParty.name + ", know about: " + serviceHub.networkMapCache.partyNodes.map { it.identity } }
-            val otherSide = otherNode!!.address
             progressTracker.currentStep = ANNOUNCING
-            send(TOPIC, otherSide, 0, AutoOfferMessage(serviceHub.networkService.myAddress, ourSessionID, dealToBeOffered))
+            send(otherParty, 0, AutoOfferMessage(serviceHub.storageService.myLegalIdentity, notary, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING
-            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherSide, notary.identity, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
+            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherParty, notary, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
             return stx
         }
 
-        fun notUs(vararg parties: Party): List<Party> {
+        private fun notUs(vararg parties: Party): List<Party> {
             val notUsParties: MutableList<Party> = arrayListOf()
             for (party in parties) {
                 if (serviceHub.storageService.myLegalIdentity != party) {

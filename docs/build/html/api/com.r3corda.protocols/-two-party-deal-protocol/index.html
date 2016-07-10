@@ -11,6 +11,7 @@
 <p>Classes for manipulating a two party deal or agreement.</p>
 <p>TODO: The subclasses should probably be broken out into individual protocols rather than making this an ever expanding collection of subclasses.</p>
 <p>TODO: Also, the term Deal is used here where we might prefer Agreement.</p>
+<p>TODO: Consider whether we can merge this with <a href="../-two-party-trade-protocol/index.html">TwoPartyTradeProtocol</a></p>
 <br/>
 <br/>
 <br/>
@@ -29,14 +30,28 @@
 <td>
 <a href="-fixer/index.html">Fixer</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Fixer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-fixable-deal-state/index.html"><span class="identifier">FixableDealState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised further.</p>
+<code><span class="keyword">class </span><span class="identifier">Fixer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-secondary/index.html"><span class="identifier">Secondary</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised further.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fixing-role-decider/index.html">FixingRoleDecider</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FixingRoleDecider</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-fixing-session-initiation/index.html">FixingSessionInitiation</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixingSessionInitiation</span></code><p>Used to set up the session between <a href="-floater/index.html">Floater</a> and <a href="-fixer/index.html">Fixer</a></p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-floater/index.html">Floater</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Floater</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-fixable-deal-state/index.html"><span class="identifier">FixableDealState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised furher</p>
+<code><span class="keyword">class </span><span class="identifier">Floater</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-primary/index.html"><span class="identifier">Primary</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span></code><p>One side of the fixing protocol for an interest rate swap, but could easily be generalised furher</p>
 </td>
 </tr>
 <tr>
@@ -99,6 +114,13 @@
 <a href="-d-e-a-l_-t-o-p-i-c.html">DEAL_TOPIC</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">DEAL_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-f-i-x_-i-n-i-t-i-a-t-e_-t-o-p-i-c.html">FIX_INITIATE_TOPIC</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">FIX_INITIATE_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code><p>This topic exists purely for <a href="-fixing-session-initiation/index.html">FixingSessionInitiation</a> to be sent from <a href="-fixing-role-decider/index.html">FixingRoleDecider</a> to <a href="#">FixingSessionInitiationHandler</a></p>
+</td>
 </tr>
 </tbody>
 </table>

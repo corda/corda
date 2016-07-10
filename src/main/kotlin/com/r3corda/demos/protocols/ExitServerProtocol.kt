@@ -22,7 +22,7 @@ object ExitServerProtocol {
     object Handler {
 
         fun register(node: Node) {
-            node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
+            node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
                 // Just to validate we got the message
                 if (enabled) {
                     val message = msg.data.deserialize<ExitMessage>()
@@ -37,20 +37,21 @@ object ExitServerProtocol {
      * This takes a Java Integer rather than Kotlin Int as that is what we end up with in the calling map and currently
      * we do not support coercing numeric types in the reflective search for matching constructors
      */
-    class Broadcast(@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN") val exitCode: Integer) : ProtocolLogic<Boolean>() {
+    class Broadcast(val exitCode: Int) : ProtocolLogic<Boolean>() {
+
+        override val topic: String get() = TOPIC
 
         @Suspendable
         override fun call(): Boolean {
             if (enabled) {
-                val rc = exitCode.toInt()
-                val message = ExitMessage(rc)
+                val message = ExitMessage(exitCode)
 
                 for (recipient in serviceHub.networkMapCache.partyNodes) {
                     doNextRecipient(recipient, message)
                 }
                 // Sleep a little in case any async message delivery to other nodes needs to happen
                 Strand.sleep(1, TimeUnit.SECONDS)
-                System.exit(rc)
+                System.exit(exitCode)
             }
             return enabled
         }
@@ -60,10 +61,7 @@ object ExitServerProtocol {
             if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
-                // TODO: messaging ourselves seems to trigger a bug for the time being and we continuously receive messages
-                if (recipient.identity != serviceHub.storageService.myLegalIdentity) {
-                    send(TOPIC, recipient.address, 0, message)
-                }
+                send(recipient.identity, 0, message)
             }
         }
     }

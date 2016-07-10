@@ -7,18 +7,12 @@
 <a href="../../index.html">com.r3corda.demos.protocols</a>&nbsp;/&nbsp;<a href="../index.html">UpdateBusinessDayProtocol</a>&nbsp;/&nbsp;<a href=".">Broadcast</a><br/>
 <br/>
 <h1>Broadcast</h1>
-<code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Boolean</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">Broadcast</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><br/>
 <br/>
 <br/>
 <h3>Types</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="-l-o-c-a-l/index.html">LOCAL</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">LOCAL</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.utilities/-progress-tracker/-step/index.html"><span class="identifier">Step</span></a></code></td>
-</tr>
 <tr>
 <td>
 <a href="-n-o-t-i-f-y-i-n-g.html">NOTIFYING</a></td>
@@ -80,7 +74,9 @@ progress.</p>
 <td>
 <a href="../../../com.r3corda.core.protocols/-protocol-logic/service-hub.html">serviceHub</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts</p>
+<code><span class="keyword">val </span><span class="identifier">serviceHub</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a></code><p>Provides access to big, heavy classes that may be reconstructed from time to time, e.g. across restarts. It is
+only available once the protocol has started, which means it cannnot be accessed in the constructor. Either
+access this lazily or from inside <a href="../../../com.r3corda.core.protocols/-protocol-logic/call.html">call</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -92,7 +88,7 @@ progress.</p>
 <td>
 <a href="call.html">call</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>This is where you fill out your business logic.</p>
+<code><span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>This is where you fill out your business logic.</p>
 </td>
 </tr>
 </tbody>
@@ -111,13 +107,13 @@ progress.</p>
 <td>
 <a href="../../../com.r3corda.core.protocols/-protocol-logic/send.html">send</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="../../../com.r3corda.core.protocols/-protocol-logic/send-and-receive.html">sendAndReceive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.messaging.MessageRecipients, kotlin.Long, kotlin.Long, kotlin.Any)/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
