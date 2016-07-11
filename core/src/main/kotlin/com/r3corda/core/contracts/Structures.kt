@@ -108,12 +108,17 @@ data class TransactionState<out T : ContractState>(
         val data: T,
         /** Identity of the notary that ensures the state is not used as an input to a transaction more than once */
         val notary: Party) {
+
     /**
      * Copies the underlying state, replacing the notary field with the new value.
      * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState]
      */
-    fun withNewNotary(newNotary: Party) = TransactionState(this.data, newNotary)
+    fun withNotary(newNotary: Party) = TransactionState(this.data, newNotary)
 }
+
+/** Wraps the [ContractState] in a [TransactionState] object */
+infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
+infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(this, newNotary)
 
 /**
  * Marker interface for data classes that represent the issuance state for a contract. These are intended as templates

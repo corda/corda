@@ -1,14 +1,14 @@
 package com.r3corda.node.services
 
+import com.r3corda.contracts.asset.CASH
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.contracts.testing.CASH
-import com.r3corda.contracts.testing.`issued by`
-import com.r3corda.contracts.testing.`owned by`
-import com.r3corda.contracts.testing.`with notary`
+import com.r3corda.contracts.asset.`issued by`
+import com.r3corda.contracts.asset.`owned by`
 import com.r3corda.core.bd
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.contracts.`with notary`
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.testing.ALICE_PUBKEY

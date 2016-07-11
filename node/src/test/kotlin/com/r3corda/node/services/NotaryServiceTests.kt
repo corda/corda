@@ -7,7 +7,6 @@ import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.core.testing.MINI_CORP_KEY
 import com.r3corda.node.internal.testing.MockNetwork
-import com.r3corda.node.internal.testing.issueState
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.NotaryError

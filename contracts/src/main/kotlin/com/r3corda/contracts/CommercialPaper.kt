@@ -170,3 +170,8 @@ class CommercialPaper : Contract {
     }
 }
 
+infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = copy(owner = owner)
+infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
+infix fun ICommercialPaperState.`owned by`(newOwner: PublicKey) = withOwner(newOwner)
+
+

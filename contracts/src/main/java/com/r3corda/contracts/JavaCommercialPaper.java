@@ -17,7 +17,7 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.List;
 
-import static com.r3corda.core.contracts.ContractsDSLKt.requireSingleCommand;
+import static com.r3corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static kotlin.collections.CollectionsKt.single;
 
 
