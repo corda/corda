@@ -7,7 +7,6 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.services.IdentityService
 import com.r3corda.core.node.services.StorageService
-import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.serialization.serialize
 import java.io.InputStream
 import java.security.KeyPair
@@ -40,24 +39,6 @@ import java.util.*
  * Here follows implementations of the [LedgerDSLInterpreter] and [TransactionDSLInterpreter] interfaces to be used in
  * tests. Top level primitives [ledger] and [transaction] that bind the interpreter types are also defined here.
  */
-
-/**
- * @see JavaTestHelpers.transaction
- */
-fun transaction(
-        transactionLabel: String? = null,
-        transactionBuilder: TransactionBuilder = TransactionBuilder(),
-        dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = JavaTestHelpers.transaction(transactionLabel, transactionBuilder, dsl)
-
-/**
- * @see JavaTestHelpers.ledger
- */
-fun ledger(
-        identityService: IdentityService = MOCK_IDENTITY_SERVICE,
-        storageService: StorageService = MockStorageService(),
-        dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
-) = JavaTestHelpers.ledger(identityService, storageService, dsl)
 
 @Deprecated(
         message = "ledger doesn't nest, use tweak",

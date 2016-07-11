@@ -1,10 +1,7 @@
 package com.r3corda.contracts.asset
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.newSecureRandom
-import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
@@ -17,7 +14,6 @@ import java.util.*
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = Cash()
-    //SecureHash.sha256("cash")
 
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
@@ -242,3 +238,24 @@ val Wallet.cashBalances: Map<Currency, Amount<Currency>> get() = states.
         groupBy { it.token.product }.
         // Collapse to Map<Currency, Amount> by summing all the amounts of the same currency together.
         mapValues { it.value.map { Amount(it.quantity, it.token.product) }.sumOrThrow() }
+
+fun Cash.State.ownedBy(owner: PublicKey) = copy(owner = owner)
+fun Cash.State.issuedBy(party: Party) = copy(amount = Amount(amount.quantity, issuanceDef.copy(issuer = deposit.copy(party = party))))
+fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, issuanceDef.copy(issuer = deposit)))
+fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
+
+infix fun Cash.State.`owned by`(owner: PublicKey) = ownedBy(owner)
+infix fun Cash.State.`issued by`(party: Party) = issuedBy(party)
+infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
+
+// Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
+
+/** A randomly generated key. */
+val DUMMY_CASH_ISSUER_KEY by lazy { generateKeyPair() }
+/** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
+val DUMMY_CASH_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).ref(1) }
+/** An extension property that lets you write 100.DOLLARS.CASH */
+val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NullPublicKey)
+/** An extension property that lets you get a cash state from an issued token, under the [NullPublicKey] */
+val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NullPublicKey)

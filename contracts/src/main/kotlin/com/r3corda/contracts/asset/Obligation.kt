@@ -1,15 +1,18 @@
 package com.r3corda.contracts.asset
 
 import com.google.common.annotations.VisibleForTesting
-import com.r3corda.contracts.asset.FungibleAssetState
-import com.r3corda.contracts.asset.sumFungibleOrNull
+import com.r3corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.testing.MINI_CORP
+import com.r3corda.core.testing.TEST_TX_TIME
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.NonEmptySet
+import com.r3corda.core.utilities.nonEmptySetOf
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -812,3 +815,16 @@ fun <P> Iterable<ContractState>.sumObligationsOrNull(): Amount<P>?
 fun <P> Iterable<ContractState>.sumObligationsOrZero(product: P): Amount<P>
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(product)
 
+infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
+infix fun <T> Obligation.IssuanceDefinition<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
+infix fun <T> Obligation.State<T>.between(parties: Pair<Party, PublicKey>) = copy(obligor = parties.first, beneficiary = parties.second)
+infix fun <T> Obligation.State<T>.`owned by`(owner: PublicKey) = copy(beneficiary = owner)
+infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
+// For Java users:
+fun <T> Obligation.State<T>.ownedBy(owner: PublicKey) = copy(beneficiary = owner)
+fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
+
+val Issued<Currency>.OBLIGATION_DEF: Obligation.StateTemplate<Currency>
+    get() = Obligation.StateTemplate(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
+val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
+    get() = Obligation.State(Obligation.Lifecycle.NORMAL, MINI_CORP, token.OBLIGATION_DEF, quantity, NullPublicKey)

@@ -35,7 +35,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
 
         override fun assembleTx(): Pair<SignedTransaction, List<PublicKey>> {
             val state = originalState.state
-            val newState = state.withNewNotary(modification)
+            val newState = state.withNotary(modification)
             val participants = state.data.participants
             val tx = TransactionType.NotaryChange.Builder().withItems(originalState, newState)
             tx.signWith(serviceHub.storageService.myLegalIdentityKey)
