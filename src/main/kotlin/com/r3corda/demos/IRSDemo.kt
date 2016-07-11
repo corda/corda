@@ -82,7 +82,6 @@ sealed class CliParams {
             val apiAddress: HostAndPort,
             val mapAddress: String,
             val identityFile: Path,
-            val tradeWithAddrs: List<String>,
             val tradeWithIdentities: List<Path>,
             val uploadRates: Boolean,
             val defaultLegalName: String,
@@ -155,11 +154,6 @@ sealed class CliParams {
                         Paths.get(options.valueOf(CliParamsSpec.networkMapIdentityFile))
                     } else {
                         dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME)
-                    },
-                    tradeWithAddrs = if (options.has(CliParamsSpec.fakeTradeWithAddr)) {
-                        options.valuesOf(CliParamsSpec.fakeTradeWithAddr)
-                    } else  {
-                        listOf("localhost:${defaultNetworkPort(node.other)}")
                     },
                     tradeWithIdentities = if (options.has(CliParamsSpec.fakeTradeWithIdentityFile)) {
                         options.valuesOf(CliParamsSpec.fakeTradeWithIdentityFile).map { Paths.get(it) }
@@ -236,7 +230,6 @@ object CliParamsSpec {
     val baseDirectoryArg = parser.accepts("base-directory").withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
     val networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
     val networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
-    val fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withOptionalArg()
     val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
     val nonOptions = parser.nonOptions()
 }
@@ -306,11 +299,8 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
 
     try {
         val networkMap = createRecipient(cliParams.mapAddress)
-        val destinations = cliParams.tradeWithAddrs.map({
-            createRecipient(it)
-        })
 
-        val node = startNode(cliParams, networkMap, destinations)
+        val node = startNode(cliParams, networkMap)
         // Register handlers for the demo
         AutoOfferProtocol.Handler.register(node)
         UpdateBusinessDayProtocol.Handler.register(node)
@@ -366,7 +356,7 @@ private fun createRecipient(addr: String) : SingleMessageRecipient {
     return ArtemisMessagingService.makeRecipient(hostAndPort)
 }
 
-private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
+private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient) : Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
     val networkMapId =
@@ -387,21 +377,18 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
-    if (params.tradeWithAddrs.size != params.tradeWithIdentities.size) {
-        throw IllegalArgumentException("Different number of peer addresses (${params.tradeWithAddrs.size}) and identities (${params.tradeWithIdentities.size})")
-    }
-    for ((recipient, identityFile) in recipients.zip(params.tradeWithIdentities)) {
-        val peerId = nodeInfo(recipient, identityFile)
-        node.services.identityService.registerIdentity(peerId.identity)
+    for (identityFile in params.tradeWithIdentities) {
+        node.services.identityService.registerIdentity(parsePartyFromFile(identityFile))
     }
 
     return node
 }
 
+private fun parsePartyFromFile(path: Path) = Files.readAllBytes(path).deserialize<Party>()
+
 private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
     try {
-        val path = identityFile
-        val party = Files.readAllBytes(path).deserialize<Party>()
+        val party = parsePartyFromFile(identityFile)
         return NodeInfo(recipient, party, advertisedServices)
     } catch (e: Exception) {
         println("Could not find identify file $identityFile.")
