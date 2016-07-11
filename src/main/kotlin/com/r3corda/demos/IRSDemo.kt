@@ -197,7 +197,7 @@ sealed class CliParams {
         }
 
         fun parse(options: OptionSet): CliParams {
-            val role = options.valueOf(CliParamsSpec.roleArg)!!
+            val role: IRSDemoRole = options.valueOf(CliParamsSpec.roleArg) ?: throw IllegalArgumentException("Please provide a role")
             return when (role) {
                 IRSDemoRole.SetupNodeA -> parseSetupNode(options, IRSDemoNode.NodeA)
                 IRSDemoRole.SetupNodeB -> parseSetupNode(options, IRSDemoNode.NodeB)
