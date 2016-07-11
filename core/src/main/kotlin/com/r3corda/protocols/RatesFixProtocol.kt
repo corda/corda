@@ -11,7 +11,6 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
-import com.r3corda.protocols.RatesFixProtocol.FixOutOfRange
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant

@@ -3,7 +3,6 @@ package com.r3corda.node.utilities
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.utilities.ANSIProgressRenderer.progressTracker
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
