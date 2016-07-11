@@ -422,7 +422,7 @@ class Obligation<P> : Contract {
         val outputAmount: Amount<P> = outputs.sumObligations<P>()
         requireThat {
             "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-            "output deposits are owned by a command signer" by (obligor in issueCommand.signingParties)
+            "output states are issued by a command signer" by (obligor in issueCommand.signingParties)
             "output values sum to more than the inputs" by (outputAmount > inputAmount)
             "valid settlement issuance definition is not this issuance definition" by inputs.none { it.issuanceDef in it.acceptableIssuanceDefinitions }
         }

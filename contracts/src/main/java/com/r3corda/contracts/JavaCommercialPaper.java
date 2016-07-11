@@ -165,10 +165,10 @@ public class JavaCommercialPaper implements Contract {
             if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
                 State output = single(outputs);
                 if (!inputs.isEmpty()) {
-                    throw new IllegalStateException("Failed Requirement: there is no input state");
+                    throw new IllegalStateException("Failed Requirement: output values sum to more than the inputs");
                 }
                 if (output.faceValue.getQuantity() == 0) {
-                    throw new IllegalStateException("Failed Requirement: the face value is not zero");
+                    throw new IllegalStateException("Failed Requirement: output values sum to more than the inputs");
                 }
 
                 TimestampCommand timestampCommand = tx.getTimestampByName("Notary Service");
@@ -182,7 +182,7 @@ public class JavaCommercialPaper implements Contract {
                 }
 
                 if (!cmd.getSigners().contains(output.issuance.getParty().getOwningKey())) {
-                    throw new IllegalStateException("Failed Requirement: the issuance is signed by the claimed issuer of the paper");
+                    throw new IllegalStateException("Failed Requirement: output states are issued by a command signer");
                 }
             } else {
                 // Everything else (Move, Redeem) requires inputs (they are not first to be actioned)

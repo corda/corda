@@ -116,7 +116,7 @@ abstract class FungibleAsset<T> : Contract {
         val assetCommands = tx.commands.select<FungibleAsset.Commands>()
         requireThat {
             "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-            "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
+            "output states are issued by a command signer" by (issuer in issueCommand.signingParties)
             "output values sum to more than the inputs" by (outputAmount > inputAmount)
             "there is only a single issue command" by (assetCommands.count() == 1)
         }
