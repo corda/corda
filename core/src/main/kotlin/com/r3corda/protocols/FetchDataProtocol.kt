@@ -27,7 +27,7 @@ import java.util.*
  * @param T The ultimate type of the data being fetched.
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
  */
-abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
+abstract class FetchDataProtocol<T : NamedByHash, in W : Any>(
         protected val requests: Set<SecureHash>,
         protected val otherSide: Party) : ProtocolLogic<FetchDataProtocol.Result<T>>() {
 
@@ -36,7 +36,7 @@ abstract class FetchDataProtocol<T : NamedByHash, W : Any>(
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
 
     data class Request(val hashes: List<SecureHash>, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
-    data class Result<T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
+    data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     @Suspendable
     override fun call(): Result<T> {

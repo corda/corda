@@ -132,7 +132,7 @@ interface IssuanceDefinition
  *
  * @param P the type of product underlying the definition, for example [Currency].
  */
-data class Issued<P>(
+data class Issued<out P>(
         val issuer: PartyAndReference,
         val product: P
 )

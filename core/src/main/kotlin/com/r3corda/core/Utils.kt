@@ -142,7 +142,7 @@ inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () ->
  *
  * val ii = state.locked { i }
  */
-class ThreadBox<T>(content: T, val lock: ReentrantLock = ReentrantLock()) {
+class ThreadBox<out T>(content: T, val lock: ReentrantLock = ReentrantLock()) {
     val content = content
     inline fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
     inline fun <R> alreadyLocked(body: T.() -> R): R {
@@ -164,7 +164,7 @@ abstract class RetryableException(message: String) : Exception(message)
  * will not be serialized to disk, and if it's missing (or the first time it's accessed), the initializer will be
  * used to set it up. Note that the initializer will be called with the TransientProperty object locked.
  */
-class TransientProperty<T>(private val initializer: () -> T) {
+class TransientProperty<out T>(private val initializer: () -> T) {
     @Transient private var v: T? = null
 
     @Synchronized

@@ -44,7 +44,7 @@ object TwoPartyDealProtocol {
     }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-    data class Handshake<T>(
+    data class Handshake<out T>(
             val payload: T,
             val publicKey: PublicKey,
             val sessionID: Long
@@ -58,7 +58,7 @@ object TwoPartyDealProtocol {
      * There's a good chance we can push at least some of this logic down into core protocol logic
      * and helper methods etc.
      */
-    abstract class Primary<U>(override val progressTracker: ProgressTracker = Primary.tracker()) : ProtocolLogic<SignedTransaction>() {
+    abstract class Primary<out U>(override val progressTracker: ProgressTracker = Primary.tracker()) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal")
