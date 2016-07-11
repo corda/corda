@@ -1,7 +1,6 @@
 package com.r3corda.contracts.asset
 
 import com.r3corda.contracts.asset.Obligation.Lifecycle
-import com.r3corda.contracts.testing.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.testing.*
@@ -11,7 +10,10 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class ObligationTests {
     val defaultIssuer = MEGA_CORP.ref(1)

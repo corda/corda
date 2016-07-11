@@ -43,8 +43,8 @@ class NonEmptySetTest {
                     .suppressing(CollectionAddAllTester::class.java.getMethod("testAddAll_nullCollectionReference"))
                     // Disable tests that try to remove everything:
                     .suppressing(CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceNonEmptySubject"))
-                    .suppressing(CollectionClearTester::class.java.getMethods().toList())
-                    .suppressing(CollectionRetainAllTester::class.java.getMethods().toList())
+                    .suppressing(CollectionClearTester::class.java.methods.toList())
+                    .suppressing(CollectionRetainAllTester::class.java.methods.toList())
                     .createTestSuite()
         }
 

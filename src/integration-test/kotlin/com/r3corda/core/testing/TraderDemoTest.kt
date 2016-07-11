@@ -51,7 +51,7 @@ class TraderDemoTest {
                     "--base-directory", baseDirectory
             )
             val proc = spawn("com.r3corda.demos.TraderDemoKt", args, "TradeDemoSeller")
-            assertExitOrKill(proc);
+            assertExitOrKill(proc)
             assertEquals(proc.exitValue(), 0)
         }
 

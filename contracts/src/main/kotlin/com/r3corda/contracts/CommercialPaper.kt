@@ -80,12 +80,12 @@ class CommercialPaper : Contract {
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
         // If it's an issue, we can't take notary from inputs, so it must be specified in the command
-        val timestamp: TimestampCommand? = if (command.value is Commands.Issue)
-            tx.getTimestampBy((command.value as Commands.Issue).notary)
-        else if (command.value is Commands.Redeem)
-            tx.getTimestampBy((command.value as Commands.Redeem).notary)
-        else
-            null
+        val cmdVal = command.value
+        val timestamp: TimestampCommand? = when (cmdVal) {
+            is Commands.Issue -> tx.getTimestampBy(cmdVal.notary)
+            is Commands.Redeem -> tx.getTimestampBy(cmdVal.notary)
+            else -> null
+        }
 
         for ((inputs, outputs, key) in groups) {
             when (command.value) {

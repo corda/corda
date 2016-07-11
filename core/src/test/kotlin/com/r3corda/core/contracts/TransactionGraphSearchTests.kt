@@ -6,7 +6,6 @@ import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP_KEY
 import org.junit.Test
 import java.security.KeyPair
-import java.security.SecureRandom
 import kotlin.test.assertEquals
 
 class TransactionGraphSearchTests {

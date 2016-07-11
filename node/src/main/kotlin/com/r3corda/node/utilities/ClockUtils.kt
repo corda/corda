@@ -49,7 +49,7 @@ abstract class MutableClock : Clock() {
      */
     val mutations: Observable<Long> by lazy {
         Observable.create({ subscriber: Subscriber<in Long> ->
-            if (!subscriber.isUnsubscribed()) {
+            if (!subscriber.isUnsubscribed) {
                 mutationObservers.add(subscriber)
                 // This is not very intuitive, but subscribing to a subscriber observes unsubscribes.
                 subscriber.add(Subscriptions.create { mutationObservers.remove(subscriber) })

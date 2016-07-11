@@ -24,7 +24,7 @@ import org.slf4j.Logger
  * If you'd like to use another ProtocolLogic class as a component of your own, construct it on the fly and then pass
  * it to the [subProtocol] method. It will return the result of that protocol when it completes.
  */
-abstract class ProtocolLogic<T> {
+abstract class ProtocolLogic<out T> {
 
     /** Reference to the [Fiber] instance that is the top level controller for the entire flow. */
     lateinit var psm: ProtocolStateMachine<*>

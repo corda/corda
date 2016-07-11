@@ -1,12 +1,12 @@
 package com.r3corda.contracts.asset;
 
-import com.r3corda.core.contracts.PartyAndReference;
-import com.r3corda.core.serialization.OpaqueBytes;
-import kotlin.Unit;
-import org.junit.Test;
+import com.r3corda.core.contracts.*;
+import com.r3corda.core.serialization.*;
+import kotlin.*;
+import org.junit.*;
 
-import static com.r3corda.core.testing.CoreTestUtils.*;
 import static com.r3corda.core.contracts.ContractsDSL.*;
+import static com.r3corda.core.testing.CoreTestUtils.*;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL

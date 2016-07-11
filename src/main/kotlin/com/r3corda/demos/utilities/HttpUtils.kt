@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 private val client by lazy {
     OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS).build();
+        .readTimeout(60, TimeUnit.SECONDS).build()
 }
 
 fun putJson(url: URL, data: String) : Boolean {
@@ -27,12 +27,12 @@ fun uploadFile(url: URL, file: String) : Boolean {
     val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("rates", "example.rates.txt", RequestBody.create(MediaType.parse("text/plain"), file))
-            .build();
+            .build()
     return makeRequest(Request.Builder().url(url).post(body).build())
 }
 
 private fun makeRequest(request: Request): Boolean {
-    val response = client.newCall(request).execute();
+    val response = client.newCall(request).execute()
 
     if (!response.isSuccessful) {
         println("Could not fulfill HTTP request. Status Code: ${response.code()}. Message: ${response.body()}")

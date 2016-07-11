@@ -326,7 +326,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // no-arg constructor available.
         instantiatorStrategy = DefaultInstantiatorStrategy(StdInstantiatorStrategy())
 
-        register(Arrays.asList("").javaClass, ArraysAsListSerializer());
+        register(Arrays.asList("").javaClass, ArraysAsListSerializer())
 
         // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
         // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so

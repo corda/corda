@@ -5,7 +5,6 @@ import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.ServiceType
 import org.slf4j.LoggerFactory
 import java.security.PublicKey
 

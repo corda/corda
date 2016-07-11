@@ -6,7 +6,7 @@ import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.TransactionForContract
 import java.util.*
 
-interface GroupVerify<S, T : Any> {
+interface GroupVerify<in S, in T : Any> {
     /**
      *
      * @return the set of commands that are consumed IF this clause is matched, and cannot be used to match a

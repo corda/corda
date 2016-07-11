@@ -26,7 +26,7 @@ import java.security.PublicKey
  * use the new updated state for future transactions.
  */
 abstract class AbstractStateReplacementProtocol<T> {
-    interface Proposal<T> {
+    interface Proposal<out T> {
         val stateRef: StateRef
         val modification: T
         val stx: SignedTransaction

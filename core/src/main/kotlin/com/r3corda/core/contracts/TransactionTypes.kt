@@ -17,7 +17,6 @@ sealed class TransactionType {
      * Note: Presence of _signatures_ is not checked, only the public keys to be signed for.
      */
     fun verify(tx: TransactionForVerification) {
-
         val missing = verifySigners(tx)
         if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
 
