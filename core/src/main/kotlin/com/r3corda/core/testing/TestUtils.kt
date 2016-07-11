@@ -97,8 +97,8 @@ object JavaTestHelpers {
     @JvmStatic @JvmOverloads fun ledger(
             identityService: IdentityService = MOCK_IDENTITY_SERVICE,
             storageService: StorageService = MockStorageService(),
-            dsl: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
-    ): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+            dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
+    ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
         val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(identityService, storageService))
         dsl(ledgerDsl)
         return ledgerDsl
@@ -111,10 +111,7 @@ object JavaTestHelpers {
     @JvmStatic @JvmOverloads fun transaction(
             transactionLabel: String? = null,
             transactionBuilder: TransactionBuilder = TransactionBuilder(),
-            dsl: TransactionDSL<
-                    EnforceVerifyOrFail,
-                    TransactionDSLInterpreter<EnforceVerifyOrFail>
-                    >.() -> EnforceVerifyOrFail
+            dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
     ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
 }
 

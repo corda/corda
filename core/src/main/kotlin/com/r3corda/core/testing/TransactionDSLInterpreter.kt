@@ -13,11 +13,11 @@ import java.time.Instant
  * @param <R>: The return type of [verifies]/[failsWith] and the like. It is generic so that we have control over whether
  * we want to enforce users to call these methods (@see [EnforceVerifyOrFail]) or not.
  */
-interface TransactionDSLInterpreter<R> : OutputStateLookup {
+interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     /**
      * A reference to the enclosing ledger{..}'s interpreter.
      */
-    val ledgerInterpreter: LedgerDSLInterpreter<R, TransactionDSLInterpreter<R>>
+    val ledgerInterpreter: LedgerDSLInterpreter<TransactionDSLInterpreter>
 
     /**
      * Adds an input reference to the transaction. Note that [verifies] will resolve this reference.
@@ -47,30 +47,18 @@ interface TransactionDSLInterpreter<R> : OutputStateLookup {
     fun _command(signers: List<PublicKey>, commandData: CommandData)
 
     /**
-     * Verifies the transaction.
-     * @return: Possibly a token confirming that [verifies] has been called.
-     */
-    fun verifies(): R
-
-    /**
-     * Verifies the transaction, expecting an exception to be thrown.
-     * @param expectedMessage: An optional string to be searched for in the raised exception.
-     */
-    fun failsWith(expectedMessage: String?): R
-
-    /**
      * Creates a local scoped copy of the transaction.
      * @param dsl: The transaction DSL to be interpreted using the copy.
      */
-    fun tweak(dsl: TransactionDSL<R, TransactionDSLInterpreter<R>>.() -> R): R
+    fun tweak(dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail): EnforceVerifyOrFail
 }
 
-class TransactionDSL<R, out T : TransactionDSLInterpreter<R>> (val interpreter: T) :
-        TransactionDSLInterpreter<R> by interpreter {
+class TransactionDSL<out T : TransactionDSLInterpreter> (val interpreter: T) :
+        TransactionDSLInterpreter by interpreter {
 
     /**
      * Looks up the output label and adds the found state as an input.
-     * @param stateLabel: The label of the output state specified when calling [LedgerDSLInterpreter._output] and friends.
+     * @param stateLabel: The label of the output state specified when calling [TransactionDSLInterpreter._output] and friends.
      */
     fun input(stateLabel: String) = input(retrieveOutputStateAndRef(ContractState::class.java, stateLabel).ref)
 
@@ -128,14 +116,4 @@ class TransactionDSL<R, out T : TransactionDSLInterpreter<R>> (val interpreter: 
      */
     @JvmOverloads
     fun timestamp(data: TimestampCommand, notary: PublicKey = DUMMY_NOTARY.owningKey) = command(notary, data)
-
-    /**
-     * Asserts that the transaction will fail verification
-     */
-    fun fails() = failsWith(null)
-
-    /**
-     * @see TransactionDSLInterpreter.failsWith
-     */
-    infix fun `fails with`(msg: String) = failsWith(msg)
 }

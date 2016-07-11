@@ -360,7 +360,7 @@ class IRSTests {
     /**
      * Generates a typical transactional history for an IRS.
      */
-    fun trade(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+    fun trade(): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
@@ -653,7 +653,7 @@ class IRSTests {
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.
      */
-    fun tradegroups(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+    fun tradegroups(): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
         val ld1 = LocalDate.of(2016, 3, 8)
         val bd1 = BigDecimal("0.0063518")
 

@@ -5,7 +5,6 @@ import com.r3corda.contracts.testing.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.testing.*
-import com.r3corda.core.testing.JavaTestHelpers
 import com.r3corda.core.utilities.nonEmptySetOf
 import org.junit.Test
 import java.security.PublicKey
@@ -35,7 +34,7 @@ class ObligationTests {
     val outState = inState.copy(beneficiary = DUMMY_PUBKEY_2)
 
     private fun obligationTestRoots(
-            group: LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
+            group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {
         unverifiedTransaction {
             output("Alice's $1,000,000 obligation to Bob", oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY))

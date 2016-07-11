@@ -14,7 +14,7 @@ import static com.r3corda.contracts.testing.JavaTestHelpers.*;
  */
 public class CashTestsJava {
 
-    private OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});;
+    private OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
     private PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
     private Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1());
     private Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2());

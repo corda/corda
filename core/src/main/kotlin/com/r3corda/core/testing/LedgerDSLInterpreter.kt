@@ -19,11 +19,63 @@ interface OutputStateLookup {
 }
 
 /**
+ * This interface asserts that the DSL at hand is capable of verifying it's underlying construct(ledger/transaction)
+ */
+interface Verifies {
+    /**
+     * Verifies the ledger/transaction, throws if the verification fails.
+     */
+    fun verifies(): EnforceVerifyOrFail
+
+    /**
+     * Asserts that verifies() throws
+     * @param expectedMessage: An optional string to be searched for in the raised exception.
+     */
+    fun failsWith(expectedMessage: String?): EnforceVerifyOrFail {
+        val exceptionThrown = try {
+            verifies()
+            false
+        } catch (exception: Exception) {
+            if (expectedMessage != null) {
+                val exceptionMessage = exception.message
+                if (exceptionMessage == null) {
+                    throw AssertionError(
+                            "Expected exception containing '$expectedMessage' but raised exception had no message"
+                    )
+                } else if (!exceptionMessage.toLowerCase().contains(expectedMessage.toLowerCase())) {
+                    throw AssertionError(
+                            "Expected exception containing '$expectedMessage' but raised exception was '$exception'"
+                    )
+                }
+            }
+            true
+        }
+
+        if (!exceptionThrown) {
+            throw AssertionError("Expected exception but didn't get one")
+        }
+
+        return EnforceVerifyOrFail.Token
+    }
+
+    /**
+     * Asserts that [verifies] throws, with no condition on the exception message
+     */
+    fun fails() = failsWith(null)
+
+    /**
+     * @see failsWith
+     */
+    infix fun `fails with`(msg: String) = failsWith(msg)
+}
+
+
+/**
  * This interface defines the bare bone functionality that a Ledger DSL interpreter should implement.
  *
  * TODO (Kotlin 1.1): Use type synonyms to make the type params less unwieldy
  */
-interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : OutputStateLookup {
+interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, OutputStateLookup {
     /**
      * Creates and adds a transaction to the ledger.
      * @param transactionLabel: Optional label of the transaction, to be used in diagnostic messages.
@@ -32,7 +84,7 @@ interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : Output
      * @return: The final [WireTransaction] of the built transaction.
      */
     fun _transaction(transactionLabel: String?, transactionBuilder: TransactionBuilder,
-                     dsl: TransactionDSL<R, T>.() -> R): WireTransaction
+                     dsl: TransactionDSL<T>.() -> EnforceVerifyOrFail): WireTransaction
 
     /**
      * Creates and adds a transaction to the ledger that will not be verified by [verifies].
@@ -42,13 +94,13 @@ interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : Output
      * @return: The final [WireTransaction] of the built transaction.
      */
     fun _unverifiedTransaction(transactionLabel: String?, transactionBuilder: TransactionBuilder,
-                               dsl: TransactionDSL<R, T>.() -> Unit): WireTransaction
+                               dsl: TransactionDSL<T>.() -> Unit): WireTransaction
 
     /**
      * Creates a local scoped copy of the ledger.
      * @param dsl: The ledger DSL to be interpreted using the copy.
      */
-    fun tweak(dsl: LedgerDSL<R, T, LedgerDSLInterpreter<R, T>>.() -> Unit)
+    fun tweak(dsl: LedgerDSL<T, LedgerDSLInterpreter<T>>.() -> Unit)
 
     /**
      * Adds an attachment to the ledger.
@@ -57,16 +109,6 @@ interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : Output
      */
     fun attachment(attachment: InputStream): SecureHash
 
-    /**
-     * Verifies the ledger using [TransactionGroup.verify], throws if the verification fails.
-     */
-    fun verifies()
-
-    /**
-     * Verifies the ledger, expecting an exception to be thrown.
-     * @param expectedMessage: An optional string to be searched for in the raised exception.
-     */
-    fun failsWith(expectedMessage: String?)
 }
 
 /**
@@ -75,22 +117,22 @@ interface LedgerDSLInterpreter<R, out T : TransactionDSLInterpreter<R>> : Output
  * functionality then first add your primitive to [LedgerDSLInterpreter] and then add the convenience defaults/extension
  * methods here.
  */
-class LedgerDSL<R, out T : TransactionDSLInterpreter<R>, out L : LedgerDSLInterpreter<R, T>> (val interpreter: L) :
-        LedgerDSLInterpreter<R, TransactionDSLInterpreter<R>> by interpreter {
+class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<T>> (val interpreter: L) :
+        LedgerDSLInterpreter<TransactionDSLInterpreter> by interpreter {
 
     /**
      * @see LedgerDSLInterpreter._transaction
      */
     @JvmOverloads
     fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(),
-                    dsl: TransactionDSL<R, TransactionDSLInterpreter<R>>.() -> R) =
+                    dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) =
             _transaction(label, transactionBuilder, dsl)
     /**
      * @see LedgerDSLInterpreter._unverifiedTransaction
      */
     @JvmOverloads
     fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(),
-                    dsl: TransactionDSL<R, TransactionDSLInterpreter<R>>.() -> Unit) =
+                    dsl: TransactionDSL<TransactionDSLInterpreter>.() -> Unit) =
             _unverifiedTransaction(label, transactionBuilder, dsl)
 
     /**
@@ -117,14 +159,4 @@ class LedgerDSL<R, out T : TransactionDSLInterpreter<R>, out L : LedgerDSLInterp
      */
     fun <S : ContractState> retrieveOutput(clazz: Class<S>, label: String) =
             retrieveOutputStateAndRef(clazz, label).state.data
-
-    /**
-     * Asserts that the transaction will fail verification
-     */
-    fun fails() = failsWith(null)
-
-    /**
-     * @see TransactionDSLInterpreter.failsWith
-     */
-    infix fun `fails with`(msg: String) = failsWith(msg)
 }
