@@ -3,6 +3,7 @@ package com.r3corda.contracts
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.testing.*
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.node.services.testing.MockStorageService
@@ -18,8 +19,8 @@ import kotlin.test.assertTrue
 
 interface ICommercialPaperTestTemplate {
     fun getPaper(): ICommercialPaperState
-    fun getIssueCommand(): CommandData
-    fun getRedeemCommand(): CommandData
+    fun getIssueCommand(notary: Party): CommandData
+    fun getRedeemCommand(notary: Party): CommandData
     fun getMoveCommand(): CommandData
 }
 
@@ -31,8 +32,8 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
             TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(): CommandData = JavaCommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(): CommandData = JavaCommercialPaper.Commands.Redeem()
+    override fun getIssueCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Issue(notary)
+    override fun getRedeemCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Redeem(notary)
     override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
 }
 
@@ -44,8 +45,8 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
             maturityDate = TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(): CommandData = CommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(): CommandData = CommercialPaper.Commands.Redeem()
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue(notary)
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem(notary)
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
 }
 
@@ -74,7 +75,7 @@ class CommercialPaperTestsGeneric {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
                 output("paper") { thisTest.getPaper() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
                 timestamp(TEST_TX_TIME)
                 this.verifies()
             }
@@ -103,7 +104,7 @@ class CommercialPaperTestsGeneric {
                 }
 
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                command(ALICE_PUBKEY) { thisTest.getRedeemCommand() }
+                command(ALICE_PUBKEY) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
 
                 tweak {
                     outputs(700.DOLLARS `issued by` issuer)
@@ -133,7 +134,7 @@ class CommercialPaperTestsGeneric {
     fun `key mismatch at issue`() {
         transaction {
             output { thisTest.getPaper() }
-            command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
+            command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
         }
@@ -143,7 +144,7 @@ class CommercialPaperTestsGeneric {
     fun `face value is not zero`() {
         transaction {
             output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
@@ -153,7 +154,7 @@ class CommercialPaperTestsGeneric {
     fun `maturity date not in the past`() {
         transaction {
             output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
         }
@@ -164,7 +165,7 @@ class CommercialPaperTestsGeneric {
         transaction {
             input(thisTest.getPaper())
             output { thisTest.getPaper() }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }

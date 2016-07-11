@@ -96,6 +96,7 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority:
  * Note that matching here is done by (verified, legal) name, not by public key. Any signature by any
  * party with a name that matches (case insensitively) any of the given names will yield a match.
  */
+@Deprecated(message = "Timestamping authority should always be notary for the transaction")
 fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: String): TimestampCommand? {
     val timestampCmd = filter { it.value is TimestampCommand }.singleOrNull() ?: return null
     val tsaNames = timestampCmd.signingParties.map { it.name.toLowerCase() }

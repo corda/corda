@@ -390,9 +390,7 @@ class Obligation<P> : Contract {
         for ((stateIdx, input) in inputs.withIndex()) {
             val actualOutput = outputs[stateIdx]
             val deadline = input.dueBefore
-            // TODO: Determining correct timestamp authority needs rework now that timestamping service is part of
-            // notary.
-            val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
+            val timestamp: TimestampCommand? = tx.timestamp
             val expectedOutput: State<P> = input.copy(lifecycle = expectedOutputLifecycle)
 
             requireThat {

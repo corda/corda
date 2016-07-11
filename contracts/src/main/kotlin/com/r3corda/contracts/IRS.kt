@@ -496,6 +496,8 @@ class InterestRateSwap() : Contract {
         val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
 
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
+        // TODO: This needs to either be the notary used for the inputs, or otherwise
+        // derived as the correct notary
         val time = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
