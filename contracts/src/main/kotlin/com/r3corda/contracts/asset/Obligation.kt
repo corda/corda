@@ -39,7 +39,7 @@ class Obligation<P> : Contract {
      * Motivation: it's the difference between a state object referencing a programRef, which references a
      * legalContractReference and a state object which directly references both.  The latter allows the legal wording
      * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract
+     * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
 
@@ -224,7 +224,7 @@ class Obligation<P> : Contract {
         /**
          * A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
-         * @see [MoveCommand]
+         * @see [MoveCommand].
          */
         data class Settle<P>(override val aggregateState: IssuanceDefinition<P>,
                              val amount: Amount<P>) : Commands, IssuanceCommands<P>

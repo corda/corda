@@ -65,9 +65,9 @@ interface NetworkMapCache {
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
      * updates.
      *
-     * @param net the network messaging service
+     * @param net the network messaging service.
      * @param service the network map service to fetch current state from.
-     * @param subscribe if the cache should subscribe to updates
+     * @param subscribe if the cache should subscribe to updates.
      * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
      * version is less than or equal to the given version, no update is fetched.
      */
@@ -75,19 +75,19 @@ interface NetworkMapCache {
                       subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
 
     /**
-     * Adds a node to the local cache (generally only used for adding ourselves)
+     * Adds a node to the local cache (generally only used for adding ourselves).
      */
     fun addNode(node: NodeInfo)
 
     /**
-     * Removes a node from the local cache
+     * Removes a node from the local cache.
      */
     fun removeNode(node: NodeInfo)
 
     /**
      * Deregister from updates from the given map service.
      *
-     * @param net the network messaging service
+     * @param net the network messaging service.
      * @param service the network map service to fetch current state from.
      */
     fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit>

@@ -42,15 +42,15 @@ class ConfigurationException(message: String) : Exception(message)
  * @param dir A [Path] to a location on disk where working files can be found or stored.
  * @param p2pAddr The host and port that this server will use. It can't find out its own external hostname, so you
  *                have to specify that yourself.
- * @param configuration This is typically loaded from a .properties file
+ * @param configuration This is typically loaded from a .properties file.
  * @param networkMapAddress An external network map service to use. Should only ever be null when creating the first
  * network map service, while bootstrapping a network.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  * @param clientAPIs A list of JAX-RS annotated classes to register
  * which will be used to register any extra client web interfaces the node requires for demos to use.
- * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter
- * @param clock The clock used within the node and by all protocols etc
+ * Listed clientAPI classes are assumed to have to take a single APIServer constructor parameter.
+ * @param clock The clock used within the node and by all protocols etc.
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, configuration: NodeConfiguration,
            networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,

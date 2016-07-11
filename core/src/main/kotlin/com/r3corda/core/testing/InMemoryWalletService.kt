@@ -43,7 +43,7 @@ open class InMemoryWalletService(private val services: ServiceHub) : SingletonSe
         get() = _updatesPublisher
 
     /**
-     * Returns a snapshot of the heads of LinearStates
+     * Returns a snapshot of the heads of LinearStates.
      */
     override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
         get() = currentWallet.let { wallet ->

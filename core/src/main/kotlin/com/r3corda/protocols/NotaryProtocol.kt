@@ -27,10 +27,10 @@ object NotaryProtocol {
 
     /**
      * A protocol to be used for obtaining a signature from a [NotaryService] ascertaining the transaction
-     * timestamp is correct and none of its inputs have been used in another completed transaction
+     * timestamp is correct and none of its inputs have been used in another completed transaction.
      *
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
-     *                         by another transaction or the timestamp is invalid
+     *                         by another transaction or the timestamp is invalid.
      */
     class Client(private val stx: SignedTransaction,
                  override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
@@ -157,7 +157,7 @@ object NotaryProtocol {
          * history chain.
          * As a result, the Notary _will commit invalid transactions_ as well, but as it also records the identity of
          * the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
-         * undo the commit of the input states (the exact mechanism still needs to be worked out)
+         * undo the commit of the input states (the exact mechanism still needs to be worked out).
          */
         @Suspendable
         open fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {

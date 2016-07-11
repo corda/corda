@@ -240,7 +240,7 @@ class IRSTests {
     }
 
     /**
-     * Utility so I don't have to keep typing this
+     * Utility so I don't have to keep typing this.
      */
     fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
         return generateIRSTxn(irsSelector).outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
@@ -256,7 +256,7 @@ class IRSTests {
     }
 
     /**
-     * Testing a simple IRS, add a few fixings and then display as CSV
+     * Testing a simple IRS, add a few fixings and then display as CSV.
      */
     @Test
     fun `IRS Export test`() {
@@ -280,7 +280,7 @@ class IRSTests {
     }
 
     /**
-     * Make sure it has a schedule and the schedule has some unfixed rates
+     * Make sure it has a schedule and the schedule has some unfixed rates.
      */
     @Test
     fun `next fixing date`() {
@@ -289,7 +289,7 @@ class IRSTests {
     }
 
     /**
-     * Iterate through all the fix dates and add something
+     * Iterate through all the fix dates and add something.
      */
     @Test
     fun generateIRSandFixSome() {
@@ -472,7 +472,7 @@ class IRSTests {
     }
 
     /**
-     * This will be modified once we adapt the IRS to be cross currency
+     * This will be modified once we adapt the IRS to be cross currency.
      */
     @Test
     fun `ensure same currency notionals`() {

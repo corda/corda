@@ -142,7 +142,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
-     * Returns the set of missing signatures - a signature must be present for each signer public key
+     * Returns the set of missing signatures - a signature must be present for each signer public key.
      */
     fun getMissingSignatures(): Set<PublicKey> {
         val requiredKeys = tx.signers.toSet()

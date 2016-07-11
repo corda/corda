@@ -16,7 +16,7 @@ abstract class ServiceHubInternal : ServiceHub {
      * sends them to the wallet for further processing. This is intended for implementations to call from
      * [recordTransactions].
      *
-     * @param txs The transactions to record
+     * @param txs The transactions to record.
      */
     internal fun recordTransactionsInternal(writableStorageService: TxWritableStorageService, txs: Iterable<SignedTransaction>) {
         txs.forEach { writableStorageService.validatedTransactions.addTransaction(it) }
@@ -26,7 +26,7 @@ abstract class ServiceHubInternal : ServiceHub {
     /**
      * TODO: borrowing this method from service manager work in another branch.  It's required to avoid circular dependency
      *       between SMM and the scheduler.  That particular problem should also be resolved by the service manager work
-     *       itself, at which point this method would not be needed (by the scheduler)
+     *       itself, at which point this method would not be needed (by the scheduler).
      */
     abstract fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T>
 

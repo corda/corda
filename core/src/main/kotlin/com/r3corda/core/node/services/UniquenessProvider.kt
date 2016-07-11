@@ -6,7 +6,7 @@ import com.r3corda.core.crypto.SecureHash
 
 /**
  * A service that records input states of the given transaction and provides conflict information
- * if any of the inputs have already been used in another transaction
+ * if any of the inputs have already been used in another transaction.
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction */
@@ -17,7 +17,7 @@ interface UniquenessProvider {
 
     /**
      * Specifies the transaction id, the position of the consumed state in the inputs, and
-     * the caller identity requesting the commit
+     * the caller identity requesting the commit.
      *
      * TODO: need to do more design work to prevent privacy problems: knowing the id of a
      *       transaction, by the rules of our system the party can obtain it and see its contents.

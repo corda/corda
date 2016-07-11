@@ -23,7 +23,7 @@ class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Except
  * See [Cash] for an example subclass that implements currency.
  *
  * @param T a type that represents the asset in question. This should describe the basic type of the asset
- * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.)
+ * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
 abstract class FungibleAsset<T> : Contract {
     /** A state representing a cash claim against some party */

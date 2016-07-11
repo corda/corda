@@ -71,7 +71,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     // TODO: Persist this, as well as whether the node is registered.
     /**
-     * Sequence number of changes sent to the network map service, when registering/de-registering this node
+     * Sequence number of changes sent to the network map service, when registering/de-registering this node.
      */
     var networkMapSeq: Long = 1
 
@@ -202,7 +202,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
 
     /**
-     * Run any tasks that are needed to ensure the node is in a correct state before running start()
+     * Run any tasks that are needed to ensure the node is in a correct state before running start().
      */
     open fun setup(): AbstractNode {
         createNodeDir()

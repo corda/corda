@@ -5,7 +5,7 @@ import java.util.*
 
 /**
  * [timestamp] holds a formatted (UTC) timestamp that's set the first time it is queried. This is used to
- * provide a uniform timestamp for tests
+ * provide a uniform timestamp for tests.
  */
 class TestTimestamp {
     companion object {

@@ -111,7 +111,7 @@ data class TransactionState<out T : ContractState>(
 
     /**
      * Copies the underlying state, replacing the notary field with the new value.
-     * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState]
+     * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState].
      */
     fun withNotary(newNotary: Party) = TransactionState(this.data, newNotary)
 }
@@ -164,7 +164,7 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
 
 /**
  * This class represents the lifecycle activity that a contract state of type [LinearState] would like to perform at a given point in time.
- * e.g. run a fixing protocol
+ * e.g. run a fixing protocol.
  *
  * Note the use of [ProtocolLogicRef] to represent a safe way to transport a [ProtocolLogic] out of the contract sandbox.
  *
@@ -176,9 +176,9 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
 data class ScheduledActivity(val logicRef: ProtocolLogicRef, override val scheduledAt: Instant) : Scheduled
 
 /**
- * A state that evolves by superseding itself, all of which share the common "thread"
+ * A state that evolves by superseding itself, all of which share the common "thread".
  *
- * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet
+ * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet.
  */
 interface LinearState : ContractState {
     /** Unique thread id within the wallets of all parties */
@@ -196,7 +196,7 @@ interface SchedulableState : ContractState {
      *
      * The state has no reference to it's own StateRef, so supply that for use as input to any ProtocolLogic constructed.
      *
-     * @return null if there is no activity to schedule
+     * @return null if there is no activity to schedule.
      */
     fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity?
 }
@@ -217,18 +217,18 @@ interface DealState : LinearState {
 
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
-     * deal/agreement protocol to generate the necessary transaction for potential implementations
+     * deal/agreement protocol to generate the necessary transaction for potential implementations.
      *
      * TODO: Currently this is the "inception" transaction but in future an offer of some description might be an input state ref
      *
      * TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
-     * Contract instance from a ContractState are imminent, at which point we can move this out of here
+     * Contract instance from a ContractState are imminent, at which point we can move this out of here.
      */
     fun generateAgreement(notary: Party): TransactionBuilder
 }
 
 /**
- * Interface adding fixing specific methods
+ * Interface adding fixing specific methods.
  */
 interface FixableDealState : DealState {
     /**
@@ -237,10 +237,10 @@ interface FixableDealState : DealState {
     fun nextFixingOf(): FixOf?
 
     /**
-     * Generate a fixing command for this deal and fix
+     * Generate a fixing command for this deal and fix.
      *
      * TODO: This would also likely move to methods on the Contract once the changes to reference
-     * the Contract from the ContractState are in
+     * the Contract from the ContractState are in.
      */
     fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix)
 }
@@ -319,7 +319,7 @@ data class AuthenticatedObject<out T : Any>(
 
 /**
  * If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
- * public keys are identified in the containing [Command] object. The true time must be between (after, before)
+ * public keys are identified in the containing [Command] object. The true time must be between (after, before).
  */
 // TODO: Timestamps are now always provided by the consensus service for the transaction, rather than potentially
 // having multiple timestamps on a transaction. As such, it likely makes more sense for time to be a field on the

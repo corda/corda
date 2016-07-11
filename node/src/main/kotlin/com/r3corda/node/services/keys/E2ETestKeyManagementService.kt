@@ -17,9 +17,9 @@ import javax.annotation.concurrent.ThreadSafe
  *   on a separate/firewalled service.
  * - Use the protocol framework so requests to fetch keys can be suspended whilst a human signs off on the request.
  * - Use deterministic key derivation.
- * - Possibly have some sort of TREZOR-like two-factor authentication ability
+ * - Possibly have some sort of TREZOR-like two-factor authentication ability.
  *
- * etc
+ * etc.
  */
 @ThreadSafe
 class E2ETestKeyManagementService(initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {

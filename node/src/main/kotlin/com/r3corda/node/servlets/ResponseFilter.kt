@@ -6,7 +6,7 @@ import javax.ws.rs.container.ContainerResponseFilter
 import javax.ws.rs.ext.Provider
 
 /**
- * This adds headers needed for cross site scripting on API clients
+ * This adds headers needed for cross site scripting on API clients.
  */
 @Provider
 class ResponseFilter : ContainerResponseFilter {
@@ -18,7 +18,7 @@ class ResponseFilter : ContainerResponseFilter {
          *
          * We don't want this scriptable from any web page anywhere, but for demo reasons
          * we're making this really easy to access pending a proper security approach including
-         * access control and authentication at a network and software level
+         * access control and authentication at a network and software level.
          *
          */
         headers.add("Access-Control-Allow-Origin", "*")

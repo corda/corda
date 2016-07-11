@@ -18,7 +18,7 @@ import com.r3corda.protocols.TwoPartyDealProtocol
  * API call from a single party without bi-directional access to the database of offers etc.
  *
  * In the "real world", we'd probably have the offers sitting in the platform prior to the agreement step
- * or the protocol would have to reach out to external systems (or users) to verify the deals
+ * or the protocol would have to reach out to external systems (or users) to verify the deals.
  */
 object AutoOfferProtocol {
     val TOPIC = "autooffer.topic"

@@ -32,7 +32,7 @@ interface APIServer {
     fun serverTime(): LocalDateTime
 
     /**
-     * Report whether this node is started up or not
+     * Report whether this node is started up or not.
      */
     @GET
     @Path("status")

@@ -7,7 +7,7 @@ import java.time.Clock
 import java.time.Duration
 
 /**
- * Checks if the given timestamp falls within the allowed tolerance interval
+ * Checks if the given timestamp falls within the allowed tolerance interval.
  */
 class TimestampChecker(val clock: Clock = Clock.systemUTC(),
                        val tolerance: Duration = 30.seconds) {

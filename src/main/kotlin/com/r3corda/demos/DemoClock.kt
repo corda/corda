@@ -8,7 +8,7 @@ import java.time.*
 import javax.annotation.concurrent.ThreadSafe
 
 /**
- * A [Clock] that can have the date advanced for use in demos
+ * A [Clock] that can have the date advanced for use in demos.
  */
 @ThreadSafe
 class DemoClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableClock(), SerializeAsToken {

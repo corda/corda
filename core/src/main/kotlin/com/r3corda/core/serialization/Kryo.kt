@@ -113,7 +113,7 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
 
 /**
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
- * the type is marked as serializable or was designed for it (so be careful!)
+ * the type is marked as serializable or was designed for it (so be careful!).
  */
 fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()

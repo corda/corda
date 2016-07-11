@@ -158,7 +158,7 @@ class CommercialPaper : Contract {
      * to redeem the paper. We must therefore send enough money to the key that owns the paper to satisfy the face
      * value, and then ensure the paper is removed from the ledger.
      *
-     * @throws InsufficientBalanceException if the wallet doesn't contain enough money to pay the redeemer
+     * @throws InsufficientBalanceException if the wallet doesn't contain enough money to pay the redeemer.
      */
     @Throws(InsufficientBalanceException::class)
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {

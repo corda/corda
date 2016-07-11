@@ -11,7 +11,7 @@ import com.r3corda.node.services.network.MockNetworkMapCache
 import java.time.LocalDate
 
 /**
- * This is a less temporary, demo-oriented way of initiating processing of temporal events
+ * This is a less temporary, demo-oriented way of initiating processing of temporal events.
  */
 object UpdateBusinessDayProtocol {
 

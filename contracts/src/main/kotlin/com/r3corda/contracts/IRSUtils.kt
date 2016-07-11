@@ -36,14 +36,14 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
 }
 
 /**
- * For the convenience of writing "5".percent
+ * For the convenience of writing "5".percent.
  * Note that we do not currently allow 10.percent (ie no quotes) as this might get a little confusing if 0.1.percent was
  * written. Additionally, there is a possibility of creating a precision error in the implicit conversion.
  */
 val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 
 /**
- * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc
+ * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.
  */
 open class Rate(val ratioUnit: RatioUnit? = null) {
     override fun equals(other: Any?): Boolean {
@@ -82,7 +82,7 @@ class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
 }
 
 /**
- * The parent class of the Floating rate classes
+ * The parent class of the Floating rate classes.
  */
 open class FloatingRate : Rate(null)
 
