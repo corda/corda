@@ -36,7 +36,7 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
 }
 
 /**
- * For the convenience of writing "5".percent.
+ * For the convenience of writing "5".percent
  * Note that we do not currently allow 10.percent (ie no quotes) as this might get a little confusing if 0.1.percent was
  * written. Additionally, there is a possibility of creating a precision error in the implicit conversion.
  */
