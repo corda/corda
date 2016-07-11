@@ -1,8 +1,8 @@
 package com.r3corda.core.crypto
 
-import java.math.BigInteger
-import java.util.Arrays
 import org.junit.Test
+import java.math.BigInteger
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail

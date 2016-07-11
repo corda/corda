@@ -1,24 +1,18 @@
 package com.r3corda.contracts;
 
-import com.google.common.collect.ImmutableList;
-import com.r3corda.contracts.asset.Cash;
-import com.r3corda.contracts.asset.CashKt;
-import com.r3corda.contracts.asset.InsufficientBalanceException;
+import com.google.common.collect.*;
+import com.r3corda.contracts.asset.*;
 import com.r3corda.core.contracts.*;
-import com.r3corda.core.contracts.TransactionForContract.InOutGroup;
-import com.r3corda.core.crypto.NullPublicKey;
-import com.r3corda.core.crypto.Party;
-import com.r3corda.core.crypto.SecureHash;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import com.r3corda.core.contracts.TransactionForContract.*;
+import com.r3corda.core.crypto.*;
+import org.jetbrains.annotations.*;
 
-import java.security.PublicKey;
-import java.time.Instant;
-import java.util.Currency;
-import java.util.List;
+import java.security.*;
+import java.time.*;
+import java.util.*;
 
-import static com.r3corda.core.contracts.ContractsDSL.requireSingleCommand;
-import static kotlin.collections.CollectionsKt.single;
+import static com.r3corda.core.contracts.ContractsDSL.*;
+import static kotlin.collections.CollectionsKt.*;
 
 
 /**

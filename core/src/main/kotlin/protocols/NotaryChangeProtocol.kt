@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.utilities.ProgressTracker
+import protocols.NotaryChangeProtocol.Acceptor
+import protocols.NotaryChangeProtocol.Instigator
 import java.security.PublicKey
 
 /**

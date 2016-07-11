@@ -1,13 +1,10 @@
 package com.r3corda.contracts;
 
-import com.r3corda.core.contracts.Amount;
-import com.r3corda.core.contracts.ContractState;
-import com.r3corda.core.contracts.PartyAndReference;
-import com.r3corda.core.contracts.Issued;
+import com.r3corda.core.contracts.*;
 
 import java.security.*;
 import java.time.*;
-import java.util.Currency;
+import java.util.*;
 
 /* This is an interface solely created to demonstrate that the same kotlin tests can be run against
  * either a Java implementation of the CommercialPaper or a kotlin implementation.

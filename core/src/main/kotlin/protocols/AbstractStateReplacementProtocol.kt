@@ -13,6 +13,8 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.PartyRequestMessage
 import com.r3corda.protocols.ResolveTransactionsProtocol
+import protocols.AbstractStateReplacementProtocol.Acceptor
+import protocols.AbstractStateReplacementProtocol.Instigator
 import java.security.PublicKey
 
 /**

@@ -7,6 +7,8 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.UntrustworthyData
+import com.r3corda.protocols.FetchDataProtocol.DownloadedVsRequestedDataMismatch
+import com.r3corda.protocols.FetchDataProtocol.HashNotFound
 import java.util.*
 
 /**

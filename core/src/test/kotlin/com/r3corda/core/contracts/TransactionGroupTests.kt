@@ -7,7 +7,6 @@ import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.testing.*
 import org.junit.Test
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

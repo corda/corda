@@ -10,6 +10,7 @@ import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
+import com.r3corda.node.services.network.InMemoryMessagingNetwork.InMemoryMessaging
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject

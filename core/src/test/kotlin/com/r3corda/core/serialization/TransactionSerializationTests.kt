@@ -9,7 +9,6 @@ import com.r3corda.core.testing.*
 import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.security.SignatureException
 import java.util.*
 import kotlin.test.assertEquals

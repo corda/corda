@@ -3,7 +3,6 @@ package com.r3corda.node.internal
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.r3corda.core.messaging.MessagingService
-import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -30,7 +29,6 @@ import java.net.InetSocketAddress
 import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.time.Clock
-import java.util.*
 import javax.management.ObjectName
 
 class ConfigurationException(message: String) : Exception(message)

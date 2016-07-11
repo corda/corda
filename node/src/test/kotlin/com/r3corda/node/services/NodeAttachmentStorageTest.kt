@@ -9,11 +9,7 @@ import com.r3corda.node.services.persistence.NodeAttachmentService
 import org.junit.Before
 import org.junit.Test
 import java.nio.charset.Charset
-import java.nio.file.FileAlreadyExistsException
-import java.nio.file.FileSystem
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardOpenOption
+import java.nio.file.*
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import kotlin.test.assertEquals
