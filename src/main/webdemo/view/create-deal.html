@@ -6,7 +6,14 @@
     <h2>New Deal</h2>
     <form class="ui form" ng-submit="createDeal()">
         <div class="ui grid">
-            <div class="eight wide column">
+            <div class="sixteen wide column">
+                <h3>Common</h3>
+                <div class="field">
+                    <label>Base Currency</label>
+                    <input type="text" name="baseCurrency" ng-model="deal.common.baseCurrency"/>
+                </div>
+            </div>
+            <div class="eight wide column" id="createfixedleg">
                 <h3>Fixed Leg</h3>
                 <div class="field">
                     <label>Fixed Rate Payer</label>
@@ -26,6 +33,10 @@
                             </select>
                         </div>
                     </div>
+                </div>
+                <div class="field">
+                    <label>Fixed Rate</label>
+                    <input type="text" name="value" class="percent" ng-model="deal.fixedLeg.fixedRate"/>
                 </div>
                 <div class="field">
                     <label>Payment Frequency</label>
@@ -73,7 +84,7 @@
                 </div>
                 <div class="field">
                     <label>Day in Month</label>
-                    <input type="text" name="dayInMonth" ng-model="deal.fixedLeg.dayInMonth"/>
+                    <input type="number" name="dayInMonth" min="1" max="31" ng-model="deal.fixedLeg.dayInMonth"/>
                 </div>
                 <div class="field">
                     <label>Payment Delay</label>
@@ -85,14 +96,6 @@
                     </select>
                 </div>
                 <div class="field">
-                    <label>Payment Calendar</label>
-                    <input type="text" name="paymentCalendar" ng-model="deal.fixedLeg.paymentCalendar"/>
-                </div>
-                <div class="field">
-                    <label>Fixed Rate</label>
-                    <input type="text" name="value" class="percent" ng-model="deal.fixedLeg.fixedRate"/>
-                </div>
-                <div class="field">
                     <label>Interest Period Adjustment</label>
                     <select class="ui selection dropdown" ng-model="deal.fixedLeg.interestPeriodAdjustment">
                         <option value="Adjusted">Adjusted</option>
@@ -100,7 +103,7 @@
                     </select>
                 </div>
             </div>
-            <div class="eight wide column">
+            <div class="eight wide column" id="createfloatingleg">
                 <h3>Floating Leg</h3>
                 <div class="field">
                     <label>Floating Rate Payer</label>
@@ -177,11 +180,11 @@
                 </div>
                 <div class="field">
                     <label>Day In Month</label>
-                    <input type="text" name="dayInMonth" ng-model="deal.floatingLeg.dayInMonth"/>
+                    <input type="number" name="dayInMonth" min="1" max="31" ng-model="deal.floatingLeg.dayInMonth"/>
                 </div>
                 <div class="field">
                     <label>Reset Day In Month</label>
-                    <input type="text" name="resetDayInMonth" ng-model="deal.floatingLeg.resetDayInMonth"/>
+                    <input type="number" name="resetDayInMonth" min="1" max="31" ng-model="deal.floatingLeg.resetDayInMonth"/>
                 </div>
                 <div class="field">
                     <label>Payment Delay</label>
@@ -201,7 +204,7 @@
                 </div>
                 <div class="field">
                     <label>Fixing Period Offset</label>
-                    <input type="number" name="fixingPeriodOffset" ng-model="deal.floatingLeg.fixingPeriodOffset"/>
+                    <input type="number" min="0" name="fixingPeriodOffset" ng-model="deal.floatingLeg.fixingPeriodOffset"/>
                 </div>
                 <div class="field">
                     <label>Reset Rule</label>
@@ -220,118 +223,6 @@
                 <div class="field">
                     <label>Index</label>
                     <input type="text" name="index" ng-model="deal.floatingLeg.index"/>
-                </div>
-                <div class="field">
-                    <label>Index Source</label>
-                    <input type="text" name="indexSource" ng-model="deal.floatingLeg.indexSource"/>
-                </div>
-                <div class="ui container">
-                    <h3>Index Tenor</h3>
-                    <div class="field">
-                        <label>Name</label>
-                        <input type="text" name="name" ng-model="deal.floatingLeg.indexTenor.name"/>
-                    </div>
-                </div>
-            </div>
-            <div class="sixteen wide column">
-                <h3>Common</h3>
-                <div class="field">
-                    <label>Base Currency</label>
-                    <input type="text" name="baseCurrency" ng-model="deal.common.baseCurrency"/>
-                </div>
-                <div class="field">
-                    <label>Eligible Currency</label>
-                    <input type="text" name="eligibleCurrency" ng-model="deal.common.eligibleCurrency"/>
-                </div>
-                <div class="field">
-                    <label>Eligible Credit Support</label>
-                    <input type="text" name="eligibleCreditSupport" ng-model="deal.common.eligibleCreditSupport"/>
-                </div>
-                <div class="field">
-                    <label>Independent Amounts</label>
-                    <div class="ui grid">
-                        <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.common.independentAmounts.quantity" fcsa-number />
-                        </div>
-                        <div class="eight wide column">
-                            <select class="ui dropdown fluid" name="token" ng-model="deal.common.independentAmounts.token">
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="ui container">
-                    <h3>Threshold</h3>
-                    <div class="field">
-                        <div class="ui grid">
-                            <div class="eight wide column">
-                                <input type="text" name="quantity" ng-model="deal.common.threshold.quantity" fcsa-number />
-                            </div>
-                            <div class="eight wide column">
-                                <select class="ui dropdown fluid" name="token" ng-model="deal.common.threshold.token">
-                                    <option value="EUR">EUR</option>
-                                    <option value="USD">USD</option>
-                                    <option value="GBP">GBP</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="field">
-                    <label>Minimum Transfer Amount</label>
-                    <div class="ui grid">
-                        <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.common.minimumTransferAmount.quantity" fcsa-number />
-                        </div>
-                        <div class="eight wide column">
-                            <select class="ui dropdown fluid" name="token" ng-model="deal.common.minimumTransferAmount.token">
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                                <option value="GBP">GBP</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="field">
-                    <label>Rounding</label>
-                    <div class="ui grid">
-                        <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.common.rounding.quantity" fcsa-number/>
-                        </div>
-                        <div class="eight wide column">
-                            <select class="ui dropdown fluid" name="token" ng-model="deal.common.rounding.token">
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="field">
-                    <label>ValuationDate</label>
-                    <input type="text" name="valuationDate" ng-model="deal.common.valuationDate"/>
-                </div>
-                <div class="ui container">
-                    <h3>InterestRate</h3>
-                    <div class="field">
-                        <label>Oracle</label>
-                        <input type="text" name="oracle" ng-model="deal.common.interestRate.oracle"/>
-                    </div>
-                    <div class="ui container"><h3>Tenor</h3>
-                        <div class="field">
-                            <label>Name</label>
-                            <input type="text" name="name" ng-model="deal.common.interestRate.tenor.name"/>
-                        </div>
-                    </div>
-                    <div class="ui container"><h3>Ratio Unit</h3></div>
-                    <div class="field">
-                        <label>Name</label>
-                        <input type="text" name="name" ng-model="deal.common.interestRate.name"/>
-                    </div>
-                </div>
-                <div class="field">
-                    <label>Address For Transfers</label>
-                    <input type="text" name="addressForTransfers" ng-model="deal.common.addressForTransfers"/>
                 </div>
             </div>
             <div class="sixteen wide column">
