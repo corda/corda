@@ -45,8 +45,7 @@ define(['angular', 'lodash'], (angular, _) => {
                         break;
 
                     case "day":
-                        // +2 because date is 0 based in JS dates but 1 based in the API
-                        newDate.setDate(date.getDate() + 2);
+                        newDate.setDate(date.getDate() + 1);
                         break;
                 }
 
