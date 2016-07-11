@@ -15,8 +15,8 @@ This tutorial will take you through the steps required to write a contract test 
 The testing DSL allows one to define a piece of the ledger with transactions referring to each other, and ways of
 verifying their correctness.
 
-Start with the basic Bird-fold
-------------------------------
+Testing single transactions
+---------------------------
 
 We start with the empty ledger:
 

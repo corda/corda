@@ -131,7 +131,7 @@ data class TestTransactionDSLInterpreter private constructor(
     override fun _output(label: String?, notary: Party, contractState: ContractState) {
         val outputIndex = transactionBuilder.addOutputState(contractState, notary)
         if (label != null) {
-            if (labelToIndexMap.contains(label)) {
+            if (label in labelToIndexMap) {
                 throw DuplicateOutputLabel(label)
             } else {
                 labelToIndexMap[label] = outputIndex
@@ -284,7 +284,7 @@ data class TestLedgerDSLInterpreter private constructor (
         val wireTransaction = transactionInterpreter.toWireTransaction()
         // Record the output states
         transactionInterpreter.labelToIndexMap.forEach { label, index ->
-            if (labelToOutputStateAndRefs.contains(label)) {
+            if (label in labelToOutputStateAndRefs) {
                 throw DuplicateOutputLabel(label)
             }
             labelToOutputStateAndRefs[label] = wireTransaction.outRef(index)
@@ -355,7 +355,7 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyP
     require(bits == wtx.serialized)
     val signatures = ArrayList<DigitalSignature.WithKey>()
     for (key in ALL_TEST_KEYS + extraKeys) {
-        if (allPubKeys.contains(key.public)) {
+        if (key.public in allPubKeys) {
             signatures += key.signWithECDSA(bits)
             allPubKeys -= key.public
         }
