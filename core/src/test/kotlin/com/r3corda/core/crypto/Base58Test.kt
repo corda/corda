@@ -32,7 +32,7 @@ class Base58Test {
     @Test
     fun testDecode() {
         val testbytes = "Hello World".toByteArray()
-        val actualbytes = Base58.decode("JxF12TrwUP45BMd");
+        val actualbytes = Base58.decode("JxF12TrwUP45BMd")
         assertTrue(String(actualbytes)) { Arrays.equals(testbytes, actualbytes) }
 
         assertTrue("1") { Arrays.equals(ByteArray(1), Base58.decode("1")) }

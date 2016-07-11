@@ -12,7 +12,7 @@ fun spawn(className: String, args: List<String>, appName: String): Process {
     val builder = ProcessBuilder(javaArgs + args)
     builder.redirectError(Paths.get("error.$className.log").toFile())
     builder.inheritIO()
-    val process = builder.start();
+    val process = builder.start()
     return process
 }
 

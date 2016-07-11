@@ -29,7 +29,7 @@ object JsonSupport {
 
     fun createDefaultMapper(identities: IdentityService): ObjectMapper {
         val mapper = ServiceHubObjectMapper(identities)
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        mapper.enable(SerializationFeature.INDENT_OUTPUT)
         mapper.enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         mapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
 
