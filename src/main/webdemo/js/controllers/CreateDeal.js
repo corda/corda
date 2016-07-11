@@ -9,7 +9,6 @@ define([
 ], (angular, maskedInput, semantic, nodeApi, Deal) => {
     angular.module('irsViewer').controller('CreateDealController', function CreateDealController($http, $scope, $location, nodeService) {
         semantic.init();
-
         $scope.isLoading = nodeService.isLoading;
         $scope.deal = nodeService.newDeal();
         $scope.createDeal = () => {

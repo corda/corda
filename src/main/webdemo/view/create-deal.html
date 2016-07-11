@@ -29,19 +29,15 @@
                 </div>
                 <div class="field">
                     <label>Payment Frequency</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.fixedLeg.paymentFrequency" />
-                        <div class="default text">{{deal.fixedLeg.paymentFrequency}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Annual">Annual</div>
-                            <div class="item" data-value="SemiAnnual">Semi Annual</div>
-                            <div class="item" data-value="Quarterly">Quarterly</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.paymentFrequency">
+                        <option value="Annual">Annual</option>
+                        <option value="SemiAnnual">Semi Annual</option>
+                        <option value="Quarterly">Quarterly</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Effective Date</label>
-                    <input type="date" name="effectiveDate" ng-model="deal.fixedLeg.effectiveDate""/>
+                    <input type="date" name="effectiveDate" ng-model="deal.fixedLeg.effectiveDate"/>
                 </div>
                 <div class="field">
                     <label>Termination Date</label>
@@ -49,39 +45,31 @@
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.fixedLeg.dayCountBasis" />
-                        <div class="default text">{{deal.fixedLeg.dayCountBasis}}</div>
-                        <div class="menu">
-                            <div class="item">1/1</div>
-                            <div class="item">30/360</div>
-                            <div class="item">30E/360</div>
-                            <div class="item">30E/360 (IDSA)</div>
-                            <div class="item">30E+/360 ISDO</div>
-                            <div class="item">ACT/360</div>
-                            <div class="item">ACT/365 Fixed</div>
-                            <div class="item">ACT/365 L</div>
-                            <div class="item">ACT/365 A/1</div>
-                            <div class="item">NL/365</div>
-                            <div class="item">ACT/ACT ISDA</div>
-                            <div class="item">ACT/ACT ICMA</div>
-                            <div class="item">Business/252</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.dayCountBasis">
+                        <option>30/360</option>
+                        <option>30E/360</option>
+                        <option>30E/360 (IDSA)</option>
+                        <option>30E+/360 ISDO</option>
+                        <option>ACT/360</option>
+                        <option>ACT/365 Fixed</option>
+                        <option>ACT/365 L</option>
+                        <option>ACT/365 A/1</option>
+                        <option>NL/365</option>
+                        <option>ACT/ACT ISDA</option>
+                        <option>ACT/ACT ICMA</option>
+                        <option>Business/252</option>
+                        <option>1/1</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.fixedLeg.rollConvention" />
-                        <div class="default text">{{deal.fixedLeg.rollConvention}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Following">Following</div>
-                            <div class="item" data-value="Preceding">Preceding</div>
-                            <div class="item" data-value="ModifiedFollowing">Modified following</div>
-                            <div class="item" data-value="ModifiedFollowingBimonthly">Modified following bimonthly</div>
-                            <div class="item" data-value="EndOfMonth">End of month</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.rollConvention">
+                        <option value="Following">Following</option>
+                        <option value="Preceding">Preceding</option>
+                        <option value="ModifiedFollowing">Modified following</option>
+                        <option value="ModifiedFollowingBimonthly">Modified following bimonthly</option>
+                        <option value="EndOfMonth">End of month</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Day in Month</label>
@@ -89,16 +77,12 @@
                 </div>
                 <div class="field">
                     <label>Payment Delay</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.fixedLeg.paymentDelay" />
-                        <div class="default text">{{deal.fixedLeg.paymentDelay}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="0">T+00D</div>
-                            <div class="item" data-value="1">T+01D</div>
-                            <div class="item" data-value="2">T+02D</div>
-                            <div class="item" data-value="3">T+03D</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.paymentDelay">
+                        <option value="0">T+00D</option>
+                        <option value="1">T+01D</option>
+                        <option value="2">T+02D</option>
+                        <option value="3">T+03D</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Payment Calendar</label>
@@ -110,14 +94,10 @@
                 </div>
                 <div class="field">
                     <label>Interest Period Adjustment</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.fixedLeg.interestPeriodAdjustment" />
-                        <div class="default text">{{deal.fixedLeg.interestPeriodAdjustment}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Adjusted">Adjusted</div>
-                            <div class="item" data-value="Unadjusted">Unadjusted</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.interestPeriodAdjustment">
+                        <option value="Adjusted">Adjusted</option>
+                        <option value="Unadjusted">Unadjusted</option>
+                    </select>
                 </div>
             </div>
             <div class="eight wide column">
@@ -143,15 +123,11 @@
                 </div>
                 <div class="field">
                     <label>Payment Frequency</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.floatingLeg.paymentFrequency" />
-                        <div class="default text">{{deal.floatingLeg.paymentFrequency}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Annual">Annual</div>
-                            <div class="item" data-value="SemiAnnual">Semi Annual</div>
-                            <div class="item" data-value="Quarterly">Quarterly</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.paymentFrequency">
+                        <option value="Annual">Annual</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="SemiAnnual">Semi Annual</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Effective Date</label>
@@ -163,53 +139,41 @@
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.floatingLeg.dayCountBasis" />
-                        <div class="default text">{{deal.floatingLeg.dayCountBasis}}</div>
-                        <div class="menu">
-                            <div class="item">1/1</div>
-                            <div class="item">30/360</div>
-                            <div class="item">30E/360</div>
-                            <div class="item">30E/360 (IDSA)</div>
-                            <div class="item">30E+/360 ISDO</div>
-                            <div class="item">ACT/360</div>
-                            <div class="item">ACT/365 Fixed</div>
-                            <div class="item">ACT/365 L</div>
-                            <div class="item">ACT/365 A/1</div>
-                            <div class="item">NL/365</div>
-                            <div class="item">ACT/ACT ISDA</div>
-                            <div class="item">ACT/ACT ICMA</div>
-                            <div class="item">Business/252</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.dayCountBasis">
+                        <option>1/1</option>
+                        <option>30/360</option>
+                        <option>30E/360</option>
+                        <option>30E/360 (IDSA)</option>
+                        <option>30E+/360 ISDO</option>
+                        <option>ACT/360</option>
+                        <option>ACT/365 Fixed</option>
+                        <option>ACT/365 L</option>
+                        <option>ACT/365 A/1</option>
+                        <option>NL/365</option>
+                        <option>ACT/ACT ISDA</option>
+                        <option>ACT/ACT ICMA</option>
+                        <option>Business/252</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.floatingLeg.rollConvention" />
-                        <div class="default text">{{deal.floatingLeg.rollConvention}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Following">Following</div>
-                            <div class="item" data-value="Preceding">Preceding</div>
-                            <div class="item" data-value="ModifiedFollowing">Modified following</div>
-                            <div class="item" data-value="ModifiedFollowingBimonthly">Modified following bimonthly</div>
-                            <div class="item" data-value="EndOfMonth">End of month</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.rollConvention">
+                        <option value="Following">Following</option>
+                        <option value="Preceding">Preceding</option>
+                        <option value="ModifiedFollowing">Modified following</option>
+                        <option value="ModifiedFollowingBimonthly">Modified following bimonthly</option>
+                        <option value="EndOfMonth">End of month</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Fixing Roll Convention</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.floatingLeg.fixingRollConvention" />
-                        <div class="default text">{{deal.floatingLeg.fixingRollConvention}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Following">Following</div>
-                            <div class="item" data-value="Preceding">Preceding</div>
-                            <div class="item" data-value="ModifiedFollowing">Modified following</div>
-                            <div class="item" data-value="ModifiedFollowingBimonthly">Modified following bimonthly</div>
-                            <div class="item" data-value="EndOfMonth">End of month</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.fixingRollConvention">
+                        <option value="Following">Following</option>
+                        <option value="Preceding">Preceding</option>
+                        <option value="ModifiedFollowing">Modified following</option>
+                        <option value="ModifiedFollowingBimonthly">Modified following bimonthly</option>
+                        <option value="EndOfMonth">End of month</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Day In Month</label>
@@ -221,33 +185,19 @@
                 </div>
                 <div class="field">
                     <label>Payment Delay</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.floatingLeg.paymentDelay" />
-                        <div class="default text">{{deal.floatingLeg.paymentDelay}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="0">T+00D</div>
-                            <div class="item" data-value="1">T+01D</div>
-                            <div class="item" data-value="2">T+02D</div>
-                            <div class="item" data-value="3">T+03D</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.paymentDelay">
+                        <option value="0">T+00D</option>
+                        <option value="1">T+01D</option>
+                        <option value="2">T+02D</option>
+                        <option value="3">T+03D</option>
+                    </select>
                 </div>
-                <!--<div class="ui container"><h3>deal.floatingLeg.paymentCalendar</h3>
-                    <div class="field">
-                        <label>0</label>
-                        <input type="text" name="0" ng-model="deal.floatingLeg.paymentCalendar.0"/>
-                    </div>
-                </div>-->
                 <div class="field">
                     <label>Interest Period Adjustment</label>
-                    <div class="ui selection dropdown">
-                        <input type="hidden" ng-model="deal.floatingLeg.interestPeriodAdjustment" />
-                        <div class="default text">{{deal.floatingLeg.interestPeriodAdjustment}}</div>
-                        <div class="menu">
-                            <div class="item" data-value="Adjusted">Adjusted</div>
-                            <div class="item" data-value="Unadjusted">Unadjusted</div>
-                        </div>
-                    </div>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.interestPeriodAdjustment">
+                        <option value="Adjusted">Adjusted</option>
+                        <option value="Unadjusted">Unadjusted</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Fixing Period Offset</label>
@@ -361,14 +311,6 @@
                     <label>ValuationDate</label>
                     <input type="text" name="valuationDate" ng-model="deal.common.valuationDate"/>
                 </div>
-                <div class="field">
-                    <label>NotificationTime</label>
-                    <input type="text" name="notificationTime" ng-model="deal.common.notificationTime"/>
-                </div>
-                <div class="field">
-                    <label>ResolutionTime</label>
-                    <input type="text" name="resolutionTime" ng-model="deal.common.resolutionTime"/>
-                </div>
                 <div class="ui container">
                     <h3>InterestRate</h3>
                     <div class="field">
@@ -391,17 +333,6 @@
                     <label>Address For Transfers</label>
                     <input type="text" name="addressForTransfers" ng-model="deal.common.addressForTransfers"/>
                 </div>
-                <!--<div class="ui container"><h3>deal.common.exposure</h3></div>
-                <div class="ui container"><h3>deal.common.localBusinessDay</h3>
-                    <div class="field">
-                        <label>0</label>
-                        <input type="text" name="0" ng-model="deal.common.localBusinessDay.0"/>
-                    </div>
-                    <div class="field">
-                        <label>1</label>
-                        <input type="text" name="1" ng-model="deal.common.localBusinessDay.1"/>
-                    </div>
-                </div>-->
             </div>
             <div class="sixteen wide column">
                 <input type="submit" class="ui submit primary button fluid"/>
