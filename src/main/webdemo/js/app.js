@@ -15,8 +15,7 @@ function formatDateForAngular(dateStr) {
 let fixedLegModel = {
     fixedRatePayer: "Bank A",
     notional: {
-        quantity: 2500000000,
-        token: "EUR"
+        quantity: 2500000000
     },
     paymentFrequency: "Annual",
     effectiveDate: new Date(2016, 3, 11),
@@ -38,8 +37,7 @@ let fixedLegModel = {
 let floatingLegModel = {
    floatingRatePayer: "Bank B",
    notional: {
-       quantity: 2500000000,
-       token: "EUR"
+       quantity: 2500000000
    },
    paymentFrequency: "Quarterly",
    effectiveDate: new Date(2016, 3, 11),
@@ -86,23 +84,18 @@ let fixedRateViewModel = {
 
 let commonViewModel = {
     baseCurrency: "EUR",
-    eligibleCurrency: "EUR",
     eligibleCreditSupport: "Cash in an Eligible Currency",
     independentAmounts: {
-        quantity: 0,
-        token: "EUR"
+        quantity: 0
     },
     threshold: {
-        quantity: 0,
-        token: "EUR"
+        quantity: 0
     },
     minimumTransferAmount: {
-        quantity: 25000000,
-        token: "EUR"
+        quantity: 25000000
     },
     rounding: {
-        quantity: 1000000,
-        token: "EUR"
+        quantity: 1000000
     },
     valuationDate: "Every Local Business Day",
     notificationTime: "2:00pm London",

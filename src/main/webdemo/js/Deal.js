@@ -16,6 +16,13 @@ let Deal = function(dealViewModel) {
         fixedLeg.fixedRate = Number(fixedLeg.fixedRate) / 100;
 
         common.tradeID = tradeId;
+        common.eligibleCurrency = common.baseCurrency;
+        common.independentAmounts.token = common.baseCurrency;
+        common.threshold.token = common.baseCurrency;
+        common.minimumTransferAmount.token = common.baseCurrency;
+        common.rounding.token = common.baseCurrency;
+
+        fixedLeg.notional.token = common.baseCurrency;
         fixedLeg.effectiveDate = formatDateForNode(fixedLeg.effectiveDate);
         fixedLeg.terminationDate = formatDateForNode(fixedLeg.terminationDate);
         fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
@@ -23,6 +30,7 @@ let Deal = function(dealViewModel) {
         fixedLeg.dayCountBasisYear = dayCountBasisLookup[fixedLeg.dayCountBasis].year;
         delete fixedLeg.dayCountBasis;
 
+        floatingLeg.notional.token = common.baseCurrency;
         floatingLeg.effectiveDate = formatDateForNode(floatingLeg.effectiveDate);
         floatingLeg.terminationDate = formatDateForNode(floatingLeg.terminationDate);
         floatingLeg.dayCountBasisDay = dayCountBasisLookup[floatingLeg.dayCountBasis].day;

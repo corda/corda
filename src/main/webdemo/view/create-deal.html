@@ -7,10 +7,13 @@
     <form class="ui form" ng-submit="createDeal()">
         <div class="ui grid">
             <div class="sixteen wide column">
-                <h3>Common</h3>
                 <div class="field">
                     <label>Base Currency</label>
-                    <input type="text" name="baseCurrency" ng-model="deal.common.baseCurrency"/>
+                    <select class="ui dropdown fluid" name="token" ng-model="deal.common.baseCurrency">
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                    </select>
                 </div>
             </div>
             <div class="eight wide column" id="createfixedleg">
@@ -21,18 +24,7 @@
                 </div>
                 <div class="field">
                     <label>Notional</label>
-                    <div class="ui grid">
-                        <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.fixedLeg.notional.quantity" fcsa-number/>
-                        </div>
-                        <div class="eight wide column">
-                            <select class="ui dropdown fluid" name="token" ng-model="deal.fixedLeg.notional.token">
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                                <option value="GBP">GBP</option>
-                            </select>
-                        </div>
-                    </div>
+                    <input type="text" name="quantity" ng-model="deal.fixedLeg.notional.quantity" fcsa-number/>
                 </div>
                 <div class="field">
                     <label>Fixed Rate</label>
@@ -111,18 +103,7 @@
                 </div>
                 <div class="field">
                     <label>Notional</label>
-                    <div class="ui grid">
-                        <div class="eight wide column">
-                            <input type="text" name="quantity" ng-model="deal.floatingLeg.notional.quantity" fcsa-number/>
-                        </div>
-                        <div class="eight wide column">
-                            <select class="ui dropdown fluid" name="token" ng-model="deal.floatingLeg.notional.token">
-                                <option value="EUR">EUR</option>
-                                <option value="USD">USD</option>
-                                <option value="GBP">GBP</option>
-                            </select>
-                        </div>
-                    </div>
+                    <input type="text" name="quantity" ng-model="deal.floatingLeg.notional.quantity" fcsa-number/>
                 </div>
                 <div class="field">
                     <label>Payment Frequency</label>
@@ -214,12 +195,6 @@
                     <label>Fixings Per Payment</label>
                     <input type="text" name="fixingsPerPayment" ng-model="deal.floatingLeg.fixingsPerPayment"/>
                 </div>
-                <!--<div class="ui container"><h3>deal.floatingLeg.fixingCalendar</h3>
-                    <div class="field">
-                        <label>0</label>
-                        <input type="text" name="0" ng-model="deal.floatingLeg.fixingCalendar.0"/>
-                    </div>
-                </div>-->
                 <div class="field">
                     <label>Index</label>
                     <input type="text" name="index" ng-model="deal.floatingLeg.index"/>
