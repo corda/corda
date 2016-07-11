@@ -11,15 +11,15 @@ import java.io.InputStream
 interface OutputStateLookup {
     /**
      * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
-     * @param clazz: The class object holding the type of the output state expected.
-     * @param label: The label of the to-be-retrieved output state
-     * @return: The output [StateAndRef]
+     * @param clazz The class object holding the type of the output state expected.
+     * @param label The label of the to-be-retrieved output state
+     * @return The output [StateAndRef]
      */
     fun <S : ContractState> retrieveOutputStateAndRef(clazz: Class<S>, label: String): StateAndRef<S>
 }
 
 /**
- * This interface asserts that the DSL at hand is capable of verifying it's underlying construct(ledger/transaction)
+ * This interface asserts that the DSL at hand is capable of verifying its underlying construct(ledger/transaction)
  */
 interface Verifies {
     /**
@@ -29,7 +29,7 @@ interface Verifies {
 
     /**
      * Asserts that verifies() throws
-     * @param expectedMessage: An optional string to be searched for in the raised exception.
+     * @param expectedMessage An optional string to be searched for in the raised exception.
      */
     fun failsWith(expectedMessage: String?): EnforceVerifyOrFail {
         val exceptionThrown = try {
@@ -78,34 +78,34 @@ interface Verifies {
 interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, OutputStateLookup {
     /**
      * Creates and adds a transaction to the ledger.
-     * @param transactionLabel: Optional label of the transaction, to be used in diagnostic messages.
-     * @param transactionBuilder: The base transactionBuilder that will be used to build the transaction.
-     * @param dsl: The dsl that should be interpreted for building the transaction.
-     * @return: The final [WireTransaction] of the built transaction.
+     * @param transactionLabel Optional label of the transaction, to be used in diagnostic messages.
+     * @param transactionBuilder The base transactionBuilder that will be used to build the transaction.
+     * @param dsl The dsl that should be interpreted for building the transaction.
+     * @return The final [WireTransaction] of the built transaction.
      */
     fun _transaction(transactionLabel: String?, transactionBuilder: TransactionBuilder,
                      dsl: TransactionDSL<T>.() -> EnforceVerifyOrFail): WireTransaction
 
     /**
      * Creates and adds a transaction to the ledger that will not be verified by [verifies].
-     * @param transactionLabel: Optional label of the transaction, to be used in diagnostic messages.
-     * @param transactionBuilder: The base transactionBuilder that will be used to build the transaction.
-     * @param dsl: The dsl that should be interpreted for building the transaction.
-     * @return: The final [WireTransaction] of the built transaction.
+     * @param transactionLabel Optional label of the transaction, to be used in diagnostic messages.
+     * @param transactionBuilder The base transactionBuilder that will be used to build the transaction.
+     * @param dsl The dsl that should be interpreted for building the transaction.
+     * @return The final [WireTransaction] of the built transaction.
      */
     fun _unverifiedTransaction(transactionLabel: String?, transactionBuilder: TransactionBuilder,
                                dsl: TransactionDSL<T>.() -> Unit): WireTransaction
 
     /**
      * Creates a local scoped copy of the ledger.
-     * @param dsl: The ledger DSL to be interpreted using the copy.
+     * @param dsl The ledger DSL to be interpreted using the copy.
      */
     fun tweak(dsl: LedgerDSL<T, LedgerDSLInterpreter<T>>.() -> Unit)
 
     /**
      * Adds an attachment to the ledger.
-     * @param attachment: The [InputStream] defining the contents of the attachment.
-     * @return: The [SecureHash] that identifies the attachment, to be used in transactions.
+     * @param attachment The [InputStream] defining the contents of the attachment.
+     * @return The [SecureHash] that identifies the attachment, to be used in transactions.
      */
     fun attachment(attachment: InputStream): SecureHash
 

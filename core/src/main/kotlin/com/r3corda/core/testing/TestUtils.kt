@@ -90,9 +90,9 @@ object JavaTestHelpers {
 
     /**
      * Creates and tests a ledger built by the passed in dsl.
-     * @param identityService: The [IdentityService] to be used while building the ledger.
-     * @param storageService: The [StorageService] to be used for storing e.g. [Attachment]s.
-     * @param dsl: The dsl building the ledger.
+     * @param identityService The [IdentityService] to be used while building the ledger.
+     * @param storageService The [StorageService] to be used for storing e.g. [Attachment]s.
+     * @param dsl The dsl building the ledger.
      */
     @JvmStatic @JvmOverloads fun ledger(
             identityService: IdentityService = MOCK_IDENTITY_SERVICE,

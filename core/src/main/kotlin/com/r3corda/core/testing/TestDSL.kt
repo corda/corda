@@ -345,9 +345,9 @@ data class TestLedgerDSLInterpreter private constructor (
 
 /**
  * Signs all transactions passed in.
- * @param transactionsToSign: Transactions to be signed.
- * @param extraKeys: extra keys to sign transactions with.
- * @return: List of [SignedTransaction]s.
+ * @param transactionsToSign Transactions to be signed.
+ * @param extraKeys extra keys to sign transactions with.
+ * @return List of [SignedTransaction]s.
  */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyPair>) = transactionsToSign.map { wtx ->
     val allPubKeys = wtx.signers.toMutableSet()
@@ -365,8 +365,8 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyP
 
 /**
  * Signs all transactions in the ledger.
- * @param extraKeys: extra keys to sign transactions with.
- * @return: List of [SignedTransaction]s.
+ * @param extraKeys extra keys to sign transactions with.
+ * @return List of [SignedTransaction]s.
  */
 fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
         vararg extraKeys: KeyPair) = signAll(this.interpreter.wireTransactions, extraKeys)
