@@ -224,13 +224,26 @@ enum class IRSDemoNode {
 
 object CliParamsSpec {
     val parser = OptionParser()
-    val roleArg = parser.accepts("role").withRequiredArg().ofType(IRSDemoRole::class.java)
-    val networkAddressArg = parser.accepts("network-address").withOptionalArg().ofType(String::class.java)
-    val apiAddressArg = parser.accepts("api-address").withOptionalArg().ofType(String::class.java)
-    val baseDirectoryArg = parser.accepts("base-directory").withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
-    val networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
-    val networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
-    val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
+    val roleArg = parser.accepts("role")
+            .withRequiredArg().ofType(IRSDemoRole::class.java)
+    val networkAddressArg =
+            parser.accepts("network-address", "The p2p networking address to use")
+            .withOptionalArg().ofType(String::class.java)
+    val apiAddressArg =
+            parser.accepts("api-address", "The address to expose the HTTP API on")
+            .withOptionalArg().ofType(String::class.java)
+    val baseDirectoryArg =
+            parser.accepts("base-directory", "The directory to put all files under")
+            .withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
+    val networkMapIdentityFile =
+            parser.accepts("network-map-identity-file", "The file containing the Party info of the network map")
+            .withOptionalArg()
+    val networkMapNetAddr =
+            parser.accepts("network-map-address", "The address of the network map")
+            .withRequiredArg().defaultsTo("localhost")
+    val fakeTradeWithIdentityFile =
+            parser.accepts("fake-trade-with-identity-file", "Extra identities to be registered with the identity service")
+            .withOptionalArg()
     val nonOptions = parser.nonOptions()
 }
 
@@ -453,8 +466,9 @@ private fun createDefaultConfigFile(configFile: File, legalName: String) {
 }
 
 private fun printHelp(parser: OptionParser) {
+    val roleList = IRSDemoRole.values().joinToString(separator = "|") {it.toString()}
     println("""
-    Usage: irsdemo --role [NodeA|NodeB|Trade|Date] [<TradeName>|<DateValue>] [options]
+    Usage: irsdemo --role $roleList [<TradeName>|<DateValue>] [options]
     Please refer to the documentation in docs/build/index.html for more info.
 
     """.trimIndent())
