@@ -104,6 +104,11 @@ sealed class CliParams {
             val dateString: String
     ) : CliParams()
 
+    /**
+     * Corresponds to --help.
+     */
+    object Help : CliParams()
+
     companion object {
 
         val defaultBaseDirectory = "./build/irs-demo"
@@ -197,6 +202,9 @@ sealed class CliParams {
         }
 
         fun parse(options: OptionSet): CliParams {
+            if (options.has(CliParamsSpec.help)) {
+                return Help
+            }
             val role: IRSDemoRole = options.valueOf(CliParamsSpec.roleArg) ?: throw IllegalArgumentException("Please provide a role")
             return when (role) {
                 IRSDemoRole.SetupNodeA -> parseSetupNode(options, IRSDemoNode.NodeA)
@@ -245,6 +253,7 @@ object CliParamsSpec {
             parser.accepts("fake-trade-with-identity-file", "Extra identities to be registered with the identity service")
             .withOptionalArg()
     val nonOptions = parser.nonOptions()
+    val help = parser.accepts("help", "Prints this help").forHelp()
 }
 
 class IRSDemoPluginRegistry : CordaPluginRegistry {
@@ -280,6 +289,10 @@ fun runIRSDemo(args: Array<String>): Int {
         is CliParams.RunNode -> runNode(cliParams)
         is CliParams.Trade -> runTrade(cliParams)
         is CliParams.DateChange -> runDateChange(cliParams)
+        is CliParams.Help -> {
+            printHelp(CliParamsSpec.parser)
+            0
+        }
     }
 }
 
