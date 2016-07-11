@@ -85,9 +85,9 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     /**
      * Creates a node at the given address: useful if you want to recreate a node to simulate a restart.
      *
-     * @param manuallyPumped see [createNode]
+     * @param manuallyPumped see [createNode].
      * @param id the numeric ID to use, e.g. set to whatever ID the node used last time.
-     * @param description text string that identifies this node for message logging (if is enabled) or null to autogenerate
+     * @param description text string that identifies this node for message logging (if is enabled) or null to autogenerate.
      */
     fun createNodeWithID(manuallyPumped: Boolean, id: Int, description: String? = null): MessagingServiceBuilder<InMemoryMessaging> {
         return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"))

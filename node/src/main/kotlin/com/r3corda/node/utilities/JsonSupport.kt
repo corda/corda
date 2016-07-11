@@ -109,7 +109,7 @@ object JsonSupport {
     }
 
     /**
-     * Implemented as a class so that we can instantiate for T
+     * Implemented as a class so that we can instantiate for T.
      */
     class SecureHashDeserializer<T : SecureHash> : JsonDeserializer<T>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): T {

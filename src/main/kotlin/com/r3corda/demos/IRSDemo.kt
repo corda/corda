@@ -64,7 +64,7 @@ enum class IRSDemoRole {
 sealed class CliParams {
 
     /**
-     * Corresponds to roles 'SetupNodeA' and 'SetupNodeB'
+     * Corresponds to roles 'SetupNodeA' and 'SetupNodeB'.
      */
     class SetupNode(
             val node: IRSDemoNode,
@@ -73,7 +73,7 @@ sealed class CliParams {
     ) : CliParams()
 
     /**
-     * Corresponds to roles 'NodeA' and 'NodeB'
+     * Corresponds to roles 'NodeA' and 'NodeB'.
      */
     class RunNode(
             val node: IRSDemoNode,
@@ -90,7 +90,7 @@ sealed class CliParams {
     ) : CliParams()
 
     /**
-     * Corresponds to role 'Trade'
+     * Corresponds to role 'Trade'.
      */
     class Trade(
             val apiAddress: HostAndPort,
@@ -98,7 +98,7 @@ sealed class CliParams {
     ) : CliParams()
 
     /**
-     * Corresponds to role 'Date'
+     * Corresponds to role 'Date'.
      */
     class DateChange(
             val apiAddress: HostAndPort,

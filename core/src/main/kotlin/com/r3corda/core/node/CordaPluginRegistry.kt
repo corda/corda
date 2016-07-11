@@ -16,8 +16,8 @@ interface CordaPluginRegistry {
      * A Map with an entry for each consumed protocol used by the webAPIs.
      * The key of each map entry should contain the ProtocolLogic<T> class name.
      * The associated map values are the union of all concrete class names passed to the protocol constructor.
-     * Standard java.lang.* and kotlin.* types do not need to be included explicitly
-     * This is used to extend the white listed protocols that can be initiated from the ServiceHub invokeProtocolAsync method
+     * Standard java.lang.* and kotlin.* types do not need to be included explicitly.
+     * This is used to extend the white listed protocols that can be initiated from the ServiceHub invokeProtocolAsync method.
      */
     val requiredProtocols: Map<String, Set<String>>
 }

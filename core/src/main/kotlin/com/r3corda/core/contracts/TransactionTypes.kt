@@ -38,7 +38,7 @@ sealed class TransactionType {
 
     /**
      * Return the list of public keys that that require signatures for the transaction type.
-     * Note: the notary key is checked separately for all transactions and need not be included
+     * Note: the notary key is checked separately for all transactions and need not be included.
      */
     abstract fun getRequiredSigners(tx: TransactionForVerification): Set<PublicKey>
 
@@ -52,7 +52,7 @@ sealed class TransactionType {
 
         /**
          * Check the transaction is contract-valid by running the verify() for each input and output state contract.
-         * If any contract fails to verify, the whole transaction is considered to be invalid
+         * If any contract fails to verify, the whole transaction is considered to be invalid.
          */
         override fun verifyTransaction(tx: TransactionForVerification) {
             // TODO: Check that notary is unchanged
@@ -92,7 +92,7 @@ sealed class TransactionType {
 
         /**
          * Check that the difference between inputs and outputs is only the notary field,
-         * and that all required signing public keys are present
+         * and that all required signing public keys are present.
          */
         override fun verifyTransaction(tx: TransactionForVerification) {
             try {

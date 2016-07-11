@@ -32,7 +32,7 @@ open class TransactionBuilder(
     val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
 
     /**
-     * Creates a copy of the builder
+     * Creates a copy of the builder.
      */
     fun copy(): TransactionBuilder =
             TransactionBuilder(
@@ -90,7 +90,7 @@ open class TransactionBuilder(
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
      * adds it.
      *
-     * @throws SignatureException if the signature didn't match the transaction contents
+     * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
@@ -101,7 +101,7 @@ open class TransactionBuilder(
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
      *
-     * @throws SignatureException if the signature didn't match the transaction contents
+     * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkSignature(sig: DigitalSignature.WithKey) {

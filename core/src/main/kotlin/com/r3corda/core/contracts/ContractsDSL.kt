@@ -105,7 +105,7 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: Stri
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
  *
- * @param T the type of the move command
+ * @param T the type of the move command.
  */
 @Throws(IllegalArgumentException::class)
 // TODO: Can we have a common Move command for all contracts and avoid the reified type parameter here?
@@ -117,7 +117,7 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
  *
- * @param T the type of the move command
+ * @param T the type of the move command.
  */
 @Throws(IllegalArgumentException::class)
 inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,

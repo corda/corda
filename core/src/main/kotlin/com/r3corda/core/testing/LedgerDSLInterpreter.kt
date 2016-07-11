@@ -12,14 +12,14 @@ interface OutputStateLookup {
     /**
      * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
      * @param clazz The class object holding the type of the output state expected.
-     * @param label The label of the to-be-retrieved output state
-     * @return The output [StateAndRef]
+     * @param label The label of the to-be-retrieved output state.
+     * @return The output [StateAndRef].
      */
     fun <S : ContractState> retrieveOutputStateAndRef(clazz: Class<S>, label: String): StateAndRef<S>
 }
 
 /**
- * This interface asserts that the DSL at hand is capable of verifying its underlying construct(ledger/transaction)
+ * This interface asserts that the DSL at hand is capable of verifying its underlying construct(ledger/transaction).
  */
 interface Verifies {
     /**
@@ -28,7 +28,7 @@ interface Verifies {
     fun verifies(): EnforceVerifyOrFail
 
     /**
-     * Asserts that verifies() throws
+     * Asserts that verifies() throws.
      * @param expectedMessage An optional string to be searched for in the raised exception.
      */
     fun failsWith(expectedMessage: String?): EnforceVerifyOrFail {
@@ -59,7 +59,7 @@ interface Verifies {
     }
 
     /**
-     * Asserts that [verifies] throws, with no condition on the exception message
+     * Asserts that [verifies] throws, with no condition on the exception message.
      */
     fun fails() = failsWith(null)
 

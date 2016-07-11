@@ -11,7 +11,7 @@ interface InterpolatorFactory {
 }
 
 /**
- * Interpolates values between the given data points using straight lines
+ * Interpolates values between the given data points using straight lines.
  */
 class LinearInterpolator(private val xs: DoubleArray, private val ys: DoubleArray) : Interpolator {
     init {
@@ -105,8 +105,8 @@ class CubicSplineInterpolator(private val xs: DoubleArray, private val ys: Doubl
 }
 
 /**
- * Represents a polynomial function of arbitrary degree
- * @param coefficients polynomial coefficients in the order of degree (constant first, followed by higher degree term coefficients)
+ * Represents a polynomial function of arbitrary degree.
+ * @param coefficients polynomial coefficients in the order of degree (constant first, followed by higher degree term coefficients).
  */
 class Polynomial(private val coefficients: DoubleArray) {
     private val reversedCoefficients = coefficients.reversed()
@@ -118,7 +118,7 @@ class Polynomial(private val coefficients: DoubleArray) {
  * A *spline* is function piecewise-defined by polynomial functions.
  * Points at which polynomial pieces connect are known as *knots*.
  *
- * @param segmentMap a mapping between a knot and the polynomial that covers the subsequent interval
+ * @param segmentMap a mapping between a knot and the polynomial that covers the subsequent interval.
  */
 class SplineFunction(private val segmentMap: TreeMap<Double, Polynomial>) {
     fun getValue(x: Double): Double {

@@ -400,7 +400,7 @@ object TwoPartyDealProtocol {
     }
 
     /**
-     * One side of the fixing protocol for an interest rate swap, but could easily be generalised furher
+     * One side of the fixing protocol for an interest rate swap, but could easily be generalised furher.
      *
      * As per the [Fixer], do not infer too much from this class name in terms of business roles.  This
      * is just the "side" of the protocol run by the party with the floating leg as a way of deciding who

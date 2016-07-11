@@ -77,8 +77,8 @@ open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueByte
  * A serialized piece of data and its signature. Enforces signature validity in order to deserialize the data
  * contained within.
  *
- * @param raw the raw serialized data
- * @param sig the (unverified) signature for the data
+ * @param raw the raw serialized data.
+ * @param sig the (unverified) signature for the data.
  */
 open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignature.WithKey) {
     /**

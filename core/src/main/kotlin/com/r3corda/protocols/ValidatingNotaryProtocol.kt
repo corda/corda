@@ -14,7 +14,7 @@ import java.security.SignatureException
  * A notary commit protocol that makes sure a given transaction is valid before committing it. This does mean that the calling
  * party has to reveal the whole transaction history; however, we avoid complex conflict resolution logic where a party
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
- * indeed valid
+ * indeed valid.
  */
 class ValidatingNotaryProtocol(otherSide: Party,
                                sessionIdForSend: Long,

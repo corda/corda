@@ -8,7 +8,7 @@ import org.slf4j.Logger
 
 
 /**
- * The interface of [ProtocolStateMachineImpl] exposing methods and properties required by ProtocolLogic for compilation
+ * The interface of [ProtocolStateMachineImpl] exposing methods and properties required by ProtocolLogic for compilation.
  */
 interface ProtocolStateMachine<R> {
     @Suspendable

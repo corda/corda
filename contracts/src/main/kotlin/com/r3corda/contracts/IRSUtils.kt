@@ -43,7 +43,7 @@ open class PercentageRatioUnit(percentageAsString: String) : RatioUnit(BigDecima
 val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 
 /**
- * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc
+ * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.
  */
 open class Rate(val ratioUnit: RatioUnit? = null) {
     override fun equals(other: Any?): Boolean {
@@ -82,7 +82,7 @@ class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
 }
 
 /**
- * The parent class of the Floating rate classes
+ * The parent class of the Floating rate classes.
  */
 open class FloatingRate : Rate(null)
 

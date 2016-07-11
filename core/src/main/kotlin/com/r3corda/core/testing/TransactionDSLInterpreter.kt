@@ -35,7 +35,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
 
     /**
      * Adds an [Attachment] reference to the transaction.
-     * @param attachmentId The hash of the attachment, possibly returned by [LedgerDSLInterpreter.attachment]
+     * @param attachmentId The hash of the attachment, possibly returned by [LedgerDSLInterpreter.attachment].
      */
     fun attachment(attachmentId: SecureHash)
 

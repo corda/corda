@@ -69,7 +69,7 @@ data class TransactionForVerification(val inputs: List<TransactionState<Contract
      * TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.
      *
      * @throws TransactionVerificationException if validation logic fails or if a contract throws an exception
-     *                                          (the original is in the cause field)
+     *                                          (the original is in the cause field).
      */
     @Throws(TransactionVerificationException::class)
     fun verify() = type.verify(this)

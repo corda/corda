@@ -29,7 +29,7 @@ val TOPIC_DEFAULT_POSTFIX = ".0"
  *
  * [states] Holds the list of states that are *active* and *relevant*.
  *   Active means they haven't been consumed yet (or we don't know about it).
- *   Relevant means they contain at least one of our pubkeys
+ *   Relevant means they contain at least one of our pubkeys.
  */
 class Wallet(val states: List<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
@@ -80,7 +80,7 @@ interface WalletService {
     val currentWallet: Wallet
 
     /**
-     * Returns a snapshot of the heads of LinearStates
+     * Returns a snapshot of the heads of LinearStates.
      */
     val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
 

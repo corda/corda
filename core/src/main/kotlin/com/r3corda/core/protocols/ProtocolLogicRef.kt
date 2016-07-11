@@ -15,7 +15,7 @@ import kotlin.reflect.jvm.javaType
 import kotlin.reflect.primaryConstructor
 
 /**
- * A class for conversion to and from [ProtocolLogic] and [ProtocolLogicRef] instances
+ * A class for conversion to and from [ProtocolLogic] and [ProtocolLogicRef] instances.
  *
  * Validation of types is performed on the way in and way out in case this object is passed between JVMs which might have differing
  * whitelists.
@@ -151,9 +151,9 @@ class ProtocolLogicRefFactory(private val protocolWhitelist: Map<String, Set<Str
 class IllegalProtocolLogicException(type: Class<*>, msg: String) : IllegalArgumentException("${ProtocolLogicRef::class.java.simpleName} cannot be constructed for ${ProtocolLogic::class.java.simpleName} of type ${type.name} $msg")
 
 /**
- * A class representing a [ProtocolLogic] instance which would be possible to safely pass out of the contract sandbox
+ * A class representing a [ProtocolLogic] instance which would be possible to safely pass out of the contract sandbox.
  *
- * Only allows a String reference to the ProtocolLogic class, and only allows restricted argument types as per [ProtocolLogicRefFactory]
+ * Only allows a String reference to the ProtocolLogic class, and only allows restricted argument types as per [ProtocolLogicRefFactory].
  */
 // TODO: align this with the existing [ProtocolRef] in the bank-side API (probably replace some of the API classes)
 data class ProtocolLogicRef internal constructor(val protocolLogicClassName: String, val appContext: AppContext, val args: Map<String, Any?>)

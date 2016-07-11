@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * Modified from the bitcoinj library
+ * Modified from the bitcoinj library.
  */
 class Base58Test {
     @Test

@@ -28,7 +28,7 @@ import java.util.*
  * TODO: It may make sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface,
  *       in particular for use during calculations. This may also resolve...
  * TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
- * TODO: Add either a scaling factor, or a variant for use in calculations
+ * TODO: Add either a scaling factor, or a variant for use in calculations.
  *
  * @param T the type of the token, for example [Currency].
  */
@@ -153,14 +153,14 @@ enum class AccrualAdjustment {
 
 /**
  * This is utilised in the [DateRollConvention] class to determine which way we should initially step when
- * finding a business day
+ * finding a business day.
  */
 enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
 
 /**
- * This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
- * Depending on the accounting requirement, we can move forward until we get to a business day, or backwards
- * There are some additional rules which are explained in the individual cases below
+ * This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day.
+ * Depending on the accounting requirement, we can move forward until we get to a business day, or backwards.
+ * There are some additional rules which are explained in the individual cases below.
  */
 enum class DateRollConvention {
     // direction() cannot be a val due to the throw in the Actual instance

@@ -37,7 +37,7 @@ class Cash : FungibleAsset<Currency>() {
      * Motivation: it's the difference between a state object referencing a programRef, which references a
      * legalContractReference and a state object which directly references both.  The latter allows the legal wording
      * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract
+     * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
 
