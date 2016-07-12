@@ -1,8 +1,5 @@
 <div class="ui container">
     <div class="ui negative message" id="form-error" ng-show="formError">{{formError}}</div>
-    <div class="ui active dimmer" ng-show="isLoading()">
-        <div class="ui text loader">Loading</div>
-    </div>
     <h2>New Deal</h2>
     <form id="deal-form" class="ui form" ng-submit="createDeal()">
         <div id="irscolumns" class="ui grid">

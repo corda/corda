@@ -1,12 +1,13 @@
 'use strict';
 
-define(['angular', 'services/NodeApi'], (angular, nodeApi) => {
+define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, nodeApi) => {
     angular.module('irsViewer').controller('HomeController', function HomeController($http, $scope, nodeService) {
+        semantic.addLoadingModal($scope, nodeService.isLoading);
+
         let handleHttpFail = (resp) => {
             $scope.httpError = resp.data
         }
 
-        $scope.isLoading = nodeService.isLoading;
         $scope.infoMsg = "";
         $scope.errorText = "";
         $scope.date = { "year": "...", "month": "...", "day": "..." };

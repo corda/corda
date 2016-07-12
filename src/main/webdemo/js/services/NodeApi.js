@@ -76,6 +76,7 @@ define(['angular', 'lodash'], (angular, _) => {
             }
 
             this.isLoading = () => {
+                console.log("IS LOADING");
                 return _.reduce(Object.keys(curLoading), (last, key) => {
                     return (last || curLoading[key]);
                 }, false);
