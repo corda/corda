@@ -55,6 +55,8 @@ class Cash : FungibleAsset<Currency>() {
             get() = Amount(amount.quantity, amount.token.product)
         override val deposit: PartyAndReference
             get() = amount.token.issuer
+        override val exitKeys: Collection<PublicKey>
+            get() = setOf(deposit.party.owningKey)
         override val contract = CASH_PROGRAM_ID
         override val issuanceDef: Issued<Currency>
             get() = amount.token

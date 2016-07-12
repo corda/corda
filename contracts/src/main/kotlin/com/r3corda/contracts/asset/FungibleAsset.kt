@@ -31,6 +31,8 @@ abstract class FungibleAsset<T> : Contract {
         /** Where the underlying currency backing this ledger entry can be found (propagated) */
         val deposit: PartyAndReference
         val amount: Amount<Issued<T>>
+        /** There must be an ExitCommand signed by these keys to destroy the amount */
+        val exitKeys: Collection<PublicKey>
         /** There must be a MoveCommand signed by this key to claim the amount */
         override val owner: PublicKey
     }
