@@ -39,6 +39,7 @@ Read on to learn:
 
    where-to-start
    tutorial-contract
+   tutorial-contract-clauses
    tutorial-test-dsl
    protocol-state-machines
    oracles

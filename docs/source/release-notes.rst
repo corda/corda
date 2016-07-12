@@ -6,7 +6,8 @@ Here are brief summaries of what's changed between each snapshot release.
 Unreleased
 ----------
 
-There are currently no unreleased changes.
+* Smart contracts have been redesigned around reusable components, referred to as "clauses". The cash, commercial paper
+  and obligation contracts now share a common issue clause.
 
 Milestone 1
 -----------
