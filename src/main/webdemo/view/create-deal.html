@@ -5,7 +5,7 @@
     </div>
     <h2>New Deal</h2>
     <form id="deal-form" class="ui form" ng-submit="createDeal()">
-        <div class="ui grid">
+        <div id="irscolumns" class="ui grid">
             <div class="sixteen wide column">
                 <input type="submit" class="ui submit primary button fluid"/>
             </div>
@@ -26,6 +26,11 @@
                     <label>Termination Date</label>
                     <input type="date" name="terminationDate" ng-model="deal.common.terminationDate"/>
                 </div>
+            </div>
+            <div class="sixteen wide column">
+                <button type="button" id="swapirscolumns" class="ui icon button fluid">
+                    <i class="exchange icon"></i>
+                </button>
             </div>
             <div class="eight wide column" id="createfixedleg">
                 <h3>Fixed Leg</h3>

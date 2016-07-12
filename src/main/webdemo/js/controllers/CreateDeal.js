@@ -18,5 +18,10 @@ define([
             });
         };
         $('input.percent').mask("9.999999%", {placeholder: "", autoclear: false});
+        $('#swapirscolumns').click(() => {
+            let first = $('#irscolumns .eight:eq( 0 )');
+            let last = $('#irscolumns .eight:eq( 1 )');
+            first.before(last);
+        });
     });
 });
