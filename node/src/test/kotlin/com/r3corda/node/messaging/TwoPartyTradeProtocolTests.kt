@@ -2,10 +2,10 @@ package com.r3corda.node.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.asset.CASH
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.contracts.testing.CASH
-import com.r3corda.contracts.testing.`issued by`
-import com.r3corda.contracts.testing.`owned by`
+import com.r3corda.contracts.asset.`issued by`
+import com.r3corda.contracts.asset.`owned by`
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
@@ -17,7 +17,6 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
@@ -366,7 +365,7 @@ class TwoPartyTradeProtocolTests {
         }
     }
 
-    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
+    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
             bobError: Boolean,
             aliceError: Boolean,
             expectedMessageSubstring: String
@@ -431,7 +430,7 @@ class TwoPartyTradeProtocolTests {
         return signed.associateBy { it.id }
     }
 
-    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
+    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: PublicKey = BOB_PUBKEY,
             issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
@@ -472,7 +471,7 @@ class TwoPartyTradeProtocolTests {
         return Pair(wallet, listOf(eb1, bc1, bc2))
     }
 
-    private fun LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
+    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,
@@ -482,9 +481,9 @@ class TwoPartyTradeProtocolTests {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
-            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue(notary) }
             if (!withError)
-                command(notary.owningKey) { TimestampCommand(TEST_TX_TIME, 30.seconds) }
+                timestamp(time = TEST_TX_TIME, notary = notary.owningKey)
             if (attachmentID != null)
                 attachment(attachmentID)
             if (withError) {

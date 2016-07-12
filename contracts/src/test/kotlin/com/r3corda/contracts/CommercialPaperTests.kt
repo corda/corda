@@ -1,8 +1,8 @@
 package com.r3corda.contracts
 
-import com.r3corda.contracts.asset.Cash
-import com.r3corda.contracts.testing.*
+import com.r3corda.contracts.asset.*
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.node.services.testing.MockStorageService
@@ -18,8 +18,8 @@ import kotlin.test.assertTrue
 
 interface ICommercialPaperTestTemplate {
     fun getPaper(): ICommercialPaperState
-    fun getIssueCommand(): CommandData
-    fun getRedeemCommand(): CommandData
+    fun getIssueCommand(notary: Party): CommandData
+    fun getRedeemCommand(notary: Party): CommandData
     fun getMoveCommand(): CommandData
 }
 
@@ -31,8 +31,8 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
             TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(): CommandData = JavaCommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(): CommandData = JavaCommercialPaper.Commands.Redeem()
+    override fun getIssueCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Issue(notary)
+    override fun getRedeemCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Redeem(notary)
     override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
 }
 
@@ -44,8 +44,8 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
             maturityDate = TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(): CommandData = CommercialPaper.Commands.Issue()
-    override fun getRedeemCommand(): CommandData = CommercialPaper.Commands.Redeem()
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue(notary)
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem(notary)
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
 }
 
@@ -74,7 +74,7 @@ class CommercialPaperTestsGeneric {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
                 output("paper") { thisTest.getPaper() }
-                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+                command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
                 timestamp(TEST_TX_TIME)
                 this.verifies()
             }
@@ -85,7 +85,7 @@ class CommercialPaperTestsGeneric {
                 input("paper")
                 input("alice's $900")
                 output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output<ICommercialPaperState>().data `owned by` ALICE_PUBKEY }
+                output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
@@ -97,13 +97,13 @@ class CommercialPaperTestsGeneric {
                 input("alice's paper")
                 input("some profits")
 
-                fun TransactionDSL<EnforceVerifyOrFail, TransactionDSLInterpreter<EnforceVerifyOrFail>>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
+                fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
                     output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
                     output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
                 }
 
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                command(ALICE_PUBKEY) { thisTest.getRedeemCommand() }
+                command(ALICE_PUBKEY) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
 
                 tweak {
                     outputs(700.DOLLARS `issued by` issuer)
@@ -120,7 +120,7 @@ class CommercialPaperTestsGeneric {
                 timestamp(TEST_TX_TIME + 8.days)
 
                 tweak {
-                    output { "paper".output<ICommercialPaperState>().data }
+                    output { "paper".output<ICommercialPaperState>() }
                     this `fails with` "must be destroyed"
                 }
 
@@ -133,9 +133,9 @@ class CommercialPaperTestsGeneric {
     fun `key mismatch at issue`() {
         transaction {
             output { thisTest.getPaper() }
-            command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
+            command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
-            this `fails with` "signed by the claimed issuer"
+            this `fails with` "output states are issued by a command signer"
         }
     }
 
@@ -143,9 +143,9 @@ class CommercialPaperTestsGeneric {
     fun `face value is not zero`() {
         transaction {
             output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
-            this `fails with` "face value is not zero"
+            this `fails with` "output values sum to more than the inputs"
         }
     }
 
@@ -153,7 +153,7 @@ class CommercialPaperTestsGeneric {
     fun `maturity date not in the past`() {
         transaction {
             output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
         }
@@ -164,13 +164,13 @@ class CommercialPaperTestsGeneric {
         transaction {
             input(thisTest.getPaper())
             output { thisTest.getPaper() }
-            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
+            command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
             timestamp(TEST_TX_TIME)
-            this `fails with` "there is no input state"
+            this `fails with` "output values sum to more than the inputs"
         }
     }
 
-    fun <T : ContractState> cashOutputsToWallet(vararg outputs: TransactionState<T>): Pair<LedgerTransaction, List<StateAndRef<T>>> {
+    fun cashOutputsToWallet(vararg outputs: TransactionState<Cash.State>): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
         val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.General())
         return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }

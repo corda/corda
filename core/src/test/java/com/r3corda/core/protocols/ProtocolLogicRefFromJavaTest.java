@@ -1,13 +1,10 @@
 package com.r3corda.core.protocols;
 
 
-import org.jetbrains.annotations.NotNull;
-import org.junit.Test;
+import org.jetbrains.annotations.*;
+import org.junit.*;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ProtocolLogicRefFromJavaTest {
 

@@ -1,7 +1,6 @@
 package com.r3corda.contracts.asset
 
 import com.r3corda.core.contracts.Amount
-import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.OwnableState
 import java.security.PublicKey
 

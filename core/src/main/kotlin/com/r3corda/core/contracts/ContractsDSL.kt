@@ -1,3 +1,4 @@
+@file:JvmName("ContractsDSL")
 package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.Party
@@ -17,34 +18,27 @@ import java.util.*
 
 //// Currencies ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-fun currency(code: String) = Currency.getInstance(code)
+fun currency(code: String) = Currency.getInstance(code)!!
 
-// Java interop
-object JavaTestHelpers {
-    @JvmStatic val USD: Currency get() = currency("USD")
-    @JvmStatic val GBP: Currency get() = currency("GBP")
-    @JvmStatic val CHF: Currency get() = currency("CHF")
+@JvmField val USD = currency("USD")
+@JvmField val GBP = currency("GBP")
+@JvmField val CHF = currency("CHF")
 
-    @JvmStatic fun DOLLARS(amount: Int) = Amount(amount.toLong() * 100, USD)
-    @JvmStatic fun DOLLARS(amount: Double) = Amount((amount * 100).toLong(), USD)
-    @JvmStatic fun POUNDS(amount: Int) = Amount(amount.toLong() * 100, GBP)
-    @JvmStatic fun SWISS_FRANCS(amount: Int) = Amount(amount.toLong() * 100, CHF)
+fun DOLLARS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, USD)
+fun DOLLARS(amount: Double): Amount<Currency> = Amount((amount * 100).toLong(), USD)
+fun POUNDS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, GBP)
+fun SWISS_FRANCS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, CHF)
 
-    @JvmStatic fun issuedBy(currency: Currency, deposit: PartyAndReference) = Issued<Currency>(deposit, currency)
-    @JvmStatic fun issuedBy(amount: Amount<Currency>, deposit: PartyAndReference) = Amount(amount.quantity, issuedBy(amount.token, deposit))
-}
+val Int.DOLLARS: Amount<Currency> get() = DOLLARS(this)
+val Double.DOLLARS: Amount<Currency> get() = DOLLARS(this)
+val Int.POUNDS: Amount<Currency> get() = POUNDS(this)
+val Int.SWISS_FRANCS: Amount<Currency> get() = SWISS_FRANCS(this)
 
-val USD = JavaTestHelpers.USD
-val GBP = JavaTestHelpers.GBP
-val CHF = JavaTestHelpers.CHF
+infix fun Currency.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
+infix fun Currency.issuedBy(deposit: PartyAndReference) = Issued<Currency>(deposit, this)
+infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantity, token.issuedBy(deposit))
 
-val Int.DOLLARS: Amount<Currency> get() = JavaTestHelpers.DOLLARS(this)
-val Double.DOLLARS: Amount<Currency> get() = JavaTestHelpers.DOLLARS(this)
-val Int.POUNDS: Amount<Currency> get() = JavaTestHelpers.POUNDS(this)
-val Int.SWISS_FRANCS: Amount<Currency> get() = JavaTestHelpers.SWISS_FRANCS(this)
-
-infix fun Currency.`issued by`(deposit: PartyAndReference) = JavaTestHelpers.issuedBy(this, deposit)
-infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = JavaTestHelpers.issuedBy(this, deposit)
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -96,6 +90,7 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority:
  * Note that matching here is done by (verified, legal) name, not by public key. Any signature by any
  * party with a name that matches (case insensitively) any of the given names will yield a match.
  */
+@Deprecated(message = "Timestamping authority should always be notary for the transaction")
 fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: String): TimestampCommand? {
     val timestampCmd = filter { it.value is TimestampCommand }.singleOrNull() ?: return null
     val tsaNames = timestampCmd.signingParties.map { it.name.toLowerCase() }
@@ -110,7 +105,7 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: Stri
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
  *
- * @param T the type of the move command
+ * @param T the type of the move command.
  */
 @Throws(IllegalArgumentException::class)
 // TODO: Can we have a common Move command for all contracts and avoid the reified type parameter here?
@@ -122,7 +117,7 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
 /**
  * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
  *
- * @param T the type of the move command
+ * @param T the type of the move command.
  */
 @Throws(IllegalArgumentException::class)
 inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,

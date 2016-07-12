@@ -19,9 +19,9 @@ abstract class AbstractNodeService(val net: MessagingService, val networkMapCach
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
      * common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
-     * acknowledgement response with no content, use [com.r3corda.core.messaging.Ack]
+     * acknowledgement response with no content, use [com.r3corda.core.messaging.Ack].
      *
-     * @param topic the topic, without the default session ID postfix (".0)
+     * @param topic the topic, without the default session ID postfix (".0).
      * @param handler a function to handle the deserialised request and return an optional response (if return type not Unit)
      * @param exceptionConsumer a function to which any thrown exception is passed.
      */
@@ -47,10 +47,10 @@ abstract class AbstractNodeService(val net: MessagingService, val networkMapCach
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
      * common boilerplate code. Exceptions are propagated to the messaging layer.  If you just want a simple
-     * acknowledgement response with no content, use [com.r3corda.core.messaging.Ack]
+     * acknowledgement response with no content, use [com.r3corda.core.messaging.Ack].
      *
-     * @param topic the topic, without the default session ID postfix (".0)
-     * @param handler a function to handle the deserialised request and return an optional response (if return type not Unit)
+     * @param topic the topic, without the default session ID postfix (".0).
+     * @param handler a function to handle the deserialised request and return an optional response (if return type not Unit).
      */
     protected inline fun <reified Q : ServiceRequestMessage, reified R : Any>
             addMessageHandler(topic: String,

@@ -97,7 +97,7 @@ object NodeInterestRates {
         }
 
         /**
-         * Register the protocol that is used with the Fixing integration tests
+         * Register the protocol that is used with the Fixing integration tests.
          */
         class FixingServicePlugin : CordaPluginRegistry {
             override val webApis: List<Class<*>> = emptyList()
@@ -252,7 +252,7 @@ object NodeInterestRates {
 
         /**
          * Returns the interest rate for a given [Tenor],
-         * or _null_ if the rate is not found and cannot be interpolated
+         * or _null_ if the rate is not found and cannot be interpolated.
          */
         fun getRate(tenor: Tenor): BigDecimal? {
             return rates.getOrElse(tenor) {

@@ -19,7 +19,7 @@ fun newSecureRandom(): SecureRandom {
 }
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
-sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
+sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
         init {
             require(bits.size == 32)
@@ -77,8 +77,8 @@ open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueByte
  * A serialized piece of data and its signature. Enforces signature validity in order to deserialize the data
  * contained within.
  *
- * @param raw the raw serialized data
- * @param sig the (unverified) signature for the data
+ * @param raw the raw serialized data.
+ * @param sig the (unverified) signature for the data.
  */
 open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSignature.WithKey) {
     /**
@@ -169,4 +169,4 @@ operator fun KeyPair.component1() = this.private
 operator fun KeyPair.component2() = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
-fun generateKeyPair() = EddsaKeyPairGenerator().generateKeyPair()
+fun generateKeyPair(): KeyPair = EddsaKeyPairGenerator().generateKeyPair()

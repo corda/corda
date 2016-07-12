@@ -113,7 +113,7 @@ object SerializedBytesSerializer : Serializer<SerializedBytes<Any>>() {
 
 /**
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
- * the type is marked as serializable or was designed for it (so be careful!)
+ * the type is marked as serializable or was designed for it (so be careful!).
  */
 fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
@@ -326,7 +326,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // no-arg constructor available.
         instantiatorStrategy = DefaultInstantiatorStrategy(StdInstantiatorStrategy())
 
-        register(Arrays.asList("").javaClass, ArraysAsListSerializer());
+        register(Arrays.asList("").javaClass, ArraysAsListSerializer())
 
         // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
         // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so

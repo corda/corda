@@ -98,7 +98,7 @@ abstract class RatePaymentEvent(date: LocalDate,
 }
 
 /**
- * Basic class for the Fixed Rate Payments on the fixed leg - see [RatePaymentEvent]
+ * Basic class for the Fixed Rate Payments on the fixed leg - see [RatePaymentEvent].
  * Assumes that the rate is valid.
  */
 class FixedRatePaymentEvent(date: LocalDate,
@@ -121,7 +121,7 @@ class FixedRatePaymentEvent(date: LocalDate,
 }
 
 /**
- * Basic class for the Floating Rate Payments on the floating leg - see [RatePaymentEvent]
+ * Basic class for the Floating Rate Payments on the floating leg - see [RatePaymentEvent].
  * If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?
  */
 class FloatingRatePaymentEvent(date: LocalDate,
@@ -148,7 +148,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
     override fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},${notional},$fixingDate,$rate,$flow"
 
     /**
-     * Used for making immutables
+     * Used for making immutables.
      */
     fun withNewRate(newRate: Rate): FloatingRatePaymentEvent =
             FloatingRatePaymentEvent(date, accrualStartDate, accrualEndDate, dayCountBasisDay,
@@ -177,8 +177,8 @@ class FloatingRatePaymentEvent(date: LocalDate,
 
 
 /**
- * The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
- * This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
+ * The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+ * This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
  * It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
  * Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
  * This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.
@@ -212,7 +212,7 @@ class InterestRateSwap() : Contract {
     /**
      * The Calculation data class is "mutable" through out the life of the swap, as in, it's the only thing that contains
      * data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
-     * copy / update for each transition)
+     * copy / update for each transition).
      */
     data class Calculation(
             val expression: Expression,
@@ -230,7 +230,7 @@ class InterestRateSwap() : Contract {
         }
 
         /**
-         * Returns the fixing for that date
+         * Returns the fixing for that date.
          */
         fun getFixing(date: LocalDate): FloatingRatePaymentEvent =
                 floatingLegPaymentSchedule.values.single { it.fixingDate == date }
@@ -496,6 +496,9 @@ class InterestRateSwap() : Contract {
         val groups = tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
 
         val command = tx.commands.requireSingleCommand<InterestRateSwap.Commands>()
+        // TODO: This needs to either be the notary used for the inputs, or otherwise
+        // derived as the correct notary
+        @Suppress("DEPRECATION")
         val time = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
@@ -584,7 +587,7 @@ class InterestRateSwap() : Contract {
     }
 
     /**
-     * The state class contains the 4 major data classes
+     * The state class contains the 4 major data classes.
      */
     data class State(
             val fixedLeg: FixedLeg,
@@ -647,7 +650,7 @@ class InterestRateSwap() : Contract {
         }
 
         /**
-         * For evaluating arbitrary java on the platform
+         * For evaluating arbitrary java on the platform.
          */
 
         fun evaluateCalculation(businessDate: LocalDate, expression: Expression = calculation.expression): Any {

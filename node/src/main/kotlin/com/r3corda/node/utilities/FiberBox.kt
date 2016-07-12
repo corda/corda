@@ -12,7 +12,7 @@ import kotlin.concurrent.withLock
 
 
 /**
- * Modelled on [ThreadBox], but with support for waiting that is compatible with Quasar [Fiber]s and [MutableClock]s
+ * Modelled on [ThreadBox], but with support for waiting that is compatible with Quasar [Fiber]s and [MutableClock]s.
  *
  * It supports 3 main operations, all of which operate in a similar context to the [locked] method
  * of [ThreadBox].  i.e. in the context of the content.

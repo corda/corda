@@ -1,5 +1,3 @@
-TODO
-
 # Eclipse, ctags, Mac metadata, log files
 .classpath
 .project
@@ -88,3 +86,6 @@ atlassian-ide-plugin.xml
 com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
+
+# docs related
+docs/virtualenv/

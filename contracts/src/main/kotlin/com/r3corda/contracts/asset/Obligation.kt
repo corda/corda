@@ -1,15 +1,18 @@
 package com.r3corda.contracts.asset
 
 import com.google.common.annotations.VisibleForTesting
-import com.r3corda.contracts.asset.FungibleAssetState
-import com.r3corda.contracts.asset.sumFungibleOrNull
+import com.r3corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.testing.MINI_CORP
+import com.r3corda.core.testing.TEST_TX_TIME
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.NonEmptySet
+import com.r3corda.core.utilities.nonEmptySetOf
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -36,7 +39,7 @@ class Obligation<P> : Contract {
      * Motivation: it's the difference between a state object referencing a programRef, which references a
      * legalContractReference and a state object which directly references both.  The latter allows the legal wording
      * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     * that is inconsistent with the legal contract
+     * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
 
@@ -221,7 +224,7 @@ class Obligation<P> : Contract {
         /**
          * A command stating that the obligor is settling some or all of the amount owed by transferring a suitable
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
-         * @see [MoveCommand]
+         * @see [MoveCommand].
          */
         data class Settle<P>(override val aggregateState: IssuanceDefinition<P>,
                              val amount: Amount<P>) : Commands, IssuanceCommands<P>
@@ -390,9 +393,7 @@ class Obligation<P> : Contract {
         for ((stateIdx, input) in inputs.withIndex()) {
             val actualOutput = outputs[stateIdx]
             val deadline = input.dueBefore
-            // TODO: Determining correct timestamp authority needs rework now that timestamping service is part of
-            // notary.
-            val timestamp: TimestampCommand? = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
+            val timestamp: TimestampCommand? = tx.timestamp
             val expectedOutput: State<P> = input.copy(lifecycle = expectedOutputLifecycle)
 
             requireThat {
@@ -422,7 +423,7 @@ class Obligation<P> : Contract {
         val outputAmount: Amount<P> = outputs.sumObligations<P>()
         requireThat {
             "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-            "output deposits are owned by a command signer" by (obligor in issueCommand.signingParties)
+            "output states are issued by a command signer" by (obligor in issueCommand.signingParties)
             "output values sum to more than the inputs" by (outputAmount > inputAmount)
             "valid settlement issuance definition is not this issuance definition" by inputs.none { it.issuanceDef in it.acceptableIssuanceDefinitions }
         }
@@ -814,3 +815,16 @@ fun <P> Iterable<ContractState>.sumObligationsOrNull(): Amount<P>?
 fun <P> Iterable<ContractState>.sumObligationsOrZero(product: P): Amount<P>
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(product)
 
+infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
+infix fun <T> Obligation.IssuanceDefinition<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
+infix fun <T> Obligation.State<T>.between(parties: Pair<Party, PublicKey>) = copy(obligor = parties.first, beneficiary = parties.second)
+infix fun <T> Obligation.State<T>.`owned by`(owner: PublicKey) = copy(beneficiary = owner)
+infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
+// For Java users:
+fun <T> Obligation.State<T>.ownedBy(owner: PublicKey) = copy(beneficiary = owner)
+fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
+
+val Issued<Currency>.OBLIGATION_DEF: Obligation.StateTemplate<Currency>
+    get() = Obligation.StateTemplate(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
+val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
+    get() = Obligation.State(Obligation.Lifecycle.NORMAL, MINI_CORP, token.OBLIGATION_DEF, quantity, NullPublicKey)

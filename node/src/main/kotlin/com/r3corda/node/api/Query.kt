@@ -1,7 +1,7 @@
 package com.r3corda.node.api
 
 /**
- * Extremely rudimentary query language which should most likely be replaced with a product
+ * Extremely rudimentary query language which should most likely be replaced with a product.
  */
 interface StatesQuery {
     companion object {

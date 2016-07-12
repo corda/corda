@@ -20,15 +20,30 @@ import java.util.*
  *               an output state can be added by just passing in a [ContractState] – a [TransactionState] with the
  *               default notary will be generated automatically.
  */
-abstract class TransactionBuilder(protected val type: TransactionType = TransactionType.General(),
-                                  protected val notary: Party? = null) {
-    protected val inputs: MutableList<StateRef> = arrayListOf()
-    protected val attachments: MutableList<SecureHash> = arrayListOf()
-    protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf()
-    protected val commands: MutableList<Command> = arrayListOf()
-    protected val signers: MutableSet<PublicKey> = mutableSetOf()
+open class TransactionBuilder(
+        protected val type: TransactionType = TransactionType.General(),
+        protected val notary: Party? = null,
+        protected val inputs: MutableList<StateRef> = arrayListOf(),
+        protected val attachments: MutableList<SecureHash> = arrayListOf(),
+        protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+        protected val commands: MutableList<Command> = arrayListOf(),
+        protected val signers: MutableSet<PublicKey> = mutableSetOf()) {
 
     val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
+
+    /**
+     * Creates a copy of the builder.
+     */
+    fun copy(): TransactionBuilder =
+            TransactionBuilder(
+                    type = type,
+                    notary = notary,
+                    inputs = ArrayList(inputs),
+                    attachments = ArrayList(attachments),
+                    outputs = ArrayList(outputs),
+                    commands = ArrayList(commands),
+                    signers = LinkedHashSet(signers)
+            )
 
     /**
      * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
@@ -75,7 +90,7 @@ abstract class TransactionBuilder(protected val type: TransactionType = Transact
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
      * adds it.
      *
-     * @throws SignatureException if the signature didn't match the transaction contents
+     * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
@@ -86,7 +101,7 @@ abstract class TransactionBuilder(protected val type: TransactionType = Transact
     /**
      * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
      *
-     * @throws SignatureException if the signature didn't match the transaction contents
+     * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
     fun checkSignature(sig: DigitalSignature.WithKey) {
@@ -112,31 +127,32 @@ abstract class TransactionBuilder(protected val type: TransactionType = Transact
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
-    open fun addInputState(stateAndRef: StateAndRef<*>) {
+    open fun addInputState(stateAndRef: StateAndRef<*>) = addInputState(stateAndRef.ref, stateAndRef.state.notary)
+
+    fun addInputState(stateRef: StateRef, notary: Party) {
         check(currentSigs.isEmpty())
 
-        val notaryKey = stateAndRef.state.notary.owningKey
-        signers.add(notaryKey)
-
-        inputs.add(stateAndRef.ref)
+        signers.add(notary.owningKey)
+        inputs.add(stateRef)
     }
 
-    fun addAttachment(attachment: Attachment) {
+    fun addAttachment(attachmentId: SecureHash) {
         check(currentSigs.isEmpty())
-        attachments.add(attachment.id)
+        attachments.add(attachmentId)
     }
 
-    fun addOutputState(state: TransactionState<*>) {
+    fun addOutputState(state: TransactionState<*>): Int {
         check(currentSigs.isEmpty())
         outputs.add(state)
+        return outputs.size - 1
     }
 
     fun addOutputState(state: ContractState, notary: Party) = addOutputState(TransactionState(state, notary))
 
     /** A default notary must be specified during builder construction to use this method */
-    fun addOutputState(state: ContractState) {
+    fun addOutputState(state: ContractState): Int {
         checkNotNull(notary) { "Need to specify a Notary for the state, or set a default one on TransactionBuilder initialisation" }
-        addOutputState(state, notary!!)
+        return addOutputState(state, notary!!)
     }
 
     fun addCommand(arg: Command) {

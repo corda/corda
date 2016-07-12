@@ -4,7 +4,6 @@ import com.r3corda.core.contracts.Contract
 import com.r3corda.core.contracts.LinearState
 import com.r3corda.core.crypto.SecureHash
 import java.security.PublicKey
-import java.util.*
 
 class DummyLinearState(
         override val thread: SecureHash = SecureHash.randomSHA256(),

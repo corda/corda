@@ -16,8 +16,8 @@ class RecordingMap<K, V>(private val wrappedMap: MutableMap<K, V>,
     // If/when Kotlin supports data classes inside sealed classes, that would be preferable to this.
     interface Record
 
-    data class Get<K>(val key: K) : Record
-    data class Put<K, V>(val key: K, val value: V) : Record
+    data class Get<out K>(val key: K) : Record
+    data class Put<out K, out V>(val key: K, val value: V) : Record
 
     private val _records = Collections.synchronizedList(ArrayList<Record>())
 

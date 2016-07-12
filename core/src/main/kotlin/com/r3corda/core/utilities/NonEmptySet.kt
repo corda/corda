@@ -72,7 +72,7 @@ class NonEmptySet<T>(initial: T) : MutableSet<T> {
     override fun hashCode(): Int = set.hashCode()
     override fun toString(): String = set.toString()
 
-    inner class Iterator<T>(val iterator: MutableIterator<T>) : MutableIterator<T> {
+    inner class Iterator<out T>(val iterator: MutableIterator<T>) : MutableIterator<T> {
         override fun hasNext(): Boolean = iterator.hasNext()
         override fun next(): T = iterator.next()
         override fun remove() =

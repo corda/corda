@@ -240,7 +240,7 @@ class IRSTests {
     }
 
     /**
-     * Utility so I don't have to keep typing this
+     * Utility so I don't have to keep typing this.
      */
     fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
         return generateIRSTxn(irsSelector).outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
@@ -256,7 +256,7 @@ class IRSTests {
     }
 
     /**
-     * Testing a simple IRS, add a few fixings and then display as CSV
+     * Testing a simple IRS, add a few fixings and then display as CSV.
      */
     @Test
     fun `IRS Export test`() {
@@ -280,7 +280,7 @@ class IRSTests {
     }
 
     /**
-     * Make sure it has a schedule and the schedule has some unfixed rates
+     * Make sure it has a schedule and the schedule has some unfixed rates.
      */
     @Test
     fun `next fixing date`() {
@@ -289,7 +289,7 @@ class IRSTests {
     }
 
     /**
-     * Iterate through all the fix dates and add something
+     * Iterate through all the fix dates and add something.
      */
     @Test
     fun generateIRSandFixSome() {
@@ -360,7 +360,7 @@ class IRSTests {
     /**
      * Generates a typical transactional history for an IRS.
      */
-    fun trade(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+    fun trade(): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
 
         val ld = LocalDate.of(2016, 3, 8)
         val bd = BigDecimal("0.0063518")
@@ -377,11 +377,11 @@ class IRSTests {
                 input("irs post agreement")
                 val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
                 output("irs post first fixing") {
-                    postAgreement.data.copy(
-                            postAgreement.data.fixedLeg,
-                            postAgreement.data.floatingLeg,
-                            postAgreement.data.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
-                            postAgreement.data.common
+                    postAgreement.copy(
+                            postAgreement.fixedLeg,
+                            postAgreement.floatingLeg,
+                            postAgreement.calculation.applyFixing(ld, FixedRate(RatioUnit(bd))),
+                            postAgreement.common
                     )
                 }
                 command(ORACLE_PUBKEY) {
@@ -472,7 +472,7 @@ class IRSTests {
     }
 
     /**
-     * This will be modified once we adapt the IRS to be cross currency
+     * This will be modified once we adapt the IRS to be cross currency.
      */
     @Test
     fun `ensure same currency notionals`() {
@@ -653,7 +653,7 @@ class IRSTests {
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.
      */
-    fun tradegroups(): LedgerDSL<EnforceVerifyOrFail, TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
+    fun tradegroups(): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
         val ld1 = LocalDate.of(2016, 3, 8)
         val bd1 = BigDecimal("0.0063518")
 
@@ -693,20 +693,20 @@ class IRSTests {
                 input("irs post agreement2")
                 val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
                 output("irs post first fixing1") {
-                    postAgreement1.data.copy(
-                            postAgreement1.data.fixedLeg,
-                            postAgreement1.data.floatingLeg,
-                            postAgreement1.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            postAgreement1.data.common.copy(tradeID = "t1")
+                    postAgreement1.copy(
+                            postAgreement1.fixedLeg,
+                            postAgreement1.floatingLeg,
+                            postAgreement1.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement1.common.copy(tradeID = "t1")
                     )
                 }
                 val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
                 output("irs post first fixing2") {
-                    postAgreement2.data.copy(
-                            postAgreement2.data.fixedLeg,
-                            postAgreement2.data.floatingLeg,
-                            postAgreement2.data.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
-                            postAgreement2.data.common.copy(tradeID = "t2")
+                    postAgreement2.copy(
+                            postAgreement2.fixedLeg,
+                            postAgreement2.floatingLeg,
+                            postAgreement2.calculation.applyFixing(ld1, FixedRate(RatioUnit(bd1))),
+                            postAgreement2.common.copy(tradeID = "t2")
                     )
                 }
 

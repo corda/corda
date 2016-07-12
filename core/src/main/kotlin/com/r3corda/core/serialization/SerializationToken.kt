@@ -27,7 +27,7 @@ interface SerializeAsToken {
 }
 
 /**
- * This represents a token in the serialized stream for an instance of a type that implements [SerializeAsToken]
+ * This represents a token in the serialized stream for an instance of a type that implements [SerializeAsToken].
  */
 interface SerializationToken {
     fun fromToken(context: SerializeAsTokenContext): Any

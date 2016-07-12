@@ -9,7 +9,6 @@ import com.r3corda.core.testing.*
 import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.security.SignatureException
 import java.util.*
 import kotlin.test.assertEquals
@@ -47,7 +46,7 @@ class TransactionSerializationTests {
     val fakeStateRef = generateStateRef()
     val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, DUMMY_PUBKEY_1), DUMMY_NOTARY), fakeStateRef)
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1), DUMMY_NOTARY)
-    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, TestUtils.keypair.public), DUMMY_NOTARY)
+    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, DUMMY_KEY_1.public), DUMMY_NOTARY)
 
 
     lateinit var tx: TransactionBuilder
@@ -55,14 +54,14 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = TransactionType.General.Builder().withItems(
-                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
+                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(DUMMY_KEY_1.public))
         )
     }
 
     @Test
     fun signWireTX() {
         tx.signWith(DUMMY_NOTARY_KEY)
-        tx.signWith(TestUtils.keypair)
+        tx.signWith(DUMMY_KEY_1)
         val signedTX = tx.toSignedTransaction()
 
         // Now check that the signature we just made verifies.
@@ -82,7 +81,7 @@ class TransactionSerializationTests {
             tx.toSignedTransaction()
         }
 
-        tx.signWith(TestUtils.keypair)
+        tx.signWith(DUMMY_KEY_1)
         tx.signWith(DUMMY_NOTARY_KEY)
         val signedTX = tx.toSignedTransaction()
 
@@ -94,9 +93,9 @@ class TransactionSerializationTests {
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = TransactionType.General.Builder().withItems(inputState, outputState, changeState,
-                    Command(TestCash.Commands.Move(), TestUtils.keypair2.public))
+                    Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
             tx2.signWith(DUMMY_NOTARY_KEY)
-            tx2.signWith(TestUtils.keypair2)
+            tx2.signWith(DUMMY_KEY_2)
 
             signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()
         }
@@ -105,7 +104,7 @@ class TransactionSerializationTests {
     @Test
     fun timestamp() {
         tx.setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
-        tx.signWith(TestUtils.keypair)
+        tx.signWith(DUMMY_KEY_1)
         tx.signWith(DUMMY_NOTARY_KEY)
         val stx = tx.toSignedTransaction()
         val ltx = stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)

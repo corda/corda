@@ -4,8 +4,6 @@ package com.r3corda.node.messaging
 
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.TopicStringValidator
-import com.r3corda.core.messaging.send
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.internal.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test

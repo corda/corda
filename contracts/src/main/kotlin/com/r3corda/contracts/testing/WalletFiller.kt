@@ -24,7 +24,7 @@ import java.util.*
  *
  * The service hub needs to provide at least a key management service and a storage service.
  *
- * @return a wallet object that represents the generated states (it will NOT be the full wallet from the service hub!)
+ * @return a wallet object that represents the generated states (it will NOT be the full wallet from the service hub!).
  */
 fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     notary: Party = DUMMY_NOTARY,

@@ -12,10 +12,10 @@ import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.services.wallet.NodeWalletService
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

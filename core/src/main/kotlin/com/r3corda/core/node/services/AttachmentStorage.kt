@@ -22,7 +22,7 @@ interface AttachmentStorage {
      * to the raw byte stream is required.
      *
      * @throws FileAlreadyExistsException if the given byte stream has already been inserted.
-     * @throws IllegalArgumentException if the given byte stream is empty or a [JarInputStream]
+     * @throws IllegalArgumentException if the given byte stream is empty or a [JarInputStream].
      * @throws IOException if something went wrong.
      */
     fun importAttachment(jar: InputStream): SecureHash

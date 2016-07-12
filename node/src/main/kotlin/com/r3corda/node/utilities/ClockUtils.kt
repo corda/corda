@@ -49,7 +49,7 @@ abstract class MutableClock : Clock() {
      */
     val mutations: Observable<Long> by lazy {
         Observable.create({ subscriber: Subscriber<in Long> ->
-            if (!subscriber.isUnsubscribed()) {
+            if (!subscriber.isUnsubscribed) {
                 mutationObservers.add(subscriber)
                 // This is not very intuitive, but subscribing to a subscriber observes unsubscribes.
                 subscriber.add(Subscriptions.create { mutationObservers.remove(subscriber) })
@@ -77,7 +77,7 @@ abstract class MutableClock : Clock() {
  * of it being mutated.  Just returns if [MutableClock] mutates, so needs to be
  * called in a loop.
  *
- * @throws InterruptedException if interrupted by something other than a [MutableClock]
+ * @throws InterruptedException if interrupted by something other than a [MutableClock].
  */
 @Suppress("UNUSED_VALUE") // This is here due to the compiler thinking version is not used
 @Suspendable
@@ -107,9 +107,9 @@ private fun Clock.doInterruptibly(runnable: SuspendableRunnable) {
 
 /**
  * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
- * used in demos or testing.  This will also substitute a Fiber compatible Future if required
+ * used in demos or testing.  This will also substitute a Fiber compatible Future if required.
  *
- * @return true if the [Future] is complete, false if the deadline was reached
+ * @return true if the [Future] is complete, false if the deadline was reached.
  */
 @Suspendable
 fun Clock.awaitWithDeadline(deadline: Instant, future: Future<*> = SettableFuture<Any>()): Boolean {

@@ -32,7 +32,7 @@ var Node.styleClass: String
     get() = getAttribute("ui.class")
 
 fun createGraph(name: String, styles: String): SingleGraph {
-    System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
+    System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer")
     return SingleGraph(name).apply {
         stylesheet = styles
         setAttribute("ui.quality")

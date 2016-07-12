@@ -2,11 +2,7 @@ package com.r3corda.contracts.asset
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.toStringShort
-import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +23,7 @@ class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Except
  * See [Cash] for an example subclass that implements currency.
  *
  * @param T a type that represents the asset in question. This should describe the basic type of the asset
- * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.)
+ * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
 abstract class FungibleAsset<T> : Contract {
     /** A state representing a cash claim against some party */
@@ -116,7 +112,7 @@ abstract class FungibleAsset<T> : Contract {
         val assetCommands = tx.commands.select<FungibleAsset.Commands>()
         requireThat {
             "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-            "output deposits are owned by a command signer" by (issuer in issueCommand.signingParties)
+            "output states are issued by a command signer" by (issuer in issueCommand.signingParties)
             "output values sum to more than the inputs" by (outputAmount > inputAmount)
             "there is only a single issue command" by (assetCommands.count() == 1)
         }

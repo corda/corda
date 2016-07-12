@@ -2,6 +2,7 @@ package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.toStringShort
 import java.security.PublicKey
 import java.util.*
 
@@ -68,12 +69,13 @@ data class TransactionForVerification(val inputs: List<TransactionState<Contract
      * TODO: Move this out of the core data structure definitions, once unit tests are more cleanly separated.
      *
      * @throws TransactionVerificationException if validation logic fails or if a contract throws an exception
-     *                                          (the original is in the cause field)
+     *                                          (the original is in the cause field).
      */
     @Throws(TransactionVerificationException::class)
     fun verify() = type.verify(this)
 
-    fun toTransactionForContract() = TransactionForContract(inputs.map { it.data }, outputs.map { it.data }, attachments, commands, origHash)
+    fun toTransactionForContract() = TransactionForContract(inputs.map { it.data }, outputs.map { it.data },
+            attachments, commands, origHash, inputs.map { it.notary }.singleOrNull())
 }
 
 /**
@@ -84,7 +86,8 @@ data class TransactionForContract(val inputs: List<ContractState>,
                                   val outputs: List<ContractState>,
                                   val attachments: List<Attachment>,
                                   val commands: List<AuthenticatedObject<CommandData>>,
-                                  val origHash: SecureHash) {
+                                  val origHash: SecureHash,
+                                  val inputNotary: Party? = null) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 
@@ -156,14 +159,19 @@ data class TransactionForContract(val inputs: List<ContractState>,
      * up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
      * be used to simplify this logic.
      */
-    data class InOutGroup<T : ContractState, K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
+    data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
+
+    /** Get the timestamp command for this transaction, using the notary from the input states. */
+    val timestamp: TimestampCommand?
+        get() = if (inputNotary == null) null else commands.getTimestampBy(inputNotary)
 
     /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
     fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
 
     /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */
+    @Suppress("DEPRECATION")
+    @Deprecated(message = "Timestamping authority should always be notary for the transaction")
     fun getTimestampByName(vararg authorityName: String): TimestampCommand? = commands.getTimestampByName(*authorityName)
-
 }
 
 class TransactionResolutionException(val hash: SecureHash) : Exception()
@@ -172,6 +180,8 @@ class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTra
 sealed class TransactionVerificationException(val tx: TransactionForVerification, cause: Throwable?) : Exception(cause) {
     class ContractRejection(tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
-    class SignersMissing(tx: TransactionForVerification, missing: List<PublicKey>) : TransactionVerificationException(tx, null)
+    class SignersMissing(tx: TransactionForVerification, val missing: List<PublicKey>) : TransactionVerificationException(tx, null) {
+        override fun toString() = "Signers missing: ${missing.map { it.toStringShort() }}"
+    }
     class InvalidNotaryChange(tx: TransactionForVerification) : TransactionVerificationException(tx, null)
 }

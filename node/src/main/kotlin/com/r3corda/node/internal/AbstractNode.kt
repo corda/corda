@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
@@ -48,14 +47,12 @@ import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.ANSIProgressObserver
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
-import com.r3corda.protocols.TwoPartyDealProtocol
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
-import java.time.Duration
 import java.util.*
 
 /**
@@ -74,7 +71,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     // TODO: Persist this, as well as whether the node is registered.
     /**
-     * Sequence number of changes sent to the network map service, when registering/de-registering this node
+     * Sequence number of changes sent to the network map service, when registering/de-registering this node.
      */
     var networkMapSeq: Long = 1
 
@@ -205,7 +202,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
 
     /**
-     * Run any tasks that are needed to ensure the node is in a correct state before running start()
+     * Run any tasks that are needed to ensure the node is in a correct state before running start().
      */
     open fun setup(): AbstractNode {
         createNodeDir()

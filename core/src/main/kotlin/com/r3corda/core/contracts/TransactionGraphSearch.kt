@@ -13,8 +13,8 @@ import java.util.concurrent.Callable
  *
  * In future, this should support restricting the search by time, and other types of useful query.
  *
- * @param transactions map of transaction id to [SignedTransaction]
- * @param startPoints transactions to use as starting points for the search
+ * @param transactions map of transaction id to [SignedTransaction].
+ * @param startPoints transactions to use as starting points for the search.
  */
 class TransactionGraphSearch(val transactions: ReadOnlyTransactionStorage,
                              val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
