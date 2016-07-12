@@ -138,8 +138,7 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun generateIssue(faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
-        val issuance = faceValue.token.issuer
+    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
         val state = TransactionState(State(issuance, issuance.party.owningKey, faceValue, maturityDate), notary)
         return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(notary), issuance.party.owningKey))
     }

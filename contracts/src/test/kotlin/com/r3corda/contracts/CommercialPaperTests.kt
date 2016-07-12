@@ -179,7 +179,8 @@ class CommercialPaperTestsGeneric {
     fun `issue move and then redeem`() {
         // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val issueTX: LedgerTransaction = run {
-            val ptx = CommercialPaper().generateIssue(10000.DOLLARS `issued by` MINI_CORP.ref(123), TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
+            val ptx = CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER,
+                    TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
                 setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
                 signWith(MINI_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
@@ -189,9 +190,9 @@ class CommercialPaperTestsGeneric {
         }
 
         val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
-                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
-                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
-                3000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY
+                3000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
+                3000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
+                3000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY
         )
 
         // Alice pays $9000 to MiniCorp to own some of their debt.
@@ -207,8 +208,8 @@ class CommercialPaperTestsGeneric {
 
         // Won't be validated.
         val (corpWalletTX, corpWallet) = cashOutputsToWallet(
-                9000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY,
-                4000.DOLLARS.CASH `issued by` MINI_CORP.ref(123) `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY
+                9000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY,
+                4000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY
         )
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
