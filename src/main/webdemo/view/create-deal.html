@@ -83,7 +83,7 @@
                     <select class="ui selection dropdown" ng-model="deal.fixedLeg.paymentDelay">
                         <option value="0">T+00D</option>
                         <option value="1">T+01D</option>
-                        <option value="2">T+02D</option>
+                        <option value="2" selected="selected">T+02D</option>
                         <option value="3">T+03D</option>
                     </select>
                 </div>
@@ -189,15 +189,18 @@
                 </div>
                 <div class="field">
                     <label>Reset Rule</label>
-                    <input type="text" name="resetRule" ng-model="deal.floatingLeg.resetRule"/>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.resetRule">
+                        <option value="InAdvance">In Advance</option>
+                        <option value="InArrears">In Arrears</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Fixings Per Payment</label>
-                    <input type="text" name="fixingsPerPayment" ng-model="deal.floatingLeg.fixingsPerPayment"/>
-                </div>
-                <div class="field">
-                    <label>Index</label>
-                    <input type="text" name="index" ng-model="deal.floatingLeg.index"/>
+                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.fixingsPerPayment">
+                        <option value="Annual">Annual</option>
+                        <option value="Quarterly" selected="selected">Quarterly</option>
+                        <option value="SemiAnnual">Semi Annual</option>
+                    </select>
                 </div>
             </div>
             <div class="sixteen wide column">
