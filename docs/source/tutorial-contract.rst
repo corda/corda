@@ -421,29 +421,34 @@ logic.
           // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
           State input = single(filterIsInstance(inputs, State.class));
 
-          if (!cmd.getSigners().contains(input.getOwner()))
-              throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+          requireThat(require -> {
+              require.by("the transaction is signed by the owner of the CP", cmd.getSigners().contains(input.getOwner()));
+              return Unit.INSTANCE;
+          });
 
           if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
-              // Check the output CP state is the same as the input state, ignoring the owner field.
-              State output = single(outputs);
-
-              if (!output.getFaceValue().equals(input.getFaceValue()) ||
-                      !output.getIssuance().equals(input.getIssuance()) ||
-                      !output.getMaturityDate().equals(input.getMaturityDate()))
-                  throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
+              requireThat(require -> {
+                  require.by("the state is propagated", outputs.size() == 1);
+                  return Unit.INSTANCE;
+              });
+              // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
+              // the input ignoring the owner field due to the grouping.
           } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-              Amount received = CashKt.sumCashOrNull(inputs);
-              if (time == null)
-                  throw new IllegalArgumentException("Redemption transactions must be timestamped");
-              if (received == null)
-                  throw new IllegalStateException("Failed requirement: no cash being redeemed");
-              if (input.getMaturityDate().isAfter(time))
-                  throw new IllegalStateException("Failed requirement: the paper must have matured");
-              if (!input.getFaceValue().equals(received))
-                  throw new IllegalStateException("Failed requirement: the received amount equals the face value");
-              if (!outputs.isEmpty())
-                  throw new IllegalStateException("Failed requirement: the paper must be destroyed");
+              TimestampCommand timestampCommand = tx.getTimestampBy(((Commands.Redeem) cmd.getValue()).notary);
+              Instant time = null == timestampCommand
+                      ? null
+                      : timestampCommand.getBefore();
+              Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
+
+              requireThat(require -> {
+                  require.by("must be timestamped", timestampCommand != null);
+                  require.by("received amount equals the face value: "
+                          + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
+                  require.by("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
+                  require.by("the received amount equals the face value", input.getFaceValue().equals(received));
+                  require.by("the paper must be destroyed", outputs.isEmpty());
+                  return Unit.INSTANCE;
+              });
           } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
               // .. etc .. (see Kotlin for full definition)
           }

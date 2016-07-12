@@ -175,8 +175,8 @@ public class JavaCommercialPaper implements Contract {
                 State output = single(outputs);
                 TimestampCommand timestampCommand = tx.getTimestampBy(issueCommand.notary);
                 Instant time = null == timestampCommand
-                        ?
-                        null : timestampCommand.getBefore();
+                        ? null
+                        : timestampCommand.getBefore();
 
                 requireThat(require -> {
                     require.by("output values sum to more than the inputs", inputs.isEmpty());
@@ -206,8 +206,8 @@ public class JavaCommercialPaper implements Contract {
                 } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
                     TimestampCommand timestampCommand = tx.getTimestampBy(((Commands.Redeem) cmd.getValue()).notary);
                     Instant time = null == timestampCommand
-                            ?
-                            null : timestampCommand.getBefore();
+                            ? null
+                            : timestampCommand.getBefore();
                     Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
                     requireThat(require -> {
