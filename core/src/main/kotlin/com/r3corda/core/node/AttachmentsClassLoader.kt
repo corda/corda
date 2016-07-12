@@ -37,11 +37,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                     // We already verified that paths are not strange/game playing when we inserted the attachment
                     // into the storage service. So we don't need to repeat it here.
                     //
-                    // We forbid files that differ only in case to avoid issues for Windows/Mac developers where the
+                    // We forbid files that differ only in case, or path separator to avoid issues for Windows/Mac developers where the
                     // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
                     //
-                    // TODO: Do we need extra overlap checks?
-                    val path = entry.name.toLowerCase()
+                    // Also convert to Unix path separators as all resource/class lookups will expect this.
+                    val path = entry.name.toLowerCase().replace('\\', '/')
                     if (path in pathsToAttachments)
                         throw OverlappingAttachments(path)
                     pathsToAttachments[path] = attachment
