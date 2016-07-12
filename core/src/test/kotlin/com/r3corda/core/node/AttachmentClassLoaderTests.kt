@@ -9,6 +9,7 @@ import com.r3corda.core.serialization.*
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
 import org.apache.commons.io.IOUtils
+import org.junit.Assert
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -93,6 +94,14 @@ class AttachmentClassLoaderTests {
         return bs.toByteArray()
     }
 
+    fun readAttachment(attachment: Attachment, filepath: String) : ByteArray {
+        ByteArrayOutputStream().use {
+            attachment.extractFile(filepath, it)
+            return it.toByteArray()
+        }
+
+    }
+
     @Test
     fun `test MockAttachmentStorage open as jar`() {
         val storage = MockAttachmentStorage()
@@ -128,6 +137,27 @@ class AttachmentClassLoaderTests {
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"))
         assertEquals("some data", txt)
+    }
+
+    @Test
+    fun `Check platform independent path handling in attachment jars`() {
+        val storage = MockAttachmentStorage()
+
+        val att1 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("/folder1/foldera/file1.txt", "some data")))
+        val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("\\folder1\\folderb\\file2.txt", "some other data")))
+
+        val data1a = readAttachment(storage.openAttachment(att1)!!, "/folder1/foldera/file1.txt")
+        Assert.assertArrayEquals("some data".toByteArray(), data1a)
+
+        val data1b = readAttachment(storage.openAttachment(att1)!!, "\\folder1\\foldera\\file1.txt")
+        Assert.assertArrayEquals("some data".toByteArray(), data1b)
+
+        val data2a = readAttachment(storage.openAttachment(att2)!!, "\\folder1\\folderb\\file2.txt")
+        Assert.assertArrayEquals("some other data".toByteArray(), data2a)
+
+        val data2b = readAttachment(storage.openAttachment(att2)!!, "/folder1/folderb/file2.txt")
+        Assert.assertArrayEquals("some other data".toByteArray(), data2b)
+
     }
 
     @Test

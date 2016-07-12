@@ -381,12 +381,11 @@ interface Attachment : NamedByHash {
      * @throws FileNotFoundException if the given path doesn't exist in the attachment.
      */
     fun extractFile(path: String, outputTo: OutputStream) {
-        val p = path.toLowerCase()
+        val p = path.toLowerCase().split('\\','/')
         openAsJAR().use { jar ->
             while (true) {
                 val e = jar.nextJarEntry ?: break
-                // TODO: Normalise path separators here for more platform independence, as zip doesn't mandate a type.
-                if (e.name.toLowerCase() == p) {
+                if (e.name.toLowerCase().split('\\','/') == p) {
                     jar.copyTo(outputTo)
                     return
                 }
