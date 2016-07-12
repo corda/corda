@@ -12,8 +12,8 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
     };
 
     let indexLookup = {
-        "GBP": "LIBOR",
-        "USD": "LIBOR",
+        "GBP": "ICE LIBOR",
+        "USD": "ICE LIBOR",
         "EUR": "EURIBOR"
     };
 
