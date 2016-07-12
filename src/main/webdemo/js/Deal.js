@@ -1,6 +1,6 @@
 "use strict"
 
-define(['utils/dayCountBasisLookup', 'viewmodel/FixedRate'], (dayCountBasisLookup, fixedRateViewModel) => {
+define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
     let calculationModel = {
         expression: "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
         floatingLegPaymentSchedule: {
@@ -29,15 +29,15 @@ define(['utils/dayCountBasisLookup', 'viewmodel/FixedRate'], (dayCountBasisLooku
             fixedLeg.effectiveDate = formatDateForNode(common.effectiveDate);
             fixedLeg.terminationDate = formatDateForNode(common.terminationDate);
             fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
-            fixedLeg.dayCountBasisDay = dayCountBasisLookup[fixedLeg.dayCountBasis].day;
-            fixedLeg.dayCountBasisYear = dayCountBasisLookup[fixedLeg.dayCountBasis].year;
+            fixedLeg.dayCountBasisDay = fixedLeg.dayCountBasis.day;
+            fixedLeg.dayCountBasisYear = fixedLeg.dayCountBasis.year;
             delete fixedLeg.dayCountBasis;
 
             floatingLeg.notional.token = common.baseCurrency;
             floatingLeg.effectiveDate = formatDateForNode(common.effectiveDate);
             floatingLeg.terminationDate = formatDateForNode(common.terminationDate);
-            floatingLeg.dayCountBasisDay = dayCountBasisLookup[floatingLeg.dayCountBasis].day;
-            floatingLeg.dayCountBasisYear = dayCountBasisLookup[floatingLeg.dayCountBasis].year;
+            floatingLeg.dayCountBasisDay = floatingLeg.dayCountBasis.day;
+            floatingLeg.dayCountBasisYear = floatingLeg.dayCountBasis.year;
             delete floatingLeg.dayCountBasis;
 
             common.tradeID = tradeId;

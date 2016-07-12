@@ -109,20 +109,9 @@
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
-                    <select class="ui selection " ng-model="deal.floatingLeg.dayCountBasis">
-                        <option>1/1</option>
-                        <option>30/360</option>
-                        <option>30E/360</option>
-                        <option>30E/360 (IDSA)</option>
-                        <option>30E+/360 ISDO</option>
-                        <option selected="selected">ACT/360</option>
-                        <option>ACT/365 Fixed</option>
-                        <option>ACT/365 L</option>
-                        <option>ACT/365 A/1</option>
-                        <option>NL/365</option>
-                        <option>ACT/ACT ISDA</option>
-                        <option>ACT/ACT ICMA</option>
-                        <option>Business/252</option>
+                    <select class="ui selection"
+                            ng-model="deal.floatingLeg.dayCountBasis"
+                            ng-options="key for (key, value) in dayCountBasisLookup">
                     </select>
                 </div>
                 <div class="field">

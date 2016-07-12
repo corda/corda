@@ -1,6 +1,6 @@
 'use strict';
 
-define([], () => {
+define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
     return {
         fixedRatePayer: "Bank A",
         notional: {
@@ -10,7 +10,7 @@ define([], () => {
         effectiveDateAdjustment: null,
         terminationDateAdjustment: null,
         fixedRate: "1.676",
-        dayCountBasis: "30/360",
+        dayCountBasis: dayCountBasisLookup["ACT/360"],
         rollConvention: "Following",
         dayInMonth: 10,
         paymentRule: "InArrears",
