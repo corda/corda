@@ -31,6 +31,8 @@ import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -67,6 +69,8 @@ enum class Role {
 // which holds things like checkpoints, keys, databases, message logs etc.
 val DEFAULT_BASE_DIRECTORY = "./build/trader-demo"
 
+private val log: Logger = LoggerFactory.getLogger("TraderDemo")
+
 fun main(args: Array<String>) {
     exitProcess(runTraderDemo(args))
 }
@@ -83,7 +87,7 @@ fun runTraderDemo(args: Array<String>): Int {
     val options = try {
         parser.parse(*args)
     } catch (e: Exception) {
-        println(e.message)
+        log.error(e.message)
         printHelp(parser)
         return 1
     }
@@ -113,7 +117,7 @@ fun runTraderDemo(args: Array<String>): Int {
     BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
     val directory = Paths.get(baseDirectory, role.name.toLowerCase())
-    println("Using base demo directory $directory")
+    log.info("Using base demo directory $directory")
 
     // Override the default config file (which you can find in the file "reference.conf") to give each node a name.
     val config = run {
@@ -148,7 +152,7 @@ fun runTraderDemo(args: Array<String>): Int {
     }
 
     // And now construct then start the node object. It takes a little while.
-    val node = logElapsedTime("Node startup") {
+    val node = logElapsedTime("Node startup", log) {
         Node(directory, myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
     }
 
