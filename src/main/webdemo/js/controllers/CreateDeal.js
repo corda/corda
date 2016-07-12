@@ -22,6 +22,13 @@ define([
             let first = $('#irscolumns .eight:eq( 0 )');
             let last = $('#irscolumns .eight:eq( 1 )');
             first.before(last);
+
+            let swapPayers = () => {
+                let tmp = $scope.deal.floatingLeg.floatingRatePayer;
+                $scope.deal.floatingLeg.floatingRatePayer = $scope.deal.fixedLeg.fixedRatePayer;
+                $scope.deal.fixedLeg.fixedRatePayer = tmp;
+            };
+            $scope.$apply(swapPayers);
         });
     });
 });
