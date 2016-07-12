@@ -14,6 +14,7 @@ tags
 /contracts/build
 /contracts/isolated/build
 /core/build
+/experimental/build
 /docs/build/doctrees
 
 # gradle's buildSrc build/
