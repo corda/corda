@@ -54,7 +54,7 @@ define(['angular', 'lodash', 'viewmodel/deal'], (angular, _, dealViewModel) => {
 
             this.getDeals = () => {
                 return load('deals', $http.get('http://localhost:31338/api/irs/deals')).then((resp) => {
-                    return resp.data;
+                    return resp.data.reverse();
                 });
             };
 
