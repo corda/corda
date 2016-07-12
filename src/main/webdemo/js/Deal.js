@@ -11,6 +11,12 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
         }
     };
 
+    let indexLookup = {
+        "GBP": "LIBOR",
+        "USD": "LIBOR",
+        "EUR": "EURIBOR"
+    };
+
     let Deal = function(dealViewModel) {
         let now = new Date();
         let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
@@ -38,6 +44,7 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
             floatingLeg.terminationDate = formatDateForNode(common.terminationDate);
             floatingLeg.dayCountBasisDay = floatingLeg.dayCountBasis.day;
             floatingLeg.dayCountBasisYear = floatingLeg.dayCountBasis.year;
+            floatingLeg.index = indexLookup[common.baseCurrency];
             delete floatingLeg.dayCountBasis;
 
             common.tradeID = tradeId;

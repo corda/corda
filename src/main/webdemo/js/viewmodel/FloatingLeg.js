@@ -24,7 +24,6 @@ define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
         resetRule: "InAdvance",
         fixingsPerPayment: "Quarterly",
         fixingCalendar: [ "NewYork" ],
-        index: "ICE LIBOR",
         indexSource: "Rates Service Provider",
         indexTenor: {
            name: "3M"
