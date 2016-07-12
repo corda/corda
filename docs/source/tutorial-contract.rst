@@ -33,7 +33,7 @@ either ``CommercialPaper.kt`` or ``CommercialPaper.java`` in the src/contracts d
 
    .. sourcecode:: java
 
-      public class Cash implements Contract {
+      public class CommercialPaper implements Contract {
           @Override
           public SecureHash getLegalContractReference() {
               return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
