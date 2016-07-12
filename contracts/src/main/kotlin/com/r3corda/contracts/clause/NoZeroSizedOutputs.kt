@@ -9,7 +9,7 @@ import com.r3corda.core.contracts.clauses.MatchBehaviour
  * Clause for fungible asset contracts, which enforces that no output state should have
  * a balance of zero.
  */
-open class NoZeroSizedOutputs<S: FungibleAsset.State<T>, T: Any> : GroupClause<S, Issued<T>> {
+open class NoZeroSizedOutputs<S: FungibleAsset<T>, T: Any> : GroupClause<S, Issued<T>> {
     override val ifMatched: MatchBehaviour
         get() = MatchBehaviour.CONTINUE
     override val ifNotMatched: MatchBehaviour

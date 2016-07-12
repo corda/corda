@@ -6,6 +6,13 @@ import com.r3corda.core.contracts.clauses.MatchBehaviour
 
 /**
  * Standard issue clause for contracts that issue fungible assets.
+ *
+ * @param S the type of contract state which is being issued.
+ * @param T the token underlying the issued state.
+ * @param sum function to convert a list of states into an amount of the token. Must error if there are no states in
+ * the list.
+ * @param sumOrZero function to convert a list of states into an amount of the token, and returns zero if there are
+ * no states in the list. Takes in an instance of the token definition for constructing the zero amount if needed.
  */
 abstract class AbstractIssue<S: ContractState, T: Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,

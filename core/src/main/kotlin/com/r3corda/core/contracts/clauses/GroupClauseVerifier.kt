@@ -23,10 +23,10 @@ interface GroupClause<S : ContractState, T : Any> : Clause, GroupVerify<S, T>
 
 abstract class GroupClauseVerifier<S : ContractState, T : Any> : SingleClause {
     abstract val clauses: List<GroupClause<S, T>>
-    override val requiredCommands: Set<Class<CommandData>>
+    override val requiredCommands: Set<Class<out CommandData>>
         get() = emptySet()
 
-    abstract fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<out S, T>>
+    abstract fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<S, T>>
 
     override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
         val groups = extractGroups(tx)
