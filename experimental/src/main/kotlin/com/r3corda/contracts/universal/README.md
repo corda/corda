@@ -1,19 +1,20 @@
 # Universal contracts
  
-This is a demonstration of how to build universal contracts or higher order contracts on top of Corda.
+This is a demonstration of how to build a universal contract or higher order contracts on top of Corda. Think of the universal contract as a generalized Ricardian contract where a meta language is used as contract parameter making it possible for a single smart contract type to span a very large family of contracts.
 
 ## Overview
 
 ### Motivation and Layers of smart contracts
-Currently when discussing smart contracts we have two levels of contracts. At the lowest layer we have _Corda smart contracts_ written in JVM bytecode. At the highest level we something like _Smart Contract Templates_ where a contract is created by picking an existing template and filling in required parameters suitable for non-developer end users.
+Currently, in Corda, when discussing smart contracts we have two levels of contracts. At the lowest layer we have the _Corda smart contracts_ represented by JVM bytecode. At the highest level we have Ricardian contract like the _Smart Contract Templates_ where a contract is created by picking an existing template and filling in the required parameters. The latter kind are suitable for non-developer end users.
 
-At the highest level in order to support a new kind of contract a novel new contract type may be required to be developed at the lowest level.
-Currently a lot of work is needed to write a smart contract at this level, which obviously takes time to write but more importantly takes considerable time to review and verify (which contract participant should do). Having re-usable components will arguably reduce this time.
+At the highest level in order to support a new kind of contract, a novel new contract type might be required to be developed at the lowest level.
+Currently a lot of work is needed to write a smart contract at this level, which obviously takes time to write but more importantly takes considerable time to review and verify (which contract participant should do). There is a significant operation risk associated with contract types. Having re-usable components will arguably reduce development time and associated risk.
 
 What is proposed here is an intermediate layer in between by creating a highly customizable smart contract covering a large family of OTC contracts by having a simple yet expressive representation of contract semantics in the contract state. The objectives are:
 
- - writing a new contract requires lines of code and not pages of code.
- - a contract format suitable for automatic transformation and inspection.
+ - writing a new contract requires only lines of codee rather than pages of code.
+ - non-developers should be able able of reading and possibly writing smart contracts.
+ - the contract format should be suitable for automatic transformation and inspection.
 
 The last point is important because banks will need to integrate smart contract into their existing systems. Most banks already have _script_ representation of trades in order to have somewhat generic pricing and risk infrastructure.
 
@@ -51,6 +52,12 @@ An action combinator. This declares a named action that can be taken by anyone o
 #### ``Or action1 ... actionN``
 A combinator that can only be used on action contracts. This means only one of the action can be executed. Should any one action be executed, all other actions are discarded.
 
+#### ``RollOut startDate endDate frequency contractTemplate``
+A combinator for rolling out a date sequence using specified template
+
+#### ``Continuation``
+Marks point of recursion for the `RollOut` combinator.
+
 ### Comments
 
 ## No schedulers
@@ -68,6 +75,31 @@ Example of a zero coupon bond:
                     wileECoyote.gives(roadRunner, 100.K*GBP)
                 }
             }
+```
+
+Tag represensation of above:
+```
+    <action>
+        <actor>
+            <party ref="road runner"/>
+            <party ref="wile e coyote"/>
+        </actor>
+        <condition>
+            <after date="01/09/2017"/>
+        </condition>
+        <contract>
+            <transfer>
+                <from><party ref="wile e coyote"/></from>
+                <to><party ref="road runner"/></to>
+                <asset>
+                    <cash>
+                        <amount>100000</amount>
+                        <currency>USD</currency>
+                    </cash>
+                </asset>
+            </transfer>
+        </contract>
+    </action>
 ```
 
 ### CDS contract
@@ -119,7 +151,7 @@ There are two actors. The contract holder _exercise_ at anytime, resulting in th
 
 - Underlying conventions for contracts (important to avoid cluttering)
 
-- For convenience - automatic roll out of date sequences
+- For convenience - automatic roll out of date sequences - [in progress]
 
 - Think about how to handle classic FX barrier events. Maybe an Oracle can issue proof of an event? Would there be a problem if beneficiary did not raise the event immediately?
 
