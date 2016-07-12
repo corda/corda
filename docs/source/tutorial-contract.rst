@@ -15,9 +15,10 @@ for how Kotlin syntax works.
 Starting the commercial paper class
 -----------------------------------
 
-A smart contract is a class that implements the ``Contract`` interface. For now, they have to be a part of the main
-codebase, as dynamic loading of contract code is not yet implemented. Therefore, we start by creating a file named
-either ``CommercialPaper.kt`` or ``CommercialPaper.java`` in the src/contracts directory with the following contents:
+A smart contract is a class that implements the ``Contract`` interface. This can be either implemented directly, or
+via an abstract contract such as ``ClauseVerifier``. For now, contracts have to be a part of the main codebase, as
+dynamic loading of contract code is not yet implemented. Therefore, we start by creating a file named either
+``CommercialPaper.kt`` or ``CommercialPaper.java`` in the ``contracts/src/main`` directory with the following contents:
 
 .. container:: codeset
 
@@ -841,3 +842,9 @@ The logic that implements measurement of the threshold, different signing combin
 be implemented once in a separate contract, with the controlling data being held in the named state.
 
 Future versions of the prototype will explore these concepts in more depth.
+
+Clauses
+-------
+
+Instead of structuring contracts as a single entity, they can be broken down into reusable chunks known as clauses.
+This idea is addressed in the next tutorial, ":doc:`tutorial-contract-clauses`".
