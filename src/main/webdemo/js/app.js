@@ -121,14 +121,6 @@ let dealViewModel = {
   common: commonViewModel
 };
 
-// TODO: Fill out this lookup table and use it to inject into the view.
-let dayCountBasisLookup = {
-    "30/360": {
-        "day": "D30",
-        "year": "Y360"
-    }
-}
-
 define([
     'angular',
     'angularRoute',

@@ -9,7 +9,7 @@
             <div class="sixteen wide column">
                 <div class="field">
                     <label>Base Currency</label>
-                    <select class="ui dropdown fluid" name="token" ng-model="deal.common.baseCurrency">
+                    <select class="ui  fluid" name="token" ng-model="deal.common.baseCurrency">
                         <option value="EUR">EUR</option>
                         <option value="USD">USD</option>
                         <option value="GBP">GBP</option>
@@ -45,7 +45,7 @@
                 </div>
                 <div class="field">
                     <label>Payment Frequency</label>
-                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.paymentFrequency">
+                    <select class="ui selection " ng-model="deal.fixedLeg.paymentFrequency">
                         <option value="Annual">Annual</option>
                         <option value="SemiAnnual">Semi Annual</option>
                         <option value="Quarterly">Quarterly</option>
@@ -53,7 +53,7 @@
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
-                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.dayCountBasis">
+                    <select class="ui selection " ng-model="deal.fixedLeg.dayCountBasis">
                         <option>30/360</option>
                         <option>30E/360</option>
                         <option>30E/360 (IDSA)</option>
@@ -71,7 +71,7 @@
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
-                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.rollConvention">
+                    <select class="ui selection " ng-model="deal.fixedLeg.rollConvention">
                         <option value="Following">Following</option>
                         <option value="Preceding">Preceding</option>
                         <option value="ModifiedFollowing">Modified following</option>
@@ -85,7 +85,7 @@
                 </div>
                 <div class="field">
                     <label>Payment Delay</label>
-                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.paymentDelay">
+                    <select class="ui selection " ng-model="deal.fixedLeg.paymentDelay">
                         <option value="0">T+00D</option>
                         <option value="1">T+01D</option>
                         <option value="2" selected="selected">T+02D</option>
@@ -94,7 +94,7 @@
                 </div>
                 <div class="field">
                     <label>Interest Period Adjustment</label>
-                    <select class="ui selection dropdown" ng-model="deal.fixedLeg.interestPeriodAdjustment">
+                    <select class="ui selection " ng-model="deal.fixedLeg.interestPeriodAdjustment">
                         <option value="Adjusted">Adjusted</option>
                         <option value="Unadjusted">Unadjusted</option>
                     </select>
@@ -112,7 +112,7 @@
                 </div>
                 <div class="field">
                     <label>Payment Frequency</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.paymentFrequency">
+                    <select class="ui selection " ng-model="deal.floatingLeg.paymentFrequency">
                         <option value="Annual">Annual</option>
                         <option value="Quarterly">Quarterly</option>
                         <option value="SemiAnnual">Semi Annual</option>
@@ -120,7 +120,7 @@
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.dayCountBasis">
+                    <select class="ui selection " ng-model="deal.floatingLeg.dayCountBasis">
                         <option>1/1</option>
                         <option>30/360</option>
                         <option>30E/360</option>
@@ -138,7 +138,7 @@
                 </div>
                 <div class="field">
                     <label>Roll Convention</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.rollConvention">
+                    <select class="ui selection " ng-model="deal.floatingLeg.rollConvention">
                         <option value="Following">Following</option>
                         <option value="Preceding">Preceding</option>
                         <option value="ModifiedFollowing">Modified following</option>
@@ -148,7 +148,7 @@
                 </div>
                 <div class="field">
                     <label>Fixing Roll Convention</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.fixingRollConvention">
+                    <select class="ui selection " ng-model="deal.floatingLeg.fixingRollConvention">
                         <option value="Following">Following</option>
                         <option value="Preceding">Preceding</option>
                         <option value="ModifiedFollowing">Modified following</option>
@@ -166,7 +166,7 @@
                 </div>
                 <div class="field">
                     <label>Payment Delay</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.paymentDelay">
+                    <select class="ui selection " ng-model="deal.floatingLeg.paymentDelay">
                         <option value="0">T+00D</option>
                         <option value="1">T+01D</option>
                         <option value="2">T+02D</option>
@@ -175,7 +175,7 @@
                 </div>
                 <div class="field">
                     <label>Interest Period Adjustment</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.interestPeriodAdjustment">
+                    <select class="ui selection " ng-model="deal.floatingLeg.interestPeriodAdjustment">
                         <option value="Adjusted">Adjusted</option>
                         <option value="Unadjusted">Unadjusted</option>
                     </select>
@@ -186,14 +186,14 @@
                 </div>
                 <div class="field">
                     <label>Reset Rule</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.resetRule">
+                    <select class="ui selection " ng-model="deal.floatingLeg.resetRule">
                         <option value="InAdvance">In Advance</option>
                         <option value="InArrears">In Arrears</option>
                     </select>
                 </div>
                 <div class="field">
                     <label>Fixings Per Payment</label>
-                    <select class="ui selection dropdown" ng-model="deal.floatingLeg.fixingsPerPayment">
+                    <select class="ui selection " ng-model="deal.floatingLeg.fixingsPerPayment">
                         <option value="Annual">Annual</option>
                         <option value="Quarterly" selected="selected">Quarterly</option>
                         <option value="SemiAnnual">Semi Annual</option>
