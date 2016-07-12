@@ -18,12 +18,10 @@ define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
         resetDayInMonth: 10,
         paymentRule: "InArrears",
         paymentDelay: "0",
-        paymentCalendar: [ "London" ],
         interestPeriodAdjustment: "Adjusted",
         fixingPeriodOffset: 2,
         resetRule: "InAdvance",
         fixingsPerPayment: "Quarterly",
-        fixingCalendar: [ "NewYork" ],
         indexSource: "Rates Service Provider",
         indexTenor: {
            name: "3M"

@@ -17,6 +17,12 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
         "EUR": "EURIBOR"
     };
 
+    let calendarLookup = {
+        "GBP": "London",
+        "USD": "NewYork",
+        "EUR": "London"
+    };
+
     let Deal = function(dealViewModel) {
         let now = new Date();
         let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
@@ -37,6 +43,7 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
             fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
             fixedLeg.dayCountBasisDay = fixedLeg.dayCountBasis.day;
             fixedLeg.dayCountBasisYear = fixedLeg.dayCountBasis.year;
+            fixedLeg.paymentCalendar = calendarLookup[common.baseCurrency];
             delete fixedLeg.dayCountBasis;
 
             floatingLeg.notional.token = common.baseCurrency;
@@ -45,6 +52,8 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
             floatingLeg.dayCountBasisDay = floatingLeg.dayCountBasis.day;
             floatingLeg.dayCountBasisYear = floatingLeg.dayCountBasis.year;
             floatingLeg.index = indexLookup[common.baseCurrency];
+            floatingLeg.fixingCalendar = [calendarLookup[common.baseCurrency]];
+            floatingLeg.paymentCalendar = [calendarLookup[common.baseCurrency]];
             delete floatingLeg.dayCountBasis;
 
             common.tradeID = tradeId;

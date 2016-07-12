@@ -13,7 +13,6 @@ define([
 
         $scope.dayCountBasisLookup = dayCountBasisLookup;
         $scope.deal = nodeService.newDeal();
-        console.log($scope.deal.fixedLeg.dayCountBasis);
         $scope.createDeal = () => {
             nodeService.createDeal(new Deal($scope.deal))
             .then((tradeId) => $location.path('#/deal/' + tradeId), (resp) => {

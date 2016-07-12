@@ -15,7 +15,6 @@ define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
         dayInMonth: 10,
         paymentRule: "InArrears",
         paymentDelay: "0",
-        paymentCalendar: "London",
         interestPeriodAdjustment: "Adjusted"
     };
 });
