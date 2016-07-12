@@ -82,7 +82,6 @@ sealed class CliParams {
             val apiAddress: HostAndPort,
             val mapAddress: String,
             val identityFile: Path,
-            val tradeWithAddrs: List<String>,
             val tradeWithIdentities: List<Path>,
             val uploadRates: Boolean,
             val defaultLegalName: String,
@@ -104,6 +103,11 @@ sealed class CliParams {
             val apiAddress: HostAndPort,
             val dateString: String
     ) : CliParams()
+
+    /**
+     * Corresponds to --help.
+     */
+    object Help : CliParams()
 
     companion object {
 
@@ -156,11 +160,6 @@ sealed class CliParams {
                     } else {
                         dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME)
                     },
-                    tradeWithAddrs = if (options.has(CliParamsSpec.fakeTradeWithAddr)) {
-                        options.valuesOf(CliParamsSpec.fakeTradeWithAddr)
-                    } else  {
-                        listOf("localhost:${defaultNetworkPort(node.other)}")
-                    },
                     tradeWithIdentities = if (options.has(CliParamsSpec.fakeTradeWithIdentityFile)) {
                         options.valuesOf(CliParamsSpec.fakeTradeWithIdentityFile).map { Paths.get(it) }
                     } else {
@@ -203,7 +202,10 @@ sealed class CliParams {
         }
 
         fun parse(options: OptionSet): CliParams {
-            val role = options.valueOf(CliParamsSpec.roleArg)!!
+            if (options.has(CliParamsSpec.help)) {
+                return Help
+            }
+            val role: IRSDemoRole = options.valueOf(CliParamsSpec.roleArg) ?: throw IllegalArgumentException("Please provide a role")
             return when (role) {
                 IRSDemoRole.SetupNodeA -> parseSetupNode(options, IRSDemoNode.NodeA)
                 IRSDemoRole.SetupNodeB -> parseSetupNode(options, IRSDemoNode.NodeB)
@@ -230,15 +232,28 @@ enum class IRSDemoNode {
 
 object CliParamsSpec {
     val parser = OptionParser()
-    val roleArg = parser.accepts("role").withRequiredArg().ofType(IRSDemoRole::class.java)
-    val networkAddressArg = parser.accepts("network-address").withOptionalArg().ofType(String::class.java)
-    val apiAddressArg = parser.accepts("api-address").withOptionalArg().ofType(String::class.java)
-    val baseDirectoryArg = parser.accepts("base-directory").withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
-    val networkMapIdentityFile = parser.accepts("network-map-identity-file").withOptionalArg()
-    val networkMapNetAddr = parser.accepts("network-map-address").withRequiredArg().defaultsTo("localhost")
-    val fakeTradeWithAddr = parser.accepts("fake-trade-with-address").withOptionalArg()
-    val fakeTradeWithIdentityFile = parser.accepts("fake-trade-with-identity-file").withOptionalArg()
+    val roleArg = parser.accepts("role")
+            .withRequiredArg().ofType(IRSDemoRole::class.java)
+    val networkAddressArg =
+            parser.accepts("network-address", "The p2p networking address to use")
+            .withOptionalArg().ofType(String::class.java)
+    val apiAddressArg =
+            parser.accepts("api-address", "The address to expose the HTTP API on")
+            .withOptionalArg().ofType(String::class.java)
+    val baseDirectoryArg =
+            parser.accepts("base-directory", "The directory to put all files under")
+            .withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
+    val networkMapIdentityFile =
+            parser.accepts("network-map-identity-file", "The file containing the Party info of the network map")
+            .withOptionalArg()
+    val networkMapNetAddr =
+            parser.accepts("network-map-address", "The address of the network map")
+            .withRequiredArg().defaultsTo("localhost")
+    val fakeTradeWithIdentityFile =
+            parser.accepts("fake-trade-with-identity-file", "Extra identities to be registered with the identity service")
+            .withOptionalArg()
     val nonOptions = parser.nonOptions()
+    val help = parser.accepts("help", "Prints this help").forHelp()
 }
 
 class IRSDemoPluginRegistry : CordaPluginRegistry {
@@ -274,6 +289,10 @@ fun runIRSDemo(args: Array<String>): Int {
         is CliParams.RunNode -> runNode(cliParams)
         is CliParams.Trade -> runTrade(cliParams)
         is CliParams.DateChange -> runDateChange(cliParams)
+        is CliParams.Help -> {
+            printHelp(CliParamsSpec.parser)
+            0
+        }
     }
 }
 
@@ -306,11 +325,8 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
 
     try {
         val networkMap = createRecipient(cliParams.mapAddress)
-        val destinations = cliParams.tradeWithAddrs.map({
-            createRecipient(it)
-        })
 
-        val node = startNode(cliParams, networkMap, destinations)
+        val node = startNode(cliParams, networkMap)
         // Register handlers for the demo
         AutoOfferProtocol.Handler.register(node)
         UpdateBusinessDayProtocol.Handler.register(node)
@@ -366,7 +382,7 @@ private fun createRecipient(addr: String) : SingleMessageRecipient {
     return ArtemisMessagingService.makeRecipient(hostAndPort)
 }
 
-private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient, recipients: List<SingleMessageRecipient>) : Node {
+private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient) : Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
     val networkMapId =
@@ -387,21 +403,18 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
 
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
-    if (params.tradeWithAddrs.size != params.tradeWithIdentities.size) {
-        throw IllegalArgumentException("Different number of peer addresses (${params.tradeWithAddrs.size}) and identities (${params.tradeWithIdentities.size})")
-    }
-    for ((recipient, identityFile) in recipients.zip(params.tradeWithIdentities)) {
-        val peerId = nodeInfo(recipient, identityFile)
-        node.services.identityService.registerIdentity(peerId.identity)
+    for (identityFile in params.tradeWithIdentities) {
+        node.services.identityService.registerIdentity(parsePartyFromFile(identityFile))
     }
 
     return node
 }
 
+private fun parsePartyFromFile(path: Path) = Files.readAllBytes(path).deserialize<Party>()
+
 private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
     try {
-        val path = identityFile
-        val party = Files.readAllBytes(path).deserialize<Party>()
+        val party = parsePartyFromFile(identityFile)
         return NodeInfo(recipient, party, advertisedServices)
     } catch (e: Exception) {
         println("Could not find identify file $identityFile.")
@@ -466,8 +479,9 @@ private fun createDefaultConfigFile(configFile: File, legalName: String) {
 }
 
 private fun printHelp(parser: OptionParser) {
+    val roleList = IRSDemoRole.values().joinToString(separator = "|") { it.toString() }
     println("""
-    Usage: irsdemo --role [NodeA|NodeB|Trade|Date] [<TradeName>|<DateValue>] [options]
+    Usage: irsdemo --role $roleList [<TradeName>|<DateValue>] [options]
     Please refer to the documentation in docs/build/index.html for more info.
 
     """.trimIndent())
