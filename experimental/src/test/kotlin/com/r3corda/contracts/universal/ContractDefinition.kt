@@ -5,6 +5,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import org.junit.Test
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.*
 
 /**
@@ -20,10 +21,13 @@ class DummyPerceivable<T> : Perceivable<T>
 val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
 
 
-fun libor(amount: Amount<Currency>, start: String, end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun libor(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun libor(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
 
-fun interest(rate: Amount<Currency>, dayCountConvention: String, interest: Double /* todo -  appropriate type */,
-             start: String, end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun interest(@Suppress("UNUSED_PARAMETER") rate: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Double /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun interest(@Suppress("UNUSED_PARAMETER") rate: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Double /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
 
 // Test parties
 val roadRunner = Party("Road Runner", generateKeyPair().public)

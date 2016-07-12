@@ -99,9 +99,9 @@ fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
 
 class RolloutBuilder(val startDate: String, val endDate: String, val frequency: Frequency) {
 
-    val start = "start date"
-    val end = "end date"
-    fun recurse() = zero
+    val start = StartDate()
+    val end = EndDate()
+    fun recurse() = Continuation()
 
     fun final() =
             RollOut(startDate, endDate, frequency, zero)

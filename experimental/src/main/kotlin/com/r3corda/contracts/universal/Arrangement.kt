@@ -52,4 +52,10 @@ data class Action(val name: String, val condition: Perceivable<Boolean>,
 data class Or(val actions: Set<Action>) : Arrangement
 
 
-data class RollOut(val startDate: String, val endDate: String, val frequency: Frequency, val arrangement: Arrangement) : Arrangement
+// Roll out of arrangement
+data class RollOut(val startDate: String, val endDate: String, val frequency: Frequency, val template: Arrangement) : Arrangement
+
+
+// Continuation of roll out
+// May only be used inside template for RollOut
+class Continuation : Arrangement
