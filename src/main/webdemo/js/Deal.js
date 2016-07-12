@@ -14,6 +14,20 @@ let Deal = function(dealViewModel) {
         _.assign(fixedLeg.fixedRate, fixedRateViewModel);
 
         fixedLeg.fixedRate = Number(fixedLeg.fixedRate) / 100;
+        fixedLeg.notional.token = common.baseCurrency;
+        fixedLeg.effectiveDate = formatDateForNode(common.effectiveDate);
+        fixedLeg.terminationDate = formatDateForNode(common.terminationDate);
+        fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
+        fixedLeg.dayCountBasisDay = dayCountBasisLookup[fixedLeg.dayCountBasis].day;
+        fixedLeg.dayCountBasisYear = dayCountBasisLookup[fixedLeg.dayCountBasis].year;
+        delete fixedLeg.dayCountBasis;
+
+        floatingLeg.notional.token = common.baseCurrency;
+        floatingLeg.effectiveDate = formatDateForNode(common.effectiveDate);
+        floatingLeg.terminationDate = formatDateForNode(common.terminationDate);
+        floatingLeg.dayCountBasisDay = dayCountBasisLookup[floatingLeg.dayCountBasis].day;
+        floatingLeg.dayCountBasisYear = dayCountBasisLookup[floatingLeg.dayCountBasis].year;
+        delete floatingLeg.dayCountBasis;
 
         common.tradeID = tradeId;
         common.eligibleCurrency = common.baseCurrency;
@@ -21,21 +35,8 @@ let Deal = function(dealViewModel) {
         common.threshold.token = common.baseCurrency;
         common.minimumTransferAmount.token = common.baseCurrency;
         common.rounding.token = common.baseCurrency;
-
-        fixedLeg.notional.token = common.baseCurrency;
-        fixedLeg.effectiveDate = formatDateForNode(fixedLeg.effectiveDate);
-        fixedLeg.terminationDate = formatDateForNode(fixedLeg.terminationDate);
-        fixedLeg.fixedRate = { ratioUnit: { value: fixedLeg.fixedRate } };
-        fixedLeg.dayCountBasisDay = dayCountBasisLookup[fixedLeg.dayCountBasis].day;
-        fixedLeg.dayCountBasisYear = dayCountBasisLookup[fixedLeg.dayCountBasis].year;
-        delete fixedLeg.dayCountBasis;
-
-        floatingLeg.notional.token = common.baseCurrency;
-        floatingLeg.effectiveDate = formatDateForNode(floatingLeg.effectiveDate);
-        floatingLeg.terminationDate = formatDateForNode(floatingLeg.terminationDate);
-        floatingLeg.dayCountBasisDay = dayCountBasisLookup[floatingLeg.dayCountBasis].day;
-        floatingLeg.dayCountBasisYear = dayCountBasisLookup[floatingLeg.dayCountBasis].year;
-        delete floatingLeg.dayCountBasis;
+        delete common.effectiveDate;
+        delete common.terminationDate;
 
         let json = {
             fixedLeg: fixedLeg,

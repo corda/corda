@@ -18,9 +18,7 @@ let fixedLegModel = {
         quantity: 2500000000
     },
     paymentFrequency: "Annual",
-    effectiveDate: new Date(2016, 3, 11),
     effectiveDateAdjustment: null,
-    terminationDate: new Date(2026, 3, 11),
     terminationDateAdjustment: null,
     fixedRate: "1.676",
     dayCountBasis: "30/360",
@@ -84,6 +82,8 @@ let fixedRateViewModel = {
 
 let commonViewModel = {
     baseCurrency: "EUR",
+    effectiveDate: new Date(2016, 3, 11),
+    terminationDate: new Date(2026, 3, 11),
     eligibleCreditSupport: "Cash in an Eligible Currency",
     independentAmounts: {
         quantity: 0

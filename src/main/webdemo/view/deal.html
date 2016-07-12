@@ -71,6 +71,13 @@
                     <td>{{deal.fixedLeg.effectiveDate}}</td>
                 </tr>
                 <tr class="center aligned">
+                    <td>Fixed Rate</td>
+                    <td>
+                        <span ng-show="!deal.fixedLeg.fixedRate.positive">-</span>
+                        {{deal.fixedLeg.fixedRate.value}}%
+                    </td>
+                </tr>
+                <tr class="center aligned">
                     <td>Terminates</td>
                     <td>{{deal.fixedLeg.terminationDate}}</td>
                 </tr>
@@ -103,13 +110,6 @@
                                 </table>
                             </div>
                         </div>
-                    </td>
-                </tr>
-                <tr class="center aligned">
-                    <td>Fixed Rate</td>
-                    <td>
-                        <span ng-show="!deal.fixedLeg.fixedRate.positive">-</span>
-                        {{deal.fixedLeg.fixedRate.value}}%
                     </td>
                 </tr>
                 </tbody>

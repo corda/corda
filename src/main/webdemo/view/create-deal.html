@@ -4,8 +4,11 @@
         <div class="ui text loader">Loading</div>
     </div>
     <h2>New Deal</h2>
-    <form class="ui form" ng-submit="createDeal()">
+    <form id="deal-form" class="ui form" ng-submit="createDeal()">
         <div class="ui grid">
+            <div class="sixteen wide column">
+                <input type="submit" class="ui submit primary button fluid"/>
+            </div>
             <div class="sixteen wide column">
                 <div class="field">
                     <label>Base Currency</label>
@@ -14,6 +17,14 @@
                         <option value="USD">USD</option>
                         <option value="GBP">GBP</option>
                     </select>
+                </div>
+                <div class="field">
+                    <label>Effective Date</label>
+                    <input type="date" name="effectiveDate" ng-model="deal.common.effectiveDate"/>
+                </div>
+                <div class="field">
+                    <label>Termination Date</label>
+                    <input type="date" name="terminationDate" ng-model="deal.common.terminationDate"/>
                 </div>
             </div>
             <div class="eight wide column" id="createfixedleg">
@@ -37,14 +48,6 @@
                         <option value="SemiAnnual">Semi Annual</option>
                         <option value="Quarterly">Quarterly</option>
                     </select>
-                </div>
-                <div class="field">
-                    <label>Effective Date</label>
-                    <input type="date" name="effectiveDate" ng-model="deal.fixedLeg.effectiveDate"/>
-                </div>
-                <div class="field">
-                    <label>Termination Date</label>
-                    <input type="date" name="terminationDate" ng-model="deal.fixedLeg.terminationDate"/>
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>
@@ -112,14 +115,6 @@
                         <option value="Quarterly">Quarterly</option>
                         <option value="SemiAnnual">Semi Annual</option>
                     </select>
-                </div>
-                <div class="field">
-                    <label>Effective Date</label>
-                    <input type="date" name="effectiveDate" ng-model="deal.floatingLeg.effectiveDate"/>
-                </div>
-                <div class="field">
-                    <label>Termination Date</label>
-                    <input type="date" name="terminationDate" ng-model="deal.floatingLeg.terminationDate"/>
                 </div>
                 <div class="field">
                     <label>Day Count Basis</label>

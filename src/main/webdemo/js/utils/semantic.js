@@ -5,6 +5,7 @@ define(['jquery', 'semantic'], ($, semantic) => {
         init: () => {
             $('.ui.accordion').accordion();
             $('.ui.dropdown').dropdown();
+            $('.ui.sticky').sticky();
         }
     };
 });
