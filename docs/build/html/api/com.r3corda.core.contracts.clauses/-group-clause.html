@@ -1,0 +1,40 @@
+<HTML>
+<HEAD>
+<title>GroupClause - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href="index.html">com.r3corda.core.contracts.clauses</a>&nbsp;/&nbsp;<a href=".">GroupClause</a><br/>
+<br/>
+<h1>GroupClause</h1>
+<code><span class="keyword">interface </span><span class="identifier">GroupClause</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">, </span><a href="-group-verify/index.html"><span class="identifier">GroupVerify</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<br/>
+<br/>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-clause/if-matched.html">ifMatched</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">ifMatched</span><span class="symbol">: </span><a href="-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is not matches</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-clause/if-not-matched.html">ifNotMatched</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">ifNotMatched</span><span class="symbol">: </span><a href="-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is matched</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-clause/required-commands.html">requiredCommands</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Classes for commands which must ALL be present in transaction for this clause to be triggered</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

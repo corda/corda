@@ -43,7 +43,7 @@
 <a href="get-required-signers.html">getRequiredSigners</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">getRequiredSigners</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType.General$getRequiredSigners(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Return the list of public keys that that require signatures for the transaction type.
-Note: the notary key is checked separately for all transactions and need not be included</p>
+Note: the notary key is checked separately for all transactions and need not be included.</p>
 </td>
 </tr>
 <tr>
@@ -51,7 +51,7 @@ Note: the notary key is checked separately for all transactions and need not be 
 <a href="verify-transaction.html">verifyTransaction</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType.General$verifyTransaction(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Check the transaction is contract-valid by running the verify() for each input and output state contract.
-If any contract fails to verify, the whole transaction is considered to be invalid</p>
+If any contract fails to verify, the whole transaction is considered to be invalid.</p>
 </td>
 </tr>
 </tbody>

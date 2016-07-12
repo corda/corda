@@ -49,22 +49,11 @@ This is the definitive state that is stored on the ledger and used in transactio
 <tbody>
 <tr>
 <td>
-<a href="with-new-notary.html">withNewNotary</a></td>
+<a href="with-notary.html">withNotary</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">withNewNotary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionState$withNewNotary(com.r3corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Copies the underlying state, replacing the notary field with the new value.
-To replace the notary, we need an approval (signature) from <emph>all</emph> participants of the <a href="../-contract-state/index.html">ContractState</a></p>
+<code><span class="keyword">fun </span><span class="identifier">withNotary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionState$withNotary(com.r3corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Copies the underlying state, replacing the notary field with the new value.
+To replace the notary, we need an approval (signature) from <emph>all</emph> participants of the <a href="../-contract-state/index.html">ContractState</a>.</p>
 </td>
-</tr>
-</tbody>
-</table>
-<h3>Extension Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../../com.r3corda.core.testing/label.html">label</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">TransactionState</span><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">label</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing$label(com.r3corda.core.contracts.TransactionState((com.r3corda.core.contracts.ContractState)), kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.testing/-labeled-output/index.html"><span class="identifier">LabeledOutput</span></a></code></td>
 </tr>
 </tbody>
 </table>

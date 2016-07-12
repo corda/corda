@@ -1,0 +1,55 @@
+<HTML>
+<HEAD>
+<title>OutputStateLookup - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.testing</a>&nbsp;/&nbsp;<a href=".">OutputStateLookup</a><br/>
+<br/>
+<h1>OutputStateLookup</h1>
+<code><span class="keyword">interface </span><span class="identifier">OutputStateLookup</span></code><br/>
+<p>This interface defines output state lookup by label. It is split from the interpreter interfaces so that outputs may
+be looked up both in ledger{..} and transaction{..} blocks.</p>
+<br/>
+<br/>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="retrieve-output-state-and-ref.html">retrieveOutputStateAndRef</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">retrieveOutputStateAndRef</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.OutputStateLookup$retrieveOutputStateAndRef(java.lang.Class((com.r3corda.core.testing.OutputStateLookup.retrieveOutputStateAndRef.S)), kotlin.String)/clazz">clazz</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.OutputStateLookup$retrieveOutputStateAndRef(java.lang.Class((com.r3corda.core.testing.OutputStateLookup.retrieveOutputStateAndRef.S)), kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span></code><p>Retrieves an output previously defined by <a href="../-transaction-d-s-l-interpreter/_output.html">TransactionDSLInterpreter._output</a> with a label passed in.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-ledger-d-s-l-interpreter/index.html">LedgerDSLInterpreter</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">LedgerDSLInterpreter</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-transaction-d-s-l-interpreter/index.html"><span class="identifier">TransactionDSLInterpreter</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-verifies/index.html"><span class="identifier">Verifies</span></a><span class="symbol">, </span><span class="identifier">OutputStateLookup</span></code><p>This interface defines the bare bone functionality that a Ledger DSL interpreter should implement.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-test-transaction-d-s-l-interpreter/index.html">TestTransactionDSLInterpreter</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TestTransactionDSLInterpreter</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-transaction-d-s-l-interpreter/index.html"><span class="identifier">TransactionDSLInterpreter</span></a><span class="symbol">, </span><span class="identifier">OutputStateLookup</span></code><p>This interpreter builds a transaction, and <a href="#">TransactionDSL.verifies</a> that the resolved transaction is correct. Note
+that transactions corresponding to input states are not verified. Use <a href="#">LedgerDSL.verifies</a> for that.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-transaction-d-s-l-interpreter/index.html">TransactionDSLInterpreter</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">TransactionDSLInterpreter</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-verifies/index.html"><span class="identifier">Verifies</span></a><span class="symbol">, </span><span class="identifier">OutputStateLookup</span></code><p>This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.core</a>&nbsp;/&nbsp;<a href=".">ThreadBox</a><br/>
 <br/>
 <h1>ThreadBox</h1>
-<code><span class="keyword">class </span><span class="identifier">ThreadBox</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">ThreadBox</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
 <p>A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
 Simply define a private class to hold the data that must be grouped under the same lock, and then pass the only
 instance to the ThreadBox constructor. You can now use the <a href="locked.html">locked</a> method with a lambda to take the lock in a

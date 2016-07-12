@@ -67,7 +67,7 @@ adjusted externally.</p>
 <a href="../java.time.-clock/await-with-deadline.html">awaitWithDeadline</a></td>
 <td>
 <code><span class="keyword">fun </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">.</span><span class="identifier">awaitWithDeadline</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$awaitWithDeadline(java.time.Clock, java.time.Instant, java.util.concurrent.Future((kotlin.Any)))/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities$awaitWithDeadline(java.time.Clock, java.time.Instant, java.util.concurrent.Future((kotlin.Any)))/future">future</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;SettableFuture&lt;Any&gt;()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Wait until the given <a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html">Future</a> is complete or the deadline is reached, with support for MutableClock implementations
-used in demos or testing.  This will also substitute a Fiber compatible Future if required</p>
+used in demos or testing.  This will also substitute a Fiber compatible Future if required.</p>
 </td>
 </tr>
 </tbody>
@@ -79,14 +79,14 @@ used in demos or testing.  This will also substitute a Fiber compatible Future i
 <td>
 <a href="../../com.r3corda.demos/-demo-clock/index.html">DemoClock</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">DemoClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableClock</span><span class="symbol">, </span><a href="../../com.r3corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos</p>
+<code><span class="keyword">class </span><span class="identifier">DemoClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableClock</span><span class="symbol">, </span><a href="../../com.r3corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../../com.r3corda.node.internal.testing/-test-clock/index.html">TestClock</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableClock</span><span class="symbol">, </span><a href="../../com.r3corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the time advanced for use in testing</p>
+<code><span class="keyword">class </span><span class="identifier">TestClock</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableClock</span><span class="symbol">, </span><a href="../../com.r3corda.core.serialization/-serialize-as-token/index.html"><span class="identifier">SerializeAsToken</span></a></code><p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the time advanced for use in testing.</p>
 </td>
 </tr>
 </tbody>

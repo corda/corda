@@ -1,0 +1,483 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Writing a contract using clauses &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Writing a contract test" href="tutorial-test-dsl.html"/>
+        <link rel="prev" title="Writing a contract" href="tutorial-contract.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+<a href="api/index.html">API reference</a>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing a contract using clauses</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#commercial-paper-class">Commercial paper class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clauses">Clauses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#group-clause">Group Clause</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Writing a contract using clauses</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/tutorial-contract-clauses.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="writing-a-contract-using-clauses">
+<h1>Writing a contract using clauses<a class="headerlink" href="#writing-a-contract-using-clauses" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
+already completed &#8220;<a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a>&#8221;.</p>
+<p>Clauses are essentially &#8220;mini-contracts&#8221; which contain verification logic, and are composed together to form
+a contract. With appropriate design, they can be made to be reusable, for example issuing contract state objects is
+generally the same for all fungible contracts, so a single issuance clause can be shared. This cuts down on scope for
+error, and improves consistency of behaviour.</p>
+<p>Clauses can be composed of subclauses, either to combine clauses in different ways, or to apply specialised clauses.
+In the case of commercial paper, we have a &#8220;Grouping&#8221; outermost clause, which will contain the &#8220;Issue&#8221;, &#8220;Move&#8221; and
+&#8220;Redeem&#8221; clauses. The result is a contract that looks something like this:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><dl class="first docutils">
+<dt>Group input and output states together, and then apply the following clauses on each group:</dt>
+<dd><ol class="first last loweralpha simple">
+<li>If an Issue command is present, run appropriate tests and end processing this group.</li>
+<li>If a Move command is present, run appropriate tests and end processing this group.</li>
+<li>If a Redeem command is present, run appropriate tests and end processing this group.</li>
+</ol>
+</dd>
+</dl>
+</li>
+</ol>
+</div></blockquote>
+<div class="section" id="commercial-paper-class">
+<h2>Commercial paper class<a class="headerlink" href="#commercial-paper-class" title="Permalink to this headline">¶</a></h2>
+<p>First we need to change the class from implementing <code class="docutils literal"><span class="pre">Contract</span></code>, to extend <code class="docutils literal"><span class="pre">ClauseVerifier</span></code>. This is an abstract
+class which provides a verify() function for us, and requires we provide a property (<code class="docutils literal"><span class="pre">clauses</span></code>) for the clauses to test,
+and a function (<code class="docutils literal"><span class="pre">extractCommands</span></code>) to extract the applicable commands from the transaction. This is important because
+<code class="docutils literal"><span class="pre">ClauseVerifier</span></code> checks that no commands applicable to the contract are left unprocessed at the end. The following
+examples are trimmed to the modified class definition and added elements, for brevity:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">ClauseVerifier</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
+
+    <span class="k">override</span> <span class="k">val</span> <span class="py">clauses</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">SingleClause</span><span class="p">&gt;</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="k">throw</span> <span class="n">UnsupportedOperationException</span><span class="p">(</span><span class="s">&quot;not implemented&quot;</span><span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;</span>
+        <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">select</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">&gt;()</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CommercialPaper</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">SecureHash</span> <span class="nf">getLegalContractReference</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">SecureHash</span><span class="o">.</span><span class="na">Companion</span><span class="o">.</span><span class="na">sha256</span><span class="o">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">SingleClause</span><span class="o">&gt;</span> <span class="nf">getClauses</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="n">UnsupportedOperationException</span><span class="o">(</span><span class="s">&quot;not implemented&quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">Collection</span><span class="o">&lt;</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="nf">extractCommands</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">()</span>
+                <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
+                <span class="o">.</span><span class="na">filter</span><span class="o">((</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;</span> <span class="n">command</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span> <span class="k">return</span> <span class="n">command</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">Commands</span><span class="o">;</span> <span class="o">})</span>
+                <span class="o">.</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+    <span class="o">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="clauses">
+<h2>Clauses<a class="headerlink" href="#clauses" title="Permalink to this headline">¶</a></h2>
+<p>We&#8217;ll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
+grouping of input/output states later. The inner clauses need to implement the <code class="docutils literal"><span class="pre">GroupClause</span></code> interface, which defines
+the verify() function, and properties for key information on how the clause is processed. These properties specify the
+command(s) which must be present in order for the clause to be matched, and what to do after processing the clause
+depending on whether it was matched or not.</p>
+<p>The <code class="docutils literal"><span class="pre">verify()</span></code> functions defined in the <code class="docutils literal"><span class="pre">SingleClause</span></code> and <code class="docutils literal"><span class="pre">GroupClause</span></code> interfaces is similar to the conventional
+<code class="docutils literal"><span class="pre">Contract</span></code> verification function, although it adds new parameters and returns the set of commands which it has processed.
+Normally this returned set is identical to the commands matched in order to trigger the clause, however in some cases the
+clause may process optional commands which it needs to report that it has handled, or may by designed to only process
+the first (or otherwise) matched command.</p>
+<p>The Move clause for the commercial paper contract is relatively simple, so lets start there:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Move</span><span class="p">:</span> <span class="n">GroupClause</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">ifNotMatched</span><span class="p">:</span> <span class="n">MatchBehaviour</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">MatchBehaviour</span><span class="p">.</span><span class="n">CONTINUE</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">ifMatched</span><span class="p">:</span> <span class="n">MatchBehaviour</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">MatchBehaviour</span><span class="p">.</span><span class="n">END</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">requiredCommands</span><span class="p">:</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">CommandData</span><span class="p">&gt;&gt;</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Move</span><span class="o">::</span><span class="k">class</span><span class="p">.</span><span class="n">java</span><span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">,</span>
+                        <span class="n">inputs</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span>
+                        <span class="n">outputs</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span>
+                        <span class="n">commands</span><span class="p">:</span> <span class="n">Collection</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;,</span>
+                        <span class="n">token</span><span class="p">:</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;):</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;</span> <span class="p">{</span>
+        <span class="k">val</span> <span class="py">command</span> <span class="p">=</span> <span class="n">commands</span><span class="p">.</span><span class="n">requireSingleCommand</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">.</span><span class="n">Move</span><span class="p">&gt;()</span>
+        <span class="k">val</span> <span class="py">input</span> <span class="p">=</span> <span class="n">inputs</span><span class="p">.</span><span class="n">single</span><span class="p">()</span>
+        <span class="n">requireThat</span> <span class="p">{</span>
+            <span class="s">&quot;the transaction is signed by the owner of the CP&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">owner</span> <span class="k">in</span> <span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">)</span>
+            <span class="s">&quot;the state is propagated&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">outputs</span><span class="p">.</span><span class="n">size</span> <span class="p">==</span> <span class="m">1</span><span class="p">)</span>
+            <span class="c1">// Don&#39;t need to check anything else, as if outputs.size == 1 then the output is equal to</span>
+            <span class="c1">// the input ignoring the owner field due to the grouping.</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">setOf</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">value</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Move</span> <span class="kd">implements</span> <span class="n">GroupClause</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">MatchBehaviour</span> <span class="nf">getIfNotMatched</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">MatchBehaviour</span><span class="o">.</span><span class="na">CONTINUE</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">MatchBehaviour</span> <span class="nf">getIfMatched</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">MatchBehaviour</span><span class="o">.</span><span class="na">END</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="nf">getRequiredCommands</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singleton</span><span class="o">(</span><span class="n">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;</span> <span class="nf">verify</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">,</span>
+                                   <span class="nd">@NotNull</span> <span class="n">List</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">State</span><span class="o">&gt;</span> <span class="n">inputs</span><span class="o">,</span>
+                                   <span class="nd">@NotNull</span> <span class="n">List</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">State</span><span class="o">&gt;</span> <span class="n">outputs</span><span class="o">,</span>
+                                   <span class="nd">@NotNull</span> <span class="n">Collection</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">AuthenticatedObject</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="n">commands</span><span class="o">,</span>
+                                   <span class="nd">@NotNull</span> <span class="n">State</span> <span class="n">token</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;</span> <span class="n">cmd</span> <span class="o">=</span> <span class="n">requireSingleCommand</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">(),</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+        <span class="c1">// There should be only a single input due to aggregation above</span>
+        <span class="n">State</span> <span class="n">input</span> <span class="o">=</span> <span class="n">single</span><span class="o">(</span><span class="n">inputs</span><span class="o">);</span>
+
+        <span class="n">requireThat</span><span class="o">(</span><span class="n">require</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the transaction is signed by the owner of the CP&quot;</span><span class="o">,</span> <span class="n">cmd</span><span class="o">.</span><span class="na">getSigners</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getOwner</span><span class="o">()));</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the state is propagated&quot;</span><span class="o">,</span> <span class="n">outputs</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">==</span> <span class="mi">1</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
+        <span class="c1">// Don&#39;t need to check anything else, as if outputs.size == 1 then the output is equal to</span>
+        <span class="c1">// the input ignoring the owner field due to the grouping.</span>
+        <span class="k">return</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singleton</span><span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">());</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="docutils">
+<dt>The post-processing <code class="docutils literal"><span class="pre">MatchBehaviour</span></code> options are:</dt>
+<dd><ul class="first last simple">
+<li>CONTINUE</li>
+<li>END</li>
+<li>ERROR</li>
+</ul>
+</dd>
+</dl>
+<p>In this case we process commands against each group, until the first matching clause is found, so we <code class="docutils literal"><span class="pre">END</span></code> on a match
+and <code class="docutils literal"><span class="pre">CONTINUE</span></code> otherwise. <code class="docutils literal"><span class="pre">ERROR</span></code> can be used as a part of a clause which must always/never be matched.</p>
+</div>
+<div class="section" id="group-clause">
+<h2>Group Clause<a class="headerlink" href="#group-clause" title="Permalink to this headline">¶</a></h2>
+<p>We need to wrap the move clause (as well as the issue and redeem clauses - see the relevant contract code for their
+full specifications) in an outer clause. For this we extend the standard <code class="docutils literal"><span class="pre">GroupClauseVerifier</span></code> and specify how to
+group input/output states, as well as the clauses to run on each group.</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Group</span> <span class="p">:</span> <span class="n">GroupClauseVerifier</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;()</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">ifNotMatched</span><span class="p">:</span> <span class="n">MatchBehaviour</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">MatchBehaviour</span><span class="p">.</span><span class="n">ERROR</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">ifMatched</span><span class="p">:</span> <span class="n">MatchBehaviour</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">MatchBehaviour</span><span class="p">.</span><span class="n">END</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">clauses</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">GroupClause</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;&gt;</span>
+        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">listOf</span><span class="p">(</span>
+                <span class="n">Clause</span><span class="p">.</span><span class="n">Redeem</span><span class="p">(),</span>
+                <span class="n">Clause</span><span class="p">.</span><span class="n">Move</span><span class="p">(),</span>
+                <span class="n">Clause</span><span class="p">.</span><span class="n">Issue</span><span class="p">()</span>
+        <span class="p">)</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">extractGroups</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">TransactionForContract</span><span class="p">.</span><span class="n">InOutGroup</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;&gt;</span>
+            <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">groupStates</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">token</span> <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Group</span> <span class="kd">extends</span> <span class="n">GroupClauseVerifier</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">MatchBehaviour</span> <span class="nf">getIfMatched</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">MatchBehaviour</span><span class="o">.</span><span class="na">END</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">MatchBehaviour</span> <span class="nf">getIfNotMatched</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">MatchBehaviour</span><span class="o">.</span><span class="na">ERROR</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">com</span><span class="o">.</span><span class="na">r3corda</span><span class="o">.</span><span class="na">core</span><span class="o">.</span><span class="na">contracts</span><span class="o">.</span><span class="na">clauses</span><span class="o">.</span><span class="na">GroupClause</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;&gt;</span> <span class="nf">getClauses</span><span class="o">()</span> <span class="o">{</span>
+        <span class="kd">final</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">GroupClause</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;&gt;</span> <span class="n">clauses</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;&gt;();</span>
+
+        <span class="n">clauses</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="n">Clause</span><span class="o">.</span><span class="na">Redeem</span><span class="o">());</span>
+        <span class="n">clauses</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="n">Clause</span><span class="o">.</span><span class="na">Move</span><span class="o">());</span>
+        <span class="n">clauses</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="k">new</span> <span class="n">Clause</span><span class="o">.</span><span class="na">Issue</span><span class="o">());</span>
+
+        <span class="k">return</span> <span class="n">clauses</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;&gt;</span> <span class="nf">extractGroups</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">State</span><span class="o">::</span><span class="n">withoutOwner</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>We then pass this clause into the outer <code class="docutils literal"><span class="pre">ClauseVerifier</span></code> contract by returning it from the <code class="docutils literal"><span class="pre">clauses</span></code> property. We
+also implement the <code class="docutils literal"><span class="pre">extractCommands()</span></code> function, which filters commands on the transaction down to the set the
+contained clauses must handle (any unmatched commands at the end of clause verification results in an exception to be
+thrown).</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">override</span> <span class="k">val</span> <span class="py">clauses</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">SingleClause</span><span class="p">&gt;</span>
+    <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">listOf</span><span class="p">(</span><span class="n">Clauses</span><span class="p">.</span><span class="n">Group</span><span class="p">())</span>
+
+<span class="k">override</span> <span class="k">fun</span> <span class="nf">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;</span>
+    <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">select</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">&gt;()</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Override</span>
+<span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">SingleClause</span><span class="o">&gt;</span> <span class="nf">getClauses</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="k">new</span> <span class="n">Clause</span><span class="o">.</span><span class="na">Group</span><span class="o">());</span>
+<span class="o">}</span>
+
+<span class="nd">@Override</span>
+<span class="kd">public</span> <span class="n">Collection</span><span class="o">&lt;</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="nf">extractCommands</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
+            <span class="o">.</span><span class="na">filter</span><span class="o">((</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;</span> <span class="n">command</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span> <span class="k">return</span> <span class="n">command</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">Commands</span><span class="o">;</span> <span class="o">})</span>
+            <span class="o">.</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
+<p>In summary the top level contract <code class="docutils literal"><span class="pre">CommercialPaper</span></code> specifies a single grouping clause of type
+<code class="docutils literal"><span class="pre">CommercialPaper.Clauses.Group</span></code> which in turn specifies <code class="docutils literal"><span class="pre">GroupClause</span></code> implementations for each type of command
+(<code class="docutils literal"><span class="pre">Redeem</span></code>, <code class="docutils literal"><span class="pre">Move</span></code> and <code class="docutils literal"><span class="pre">Issue</span></code>). This reflects the flow of verification: In order to verify a <code class="docutils literal"><span class="pre">CommercialPaper</span></code>
+we first group states, check which commands are specified, and run command-specific verification logic accordingly.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tutorial-test-dsl.html" class="btn btn-neutral float-right" title="Writing a contract test" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial-contract.html" class="btn btn-neutral" title="Writing a contract" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Distributed Ledger Group, LLC.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

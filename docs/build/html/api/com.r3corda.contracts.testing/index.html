@@ -7,82 +7,9 @@
 <a href=".">com.r3corda.contracts.testing</a><br/>
 <br/>
 <h2>Package com.r3corda.contracts.testing</h2>
-<h3>Types</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-java-test-helpers/index.html">JavaTestHelpers</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">JavaTestHelpers</span></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-c-a-s-h.html">CASH</a></td>
-<td>
-<code><span class="keyword">val </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">CASH</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><p>Allows you to write 100.DOLLARS.CASH</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-d-u-m-m-y_-c-a-s-h_-i-s-s-u-e-r.html">DUMMY_CASH_ISSUER</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">DUMMY_CASH_ISSUER</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="-d-u-m-m-y_-c-a-s-h_-i-s-s-u-e-r_-k-e-y.html">DUMMY_CASH_ISSUER_KEY</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">DUMMY_CASH_ISSUER_KEY</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-o-b-l-i-g-a-t-i-o-n.html">OBLIGATION</a></td>
-<td>
-<code><span class="keyword">val </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">OBLIGATION</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-o-b-l-i-g-a-t-i-o-n_-d-e-f.html">OBLIGATION_DEF</a></td>
-<td>
-<code><span class="keyword">val </span><a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">OBLIGATION_DEF</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-obligation/-state-template/index.html"><span class="identifier">StateTemplate</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><p>Allows you to write 100.DOLLARS.CASH</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-s-t-a-t-e.html">STATE</a></td>
-<td>
-<code><span class="keyword">val </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">STATE</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="-t-e-s-t_-p-r-o-g-r-a-m_-m-a-p.html">TEST_PROGRAM_MAP</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">TEST_PROGRAM_MAP</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
-</tr>
-</tbody>
-</table>
 <h3>Functions</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="at.html">at</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">at</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$at(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.at.T)), java.time.Instant)/dueBefore">dueBefore</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="../com.r3corda.contracts.asset/-obligation/-issuance-definition/index.html"><span class="identifier">IssuanceDefinition</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">at</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$at(com.r3corda.contracts.asset.Obligation.IssuanceDefinition((com.r3corda.contracts.testing.at.T)), java.time.Instant)/dueBefore">dueBefore</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-obligation/-issuance-definition/index.html"><span class="identifier">IssuanceDefinition</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="between.html">between</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">between</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$between(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.between.T)), ((com.r3corda.core.crypto.Party, java.security.PublicKey)))/parties">parties</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
-</tr>
 <tr>
 <td>
 <a href="fill-with-some-test-cash.html">fillWithSomeTestCash</a></td>
@@ -90,43 +17,6 @@
 <code><span class="keyword">fun </span><a href="../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">.</span><span class="identifier">fillWithSomeTestCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/howMuch">howMuch</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a>&nbsp;<span class="symbol">=</span>&nbsp;DUMMY_NOTARY<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/atLeastThisManyStates">atLeastThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;3<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/atMostThisManyStates">atMostThisManyStates</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;10<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/rng">rng</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Random.html"><span class="identifier">Random</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Random()<span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.testing$fillWithSomeTestCash(com.r3corda.core.node.ServiceHub, com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.crypto.Party, kotlin.Int, kotlin.Int, java.util.Random, com.r3corda.core.serialization.OpaqueBytes)/ref">ref</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a>&nbsp;<span class="symbol">=</span>&nbsp;OpaqueBytes(ByteArray(1, { 0 }))<span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a></code><p>Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
 to the wallet. This is intended for unit tests.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="generate-state.html">generateState</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">generateState</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-dummy-state/index.html"><span class="identifier">DummyState</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="issued by.html">issued by</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.issued by.T)), com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="owned by.html">owned by</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.asset.Cash.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.asset.Obligation.State((com.r3corda.contracts.testing.owned by.T)), java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.CommercialPaper.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(, java.security.PublicKey)/new_owner">new_owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="with deposit.html">with deposit</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">with deposit</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with deposit(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="with notary.html">with notary</a></td>
-<td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with notary(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with notary(com.r3corda.contracts.CommercialPaper.State, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with notary(com.r3corda.core.contracts.ContractState, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

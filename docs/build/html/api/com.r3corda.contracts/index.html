@@ -34,7 +34,7 @@
 <td>
 <a href="-fixed-rate-payment-event/index.html">FixedRatePaymentEvent</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">FixedRatePaymentEvent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-rate-payment-event/index.html"><span class="identifier">RatePaymentEvent</span></a></code><p>Basic class for the Fixed Rate Payments on the fixed leg - see <a href="-rate-payment-event/index.html">RatePaymentEvent</a>
+<code><span class="keyword">class </span><span class="identifier">FixedRatePaymentEvent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-rate-payment-event/index.html"><span class="identifier">RatePaymentEvent</span></a></code><p>Basic class for the Fixed Rate Payments on the fixed leg - see <a href="-rate-payment-event/index.html">RatePaymentEvent</a>.
 Assumes that the rate is valid.</p>
 </td>
 </tr>
@@ -42,14 +42,14 @@ Assumes that the rate is valid.</p>
 <td>
 <a href="-floating-rate/index.html">FloatingRate</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">FloatingRate</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-rate/index.html"><span class="identifier">Rate</span></a></code><p>The parent class of the Floating rate classes</p>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">FloatingRate</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-rate/index.html"><span class="identifier">Rate</span></a></code><p>The parent class of the Floating rate classes.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-floating-rate-payment-event/index.html">FloatingRatePaymentEvent</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">FloatingRatePaymentEvent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-rate-payment-event/index.html"><span class="identifier">RatePaymentEvent</span></a></code><p>Basic class for the Floating Rate Payments on the floating leg - see <a href="-rate-payment-event/index.html">RatePaymentEvent</a>
+<code><span class="keyword">class </span><span class="identifier">FloatingRatePaymentEvent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-rate-payment-event/index.html"><span class="identifier">RatePaymentEvent</span></a></code><p>Basic class for the Floating Rate Payments on the floating leg - see <a href="-rate-payment-event/index.html">RatePaymentEvent</a>.
 If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?</p>
 </td>
 </tr>
@@ -57,8 +57,8 @@ If the rate is null returns a zero payment. // TODO: Is this the desired behavio
 <td>
 <a href="-interest-rate-swap/index.html">InterestRateSwap</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
-This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
+<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
 It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
 Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
 This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
@@ -82,7 +82,7 @@ This is just a representation of a vanilla Fixed vs Floating (same currency) IRS
 <td>
 <a href="-rate/index.html">Rate</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">Rate</span></code><p>Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc</p>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">Rate</span></code><p>Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.</p>
 </td>
 </tr>
 <tr>
@@ -169,9 +169,22 @@ is adjusted as if the paper was redeemed and immediately repurchased, but withou
 </tr>
 <tr>
 <td>
+<a href="owned by.html">owned by</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts$owned by(com.r3corda.contracts.CommercialPaper.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts$owned by(, java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="times.html">times</a></td>
 <td>
 <code><span class="keyword">operator</span> <span class="keyword">fun </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">times</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts$times(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.contracts.RatioUnit)/other">other</span><span class="symbol">:</span>&nbsp;<a href="-ratio-unit/index.html"><span class="identifier">RatioUnit</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="with notary.html">with notary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts$with notary(com.r3corda.contracts.CommercialPaper.State, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Protocol state machines" href="protocol-state-machines.html"/>
+        <link rel="next" title="Writing a contract using clauses" href="tutorial-contract-clauses.html"/>
         <link rel="prev" title="Where to start" href="where-to-start.html"/> 
 
   
@@ -110,8 +110,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#how-to-test-your-contract">How to test your contract</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#adding-a-generation-api-to-your-contract">Adding a generation API to your contract</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#non-asset-oriented-based-smart-contracts">Non-asset-oriented based smart contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clauses">Clauses</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -176,9 +179,10 @@
 for how Kotlin syntax works.</p>
 <div class="section" id="starting-the-commercial-paper-class">
 <h2>Starting the commercial paper class<a class="headerlink" href="#starting-the-commercial-paper-class" title="Permalink to this headline">¶</a></h2>
-<p>A smart contract is a class that implements the <code class="docutils literal"><span class="pre">Contract</span></code> interface. For now, they have to be a part of the main
-codebase, as dynamic loading of contract code is not yet implemented. Therefore, we start by creating a file named
-either <code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code> or <code class="docutils literal"><span class="pre">CommercialPaper.java</span></code> in the src/contracts directory with the following contents:</p>
+<p>A smart contract is a class that implements the <code class="docutils literal"><span class="pre">Contract</span></code> interface. This can be either implemented directly, or
+via an abstract contract such as <code class="docutils literal"><span class="pre">ClauseVerifier</span></code>. For now, contracts have to be a part of the main codebase, as
+dynamic loading of contract code is not yet implemented. Therefore, we start by creating a file named either
+<code class="docutils literal"><span class="pre">CommercialPaper.kt</span></code> or <code class="docutils literal"><span class="pre">CommercialPaper.java</span></code> in the <code class="docutils literal"><span class="pre">contracts/src/main</span></code> directory with the following contents:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
@@ -189,7 +193,7 @@ either <code class="docutils literal"><span class="pre">CommercialPaper.kt</span
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Cash</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CommercialPaper</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
     <span class="nd">@Override</span>
     <span class="kd">public</span> <span class="n">SecureHash</span> <span class="nf">getLegalContractReference</span><span class="o">()</span> <span class="o">{</span>
         <span class="k">return</span> <span class="n">SecureHash</span><span class="o">.</span><span class="na">Companion</span><span class="o">.</span><span class="na">sha256</span><span class="o">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="o">);</span>
@@ -534,29 +538,34 @@ logic.</p>
     <span class="c1">// For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!</span>
     <span class="n">State</span> <span class="n">input</span> <span class="o">=</span> <span class="n">single</span><span class="o">(</span><span class="n">filterIsInstance</span><span class="o">(</span><span class="n">inputs</span><span class="o">,</span> <span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
 
-    <span class="k">if</span> <span class="o">(!</span><span class="n">cmd</span><span class="o">.</span><span class="na">getSigners</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getOwner</span><span class="o">()))</span>
-        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the transaction is signed by the owner of the CP&quot;</span><span class="o">);</span>
+    <span class="n">requireThat</span><span class="o">(</span><span class="n">require</span> <span class="o">-&gt;</span> <span class="o">{</span>
+        <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the transaction is signed by the owner of the CP&quot;</span><span class="o">,</span> <span class="n">cmd</span><span class="o">.</span><span class="na">getSigners</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getOwner</span><span class="o">()));</span>
+        <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+    <span class="o">});</span>
 
     <span class="k">if</span> <span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">)</span> <span class="o">{</span>
-        <span class="c1">// Check the output CP state is the same as the input state, ignoring the owner field.</span>
-        <span class="n">State</span> <span class="n">output</span> <span class="o">=</span> <span class="n">single</span><span class="o">(</span><span class="n">outputs</span><span class="o">);</span>
-
-        <span class="k">if</span> <span class="o">(!</span><span class="n">output</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">())</span> <span class="o">||</span>
-                <span class="o">!</span><span class="n">output</span><span class="o">.</span><span class="na">getIssuance</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getIssuance</span><span class="o">())</span> <span class="o">||</span>
-                <span class="o">!</span><span class="n">output</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">()))</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the output state is the same as the input state except for owner&quot;</span><span class="o">);</span>
+        <span class="n">requireThat</span><span class="o">(</span><span class="n">require</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the state is propagated&quot;</span><span class="o">,</span> <span class="n">outputs</span><span class="o">.</span><span class="na">size</span><span class="o">()</span> <span class="o">==</span> <span class="mi">1</span><span class="o">);</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
+        <span class="c1">// Don&#39;t need to check anything else, as if outputs.size == 1 then the output is equal to</span>
+        <span class="c1">// the input ignoring the owner field due to the grouping.</span>
     <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Redeem</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">Amount</span> <span class="n">received</span> <span class="o">=</span> <span class="n">CashKt</span><span class="o">.</span><span class="na">sumCashOrNull</span><span class="o">(</span><span class="n">inputs</span><span class="o">);</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">time</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&quot;Redemption transactions must be timestamped&quot;</span><span class="o">);</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">received</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: no cash being redeemed&quot;</span><span class="o">);</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">().</span><span class="na">isAfter</span><span class="o">(</span><span class="n">time</span><span class="o">))</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the paper must have matured&quot;</span><span class="o">);</span>
-        <span class="k">if</span> <span class="o">(!</span><span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">received</span><span class="o">))</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the received amount equals the face value&quot;</span><span class="o">);</span>
-        <span class="k">if</span> <span class="o">(!</span><span class="n">outputs</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the paper must be destroyed&quot;</span><span class="o">);</span>
+        <span class="n">TimestampCommand</span> <span class="n">timestampCommand</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">getTimestampBy</span><span class="o">(((</span><span class="n">Commands</span><span class="o">.</span><span class="na">Redeem</span><span class="o">)</span> <span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()).</span><span class="na">notary</span><span class="o">);</span>
+        <span class="n">Instant</span> <span class="n">time</span> <span class="o">=</span> <span class="kc">null</span> <span class="o">==</span> <span class="n">timestampCommand</span>
+                <span class="o">?</span> <span class="kc">null</span>
+                <span class="o">:</span> <span class="n">timestampCommand</span><span class="o">.</span><span class="na">getBefore</span><span class="o">();</span>
+        <span class="n">Amount</span><span class="o">&lt;</span><span class="n">Issued</span><span class="o">&lt;</span><span class="n">Currency</span><span class="o">&gt;&gt;</span> <span class="n">received</span> <span class="o">=</span> <span class="n">CashKt</span><span class="o">.</span><span class="na">sumCashBy</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getOutputs</span><span class="o">(),</span> <span class="n">input</span><span class="o">.</span><span class="na">getOwner</span><span class="o">());</span>
+
+        <span class="n">requireThat</span><span class="o">(</span><span class="n">require</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;must be timestamped&quot;</span><span class="o">,</span> <span class="n">timestampCommand</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">);</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;received amount equals the face value: &quot;</span>
+                    <span class="o">+</span> <span class="n">received</span> <span class="o">+</span> <span class="s">&quot; vs &quot;</span> <span class="o">+</span> <span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">(),</span> <span class="n">received</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">()));</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the paper must have matured&quot;</span><span class="o">,</span> <span class="n">time</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">time</span><span class="o">.</span><span class="na">isBefore</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">()));</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the received amount equals the face value&quot;</span><span class="o">,</span> <span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">received</span><span class="o">));</span>
+            <span class="n">require</span><span class="o">.</span><span class="na">by</span><span class="o">(</span><span class="s">&quot;the paper must be destroyed&quot;</span><span class="o">,</span> <span class="n">outputs</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">());</span>
+            <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+        <span class="o">});</span>
     <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Issue</span><span class="o">)</span> <span class="o">{</span>
         <span class="c1">// .. etc .. (see Kotlin for full definition)</span>
     <span class="o">}</span>
@@ -909,6 +918,11 @@ The logic that implements measurement of the threshold, different signing combin
 be implemented once in a separate contract, with the controlling data being held in the named state.</p>
 <p>Future versions of the prototype will explore these concepts in more depth.</p>
 </div>
+<div class="section" id="clauses">
+<h2>Clauses<a class="headerlink" href="#clauses" title="Permalink to this headline">¶</a></h2>
+<p>Instead of structuring contracts as a single entity, they can be broken down into reusable chunks known as clauses.
+This idea is addressed in the next tutorial, &#8220;<a class="reference internal" href="tutorial-contract-clauses.html"><span class="doc">Writing a contract using clauses</span></a>&#8221;.</p>
+</div>
 </div>
 
 
@@ -918,7 +932,7 @@ be implemented once in a separate contract, with the controlling data being held
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="protocol-state-machines.html" class="btn btn-neutral float-right" title="Protocol state machines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="tutorial-contract-clauses.html" class="btn btn-neutral float-right" title="Writing a contract using clauses" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="where-to-start.html" class="btn btn-neutral" title="Where to start" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

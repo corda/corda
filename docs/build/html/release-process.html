@@ -101,6 +101,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
@@ -188,10 +190,12 @@ section for this release. This is the right place to put any advice on how to po
 create one, bug them to do so a day or two before the release.</li>
 <li>Regenerate the docsite if necessary and commit.</li>
 <li>Create a branch with a name like <cite>release-M0</cite> where 0 is replaced by the number of the milestone.</li>
-<li>Tag that branch with a tag like <cite>release-M0.0</cite></li>
+<li>Adjust the version in the root build.gradle file to take out the -SNAPSHOT and commit it on the branch.</li>
+<li>Tag the branch with a tag like <cite>release-M0.0</cite></li>
 <li>Push the branch and the tag to git.</li>
 <li>Write up a short announcement containing the summary of new features, changes, and API breaks. Send it to the
 r3dlg-awg mailing list.</li>
+<li>On master, adjust the version number in the root build.gradle file upwards.</li>
 </ol>
 <p>If there are serious bugs found in the release, backport the fix to the branch and then tag it with e.g. <cite>release-M0.1</cite>
 Minor changes to the branch don&#8217;t have to be announced unless it&#8217;d be critical to get all developers updated.</p>

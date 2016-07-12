@@ -20,7 +20,7 @@ The underlying set is exposed for Kryo to access, but should not be accessed dir
 <td>
 <a href="-iterator/index.html">Iterator</a></td>
 <td>
-<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">Iterator</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableIterator</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">Iterator</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableIterator</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -129,20 +129,6 @@ The underlying set is exposed for Kryo to access, but should not be accessed dir
 <a href="to-string.html">toString</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Extension Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../../com.r3corda.core/kotlin.collections.-iterable/none-or-single.html">noneOrSingle</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">noneOrSingle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core$noneOrSingle(kotlin.collections.Iterable((com.r3corda.core.noneOrSingle.T)), kotlin.Function1((com.r3corda.core.noneOrSingle.T, kotlin.Boolean)))/predicate">predicate</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">T</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span><span class="symbol">?</span></code><p>Returns the single element matching the given <a href="../../com.r3corda.core/kotlin.collections.-iterable/none-or-single.html#com.r3corda.core$noneOrSingle(kotlin.collections.Iterable((com.r3corda.core.noneOrSingle.T)), kotlin.Function1((com.r3corda.core.noneOrSingle.T, kotlin.Boolean)))/predicate">predicate</a>, or <code>null</code> if element was not found,
-or throws if more than one element was found.</p>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">Iterable</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">noneOrSingle</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span><span class="symbol">?</span></code><p>Returns single element, or <code>null</code> if element was not found, or throws if more than one element was found.</p>
-</td>
 </tr>
 </tbody>
 </table>

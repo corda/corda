@@ -1,0 +1,129 @@
+<HTML>
+<HEAD>
+<title>TestLedgerDSLInterpreter - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.testing</a>&nbsp;/&nbsp;<a href=".">TestLedgerDSLInterpreter</a><br/>
+<br/>
+<h1>TestLedgerDSLInterpreter</h1>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TestLedgerDSLInterpreter</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-ledger-d-s-l-interpreter/index.html"><span class="identifier">LedgerDSLInterpreter</span></a><span class="symbol">&lt;</span><a href="../-test-transaction-d-s-l-interpreter/index.html"><span class="identifier">TestTransactionDSLInterpreter</span></a><span class="symbol">&gt;</span></code><br/>
+<br/>
+<br/>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-type-mismatch/index.html">TypeMismatch</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">TypeMismatch</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-verifies-failed/index.html">VerifiesFailed</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">VerifiesFailed</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">TestLedgerDSLInterpreter</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$<init>(com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.StorageService)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$<init>(com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.StorageService)/storageService">storageService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-storage-service/index.html"><span class="identifier">StorageService</span></a><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="wire-transactions.html">wireTransactions</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">wireTransactions</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="_transaction.html">_transaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">_transaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$_transaction(kotlin.String, com.r3corda.core.contracts.TransactionBuilder, kotlin.Function1((com.r3corda.core.testing.TransactionDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter)), com.r3corda.core.testing.EnforceVerifyOrFail)))/transactionLabel">transactionLabel</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$_transaction(kotlin.String, com.r3corda.core.contracts.TransactionBuilder, kotlin.Function1((com.r3corda.core.testing.TransactionDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter)), com.r3corda.core.testing.EnforceVerifyOrFail)))/transactionBuilder">transactionBuilder</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$_transaction(kotlin.String, com.r3corda.core.contracts.TransactionBuilder, kotlin.Function1((com.r3corda.core.testing.TransactionDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter)), com.r3corda.core.testing.EnforceVerifyOrFail)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-d-s-l/index.html"><span class="identifier">TransactionDSL</span></a><span class="symbol">&lt;</span><a href="../-test-transaction-d-s-l-interpreter/index.html"><span class="identifier">TestTransactionDSLInterpreter</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../-enforce-verify-or-fail.html"><span class="identifier">EnforceVerifyOrFail</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><p>Creates and adds a transaction to the ledger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="_unverified-transaction.html">_unverifiedTransaction</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">_unverifiedTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$_unverifiedTransaction(kotlin.String, com.r3corda.core.contracts.TransactionBuilder, kotlin.Function1((com.r3corda.core.testing.TransactionDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter)), kotlin.Unit)))/transactionLabel">transactionLabel</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$_unverifiedTransaction(kotlin.String, com.r3corda.core.contracts.TransactionBuilder, kotlin.Function1((com.r3corda.core.testing.TransactionDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter)), kotlin.Unit)))/transactionBuilder">transactionBuilder</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$_unverifiedTransaction(kotlin.String, com.r3corda.core.contracts.TransactionBuilder, kotlin.Function1((com.r3corda.core.testing.TransactionDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter)), kotlin.Unit)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-d-s-l/index.html"><span class="identifier">TransactionDSL</span></a><span class="symbol">&lt;</span><a href="../-test-transaction-d-s-l-interpreter/index.html"><span class="identifier">TestTransactionDSLInterpreter</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><p>Creates and adds a transaction to the ledger that will not be verified by <a href="verifies.html">verifies</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="attachment.html">attachment</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">attachment</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$attachment(java.io.InputStream)/attachment">attachment</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/InputStream.html"><span class="identifier">InputStream</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>Adds an attachment to the ledger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="output-to-label.html">outputToLabel</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">outputToLabel</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$outputToLabel(com.r3corda.core.contracts.ContractState)/state">state</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="retrieve-output-state-and-ref.html">retrieveOutputStateAndRef</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">retrieveOutputStateAndRef</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$retrieveOutputStateAndRef(java.lang.Class((com.r3corda.core.testing.TestLedgerDSLInterpreter.retrieveOutputStateAndRef.S)), kotlin.String)/clazz">clazz</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$retrieveOutputStateAndRef(java.lang.Class((com.r3corda.core.testing.TestLedgerDSLInterpreter.retrieveOutputStateAndRef.S)), kotlin.String)/label">label</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span></code><p>Retrieves an output previously defined by <a href="../-transaction-d-s-l-interpreter/_output.html">TransactionDSLInterpreter._output</a> with a label passed in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="to-transaction-group.html">toTransactionGroup</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toTransactionGroup</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-transaction-group/index.html"><span class="identifier">TransactionGroup</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="transaction-name.html">transactionName</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">transactionName</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$transactionName(com.r3corda.core.crypto.SecureHash)/transactionHash">transactionHash</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="tweak.html">tweak</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tweak</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing.TestLedgerDSLInterpreter$tweak(kotlin.Function1((com.r3corda.core.testing.LedgerDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter, com.r3corda.core.testing.LedgerDSLInterpreter((com.r3corda.core.testing.TestTransactionDSLInterpreter)))), kotlin.Unit)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<a href="../-ledger-d-s-l/index.html"><span class="identifier">LedgerDSL</span></a><span class="symbol">&lt;</span><a href="../-test-transaction-d-s-l-interpreter/index.html"><span class="identifier">TestTransactionDSLInterpreter</span></a><span class="symbol">,</span>&nbsp;<a href="../-ledger-d-s-l-interpreter/index.html"><span class="identifier">LedgerDSLInterpreter</span></a><span class="symbol">&lt;</span><a href="../-test-transaction-d-s-l-interpreter/index.html"><span class="identifier">TestTransactionDSLInterpreter</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Creates a local scoped copy of the ledger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verifies.html">verifies</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">verifies</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-enforce-verify-or-fail.html"><span class="identifier">EnforceVerifyOrFail</span></a></code><p>Verifies the ledger/transaction, throws if the verification fails.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../ledger.html">ledger</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../-ledger-d-s-l-interpreter/index.html"><span class="identifier">LedgerDSLInterpreter</span></a><span class="symbol">&lt;</span><a href="../-transaction-d-s-l-interpreter/index.html"><span class="identifier">TransactionDSLInterpreter</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><s><span class="identifier">ledger</span></s><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.testing$ledger(com.r3corda.core.testing.LedgerDSLInterpreter((com.r3corda.core.testing.TransactionDSLInterpreter)), kotlin.Function1((com.r3corda.core.testing.LedgerDSL((com.r3corda.core.testing.TestTransactionDSLInterpreter, com.r3corda.core.testing.TestLedgerDSLInterpreter)), kotlin.Unit)))/dsl">dsl</span><span class="symbol">:</span>&nbsp;<a href="../-ledger-d-s-l/index.html"><span class="identifier">LedgerDSL</span></a><span class="symbol">&lt;</span><a href="../-test-transaction-d-s-l-interpreter/index.html"><span class="identifier">TestTransactionDSLInterpreter</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">TestLedgerDSLInterpreter</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

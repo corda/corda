@@ -48,6 +48,13 @@
 </tr>
 <tr>
 <td>
+<a href="exit-keys.html">exitKeys</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="issuance-def.html">issuanceDef</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">issuanceDef</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
@@ -103,28 +110,41 @@
 <tbody>
 <tr>
 <td>
-<a href="../../../com.r3corda.contracts.testing/issued by.html">issued by</a></td>
+<a href="../../issued by.html">issued by</a></td>
 <td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code><br/>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$issued by(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$issued by(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code><br/>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$issued by(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.contracts.testing/owned by.html">owned by</a></td>
+<a href="../../issued-by.html">issuedBy</a></td>
 <td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$owned by(com.r3corda.contracts.asset.Cash.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$issuedBy(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.crypto.Party)/party">party</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$issuedBy(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.contracts.testing/with deposit.html">with deposit</a></td>
+<a href="../../owned by.html">owned by</a></td>
 <td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">with deposit</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with deposit(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">owned by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$owned by(com.r3corda.contracts.asset.Cash.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../../com.r3corda.contracts.testing/with notary.html">with notary</a></td>
+<a href="../../owned-by.html">ownedBy</a></td>
 <td>
-<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.testing$with notary(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">State</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">ownedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$ownedBy(com.r3corda.contracts.asset.Cash.State, java.security.PublicKey)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../with deposit.html">with deposit</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">with deposit</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$with deposit(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../with-deposit.html">withDeposit</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">State</span><span class="symbol">.</span><span class="identifier">withDeposit</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset$withDeposit(com.r3corda.contracts.asset.Cash.State, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">State</span></code></td>
 </tr>
 </tbody>
 </table>

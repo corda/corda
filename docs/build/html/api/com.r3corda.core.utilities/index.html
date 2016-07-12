@@ -69,7 +69,7 @@ white box unit tests to ensure that code is accessing a data store as much as yo
 <td>
 <a href="-untrustworthy-data/index.html">UntrustworthyData</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">UntrustworthyData</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
+<code><span class="keyword">class </span><span class="identifier">UntrustworthyData</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
 a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
 first. The wrapper helps you to avoid forgetting this vital step. Things you might want to check are:</p>
 </td>

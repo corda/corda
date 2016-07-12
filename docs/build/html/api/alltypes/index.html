@@ -54,23 +54,11 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.protocols/-abstract-request-message/index.html">com.r3corda.protocols.AbstractRequestMessage</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../protocols/-abstract-state-replacement-protocol/index.html">protocols.AbstractStateReplacementProtocol</a></td>
 <td>
 <p>Abstract protocol to be used for replacing one state with another, for example when changing the notary of a state.
 Notably this requires a one to one replacement of states, states cannot be split, merged or issued as part of these
 protocols.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.testing/-abstract-transaction-for-test/index.html">com.r3corda.core.testing.AbstractTransactionForTest</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -165,6 +153,12 @@ of how attachments are meant to be used include:</p>
 <a href="../com.r3corda.node.servlets/-attachment-download-servlet/index.html">com.r3corda.node.servlets.AttachmentDownloadServlet</a></td>
 <td>
 <p>Allows the node administrator to either download full attachment zips, or individual files within those zips.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.testing/-attachment-resolution-exception/index.html">com.r3corda.core.testing.AttachmentResolutionException</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -273,6 +267,20 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts.clauses/-clause/index.html">com.r3corda.core.contracts.clauses.Clause</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html">com.r3corda.core.contracts.clauses.ClauseVerifier</a></td>
+<td>
+<p>Abstract superclass for clause-based contracts to extend, which provides a verify() function
+that delegates to the supplied list of clauses.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.demos/-cli-params/index.html">com.r3corda.demos.CliParams</a></td>
 <td>
 <p>Parsed command line parameters.</p>
@@ -287,6 +295,12 @@ the same transaction.</p>
 <tr>
 <td>
 <a href="../com.r3corda.node.utilities/java.time.-clock/index.html">java.time.Clock</a> (extensions in package com.r3corda.node.utilities)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts/kotlin.collections.-collection/index.html">kotlin.collections.Collection</a> (extensions in package com.r3corda.core.contracts)</td>
 <td>
 </td>
 </tr>
@@ -315,7 +329,7 @@ the same transaction.</p>
 <a href="../com.r3corda.node.servlets/-config/index.html">com.r3corda.node.servlets.Config</a></td>
 <td>
 <p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
-and to organise serializers / deserializers for java.time.* classes as necessary</p>
+and to organise serializers / deserializers for java.time.* classes as necessary.</p>
 </td>
 </tr>
 <tr>
@@ -366,6 +380,14 @@ are all free.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node/-corda-plugin-registry/index.html">com.r3corda.core.node.CordaPluginRegistry</a></td>
+<td>
+<p>Implement this interface on a class advertised in a META-INF/services/com.r3corda.core.node.CordaPluginRegistry file
+to extend a Corda node with additional application services.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.math/-cubic-spline-interpolator/index.html">com.r3corda.core.math.CubicSplineInterpolator</a></td>
 <td>
 <p>Interpolates values between the given data points using a <a href="../com.r3corda.core.math/-spline-function/index.html">SplineFunction</a>.</p>
@@ -396,9 +418,9 @@ glue that sits between the network layer and the database layer.</p>
 <td>
 <a href="../com.r3corda.core.contracts/-date-roll-convention/index.html">com.r3corda.core.contracts.DateRollConvention</a></td>
 <td>
-<p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
-Depending on the accounting requirement, we can move forward until we get to a business day, or backwards
-There are some additional rules which are explained in the individual cases below</p>
+<p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day.
+Depending on the accounting requirement, we can move forward until we get to a business day, or backwards.
+There are some additional rules which are explained in the individual cases below.</p>
 </td>
 </tr>
 <tr>
@@ -406,7 +428,7 @@ There are some additional rules which are explained in the individual cases belo
 <a href="../com.r3corda.core.contracts/-date-roll-direction/index.html">com.r3corda.core.contracts.DateRollDirection</a></td>
 <td>
 <p>This is utilised in the <a href="../com.r3corda.core.contracts/-date-roll-convention/index.html">DateRollConvention</a> class to determine which way we should initially step when
-finding a business day</p>
+finding a business day.</p>
 </td>
 </tr>
 <tr>
@@ -437,7 +459,7 @@ implementation of general protocols that manipulate many agreement types.</p>
 <td>
 <a href="../com.r3corda.demos/-demo-clock/index.html">com.r3corda.demos.DemoClock</a></td>
 <td>
-<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos</p>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the date advanced for use in demos.</p>
 </td>
 </tr>
 <tr>
@@ -495,6 +517,12 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.testing/-duplicate-output-label/index.html">com.r3corda.core.testing.DuplicateOutputLabel</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.keys/-e2-e-test-key-management-service/index.html">com.r3corda.node.services.keys.E2ETestKeyManagementService</a></td>
 <td>
 <p>A simple in-memory KMS that doesnt bother saving keys to disk. A real implementation would:</p>
@@ -519,6 +547,16 @@ building partially signed transactions.</p>
 <a href="../com.r3corda.core.utilities/-emoji/index.html">com.r3corda.core.utilities.Emoji</a></td>
 <td>
 <p>A simple wrapper class that contains icons and support for printing them only when were connected to a terminal.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.testing/-enforce-verify-or-fail.html">com.r3corda.core.testing.EnforceVerifyOrFail</a></td>
+<td>
+<p>If you jumped here from a compiler error make sure the last line of your test tests for a transaction verify or fail.
+This is a dummy type that can only be instantiated by functions in this module. This way we can ensure that all tests
+will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
+the triggered diagnostic.</p>
 </td>
 </tr>
 <tr>
@@ -579,7 +617,7 @@ attachments are saved to local storage automatically.</p>
 <td>
 <a href="../com.r3corda.node.utilities/-fiber-box/index.html">com.r3corda.node.utilities.FiberBox</a></td>
 <td>
-<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../com.r3corda.node.utilities/-mutable-clock/index.html">MutableClock</a>s</p>
+<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../com.r3corda.node.utilities/-mutable-clock/index.html">MutableClock</a>s.</p>
 </td>
 </tr>
 <tr>
@@ -600,7 +638,7 @@ attachments are saved to local storage automatically.</p>
 <td>
 <a href="../com.r3corda.core.contracts/-fixable-deal-state/index.html">com.r3corda.core.contracts.FixableDealState</a></td>
 <td>
-<p>Interface adding fixing specific methods</p>
+<p>Interface adding fixing specific methods.</p>
 </td>
 </tr>
 <tr>
@@ -614,7 +652,7 @@ attachments are saved to local storage automatically.</p>
 <td>
 <a href="../com.r3corda.contracts/-fixed-rate-payment-event/index.html">com.r3corda.contracts.FixedRatePaymentEvent</a></td>
 <td>
-<p>Basic class for the Fixed Rate Payments on the fixed leg - see <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a>
+<p>Basic class for the Fixed Rate Payments on the fixed leg - see <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a>.
 Assumes that the rate is valid.</p>
 </td>
 </tr>
@@ -630,14 +668,14 @@ running scheduled fixings for the <a href="#">InterestRateSwap</a> contract.</p>
 <td>
 <a href="../com.r3corda.contracts/-floating-rate/index.html">com.r3corda.contracts.FloatingRate</a></td>
 <td>
-<p>The parent class of the Floating rate classes</p>
+<p>The parent class of the Floating rate classes.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../com.r3corda.contracts/-floating-rate-payment-event/index.html">com.r3corda.contracts.FloatingRatePaymentEvent</a></td>
 <td>
-<p>Basic class for the Floating Rate Payments on the floating leg - see <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a>
+<p>Basic class for the Floating Rate Payments on the floating leg - see <a href="../com.r3corda.contracts/-rate-payment-event/index.html">RatePaymentEvent</a>.
 If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?</p>
 </td>
 </tr>
@@ -670,7 +708,31 @@ countable, and so on.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts.clauses/-group-clause.html">com.r3corda.core.contracts.clauses.GroupClause</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-group-clause-verifier/index.html">com.r3corda.core.contracts.clauses.GroupClauseVerifier</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-group-verify/index.html">com.r3corda.core.contracts.clauses.GroupVerify</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.demos/-i-r-s-demo-node/index.html">com.r3corda.demos.IRSDemoNode</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.demos/-i-r-s-demo-plugin-registry/index.html">com.r3corda.demos.IRSDemoPluginRegistry</a></td>
 <td>
 </td>
 </tr>
@@ -784,10 +846,18 @@ states relevant to us into a database and once such a wallet is implemented, thi
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts.clauses/-interceptor-clause/index.html">com.r3corda.core.contracts.clauses.InterceptorClause</a></td>
+<td>
+<p>A clause which intercepts calls to a wrapped clause, and passes them through verification
+only from a pre-clause. This is similar to an inceptor in aspect orientated programming.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.contracts/-interest-rate-swap/index.html">com.r3corda.contracts.InterestRateSwap</a></td>
 <td>
-<p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
-This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
+<p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
 It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
 Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
 This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
@@ -861,25 +931,6 @@ quantifiable with integer quantities.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts/-java-test-helpers/index.html">com.r3corda.core.contracts.JavaTestHelpers</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.testing/-java-test-helpers/index.html">com.r3corda.core.testing.JavaTestHelpers</a></td>
-<td>
-<p>JAVA INTEROP. Please keep the following points in mind when extending the Kotlin DSL</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts.testing/-java-test-helpers/index.html">com.r3corda.contracts.testing.JavaTestHelpers</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.node.utilities/-json-support/index.html">com.r3corda.node.utilities.JsonSupport</a></td>
 <td>
 <p>Utilities and serialisers for working with JSON representations of basic types. This adds Jackson support for
@@ -909,18 +960,19 @@ call out to a hardware security module that enforces various auditing and freque
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-labeled-output/index.html">com.r3corda.core.testing.LabeledOutput</a></td>
+<a href="../com.r3corda.core.testing/-ledger-d-s-l/index.html">com.r3corda.core.testing.LedgerDSL</a></td>
 <td>
+<p>This is the class that defines the syntactic sugar of the ledger Test DSL and delegates to the contained interpreter,
+and what is actually used in <code>ledger{(...)}</code>. Add convenience functions here, or if you want to extend the DSL
+functionality then first add your primitive to <a href="../com.r3corda.core.testing/-ledger-d-s-l-interpreter/index.html">LedgerDSLInterpreter</a> and then add the convenience defaults/extension
+methods here.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-last-line-should-test-for-accept-or-failure.html">com.r3corda.core.testing.LastLineShouldTestForAcceptOrFailure</a></td>
+<a href="../com.r3corda.core.testing/-ledger-d-s-l-interpreter/index.html">com.r3corda.core.testing.LedgerDSLInterpreter</a></td>
 <td>
-<p>If you jumped here from a compiler error make sure the last line of your test tests for a transaction accept or fail
-This is a dummy type that can only be instantiated by functions in this module. This way we can ensure that all tests
-will have as the last line either an accept or a failure test. The name is deliberately long to help make sense of
-the triggered diagnostic</p>
+<p>This interface defines the bare bone functionality that a Ledger DSL interpreter should implement.</p>
 </td>
 </tr>
 <tr>
@@ -936,14 +988,14 @@ with the commands from the wire, and verified/looked up.</p>
 <td>
 <a href="../com.r3corda.core.math/-linear-interpolator/index.html">com.r3corda.core.math.LinearInterpolator</a></td>
 <td>
-<p>Interpolates values between the given data points using straight lines</p>
+<p>Interpolates values between the given data points using straight lines.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../com.r3corda.core.contracts/-linear-state/index.html">com.r3corda.core.contracts.LinearState</a></td>
 <td>
-<p>A state that evolves by superseding itself, all of which share the common "thread"</p>
+<p>A state that evolves by superseding itself, all of which share the common "thread".</p>
 </td>
 </tr>
 <tr>
@@ -967,6 +1019,12 @@ with the commands from the wire, and verified/looked up.</p>
 <tr>
 <td>
 <a href="../com.r3corda.core/kotlin.-long/index.html">kotlin.Long</a> (extensions in package com.r3corda.core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-match-behaviour/index.html">com.r3corda.core.contracts.clauses.MatchBehaviour</a></td>
 <td>
 </td>
 </tr>
@@ -1142,7 +1200,7 @@ replace each other based on a serial number present in the change.</p>
 <td>
 <a href="../com.r3corda.node.internal/-node/index.html">com.r3corda.node.internal.Node</a></td>
 <td>
-<p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="#">ServiceHub</a>,
+<p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../com.r3corda.core.node/-service-hub/index.html">ServiceHub</a>,
 loads important data off disk and starts listening for connections.</p>
 </td>
 </tr>
@@ -1301,6 +1359,14 @@ functionality to Java, but it wont arrive for a few years yet</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.testing/-output-state-lookup/index.html">com.r3corda.core.testing.OutputStateLookup</a></td>
+<td>
+<p>This interface defines output state lookup by label. It is split from the interpreter interfaces so that outputs may
+be looked up both in ledger{..} and transaction{..} blocks.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-ownable-state/index.html">com.r3corda.core.contracts.OwnableState</a></td>
 <td>
 <p>A contract state that can have a single owner.</p>
@@ -1319,6 +1385,12 @@ functionality to Java, but it wont arrive for a few years yet</p>
 <td>
 <p>Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
 ledger. The reference is intended to be encrypted so its meaningless to anyone other than the party.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.protocols/-party-request-message/index.html">com.r3corda.protocols.PartyRequestMessage</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1374,7 +1446,7 @@ Labels should not refer to non-landmarks, for example, they should not contain t
 <td>
 <a href="../com.r3corda.core.math/-polynomial/index.html">com.r3corda.core.math.Polynomial</a></td>
 <td>
-<p>Represents a polynomial function of arbitrary degree</p>
+<p>Represents a polynomial function of arbitrary degree.</p>
 </td>
 </tr>
 <tr>
@@ -1417,14 +1489,14 @@ a node crash, how many instances of your protocol there are running and so on.</
 <td>
 <a href="../com.r3corda.core.protocols/-protocol-logic-ref/index.html">com.r3corda.core.protocols.ProtocolLogicRef</a></td>
 <td>
-<p>A class representing a <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance which would be possible to safely pass out of the contract sandbox</p>
+<p>A class representing a <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> instance which would be possible to safely pass out of the contract sandbox.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html">com.r3corda.core.protocols.ProtocolLogicRefFactory</a></td>
 <td>
-<p>A class for conversion to and from <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> and <a href="../com.r3corda.core.protocols/-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances</p>
+<p>A class for conversion to and from <a href="../com.r3corda.core.protocols/-protocol-logic/index.html">ProtocolLogic</a> and <a href="../com.r3corda.core.protocols/-protocol-logic-ref/index.html">ProtocolLogicRef</a> instances.</p>
 </td>
 </tr>
 <tr>
@@ -1445,7 +1517,7 @@ a node crash, how many instances of your protocol there are running and so on.</
 <td>
 <a href="../com.r3corda.core.protocols/-protocol-state-machine/index.html">com.r3corda.core.protocols.ProtocolStateMachine</a></td>
 <td>
-<p>The interface of <a href="#">ProtocolStateMachineImpl</a> exposing methods and properties required by ProtocolLogic for compilation</p>
+<p>The interface of <a href="#">ProtocolStateMachineImpl</a> exposing methods and properties required by ProtocolLogic for compilation.</p>
 </td>
 </tr>
 <tr>
@@ -1466,7 +1538,7 @@ For any given flow there is only one PSM, even if that protocol invokes subproto
 <td>
 <a href="../com.r3corda.contracts/-rate/index.html">com.r3corda.contracts.Rate</a></td>
 <td>
-<p>Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc</p>
+<p>Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.</p>
 </td>
 </tr>
 <tr>
@@ -1553,7 +1625,7 @@ all the transactions have been successfully verified and inserted into the local
 <td>
 <a href="../com.r3corda.node.servlets/-response-filter/index.html">com.r3corda.node.servlets.ResponseFilter</a></td>
 <td>
-<p>This adds headers needed for cross site scripting on API clients</p>
+<p>This adds headers needed for cross site scripting on API clients.</p>
 </td>
 </tr>
 <tr>
@@ -1588,7 +1660,7 @@ again.</p>
 <a href="../com.r3corda.core.contracts/-scheduled-activity/index.html">com.r3corda.core.contracts.ScheduledActivity</a></td>
 <td>
 <p>This class represents the lifecycle activity that a contract state of type <a href="../com.r3corda.core.contracts/-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
-e.g. run a fixing protocol</p>
+e.g. run a fixing protocol.</p>
 </td>
 </tr>
 <tr>
@@ -1625,7 +1697,7 @@ increase the feature set in the future.</p>
 <td>
 <a href="../com.r3corda.core.serialization/-serialization-token/index.html">com.r3corda.core.serialization.SerializationToken</a></td>
 <td>
-<p>This represents a token in the serialized stream for an instance of a type that implements <a href="../com.r3corda.core.serialization/-serialize-as-token/index.html">SerializeAsToken</a></p>
+<p>This represents a token in the serialized stream for an instance of a type that implements <a href="../com.r3corda.core.serialization/-serialize-as-token/index.html">SerializeAsToken</a>.</p>
 </td>
 </tr>
 <tr>
@@ -1686,7 +1758,7 @@ functionality and you dont want to hard-code which types in the interface.</p>
 <a href="../com.r3corda.protocols/-service-request-message/index.html">com.r3corda.protocols.ServiceRequestMessage</a></td>
 <td>
 <p>Abstract superclass for request messages sent to services, which includes common
-fields such as replyTo and replyToTopic.</p>
+fields such as replyTo and sessionID.</p>
 </td>
 </tr>
 <tr>
@@ -1729,9 +1801,21 @@ contained within.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts.clauses/-single-clause.html">com.r3corda.core.contracts.clauses.SingleClause</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.messaging/-single-message-recipient.html">com.r3corda.core.messaging.SingleMessageRecipient</a></td>
 <td>
 <p>A base class for the case of point-to-point messages</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-single-verify/index.html">com.r3corda.core.contracts.clauses.SingleVerify</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1804,7 +1888,7 @@ transaction defined the state and where in that transaction it was.</p>
 <td>
 <a href="../com.r3corda.node.api/-states-query/index.html">com.r3corda.node.api.StatesQuery</a></td>
 <td>
-<p>Extremely rudimentary query language which should most likely be replaced with a product</p>
+<p>Extremely rudimentary query language which should most likely be replaced with a product.</p>
 </td>
 </tr>
 <tr>
@@ -1851,13 +1935,21 @@ anything like that, this interface is only big enough to support the prototyping
 <td>
 <a href="../com.r3corda.node.internal.testing/-test-clock/index.html">com.r3corda.node.internal.testing.TestClock</a></td>
 <td>
-<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the time advanced for use in testing</p>
+<p>A <a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html">Clock</a> that can have the time advanced for use in testing.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-test-utils/index.html">com.r3corda.core.testing.TestUtils</a></td>
+<a href="../com.r3corda.core.testing/-test-ledger-d-s-l-interpreter/index.html">com.r3corda.core.testing.TestLedgerDSLInterpreter</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.testing/-test-transaction-d-s-l-interpreter/index.html">com.r3corda.core.testing.TestTransactionDSLInterpreter</a></td>
+<td>
+<p>This interpreter builds a transaction, and <a href="#">TransactionDSL.verifies</a> that the resolved transaction is correct. Note
+that transactions corresponding to input states are not verified. Use <a href="#">LedgerDSL.verifies</a> for that.</p>
 </td>
 </tr>
 <tr>
@@ -1881,7 +1973,7 @@ way that ensures itll be released if theres an exception.</p>
 <td>
 <a href="../com.r3corda.core.node.services/-timestamp-checker/index.html">com.r3corda.core.node.services.TimestampChecker</a></td>
 <td>
-<p>Checks if the given timestamp falls within the allowed tolerance interval</p>
+<p>Checks if the given timestamp falls within the allowed tolerance interval.</p>
 </td>
 </tr>
 <tr>
@@ -1889,7 +1981,7 @@ way that ensures itll be released if theres an exception.</p>
 <a href="../com.r3corda.core.contracts/-timestamp-command/index.html">com.r3corda.core.contracts.TimestampCommand</a></td>
 <td>
 <p>If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
-public keys are identified in the containing <a href="../com.r3corda.core.contracts/-command/index.html">Command</a> object. The true time must be between (after, before)</p>
+public keys are identified in the containing <a href="../com.r3corda.core.contracts/-command/index.html">Command</a> object. The true time must be between (after, before).</p>
 </td>
 </tr>
 <tr>
@@ -1931,16 +2023,23 @@ and commands are right, this class can be used as a holding bucket to gather sig
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts/-transaction-for-contract/index.html">com.r3corda.core.contracts.TransactionForContract</a></td>
+<a href="../com.r3corda.core.testing/-transaction-d-s-l/index.html">com.r3corda.core.testing.TransactionDSL</a></td>
 <td>
-<p>A transaction to be passed as input to a contract verification function. Defines helper methods to
-simplify verification logic in contracts.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-transaction-for-test/index.html">com.r3corda.core.testing.TransactionForTest</a></td>
+<a href="../com.r3corda.core.testing/-transaction-d-s-l-interpreter/index.html">com.r3corda.core.testing.TransactionDSLInterpreter</a></td>
 <td>
+<p>This interface defines the bare bone functionality that a Transaction DSL interpreter should implement.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts/-transaction-for-contract/index.html">com.r3corda.core.contracts.TransactionForContract</a></td>
+<td>
+<p>A transaction to be passed as input to a contract verification function. Defines helper methods to
+simplify verification logic in contracts.</p>
 </td>
 </tr>
 <tr>
@@ -1965,12 +2064,6 @@ the starting point down in order to find transactions that match the given query
 <p>A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
 verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
 this subgraph does not contain conflicts and is accepted by the involved contracts.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.testing/-transaction-group-d-s-l/index.html">com.r3corda.core.testing.TransactionGroupDSL</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -2056,7 +2149,7 @@ and seller) and the following steps:</p>
 <a href="../com.r3corda.core.node.services/-uniqueness-provider/index.html">com.r3corda.core.node.services.UniquenessProvider</a></td>
 <td>
 <p>A service that records input states of the given transaction and provides conflict information
-if any of the inputs have already been used in another transaction</p>
+if any of the inputs have already been used in another transaction.</p>
 </td>
 </tr>
 <tr>
@@ -2078,7 +2171,7 @@ first. The wrapper helps you to avoid forgetting this vital step. Things you mig
 <td>
 <a href="../com.r3corda.demos.protocols/-update-business-day-protocol/index.html">com.r3corda.demos.protocols.UpdateBusinessDayProtocol</a></td>
 <td>
-<p>This is a less temporary, demo-oriented way of initiating processing of temporal events</p>
+<p>This is a less temporary, demo-oriented way of initiating processing of temporal events.</p>
 </td>
 </tr>
 <tr>
@@ -2088,7 +2181,7 @@ first. The wrapper helps you to avoid forgetting this vital step. Things you mig
 <p>A notary commit protocol that makes sure a given transaction is valid before committing it. This does mean that the calling
 party has to reveal the whole transaction history; however, we avoid complex conflict resolution logic where a party
 has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
-indeed valid</p>
+indeed valid.</p>
 </td>
 </tr>
 <tr>
@@ -2096,6 +2189,13 @@ indeed valid</p>
 <a href="../com.r3corda.node.services.transactions/-validating-notary-service/index.html">com.r3corda.node.services.transactions.ValidatingNotaryService</a></td>
 <td>
 <p>A Notary service that validates the transaction chain of he submitted transaction before committing it</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.testing/-verifies/index.html">com.r3corda.core.testing.Verifies</a></td>
+<td>
+<p>This interface asserts that the DSL at hand is capable of verifying its underlying construct(ledger/transaction).</p>
 </td>
 </tr>
 <tr>

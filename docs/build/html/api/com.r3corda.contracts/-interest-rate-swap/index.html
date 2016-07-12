@@ -8,8 +8,8 @@
 <br/>
 <h1>InterestRateSwap</h1>
 <code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><br/>
-<p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
-This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
+<p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
 It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
 Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
 This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
@@ -24,7 +24,7 @@ This is just a representation of a vanilla Fixed vs Floating (same currency) IRS
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Calculation</span></code><p>The Calculation data class is "mutable" through out the life of the swap, as in, its the only thing that contains
 data that will changed from state to state (Recall that the design insists that everything is immutable, so we actually
-copy / update for each transition)</p>
+copy / update for each transition).</p>
 </td>
 </tr>
 <tr>
@@ -62,7 +62,7 @@ copy / update for each transition)</p>
 <td>
 <a href="-state/index.html">State</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-fixable-deal-state/index.html"><span class="identifier">FixableDealState</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.contracts/-schedulable-state/index.html"><span class="identifier">SchedulableState</span></a></code><p>The state class contains the 4 major data classes</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-fixable-deal-state/index.html"><span class="identifier">FixableDealState</span></a><span class="symbol">, </span><a href="../../com.r3corda.core.contracts/-schedulable-state/index.html"><span class="identifier">SchedulableState</span></a></code><p>The state class contains the 4 major data classes.</p>
 </td>
 </tr>
 </tbody>
@@ -74,8 +74,8 @@ copy / update for each transition)</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">InterestRateSwap</span><span class="symbol">(</span><span class="symbol">)</span></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement)
-This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg"
+<code><span class="identifier">InterestRateSwap</span><span class="symbol">(</span><span class="symbol">)</span></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
 It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
 Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
 This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>

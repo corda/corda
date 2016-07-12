@@ -30,7 +30,7 @@ for each step.</p>
 <td>
 <a href="-query-request/index.html">QueryRequest</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">QueryRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -42,7 +42,7 @@ for each step.</p>
 <td>
 <a href="-sign-request/index.html">SignRequest</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">SignRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -89,6 +89,14 @@ for each step.</p>
 helpful with the progress reports. If this protocol is invoked as a sub-protocol of another, then the
 tracker will be made a child of the current step in the parent. If its null, this protocol doesnt track
 progress.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="topic.html">topic</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">topic</span><span class="symbol">: </span><span class="identifier">String</span></code><p>The topic to use when communicating with other parties. If more than one topic is required then use sub-protocols.
+Note that this is temporary until protocol sessions are properly implemented.</p>
 </td>
 </tr>
 <tr>
@@ -145,18 +153,6 @@ before its sent back to the oracle for signing (for example, adding output state
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">call</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>This is where you fill out your business logic.</p>
 </td>
 </tr>
-<tr>
-<td>
-<a href="query.html">query</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="sign.html">sign</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code></td>
-</tr>
 </tbody>
 </table>
 <h3>Inherited Functions</h3>
@@ -166,20 +162,20 @@ before its sent back to the oracle for signing (for example, adding output state
 <td>
 <a href="../../com.r3corda.core.protocols/-protocol-logic/receive.html">receive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/clazz">clazz</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.String, kotlin.Long)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.Long, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.Long, java.lang.Class((com.r3corda.core.protocols.ProtocolLogic.receive.T)))/receiveType">receiveType</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">receive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$receive(kotlin.Long)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="../../com.r3corda.core.protocols/-protocol-logic/send.html">send</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$send(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="../../com.r3corda.core.protocols/-protocol-logic/send-and-receive.html">sendAndReceive</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">sendAndReceive</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.protocols.ProtocolLogic$sendAndReceive(com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.utilities/-untrustworthy-data/index.html"><span class="identifier">UntrustworthyData</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -199,18 +195,6 @@ before its sent back to the oracle for signing (for example, adding output state
 <a href="-t-o-p-i-c.html">TOPIC</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-t-o-p-i-c_-q-u-e-r-y.html">TOPIC_QUERY</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">TOPIC_QUERY</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-t-o-p-i-c_-s-i-g-n.html">TOPIC_SIGN</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">TOPIC_SIGN</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 </tbody>
 </table>

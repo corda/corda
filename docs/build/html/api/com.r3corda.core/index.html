@@ -14,7 +14,7 @@
 <td>
 <a href="-thread-box/index.html">ThreadBox</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ThreadBox</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
+<code><span class="keyword">class </span><span class="identifier">ThreadBox</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
 Simply define a private class to hold the data that must be grouped under the same lock, and then pass the only
 instance to the ThreadBox constructor. You can now use the <a href="-thread-box/locked.html">locked</a> method with a lambda to take the lock in a
 way that ensures itll be released if theres an exception.</p>
@@ -24,7 +24,7 @@ way that ensures itll be released if theres an exception.</p>
 <td>
 <a href="-transient-property/index.html">TransientProperty</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">TransientProperty</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A simple wrapper that enables the use of Kotlins "val x by TransientProperty { ... }" syntax. Such a property
+<code><span class="keyword">class </span><span class="identifier">TransientProperty</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><p>A simple wrapper that enables the use of Kotlins "val x by TransientProperty { ... }" syntax. Such a property
 will not be serialized to disk, and if its missing (or the first time its accessed), the initializer will be
 used to set it up. Note that the initializer will be called with the TransientProperty object locked.</p>
 </td>

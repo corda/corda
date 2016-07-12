@@ -18,7 +18,7 @@
 <a href="-client/index.html">Client</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Client</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for obtaining a signature from a <a href="#">NotaryService</a> ascertaining the transaction
-timestamp is correct and none of its inputs have been used in another completed transaction</p>
+timestamp is correct and none of its inputs have been used in another completed transaction.</p>
 </td>
 </tr>
 <tr>
@@ -37,7 +37,7 @@ timestamp is correct and none of its inputs have been used in another completed 
 <td>
 <a href="-handshake/index.html">Handshake</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Handshake</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-request-message/index.html"><span class="identifier">AbstractRequestMessage</span></a></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Handshake</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -57,7 +57,7 @@ if any of the input states have been previously committed.</p>
 <td>
 <a href="-sign-request/index.html">SignRequest</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">SignRequest</span></code><p>TODO: The caller must authenticate instead of just specifying its identity</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span></code><p>TODO: The caller must authenticate instead of just specifying its identity</p>
 </td>
 </tr>
 </tbody>
@@ -70,12 +70,6 @@ if any of the input states have been previously committed.</p>
 <a href="-t-o-p-i-c.html">TOPIC</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-t-o-p-i-c_-i-n-i-t-i-a-t-e.html">TOPIC_INITIATE</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">TOPIC_INITIATE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -19,7 +19,7 @@ overflow.</p>
 <p>TODO: It may make sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface,
 in particular for use during calculations. This may also resolve...
 TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
-TODO: Add either a scaling factor, or a variant for use in calculations</p>
+TODO: Add either a scaling factor, or a variant for use in calculations.</p>
 <br/>
 <br/>
 <h3>Parameters</h3>
@@ -106,22 +106,23 @@ amount used in whatever underlying thing the amount represents.</p>
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts.testing/-c-a-s-h.html">CASH</a></td>
+<a href="../../com.r3corda.contracts.asset/-c-a-s-h.html">CASH</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">CASH</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><p>Allows you to write 100.DOLLARS.CASH</p>
+<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">CASH</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><p>An extension property that lets you write 100.DOLLARS.CASH</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts.testing/-o-b-l-i-g-a-t-i-o-n.html">OBLIGATION</a></td>
+<a href="../../com.r3corda.contracts.asset/-o-b-l-i-g-a-t-i-o-n.html">OBLIGATION</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">OBLIGATION</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts.testing/-s-t-a-t-e.html">STATE</a></td>
+<a href="../../com.r3corda.contracts.asset/-s-t-a-t-e.html">STATE</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">STATE</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">STATE</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a></code><p>An extension property that lets you get a cash state from an issued token, under the <a href="../../com.r3corda.core.crypto/-null-public-key/index.html">NullPublicKey</a></p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -133,6 +134,12 @@ amount used in whatever underlying thing the amount represents.</p>
 <a href="../issued by.html">issued by</a></td>
 <td>
 <code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issued by(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../issued-by.html">issuedBy</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issuedBy(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="../-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Amount</span><span class="symbol">&lt;</span><a href="../-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

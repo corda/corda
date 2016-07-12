@@ -72,7 +72,7 @@ functionality to Java, but it wont arrive for a few years yet</p>
 <td>
 <a href="-serialization-token/index.html">SerializationToken</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">SerializationToken</span></code><p>This represents a token in the serialized stream for an instance of a type that implements <a href="-serialize-as-token/index.html">SerializeAsToken</a></p>
+<code><span class="keyword">interface </span><span class="identifier">SerializationToken</span></code><p>This represents a token in the serialized stream for an instance of a type that implements <a href="-serialize-as-token/index.html">SerializeAsToken</a>.</p>
 </td>
 </tr>
 <tr>
@@ -223,7 +223,7 @@ references will throw a stack overflow exception during serialisation.</p>
 <a href="serialize.html">serialize</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization$serialize(com.r3corda.core.serialization.serialize.T, )/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Can be called on any object to convert it to a byte array (wrapped by <a href="-serialized-bytes/index.html">SerializedBytes</a>), regardless of whether
-the type is marked as serializable or was designed for it (so be careful)</p>
+the type is marked as serializable or was designed for it (so be careful).</p>
 </td>
 </tr>
 <tr>

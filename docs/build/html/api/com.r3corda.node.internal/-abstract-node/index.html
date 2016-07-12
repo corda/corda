@@ -128,7 +128,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="network-map-seq.html">networkMapSeq</a></td>
 <td>
-<code><span class="keyword">var </span><span class="identifier">networkMapSeq</span><span class="symbol">: </span><span class="identifier">Long</span></code><p>Sequence number of changes sent to the network map service, when registering/de-registering this node</p>
+<code><span class="keyword">var </span><span class="identifier">networkMapSeq</span><span class="symbol">: </span><span class="identifier">Long</span></code><p>Sequence number of changes sent to the network map service, when registering/de-registering this node.</p>
 </td>
 </tr>
 <tr>
@@ -142,6 +142,19 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="platform-clock.html">platformClock</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">platformClock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="plugin-registries.html">pluginRegistries</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">pluginRegistries</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-corda-plugin-registry/index.html"><span class="identifier">CordaPluginRegistry</span></a><span class="symbol">&gt;</span></code><p>Fetch CordaPluginRegistry classes registered in META-INF/services/com.r3corda.core.node.CordaPluginRegistry files that exist in the classpath</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="protocol-logic-factory.html">protocolLogicFactory</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">protocolLogicFactory</span><span class="symbol">: </span><a href="../../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -219,7 +232,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="generate-key-pair.html">generateKeyPair</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -274,7 +287,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="setup.html">setup</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">setup</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">AbstractNode</span></code><p>Run any tasks that are needed to ensure the node is in a correct state before running start()</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">setup</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">AbstractNode</span></code><p>Run any tasks that are needed to ensure the node is in a correct state before running start().</p>
 </td>
 </tr>
 <tr>
@@ -327,7 +340,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="../-node/index.html">Node</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNode</span></code><p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="#">ServiceHub</a>,
+<code><span class="keyword">class </span><span class="identifier">Node</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNode</span></code><p>A Node manages a standalone server that takes part in the P2P network. It creates the services found in <a href="../../com.r3corda.core.node/-service-hub/index.html">ServiceHub</a>,
 loads important data off disk and starts listening for connections.</p>
 </td>
 </tr>

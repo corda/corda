@@ -8,7 +8,7 @@
 <br/>
 <h1>FiberBox</h1>
 <code><span class="keyword">class </span><span class="identifier">FiberBox</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><br/>
-<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../-mutable-clock/index.html">MutableClock</a>s</p>
+<p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../-mutable-clock/index.html">MutableClock</a>s.</p>
 <p>It supports 3 main operations, all of which operate in a similar context to the <a href="#">locked</a> method
 of <a href="#">ThreadBox</a>.  i.e. in the context of the content.</p>
 <ul><li><p><a href="read.html">read</a> operations which acquire the associated lock but do not notify any waiters (see <a href="read-with-deadline.html">readWithDeadline</a>)
@@ -38,7 +38,7 @@ as though the current version of Qasar does not support suspending on either of 
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">FiberBox</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities.FiberBox$<init>(com.r3corda.node.utilities.FiberBox.T, java.util.concurrent.locks.Lock)/content">content</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities.FiberBox$<init>(com.r3corda.node.utilities.FiberBox.T, java.util.concurrent.locks.Lock)/lock">lock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/locks/Lock.html"><span class="identifier">Lock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;ReentrantLock()<span class="symbol">)</span></code><p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../-mutable-clock/index.html">MutableClock</a>s</p>
+<code><span class="identifier">FiberBox</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities.FiberBox$<init>(com.r3corda.node.utilities.FiberBox.T, java.util.concurrent.locks.Lock)/content">content</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities.FiberBox$<init>(com.r3corda.node.utilities.FiberBox.T, java.util.concurrent.locks.Lock)/lock">lock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/locks/Lock.html"><span class="identifier">Lock</span></a>&nbsp;<span class="symbol">=</span>&nbsp;ReentrantLock()<span class="symbol">)</span></code><p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="../-mutable-clock/index.html">MutableClock</a>s.</p>
 </td>
 </tr>
 </tbody>

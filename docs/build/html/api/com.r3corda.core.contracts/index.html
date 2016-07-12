@@ -98,9 +98,9 @@ are all free.</p>
 <td>
 <a href="-date-roll-convention/index.html">DateRollConvention</a></td>
 <td>
-<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateRollConvention</span></code><p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day
-Depending on the accounting requirement, we can move forward until we get to a business day, or backwards
-There are some additional rules which are explained in the individual cases below</p>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateRollConvention</span></code><p>This reflects what happens if a date on which a business event is supposed to happen actually falls upon a non-working day.
+Depending on the accounting requirement, we can move forward until we get to a business day, or backwards.
+There are some additional rules which are explained in the individual cases below.</p>
 </td>
 </tr>
 <tr>
@@ -108,7 +108,7 @@ There are some additional rules which are explained in the individual cases belo
 <a href="-date-roll-direction/index.html">DateRollDirection</a></td>
 <td>
 <code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">DateRollDirection</span></code><p>This is utilised in the <a href="-date-roll-convention/index.html">DateRollConvention</a> class to determine which way we should initially step when
-finding a business day</p>
+finding a business day.</p>
 </td>
 </tr>
 <tr>
@@ -185,7 +185,7 @@ implementation of general protocols that manipulate many agreement types.</p>
 <td>
 <a href="-fixable-deal-state/index.html">FixableDealState</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">FixableDealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-deal-state/index.html"><span class="identifier">DealState</span></a></code><p>Interface adding fixing specific methods</p>
+<code><span class="keyword">interface </span><span class="identifier">FixableDealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-deal-state/index.html"><span class="identifier">DealState</span></a></code><p>Interface adding fixing specific methods.</p>
 </td>
 </tr>
 <tr>
@@ -215,15 +215,9 @@ from which the state object is initialised.</p>
 <td>
 <a href="-issued/index.html">Issued</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issued</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span></code><p>Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else thats
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Issued</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">P</span><span class="symbol">&gt;</span></code><p>Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else thats
 quantifiable with integer quantities.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="-java-test-helpers/index.html">JavaTestHelpers</a></td>
-<td>
-<code><span class="keyword">object </span><span class="identifier">JavaTestHelpers</span></code></td>
 </tr>
 <tr>
 <td>
@@ -238,7 +232,7 @@ with the commands from the wire, and verified/looked up.</p>
 <td>
 <a href="-linear-state/index.html">LinearState</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code><p>A state that evolves by superseding itself, all of which share the common "thread"</p>
+<code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code><p>A state that evolves by superseding itself, all of which share the common "thread".</p>
 </td>
 </tr>
 <tr>
@@ -309,7 +303,7 @@ ledger. The reference is intended to be encrypted so its meaningless to anyone o
 <a href="-scheduled-activity/index.html">ScheduledActivity</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ScheduledActivity</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-scheduled/index.html"><span class="identifier">Scheduled</span></a></code><p>This class represents the lifecycle activity that a contract state of type <a href="-linear-state/index.html">LinearState</a> would like to perform at a given point in time.
-e.g. run a fixing protocol</p>
+e.g. run a fixing protocol.</p>
 </td>
 </tr>
 <tr>
@@ -354,14 +348,14 @@ transaction defined the state and where in that transaction it was.</p>
 <a href="-timestamp-command/index.html">TimestampCommand</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TimestampCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code><p>If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
-public keys are identified in the containing <a href="-command/index.html">Command</a> object. The true time must be between (after, before)</p>
+public keys are identified in the containing <a href="-command/index.html">Command</a> object. The true time must be between (after, before).</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-transaction-builder/index.html">TransactionBuilder</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">TransactionBuilder</span></code><p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">TransactionBuilder</span></code><p>A TransactionBuilder is a transaction class thats mutable (unlike the others which are all immutable). It is
 intended to be passed around contracts that may edit it by adding new states/commands. Then once the states
 and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.</p>
 </td>
@@ -481,6 +475,12 @@ This is the definitive state that is stored on the ledger and used in transactio
 </tr>
 <tr>
 <td>
+<a href="kotlin.collections.-collection/index.html">kotlin.collections.Collection</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a></td>
 <td>
 </td>
@@ -533,6 +533,25 @@ This is the definitive state that is stored on the ledger and used in transactio
 <tbody>
 <tr>
 <td>
+<a href="-d-o-l-l-a-r-s.html">DOLLARS</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">DOLLARS</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$DOLLARS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><span class="identifier">DOLLARS</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$DOLLARS(kotlin.Double)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Double</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-o-u-n-d-s.html">POUNDS</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">POUNDS</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$POUNDS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-s-w-i-s-s_-f-r-a-n-c-s.html">SWISS_FRANCS</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">SWISS_FRANCS</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$SWISS_FRANCS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="calculate-days-between.html">calculateDaysBetween</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">calculateDaysBetween</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/startDate">startDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/endDate">endDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/dcbYear">dcbYear</span><span class="symbol">:</span>&nbsp;<a href="-day-count-basis-year/index.html"><span class="identifier">DayCountBasisYear</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/dcbDay">dcbDay</span><span class="symbol">:</span>&nbsp;<a href="-day-count-basis-day/index.html"><span class="identifier">DayCountBasisDay</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
@@ -559,6 +578,12 @@ This is the definitive state that is stored on the ledger and used in transactio
 </tr>
 <tr>
 <td>
+<a href="issued-by.html">issuedBy</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issuedBy(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="require-that.html">requireThat</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span> <span class="identifier">requireThat</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$requireThat(kotlin.Function1((com.r3corda.core.contracts.Requirements, com.r3corda.core.contracts.requireThat.R)))/body">body</span><span class="symbol">:</span>&nbsp;<a href="-requirements/index.html"><span class="identifier">Requirements</span></a><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">R</span></code></td>
@@ -574,8 +599,8 @@ This is the definitive state that is stored on the ledger and used in transactio
 <td>
 <a href="verify-move-command.html">verifyMoveCommand</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a></code><p>Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.</p>
 </td>
 </tr>
 <tr>
@@ -585,6 +610,19 @@ This is the definitive state that is stored on the ledger and used in transactio
 <code><span class="keyword">fun </span><a href="-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">.</span><span class="identifier">verifyToLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyToLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyToLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/attachmentStorage">attachmentStorage</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Calls <a href="#">verify</a> to check all required signatures are present, and then uses the passed <a href="../com.r3corda.core.node.services/-identity-service/index.html">IdentityService</a> to call
 <a href="to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a> to look up well known identities from pubkeys.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="with notary.html">with notary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">with notary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$with notary(com.r3corda.core.contracts.with notary.T, com.r3corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Wraps the <a href="-contract-state/index.html">ContractState</a> in a <a href="-transaction-state/index.html">TransactionState</a> object</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="with-notary.html">withNotary</a></td>
+<td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">withNotary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$withNotary(com.r3corda.core.contracts.withNotary.T, com.r3corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
