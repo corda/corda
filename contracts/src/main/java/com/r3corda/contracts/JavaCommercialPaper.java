@@ -3,8 +3,8 @@ package com.r3corda.contracts;
 import com.google.common.collect.*;
 import com.r3corda.contracts.asset.*;
 import com.r3corda.core.contracts.*;
-import static com.r3corda.core.contracts.ContractsDSL.requireThat;
 import com.r3corda.core.contracts.TransactionForContract.*;
+import com.r3corda.core.contracts.clauses.*;
 import com.r3corda.core.crypto.*;
 import kotlin.Unit;
 import org.jetbrains.annotations.*;
@@ -12,6 +12,7 @@ import org.jetbrains.annotations.*;
 import java.security.*;
 import java.time.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.r3corda.core.contracts.ContractsDSL.*;
 import static kotlin.collections.CollectionsKt.*;
@@ -21,7 +22,7 @@ import static kotlin.collections.CollectionsKt.*;
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  */
-public class JavaCommercialPaper implements Contract {
+public class JavaCommercialPaper extends ClauseVerifier {
     //public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
     public static Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
@@ -118,62 +119,145 @@ public class JavaCommercialPaper implements Contract {
         }
     }
 
-    public static class Commands implements CommandData {
-        public static class Move extends Commands {
+    public interface Clause {
+        abstract class AbstractGroup implements GroupClause<State, State> {
+            @NotNull
             @Override
-            public boolean equals(Object obj) {
-                return obj instanceof Move;
+            public MatchBehaviour getIfNotMatched() {
+                return MatchBehaviour.CONTINUE;
+            }
+
+            @NotNull
+            @Override
+            public MatchBehaviour getIfMatched() {
+                return MatchBehaviour.END;
             }
         }
 
-        public static class Redeem extends Commands {
-            private final Party notary;
-
-            public  Redeem(Party setNotary) {
-                this.notary = setNotary;
+        class Group extends GroupClauseVerifier<State, State> {
+            @NotNull
+            @Override
+            public MatchBehaviour getIfMatched() {
+                return MatchBehaviour.END;
             }
 
+            @NotNull
             @Override
-            public boolean equals(Object obj) {
-                return obj instanceof Redeem;
+            public MatchBehaviour getIfNotMatched() {
+                return MatchBehaviour.ERROR;
+            }
+
+            @NotNull
+            @Override
+            public List<GroupClause<State, State>> getClauses() {
+                final List<GroupClause<State, State>> clauses = new ArrayList<>();
+
+                clauses.add(new Clause.Redeem());
+                clauses.add(new Clause.Move());
+                clauses.add(new Clause.Issue());
+
+                return clauses;
+            }
+
+            @NotNull
+            @Override
+            public List<InOutGroup<State, State>> extractGroups(@NotNull TransactionForContract tx) {
+                return tx.groupStates(State.class, State::withoutOwner);
             }
         }
 
-        public static class Issue extends Commands {
-            private final Party notary;
-
-            public  Issue(Party setNotary) {
-                this.notary = setNotary;
+        class Move extends AbstractGroup {
+            @NotNull
+            @Override
+            public Set<Class<? extends CommandData>> getRequiredCommands() {
+                return Collections.singleton(Commands.Move.class);
             }
 
+            @NotNull
             @Override
-            public boolean equals(Object obj) {
-                return obj instanceof Issue;
+            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+                                           @NotNull List<? extends State> inputs,
+                                           @NotNull List<? extends State> outputs,
+                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
+                                           @NotNull State token) {
+                AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
+                // There should be only a single input due to aggregation above
+                State input = single(inputs);
+
+                if (!cmd.getSigners().contains(input.getOwner()))
+                    throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+
+                // Check the output CP state is the same as the input state, ignoring the owner field.
+                if (outputs.size() != 1) {
+                    throw new IllegalStateException("the state is propagated");
+                }
+                // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
+                // the input ignoring the owner field due to the grouping.
+                return Collections.singleton(cmd.getValue());
             }
         }
-    }
 
-    @Override
-    public void verify(@NotNull TransactionForContract tx) {
-        // There are three possible things that can be done with CP.
-        // Issuance, trading (aka moving in this prototype) and redeeming.
-        // Each command has it's own set of restrictions which the verify function ... verifies.
+        class Redeem extends AbstractGroup {
+            @NotNull
+            @Override
+            public Set<Class<? extends CommandData>> getRequiredCommands() {
+                return Collections.singleton(Commands.Redeem.class);
+            }
 
-        List<InOutGroup<State, State>> groups = tx.groupStates(State.class, State::withoutOwner);
+            @NotNull
+            @Override
+            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+                                           @NotNull List<? extends State> inputs,
+                                           @NotNull List<? extends State> outputs,
+                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
+                                           @NotNull State token) {
+                AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
-        // Find the command that instructs us what to do and check there's exactly one.
+                // There should be only a single input due to aggregation above
+                State input = single(inputs);
 
-        AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), JavaCommercialPaper.Commands.class);
+                if (!cmd.getSigners().contains(input.getOwner()))
+                    throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
-        for (InOutGroup<State, State> group : groups) {
-            List<State> inputs = group.getInputs();
-            List<State> outputs = group.getOutputs();
+                Party notary = cmd.getValue().notary;
+                TimestampCommand timestampCommand = tx.getTimestampBy(notary);
+                Instant time = null == timestampCommand
+                        ? null
+                        : timestampCommand.getBefore();
+                Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
-            // For now do not allow multiple pieces of CP to trade in a single transaction.
-            if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
-                Commands.Issue issueCommand = (Commands.Issue) cmd.getValue();
+                requireThat(require -> {
+                    require.by("must be timestamped", timestampCommand != null);
+                    require.by("received amount equals the face value: "
+                            + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
+                    require.by("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
+                    require.by("the received amount equals the face value", input.getFaceValue().equals(received));
+                    require.by("the paper must be destroyed", outputs.isEmpty());
+                    return Unit.INSTANCE;
+                });
+
+                return Collections.singleton(cmd.getValue());
+            }
+        }
+
+        class Issue extends AbstractGroup {
+            @NotNull
+            @Override
+            public Set<Class<? extends CommandData>> getRequiredCommands() {
+                return Collections.singleton(Commands.Issue.class);
+            }
+
+            @NotNull
+            @Override
+            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+                                           @NotNull List<? extends State> inputs,
+                                           @NotNull List<? extends State> outputs,
+                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
+                                           @NotNull State token) {
+                AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
-                TimestampCommand timestampCommand = tx.getTimestampBy(issueCommand.notary);
+                Party notary = cmd.getValue().notary;
+                TimestampCommand timestampCommand = tx.getTimestampBy(notary);
                 Instant time = null == timestampCommand
                         ? null
                         : timestampCommand.getBefore();
@@ -186,42 +270,64 @@ public class JavaCommercialPaper implements Contract {
                     require.by("output states are issued by a command signer", cmd.getSigners().contains(output.issuance.getParty().getOwningKey()));
                     return Unit.INSTANCE;
                 });
-            } else {
-                // Everything else (Move, Redeem) requires inputs (they are not first to be actioned)
-                // There should be only a single input due to aggregation above
-                State input = single(inputs);
 
-                requireThat(require -> {
-                    require.by("the transaction is signed by the owner of the CP", cmd.getSigners().contains(input.getOwner()));
-                    return Unit.INSTANCE;
-                });
-
-                if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
-                    requireThat(require -> {
-                        require.by("the state is propagated", outputs.size() == 1);
-                        return Unit.INSTANCE;
-                    });
-                    // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
-                    // the input ignoring the owner field due to the grouping.
-                } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-                    TimestampCommand timestampCommand = tx.getTimestampBy(((Commands.Redeem) cmd.getValue()).notary);
-                    Instant time = null == timestampCommand
-                            ? null
-                            : timestampCommand.getBefore();
-                    Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
-
-                    requireThat(require -> {
-                        require.by("must be timestamped", timestampCommand != null);
-                        require.by("received amount equals the face value: "
-                                + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
-                        require.by("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
-                        require.by("the received amount equals the face value", input.getFaceValue().equals(received));
-                        require.by("the paper must be destroyed", outputs.isEmpty());
-                        return Unit.INSTANCE;
-                    });
-                }
+                return Collections.singleton(cmd.getValue());
             }
         }
+    }
+
+    public interface Commands extends CommandData {
+        class Move implements Commands {
+            @Override
+            public boolean equals(Object obj) { return obj instanceof Move; }
+        }
+
+        class Redeem implements Commands {
+            private final Party notary;
+
+            public  Redeem(Party setNotary) {
+                this.notary = setNotary;
+            }
+
+            @Override
+            public boolean equals(Object obj) { return obj instanceof Redeem; }
+        }
+
+        class Issue implements Commands {
+            private final Party notary;
+
+            public  Issue(Party setNotary) {
+                this.notary = setNotary;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (obj instanceof Issue) {
+                    Issue other = (Issue)obj;
+                    return notary.equals(other.notary);
+                } else {
+                    return false;
+                }
+            }
+
+            @Override
+            public int hashCode() { return notary.hashCode(); }
+        }
+    }
+
+    @NotNull
+    @Override
+    public List<SingleClause> getClauses() {
+        return Collections.singletonList(new Clause.Group());
+    }
+
+    @NotNull
+    @Override
+    public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
+        return tx.getCommands()
+                .stream()
+                .filter((AuthenticatedObject<CommandData> command) -> { return command.getValue() instanceof Commands; })
+                .collect(Collectors.toList());
     }
 
     @NotNull

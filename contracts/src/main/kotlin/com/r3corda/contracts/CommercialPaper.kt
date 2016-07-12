@@ -3,11 +3,14 @@ package com.r3corda.contracts
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumCashBy
+import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
 import java.time.Instant
@@ -38,9 +41,20 @@ import java.util.*
 val CP_PROGRAM_ID = CommercialPaper()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
-class CommercialPaper : Contract {
+class CommercialPaper : ClauseVerifier() {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
+
+    data class Terms(
+        val asset: Issued<Currency>,
+        val maturityDate: Instant
+    )
+
+    override val clauses: List<SingleClause>
+        get() = listOf(Clauses.Group())
+
+    override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
+        = tx.commands.select<Commands>()
 
     data class State(
             val issuance: PartyAndReference,
@@ -52,7 +66,9 @@ class CommercialPaper : Contract {
         override val participants: List<PublicKey>
             get() = listOf(owner)
 
-        fun withoutOwner() = copy(owner = NullPublicKey)
+        val token: Issued<Terms>
+            get() = Issued(issuance, Terms(faceValue.token, maturityDate))
+
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by ${owner.toStringShort()})"
 
@@ -64,73 +80,108 @@ class CommercialPaper : Contract {
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
     }
 
-    interface Commands : CommandData {
-        class Move: TypeOnlyCommandData(), Commands
-        data class Redeem(val notary: Party) : Commands
-        // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
-        // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        data class Issue(val notary: Party) : Commands
-    }
+    interface Clauses {
+        class Group : GroupClauseVerifier<State, Issued<Terms>>() {
+            override val ifNotMatched: MatchBehaviour
+                get() = MatchBehaviour.ERROR
+            override val ifMatched: MatchBehaviour
+                get() = MatchBehaviour.END
+            override val clauses: List<GroupClause<State, Issued<Terms>>>
+                get() = listOf(
+                        Redeem(),
+                        Move(),
+                        Issue())
 
-    override fun verify(tx: TransactionForContract) {
-        // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
-        val groups = tx.groupStates() { it: State -> it.withoutOwner() }
-
-        // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
-        // it for cash on or after the maturity date.
-        val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
-        // If it's an issue, we can't take notary from inputs, so it must be specified in the command
-        val cmdVal = command.value
-        val timestamp: TimestampCommand? = when (cmdVal) {
-            is Commands.Issue -> tx.getTimestampBy(cmdVal.notary)
-            is Commands.Redeem -> tx.getTimestampBy(cmdVal.notary)
-            else -> null
+            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
+                    = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
-        for ((inputs, outputs, key) in groups) {
-            when (command.value) {
-                is Commands.Move -> {
-                    val input = inputs.single()
-                    requireThat {
-                        "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                        "the state is propagated" by (outputs.size == 1)
-                        // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
-                        // the input ignoring the owner field due to the grouping.
-                    }
-                }
+        abstract class AbstractGroupClause: GroupClause<State, Issued<Terms>> {
+            override val ifNotMatched: MatchBehaviour
+                get() = MatchBehaviour.CONTINUE
+            override val ifMatched: MatchBehaviour
+                get() = MatchBehaviour.END
+        }
 
-            // Redemption of the paper requires movement of on-ledger cash.
-                is Commands.Redeem -> {
-                    val input = inputs.single()
-                    val received = tx.outputs.sumCashBy(input.owner)
-                    val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
-                    requireThat {
-                        "the paper must have matured" by (time >= input.maturityDate)
-                        "the received amount equals the face value" by (received == input.faceValue)
-                        "the paper must be destroyed" by outputs.isEmpty()
-                        "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                    }
-                }
+        class Issue : AbstractIssue<State, Terms>(
+                { map { Amount(it.faceValue.quantity, it.token) }.sumOrThrow() },
+                { token -> map { Amount(it.faceValue.quantity, it.token) }.sumOrZero(token) }) {
+            override val requiredCommands: Set<Class<out CommandData>>
+                get() = setOf(Commands.Issue::class.java)
 
-                is Commands.Issue -> {
-                    val output = outputs.single()
-                    val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
-                    requireThat {
-                        // Don't allow people to issue commercial paper under other entities identities.
-                        "output states are issued by a command signer" by
-                                (output.issuance.party.owningKey in command.signers)
-                        "output values sum to more than the inputs" by (output.faceValue.quantity > 0)
-                        "the maturity date is not in the past" by (time < output.maturityDate)
-                        // Don't allow an existing CP state to be replaced by this issuance.
-                        // TODO: Consider how to handle the case of mistaken issuances, or other need to patch.
-                        "output values sum to more than the inputs" by inputs.isEmpty()
-                    }
-                }
+            override fun verify(tx: TransactionForContract,
+                                inputs: List<State>,
+                                outputs: List<State>,
+                                commands: Collection<AuthenticatedObject<CommandData>>,
+                                token: Issued<Terms>): Set<CommandData> {
+                val consumedCommands = super.verify(tx, inputs, outputs, commands, token)
+                val command = commands.requireSingleCommand<Commands.Issue>()
+                // If it's an issue, we can't take notary from inputs, so it must be specified in the command
+                val timestamp: TimestampCommand? = tx.getTimestampBy(command.value.notary)
+                val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
 
-                // TODO: Think about how to evolve contracts over time with new commands.
-                else -> throw IllegalArgumentException("Unrecognised command")
+                require(outputs.all { time < it.maturityDate }) { "maturity date is not in the past" }
+
+                return consumedCommands
             }
         }
+
+        class Move: AbstractGroupClause() {
+            override val requiredCommands: Set<Class<out CommandData>>
+                get() = setOf(Commands.Move::class.java)
+
+            override fun verify(tx: TransactionForContract,
+                                inputs: List<State>,
+                                outputs: List<State>,
+                                commands: Collection<AuthenticatedObject<CommandData>>,
+                                token: Issued<Terms>): Set<CommandData> {
+                val command = commands.requireSingleCommand<Commands.Move>()
+                val input = inputs.single()
+                requireThat {
+                    "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                    "the state is propagated" by (outputs.size == 1)
+                    // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
+                    // the input ignoring the owner field due to the grouping.
+                }
+                return setOf(command.value)
+            }
+        }
+
+        class Redeem(): AbstractGroupClause() {
+            override val requiredCommands: Set<Class<out CommandData>>
+                get() = setOf(Commands.Redeem::class.java)
+
+            override fun verify(tx: TransactionForContract,
+                                inputs: List<State>,
+                                outputs: List<State>,
+                                commands: Collection<AuthenticatedObject<CommandData>>,
+                                token: Issued<Terms>): Set<CommandData> {
+                // TODO: This should filter commands down to those with compatible subjects (underlying product and maturity date)
+                // before requiring a single command
+                val command = commands.requireSingleCommand<Commands.Redeem>()
+                // If it's an issue, we can't take notary from inputs, so it must be specified in the command
+                val timestamp: TimestampCommand? = tx.getTimestampBy(command.value.notary)
+
+                val input = inputs.single()
+                val received = tx.outputs.sumCashBy(input.owner)
+                val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
+                requireThat {
+                    "the paper must have matured" by (time >= input.maturityDate)
+                    "the received amount equals the face value" by (received == input.faceValue)
+                    "the paper must be destroyed" by outputs.isEmpty()
+                    "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                }
+
+                return setOf(command.value)
+            }
+
+        }
+    }
+
+    interface Commands : CommandData {
+        class Move : TypeOnlyCommandData(), Commands
+        data class Redeem(val notary: Party) : Commands
+        data class Issue(val notary: Party, override val nonce: Long = random63BitValue()) : IssueCommand, Commands
     }
 
     /**
