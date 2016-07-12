@@ -479,7 +479,7 @@ private fun createDefaultConfigFile(configFile: File, legalName: String) {
 }
 
 private fun printHelp(parser: OptionParser) {
-    val roleList = IRSDemoRole.values().joinToString(separator = "|") {it.toString()}
+    val roleList = IRSDemoRole.values().joinToString(separator = "|") { it.toString() }
     println("""
     Usage: irsdemo --role $roleList [<TradeName>|<DateValue>] [options]
     Please refer to the documentation in docs/build/index.html for more info.
