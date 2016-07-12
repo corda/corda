@@ -4,13 +4,16 @@ define([
     'angular',
     'maskedInput',
     'utils/semantic',
+    'utils/dayCountBasisLookup',
     'services/NodeApi',
     'Deal'
-], (angular, maskedInput, semantic, nodeApi, Deal) => {
+], (angular, maskedInput, semantic, dayCountBasisLookup, nodeApi, Deal) => {
     angular.module('irsViewer').controller('CreateDealController', function CreateDealController($http, $scope, $location, nodeService) {
         semantic.init($scope, nodeService.isLoading);
 
+        $scope.dayCountBasisLookup = dayCountBasisLookup;
         $scope.deal = nodeService.newDeal();
+        console.log($scope.deal.fixedLeg.dayCountBasis);
         $scope.createDeal = () => {
             nodeService.createDeal(new Deal($scope.deal))
             .then((tradeId) => $location.path('#/deal/' + tradeId), (resp) => {

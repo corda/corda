@@ -1,6 +1,16 @@
 "use strict"
 
-define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
+define(['utils/dayCountBasisLookup', 'viewmodel/FixedRate'], (dayCountBasisLookup, fixedRateViewModel) => {
+    let calculationModel = {
+        expression: "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
+        floatingLegPaymentSchedule: {
+
+        },
+        fixedLegPaymentSchedule: {
+
+        }
+    };
+
     let Deal = function(dealViewModel) {
         let now = new Date();
         let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`

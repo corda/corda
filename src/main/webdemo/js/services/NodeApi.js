@@ -1,6 +1,6 @@
 'use strict';
 
-define(['angular', 'lodash'], (angular, _) => {
+define(['angular', 'lodash', 'viewmodel/deal'], (angular, _, dealViewModel) => {
     angular.module('irsViewer').factory('nodeService', ($http) => {
         return new (function() {
             let date = new Date(2016, 0, 1, 0, 0, 0);
