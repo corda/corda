@@ -5,8 +5,8 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.statemachine.StateMachineManager
-import protocols.AbstractStateReplacementProtocol
-import protocols.NotaryChangeProtocol
+import com.r3corda.protocols.AbstractStateReplacementProtocol
+import com.r3corda.protocols.NotaryChangeProtocol
 
 /**
  * A service that monitors the network for requests for changing the notary of a state,

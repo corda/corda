@@ -10,12 +10,12 @@ import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.protocols.NotaryChangeProtocol
+import com.r3corda.protocols.NotaryChangeProtocol.Instigator
+import com.r3corda.protocols.StateReplacementException
+import com.r3corda.protocols.StateReplacementRefused
 import org.junit.Before
 import org.junit.Test
-import protocols.NotaryChangeProtocol
-import protocols.NotaryChangeProtocol.Instigator
-import protocols.StateReplacementException
-import protocols.StateReplacementRefused
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ExecutionException
