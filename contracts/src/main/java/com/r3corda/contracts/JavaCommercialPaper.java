@@ -200,13 +200,11 @@ public class JavaCommercialPaper implements Contract {
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
                 if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
-                    // Check the output CP state is the same as the input state, ignoring the owner field.
-                    State output = single(outputs);
-
-                    if (!output.getFaceValue().equals(input.getFaceValue()) ||
-                            !output.getIssuance().equals(input.getIssuance()) ||
-                            !output.getMaturityDate().equals(input.getMaturityDate()))
-                        throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
+                    if (outputs.size() != 1) {
+                        throw new IllegalStateException("the state is propagated");
+                    }
+                    // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
+                    // the input ignoring the owner field due to the grouping.
                 } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
                     TimestampCommand timestampCommand = tx.getTimestampBy(((Commands.Redeem) cmd.getValue()).notary);
                     if (timestampCommand == null)
