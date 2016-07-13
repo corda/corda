@@ -14,9 +14,9 @@ import java.net.URLConnection
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.ws.rs.*
-import javax.ws.rs.core.MediaType
-import javax.ws.rs.core.Response
+import javax.ws.rs.core.*
 import java.nio.channels.*
+import java.util.concurrent.TimeUnit
 
 /**
  * This provides a simplified API, currently for demonstration use only.
@@ -121,7 +121,9 @@ class InterestRateSwapAPI(val services: ServiceHub) {
             val resourcePath = if(filepath == "") { "index.html" } else { filepath }
             val resource = javaClass.getResourceAsStream("irswebdemo/" + resourcePath)
             if(resource != null) {
-                return Response.ok(resource).build()
+                val cacheControl = CacheControl();
+                cacheControl.maxAge = TimeUnit.SECONDS.toSeconds(0).toInt()
+                return Response.ok(resource).cacheControl(cacheControl).build()
             }
 
             return Response.status(Response.Status.NOT_FOUND).build()

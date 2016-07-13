@@ -19,6 +19,7 @@
     "lodash": "^4.13.1",
     "angular-fcsa-number": "^1.5.3",
     "jquery.maskedinput": "^1.4.1",
-    "requirejs": "^2.2.0"
+    "requirejs": "^2.2.0",
+    "semantic": "semantic-ui#^2.2.2"
   }
 }
