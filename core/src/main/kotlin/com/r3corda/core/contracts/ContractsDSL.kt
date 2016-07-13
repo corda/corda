@@ -85,6 +85,7 @@ fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingle
         mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as AuthenticatedObject<C> else null }.single()
 
 /** Returns a timestamp that was signed by the given authority, or returns null if missing. */
+@Deprecated("Get timestamp from the transaction")
 fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority: Party): TimestampCommand? {
     val timestampCmds = filter { it.signers.contains(timestampingAuthority.owningKey) && it.value is TimestampCommand }
     return timestampCmds.singleOrNull()?.value as? TimestampCommand

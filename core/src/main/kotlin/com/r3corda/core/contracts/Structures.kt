@@ -338,12 +338,29 @@ data class AuthenticatedObject<out T : Any>(
 )
 
 /**
+ * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
+ * between (after, before).
+ */
+data class Timestamp(val after: Instant?, val before: Instant?) {
+    init {
+        if (after == null && before == null)
+            throw IllegalArgumentException("At least one of before/after must be specified")
+        if (after != null && before != null)
+            check(after <= before)
+    }
+
+    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
+
+    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
+}
+
+/**
  * If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
  * public keys are identified in the containing [Command] object. The true time must be between (after, before).
+ *
+ * @deprecated timestamps are now a field on a transaction, and this exists just for legacy reasons.
  */
-// TODO: Timestamps are now always provided by the consensus service for the transaction, rather than potentially
-// having multiple timestamps on a transaction. As such, it likely makes more sense for time to be a field on the
-// transaction, rather than a command
+@Deprecated("timestamps are now a field on a transaction, and this exists just for legacy reasons.")
 data class TimestampCommand(val after: Instant?, val before: Instant?) : CommandData {
     init {
         if (after == null && before == null)

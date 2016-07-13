@@ -49,7 +49,8 @@ data class WireTransaction(val inputs: List<StateRef>,
                            val outputs: List<TransactionState<ContractState>>,
                            val commands: List<Command>,
                            val signers: List<PublicKey>,
-                           val type: TransactionType) : NamedByHash {
+                           val type: TransactionType,
+                           val timestamp: Timestamp? = null) : NamedByHash {
 
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
     @Volatile @Transient private var cachedBits: SerializedBytes<WireTransaction>? = null
@@ -165,7 +166,8 @@ data class LedgerTransaction(
         override val id: SecureHash,
         /** The notary key and the command keys together: a signed transaction must provide signatures for all of these. */
         val signers: List<PublicKey>,
-        val type: TransactionType
+        val type: TransactionType,
+        val timestamp: Timestamp? = null
 ) : NamedByHash {
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as TransactionState<T>, StateRef(id, index))

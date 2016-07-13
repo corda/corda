@@ -17,7 +17,8 @@ data class TransactionForContract(val inputs: List<ContractState>,
                                   val attachments: List<Attachment>,
                                   val commands: List<AuthenticatedObject<CommandData>>,
                                   val origHash: SecureHash,
-                                  val inputNotary: Party? = null) {
+                                  val inputNotary: Party? = null,
+                                  val timestamp: Timestamp? = null) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 
@@ -83,11 +84,8 @@ data class TransactionForContract(val inputs: List<ContractState>,
      */
     data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
 
-    /** Get the timestamp command for this transaction, using the notary from the input states. */
-    val timestamp: TimestampCommand?
-        get() = if (inputNotary == null) null else commands.getTimestampBy(inputNotary)
-
     /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
+    @Deprecated("use timestamp property instead")
     fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
 
     /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */

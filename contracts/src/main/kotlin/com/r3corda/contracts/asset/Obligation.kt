@@ -403,7 +403,10 @@ class Obligation<P> : Contract {
             if (input is State<P>) {
                 val actualOutput = outputs[stateIdx]
                 val deadline = input.dueBefore
-                val timestamp: TimestampCommand? = tx.timestamp
+                val timestamp: TimestampCommand? = if (tx.inputNotary == null)
+                    null
+                else
+                    tx.getTimestampBy(tx.inputNotary!!)
                 val expectedOutput = input.copy(lifecycle = expectedOutputLifecycle)
 
                 requireThat {
