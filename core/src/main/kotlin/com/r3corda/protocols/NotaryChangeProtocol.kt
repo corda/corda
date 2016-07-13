@@ -1,4 +1,4 @@
-package protocols
+package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.*
@@ -31,7 +31,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
         override val topic: String get() = TOPIC
 
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementProtocol.Proposal<Party>
-            = NotaryChangeProtocol.Proposal(stateRef, modification, stx)
+            = Proposal(stateRef, modification, stx)
 
         override fun assembleTx(): Pair<SignedTransaction, List<PublicKey>> {
             val state = originalState.state

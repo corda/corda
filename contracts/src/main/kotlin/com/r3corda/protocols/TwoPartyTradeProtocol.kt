@@ -41,6 +41,8 @@ import java.util.*
  *
  * To see an example of how to use this class, look at the unit tests.
  */
+// TODO: Common elements in multi-party transaction consensus and signing should be refactored into a superclass of this
+// and [AbstractStateReplacementProtocol].
 object TwoPartyTradeProtocol {
 
     val TOPIC = "platform.trade"
