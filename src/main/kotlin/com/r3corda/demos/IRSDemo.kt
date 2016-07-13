@@ -37,6 +37,8 @@ import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
 import com.r3corda.demos.utilities.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 // IRS DEMO
 //
@@ -268,6 +270,8 @@ private class NotSetupException: Throwable {
     constructor(message: String): super(message) {}
 }
 
+private val log: Logger = LoggerFactory.getLogger("IRSDemo")
+
 fun main(args: Array<String>) {
     exitProcess(runIRSDemo(args))
 }
@@ -276,7 +280,7 @@ fun runIRSDemo(args: Array<String>): Int {
     val cliParams = try {
         CliParams.parse(CliParamsSpec.parser.parse(*args))
     } catch (e: Exception) {
-        println(e)
+        log.error(e.message)
         printHelp(CliParamsSpec.parser)
         return 1
     }
@@ -343,7 +347,7 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
             node.stop()
         }
     } catch (e: NotSetupException) {
-        println(e.message)
+        log.error(e.message)
         return 1
     }
 
@@ -351,28 +355,28 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
 }
 
 private fun runDateChange(cliParams: CliParams.DateChange): Int {
-    println("Changing date to " + cliParams.dateString)
+    log.info("Changing date to " + cliParams.dateString)
     val url = URL("http://${cliParams.apiAddress}/api/irs/demodate")
     if (putJson(url, "\"" + cliParams.dateString + "\"")) {
-        println("Date changed")
+        log.info("Date changed")
         return 0
     } else {
-        println("Date failed to change")
+        log.error("Date failed to change")
         return 1
     }
 }
 
 private fun runTrade(cliParams: CliParams.Trade): Int {
-    println("Uploading tradeID " + cliParams.tradeId)
+    log.info("Uploading tradeID " + cliParams.tradeId)
     // Note: the getResourceAsStream is an ugly hack to get the jvm to search in the right location
     val fileContents = IOUtils.toString(CliParams::class.java.getResourceAsStream("example-irs-trade.json"))
     val tradeFile = fileContents.replace("tradeXXX", cliParams.tradeId)
     val url = URL("http://${cliParams.apiAddress}/api/irs/deals")
     if (postJson(url, tradeFile)) {
-        println("Trade sent")
+        log.info("Trade sent")
         return 0
     } else {
-        println("Trade failed to send")
+        log.error("Trade failed to send")
         return 1
     }
 }
@@ -397,7 +401,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
                 }
             }
 
-    val node = logElapsedTime("Node startup") {
+    val node = logElapsedTime("Node startup", log) {
         Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).start()
     }
 
@@ -417,7 +421,7 @@ private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, adve
         val party = parsePartyFromFile(identityFile)
         return NodeInfo(recipient, party, advertisedServices)
     } catch (e: Exception) {
-        println("Could not find identify file $identityFile.")
+        log.error("Could not find identify file $identityFile.")
         throw e
     }
 }
@@ -431,12 +435,12 @@ private fun runUploadRates(host: HostAndPort) {
             val url = URL("http://${host.toString()}/upload/interest-rates")
             if (uploadFile(url, fileContents)) {
                 timer!!.cancel()
-                println("Rates uploaded successfully")
+                log.info("Rates uploaded successfully")
             } else {
-                print("Could not upload rates. Retrying in 5 seconds. ")
+                log.error("Could not upload rates. Retrying in 5 seconds. ")
             }
         } catch (e: Exception) {
-            println("Could not upload rates due to exception. Retrying in 5 seconds")
+            log.error("Could not upload rates due to exception. Retrying in 5 seconds")
         }
     })
 }
@@ -457,7 +461,7 @@ private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
 private fun loadConfigFile(configFile: File, defaultLegalName: String): NodeConfiguration {
     if (!configFile.exists()) {
         createDefaultConfigFile(configFile, defaultLegalName)
-        println("Default config created at $configFile.")
+        log.warn("Default config created at $configFile.")
     }
 
     val config = ConfigFactory.parseFile(configFile).withFallback(ConfigFactory.load())

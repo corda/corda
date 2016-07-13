@@ -11,17 +11,22 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
-import com.r3corda.demos.api.InterestRateSwapAPI
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.protocols.RatesFixProtocol
 import joptsimple.OptionParser
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
+
+private val log: Logger = LoggerFactory.getLogger("RatesFixDemo")
 
 /**
  * Creates a dummy transaction that requires a rate fix within a certain range, and gets it signed by an oracle
@@ -36,14 +41,14 @@ fun main(args: Array<String>) {
     val oracleAddrArg = parser.accepts("oracle").withRequiredArg().required()
     val oracleIdentityArg = parser.accepts("oracle-identity-file").withRequiredArg().required()
 
-    val fixOfArg = parser.accepts("fix-of").withRequiredArg().defaultsTo("LIBOR 2016-03-16 1M")
+    val fixOfArg = parser.accepts("fix-of").withRequiredArg().defaultsTo("ICE LIBOR 2016-03-16 1M")
     val expectedRateArg = parser.accepts("expected-rate").withRequiredArg().defaultsTo("0.67")
     val rateToleranceArg = parser.accepts("rate-tolerance").withRequiredArg().defaultsTo("0.1")
 
     val options = try {
         parser.parse(*args)
     } catch (e: Exception) {
-        println(e.message)
+        log.error(e.message)
         exitProcess(1)
     }
 
@@ -53,7 +58,7 @@ fun main(args: Array<String>) {
     val dir = Paths.get(options.valueOf(dirArg))
     val networkMapAddr = ArtemisMessagingService.makeRecipient(options.valueOf(networkMapAddrArg))
     val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
-    val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity)
+    val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity, setOf(NetworkMapService.Type, NotaryService.Type))
 
     // Load oracle stuff (in lieu of having a network map service)
     val oracleAddr = ArtemisMessagingService.makeRecipient(options.valueOf(oracleAddrArg))
@@ -77,7 +82,7 @@ fun main(args: Array<String>) {
 
     val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddress,
             advertisedServices, DemoClock()).setup().start() }
-
+    node.networkMapRegistrationFuture.get()
     val notary = node.services.networkMapCache.notaryNodes[0]
 
     // Make a garbage transaction that includes a rate fix.
@@ -88,8 +93,7 @@ fun main(args: Array<String>) {
     node.stop()
 
     // Show the user the output.
-    println("Got rate fix")
-    println()
+    log.info("Got rate fix\n")
     print(Emoji.renderIfSupported(tx.toWireTransaction()))
-    println(tx.toSignedTransaction().sigs)
+    println(tx.toSignedTransaction().sigs.toString())
 }
