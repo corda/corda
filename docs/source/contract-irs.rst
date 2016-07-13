@@ -16,7 +16,7 @@ upon an amount that is not actually exchanged but notionally used for the calcul
 amount), and a rate that is either fixed at the creation of the swap (for the fixed leg), or based upon a reference rate
 that is retrieved during the swap (for the floating leg). An example reference rate might be something such as 'LIBOR 3M'.
 
-The fixed leg has its rate computed and set in advance, where as the floating leg has a fixing process whereas the rate
+The fixed leg has its rate computed and set in advance, whereas the floating leg has a fixing process whereas the rate
 for the next period is fixed with relation to a reference rate. Then, a calculation is performed such that the interest
 due over that period multiplied by the notional is paid (normally at the end of the period). If these two legs have the
 same payment date, then these flows can be offset against each other (in reality there are normally a number of these
@@ -33,7 +33,7 @@ the view of the floating leg receiver / fixed leg payer. The enumerated document
 it progresses (note that, the first version exists before the value date), the dots on the "y=0" represent an interest
 rate value becoming available and then the curved arrow indicates to which period the fixing applies.
 
-.. image:: irs.png
+.. image:: contract-irs.png
 
 Two days (by convention, although this can be modified), before the value date (ie the start of the swap) in the red
 period the reference rate is observed from an oracle and fixed in the instance at 1.1%. At the end of the accrual period,

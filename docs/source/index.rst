@@ -31,7 +31,7 @@ Read on to learn:
    messaging
    running-the-demos
    node-administration
-   irs
+   contract-catalogue
 
 .. toctree::
    :maxdepth: 2
