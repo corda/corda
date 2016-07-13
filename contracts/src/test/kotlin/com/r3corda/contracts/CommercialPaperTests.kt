@@ -49,11 +49,24 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
 }
 
+class KotlinCommercialPaperLegacyTest() : ICommercialPaperTestTemplate {
+    override fun getPaper(): ICommercialPaperState = CommercialPaperLegacy.State(
+            issuance = MEGA_CORP.ref(123),
+            owner = MEGA_CORP_PUBKEY,
+            faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
+            maturityDate = TEST_TX_TIME + 7.days
+    )
+
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaperLegacy.Commands.Issue(notary)
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaperLegacy.Commands.Redeem(notary)
+    override fun getMoveCommand(): CommandData = CommercialPaperLegacy.Commands.Move()
+}
+
 @RunWith(Parameterized::class)
 class CommercialPaperTestsGeneric {
     companion object {
         @Parameterized.Parameters @JvmStatic
-        fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest())
+        fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest(), KotlinCommercialPaperLegacyTest())
     }
 
     @Parameterized.Parameter

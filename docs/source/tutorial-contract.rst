@@ -7,7 +7,9 @@
 Writing a contract
 ==================
 
-This tutorial will take you through how the commercial paper contract works.
+This tutorial will take you through how the commercial paper contract works. This uses a simple contract structure of
+everything being in one contract class, while most actual contracts in Corda are broken into clauses (which we'll
+discuss in the next tutorial). You can see the full Kotlin version of this contract in the code as ``CommercialPaperLegacy``.
 
 The code in this tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling
 for how Kotlin syntax works.

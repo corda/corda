@@ -76,8 +76,8 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
 }
 
 // For Java
-fun List<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<out CommandData>) =
-        filter { klass.isInstance(it.value) }.single()
+fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<C>) =
+        mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as AuthenticatedObject<C> else null }.single()
 
 /** Returns a timestamp that was signed by the given authority, or returns null if missing. */
 fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority: Party): TimestampCommand? {
