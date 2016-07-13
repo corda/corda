@@ -3,6 +3,7 @@ package com.r3corda.demos
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import com.r3corda.contracts.CommercialPaper
+import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
@@ -336,7 +337,8 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
         val party = Party("Bank of London", keyPair.public)
 
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(1100.DOLLARS `issued by` party.ref(1, 2, 3), Instant.now() + 10.days, notaryNode.identity)
+            val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
+                    Instant.now() + 10.days, notaryNode.identity)
 
             // TODO: Consider moving these two steps below into generateIssue.
 
