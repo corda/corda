@@ -8,12 +8,14 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
+import org.apache.commons.io.IOUtils
 import java.net.URI
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
+import java.nio.channels.*
 
 /**
  * This provides a simplified API, currently for demonstration use only.
@@ -116,17 +118,14 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Path("web")
     @Produces(MediaType.TEXT_HTML)
     fun serveWeb() : Response {
-        try
-        {
+        try {
             val resourcePath = "/web/index.html"
             val resource = javaClass.getResourceAsStream(resourcePath)
-            println(resource);
-            return Response.ok(resource, MediaType.TEXT_HTML_TYPE).build()
-        }
-        catch(ex: Exception)
-        {
+            val responseContent = IOUtils.toString(resource)
+            return Response.ok(responseContent, MediaType.TEXT_HTML_TYPE).build()
+        } catch(ex: Exception) {
+            println(ex)
             return Response.status(Response.Status.NOT_FOUND).build()
         }
-
     }
 }
