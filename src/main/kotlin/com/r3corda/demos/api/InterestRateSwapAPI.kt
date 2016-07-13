@@ -119,13 +119,16 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Produces(MediaType.TEXT_HTML)
     fun serveWeb() : Response {
         try {
-            val resourcePath = "/web/index.html"
+            val resourcePath = "irswebdemo/index.html"
             val resource = javaClass.getResourceAsStream(resourcePath)
-            val responseContent = IOUtils.toString(resource)
-            return Response.ok(responseContent, MediaType.TEXT_HTML_TYPE).build()
-        } catch(ex: Exception) {
-            println(ex)
+            if(resource != null) {
+                val responseContent = IOUtils.toString(resource)
+                return Response.ok(responseContent, MediaType.TEXT_HTML_TYPE).build()
+            }
+
             return Response.status(Response.Status.NOT_FOUND).build()
+        } catch(ex: Exception) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build()
         }
     }
 }
