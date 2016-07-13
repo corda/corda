@@ -150,15 +150,15 @@ class CashTests {
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
-                this `fails with` "there is only a single issue command"
+                this `fails with` "List has more than one element."
             }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                this `fails with` "there is only a single issue command"
+                this `fails with` "All commands must be matched at end of execution."
             }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
-                this `fails with` "there is only a single issue command"
+                this `fails with` "All commands must be matched at end of execution."
             }
             this.verifies()
         }
@@ -238,7 +238,7 @@ class CashTests {
             input { inState }
             output { outState.copy(amount = inState.amount / 2).editDepositRef(0) }
             output { outState.copy(amount = inState.amount / 2).editDepositRef(1) }
-            this `fails with` "for deposit [01] at issuer MegaCorp the amounts balance"
+            this `fails with` "for reference [01] at issuer MegaCorp the amounts balance"
         }
         // Can't mix currencies.
         transaction {
@@ -271,7 +271,7 @@ class CashTests {
             input { inState }
             input { inState.editDepositRef(3) }
             output { outState.copy(amount = inState.amount * 2).editDepositRef(3) }
-            this `fails with` "for deposit [01]"
+            this `fails with` "for reference [01]"
         }
     }
 

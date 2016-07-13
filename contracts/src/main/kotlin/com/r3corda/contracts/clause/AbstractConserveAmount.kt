@@ -13,7 +13,7 @@ import java.security.PublicKey
  * Move command is provided, and errors if absent. Must be the last clause under a grouping clause;
  * errors on no-match, ends on match.
  */
-abstract class AbstractConserveAmount<C: MoveCommand, S: FungibleAsset.State<T>, T: Any> : GroupClause<S, Issued<T>> {
+abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause<S, Issued<T>> {
     override val ifMatched: MatchBehaviour
         get() = MatchBehaviour.END
     override val ifNotMatched: MatchBehaviour

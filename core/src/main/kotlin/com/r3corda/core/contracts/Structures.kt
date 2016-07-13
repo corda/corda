@@ -23,7 +23,7 @@ interface NamedByHash {
 /**
  * Interface for state objects that support being netted with other state objects.
  */
-interface BilateralNettableState<T: BilateralNettableState<T>> {
+interface BilateralNettableState<N: BilateralNettableState<N>> {
     /**
      * Returns an object used to determine if two states can be subject to close-out netting. If two states return
      * equal objects, they can be close out netted together.
@@ -34,8 +34,22 @@ interface BilateralNettableState<T: BilateralNettableState<T>> {
      * Perform bilateral netting of this state with another state. The two states must be compatible (as in
      * bilateralNetState objects are equal).
      */
-    fun net(other: T): T
+    fun net(other: N): N
 }
+
+/**
+ * Interface for state objects that support being netted with other state objects.
+ */
+interface MultilateralNettableState<T: Any> {
+    /**
+     * Returns an object used to determine if two states can be subject to close-out netting. If two states return
+     * equal objects, they can be close out netted together.
+     */
+    val multilateralNetState: T
+}
+
+interface NettableState<N: BilateralNettableState<N>, T: Any>: BilateralNettableState<N>,
+        MultilateralNettableState<T>
 
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk

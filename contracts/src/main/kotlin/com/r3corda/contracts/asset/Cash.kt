@@ -1,6 +1,10 @@
 package com.r3corda.contracts.asset
 
+import com.r3corda.contracts.clause.AbstractConserveAmount
+import com.r3corda.contracts.clause.AbstractIssue
+import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
@@ -28,7 +32,7 @@ val CASH_PROGRAM_ID = Cash()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class Cash : FungibleAsset<Currency>() {
+class Cash : ClauseVerifier() {
     /**
      * TODO:
      * 1) hash should be of the contents, not the URI
@@ -40,6 +44,34 @@ class Cash : FungibleAsset<Currency>() {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
+    override val clauses: List<SingleClause>
+        get() = listOf(Clauses.Group())
+    override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
+            = tx.commands.select<Cash.Commands>()
+
+    interface Clauses {
+        class Group : GroupClauseVerifier<State, Issued<Currency>>() {
+            override val ifMatched: MatchBehaviour
+                get() = MatchBehaviour.END
+            override val ifNotMatched: MatchBehaviour
+                get() = MatchBehaviour.ERROR
+            override val clauses: List<GroupClause<State, Issued<Currency>>>
+                get() = listOf(
+                        NoZeroSizedOutputs<State, Currency>(),
+                        Issue(),
+                        ConserveAmount())
+
+            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
+                    = tx.groupStates<State, Issued<Currency>> { it.issuanceDef }
+        }
+
+        class Issue : AbstractIssue<State, Currency>({ sumCash() }, { token -> sumCashOrZero(token) }) {
+            override val requiredCommands: Set<Class<out CommandData>>
+                get() = setOf(Commands.Issue::class.java)
+        }
+
+        class ConserveAmount : AbstractConserveAmount<State, Currency>()
+    }
 
     /** A state representing a cash claim against some party */
     data class State(
@@ -47,12 +79,10 @@ class Cash : FungibleAsset<Currency>() {
 
             /** There must be a MoveCommand signed by this key to claim the amount */
             override val owner: PublicKey
-    ) : FungibleAsset.State<Currency> {
+    ) : FungibleAsset<Currency> {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
-            : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
+        : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
 
-        override val productAmount: Amount<Currency>
-            get() = Amount(amount.quantity, amount.token.product)
         override val deposit: PartyAndReference
             get() = amount.token.issuer
         override val exitKeys: Collection<PublicKey>
@@ -63,8 +93,8 @@ class Cash : FungibleAsset<Currency>() {
         override val participants: List<PublicKey>
             get() = listOf(owner)
 
-        override fun move(newAmount: Amount<Currency>, newOwner: PublicKey): FungibleAsset.State<Currency>
-            = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
+        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey): FungibleAsset<Currency>
+                = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
@@ -72,7 +102,7 @@ class Cash : FungibleAsset<Currency>() {
     }
 
     // Just for grouping
-    interface Commands : CommandData {
+    interface Commands : FungibleAsset.Commands {
         /**
          * A command stating that money has been moved, optionally to fulfil another contract.
          *
