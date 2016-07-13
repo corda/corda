@@ -115,7 +115,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     }
 
     @GET
-    @Path("web/{filepath: (.*(.html|.css|.js|.png|.jpg|.gif|ttf|woff|woff2))?}")
+    @Path("web/{filepath: (.*(.html|.css|.js|.png|.jpg|.gif|.json|ttf|woff|woff2))?}")
     fun serveWeb(@PathParam("filepath") filepath: String) : Response {
         try {
             val resourcePath = if(filepath == "") { "index.html" } else { filepath }
