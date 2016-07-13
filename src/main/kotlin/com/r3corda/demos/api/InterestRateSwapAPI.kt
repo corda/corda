@@ -110,4 +110,23 @@ class InterestRateSwapAPI(val services: ServiceHub) {
         services.invokeProtocolAsync<Boolean>(ExitServerProtocol.Broadcast::class.java, 83).get()
         return Response.ok().build()
     }
+
+    @GET
+    //@Path("{ref: .*(.html|.css|.js|.png|.jpg|.gif)}")
+    @Path("web")
+    @Produces(MediaType.TEXT_HTML)
+    fun serveWeb() : Response {
+        try
+        {
+            val resourcePath = "/web/index.html"
+            val resource = javaClass.getResourceAsStream(resourcePath)
+            println(resource);
+            return Response.ok(resource, MediaType.TEXT_HTML_TYPE).build()
+        }
+        catch(ex: Exception)
+        {
+            return Response.status(Response.Status.NOT_FOUND).build()
+        }
+
+    }
 }
