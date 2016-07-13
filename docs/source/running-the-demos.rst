@@ -8,6 +8,7 @@ so far. We have:
    how this works in :doc:`protocol-state-machines`.
 2. The IRS demo, which shows two nodes establishing an interest rate swap between them and performing fixings with a
    rates oracle, all driven via the HTTP API.
+3. The IRS demo web interface - a web interface to the IRS demo.
 
 The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.
@@ -96,3 +97,45 @@ can see the other terminals whilst you run this command!:
 **Other**::
 
     ./build/install/r3prototyping/bin/irsdemo --role=Date 2017-01-30
+
+
+IRS web demo
+------------
+
+To run the web demo, run the first two steps from the IRS Demo:
+
+Open two terminals and in the first:
+
+**Windows**::
+
+    gradlew.bat installDist & .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeA
+
+**Other**::
+
+    ./gradlew installDist && ./build/install/r3prototyping/bin/irsdemo --role=NodeA
+
+And in the second run:
+
+**Windows**::
+
+    .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
+
+**Other**::
+
+    ./build/install/r3prototyping/bin/irsdemo --role=NodeB
+
+Now open your web browser to this URL:
+
+.. note:: If using a custom node port address or port those must be used instead.
+
+**Node A**:
+
+    http://localhost:31338/api/irs/web/
+
+**Node B**:
+
+    http://localhost:31340/api/irs/web/
+
+To use the demos click the "Create Deal" button, fill in the form, then click the "Submit" button. Now you will be
+able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
+blotter to view it.
