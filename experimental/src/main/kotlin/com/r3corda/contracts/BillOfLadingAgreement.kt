@@ -74,7 +74,7 @@ class BillOfLadingAgreement : Contract {
     override fun verify(tx: TransactionForContract) {
         val command = tx.commands.requireSingleCommand<BillOfLadingAgreement.Commands>()
 
-        val time = tx.commands.getTimestampByName("Notary Service")?.midpoint
+        val time = tx.timestamp?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         val txOutputStates: List<BillOfLadingAgreement.State> = tx.outputs.filterIsInstance<BillOfLadingAgreement.State>()
@@ -114,7 +114,7 @@ class BillOfLadingAgreement : Contract {
     fun generateIssue(owner: PublicKey, beneficiary: Party, props: BillOfLadingProperties, notary: Party): TransactionBuilder {
         val state = State(owner, beneficiary, props)
         val builder = TransactionType.General.Builder(notary = notary)
-        builder.setTime(Instant.now(), notary, 1.days)
+        builder.setTime(Instant.now(), 1.days)
         return builder.withItems(state, Command(Commands.IssueBL(), props.carrierOwner.owningKey))
     }
 

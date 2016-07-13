@@ -1,6 +1,6 @@
 package com.r3corda.node.services
 
-import com.r3corda.core.contracts.TimestampCommand
+import com.r3corda.core.contracts.Timestamp
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.DUMMY_NOTARY
@@ -40,7 +40,7 @@ class NotaryServiceTests {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder().withItems(inputState)
-            tx.setTime(Instant.now(), DUMMY_NOTARY, 30.seconds)
+            tx.setTime(Instant.now(), 30.seconds)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
         }
@@ -73,7 +73,7 @@ class NotaryServiceTests {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder().withItems(inputState)
-            tx.setTime(Instant.now().plusSeconds(3600), DUMMY_NOTARY, 30.seconds)
+            tx.setTime(Instant.now().plusSeconds(3600), 30.seconds)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
         }
@@ -85,27 +85,6 @@ class NotaryServiceTests {
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
         val error = (ex.cause as NotaryException).error
         assertTrue(error is NotaryError.TimestampInvalid)
-    }
-
-
-    @Test fun `should report error for transaction with more than one timestamp`() {
-        val stx = run {
-            val inputState = issueState(clientNode)
-            val tx = TransactionType.General.Builder().withItems(inputState)
-            val timestamp = TimestampCommand(Instant.now(), 30.seconds)
-            tx.addCommand(timestamp, DUMMY_NOTARY.owningKey)
-            tx.addCommand(timestamp, DUMMY_NOTARY.owningKey)
-            tx.signWith(clientNode.keyPair!!)
-            tx.toSignedTransaction(false)
-        }
-
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
-        net.runNetwork()
-
-        val ex = assertFailsWith(ExecutionException::class) { future.get() }
-        val error = (ex.cause as NotaryException).error
-        assertTrue(error is NotaryError.MoreThanOneTimestamp)
     }
 
 

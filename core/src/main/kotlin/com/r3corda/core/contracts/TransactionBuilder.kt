@@ -31,7 +31,7 @@ open class TransactionBuilder(
         protected var timestamp: Timestamp? = null) {
 
     @Deprecated("use timestamp instead")
-    val time: TimestampCommand? get() = commands.mapNotNull { it.value as? TimestampCommand }.singleOrNull()
+    val time: Timestamp? get() = timestamp
 
     /**
      * Creates a copy of the builder.
@@ -44,7 +44,8 @@ open class TransactionBuilder(
                     attachments = ArrayList(attachments),
                     outputs = ArrayList(outputs),
                     commands = ArrayList(commands),
-                    signers = LinkedHashSet(signers)
+                    signers = LinkedHashSet(signers),
+                    timestamp = timestamp
             )
 
     /**
@@ -59,28 +60,12 @@ open class TransactionBuilder(
      * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
      * node.
      */
-    @Deprecated("use setTime(Instant, Duration) instead")
-    fun setTime(time: Instant, authority: Party, timeTolerance: Duration) {
-        check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
-        commands.removeAll { it.value is TimestampCommand }
-        addCommand(TimestampCommand(time, timeTolerance), authority.owningKey)
-    }
+    fun setTime(time: Instant, timeTolerance: Duration)
+        = setTime(Timestamp(time, timeTolerance))
 
-    /**
-     * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
-     * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
-     * The signature can be obtained using [NotaryProtocol].
-     *
-     * The window of time in which the final timestamp may lie is defined as [time] +/- [timeTolerance].
-     * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
-     * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
-     * window of time, taking into account factors such as network latency. Transactions being built by a group of
-     * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
-     * node.
-     */
-    fun setTime(time: Instant, timeTolerance: Duration) {
+    fun setTime(newTimestamp: Timestamp) {
         check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
-        timestamp = Timestamp(time, timeTolerance)
+        this.timestamp = newTimestamp
     }
 
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */

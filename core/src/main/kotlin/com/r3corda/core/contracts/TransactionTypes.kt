@@ -24,9 +24,7 @@ sealed class TransactionType {
 
     /** Check that the list of signers includes all the necessary keys */
     fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
-        val timestamp = tx.commands.noneOrSingle { it.value is TimestampCommand }
-        val timestampKey = timestamp?.signers.orEmpty()
-        val notaryKey = (tx.inputs.map { it.state.notary.owningKey } + timestampKey).toSet()
+        val notaryKey = tx.inputs.map { it.state.notary.owningKey }.toSet()
         if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey

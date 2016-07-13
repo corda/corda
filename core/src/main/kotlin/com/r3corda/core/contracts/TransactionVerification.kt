@@ -83,15 +83,6 @@ data class TransactionForContract(val inputs: List<ContractState>,
      * be used to simplify this logic.
      */
     data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
-
-    /** Simply calls [commands.getTimestampBy] as a shortcut to make code completion more intuitive. */
-    @Deprecated("use timestamp property instead")
-    fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
-
-    /** Simply calls [commands.getTimestampByName] as a shortcut to make code completion more intuitive. */
-    @Suppress("DEPRECATION")
-    @Deprecated(message = "Timestamping authority should always be notary for the transaction")
-    fun getTimestampByName(vararg authorityName: String): TimestampCommand? = commands.getTimestampByName(*authorityName)
 }
 
 class TransactionResolutionException(val hash: SecureHash) : Exception() {

@@ -134,6 +134,10 @@ data class TestTransactionDSLInterpreter private constructor(
         return EnforceVerifyOrFail.Token
     }
 
+    override fun timestamp(data: Timestamp) {
+        transactionBuilder.setTime(data)
+    }
+
     override fun tweak(
             dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
     ) = dsl(TransactionDSL(copy()))

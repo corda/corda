@@ -350,7 +350,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
             tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
 
             // Requesting timestamping, all CP must be timestamped.
-            tx.setTime(Instant.now(), notaryNode.identity, 30.seconds)
+            tx.setTime(Instant.now(), 30.seconds)
 
             // Sign it as ourselves.
             tx.signWith(keyPair)

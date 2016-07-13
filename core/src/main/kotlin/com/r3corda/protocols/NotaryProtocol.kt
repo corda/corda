@@ -2,7 +2,8 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.TimestampCommand
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.Timestamp
 import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
@@ -84,22 +85,16 @@ object NotaryProtocol {
         }
 
         private fun findNotaryParty(): Party {
-            var maybeNotaryKey: PublicKey? = null
             val wtx = stx.tx
+            val firstStateRef = wtx.inputs.firstOrNull()
+            var maybeNotaryParty: Party? = if (firstStateRef == null)
+                null
+            else
+                serviceHub.loadState(firstStateRef).notary
 
-            val timestampCommand = wtx.commands.singleOrNull { it.value is TimestampCommand }
-            if (timestampCommand != null) maybeNotaryKey = timestampCommand.signers.first()
-
-            for (stateRef in wtx.inputs) {
-                val inputNotaryKey = serviceHub.loadState(stateRef).notary.owningKey
-                if (maybeNotaryKey != null)
-                    check(maybeNotaryKey == inputNotaryKey) { "Input states and timestamp must have the same Notary" }
-                else maybeNotaryKey = inputNotaryKey
-            }
-
-            val notaryKey = maybeNotaryKey ?: throw IllegalStateException("Transaction does not specify a Notary")
-            val notaryParty = serviceHub.networkMapCache.getNodeByPublicKey(notaryKey)?.identity
-            return notaryParty ?: throw IllegalStateException("No Notary node can be found with the specified public key")
+            val notaryParty = maybeNotaryParty ?: throw IllegalStateException("Transaction does not specify a Notary")
+            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) { "Input states must have the same Notary" }
+            return notaryParty
         }
     }
 
@@ -138,18 +133,12 @@ object NotaryProtocol {
             send(otherSide, sendSessionID, result)
         }
 
-        private fun validateTimestamp(tx: WireTransaction) {
-            val timestampCmd = try {
-                tx.commands.noneOrSingle { it.value is TimestampCommand } ?: return
-            } catch (e: IllegalArgumentException) {
-                throw NotaryException(NotaryError.MoreThanOneTimestamp())
-            }
-            val myIdentity = serviceHub.storageService.myLegalIdentity
-            if (!timestampCmd.signers.contains(myIdentity.owningKey))
-                throw NotaryException(NotaryError.NotForMe())
-            if (!timestampChecker.isValid(timestampCmd.value as TimestampCommand))
+        private fun validateTimestamp(tx: WireTransaction) =
+            if (tx.timestamp != null
+                && !timestampChecker.isValid(tx.timestamp))
                 throw NotaryException(NotaryError.TimestampInvalid())
-        }
+            else
+                Unit
 
         /**
          * No pre-commit processing is done. Transaction is not checked for contract-validity, as that would require fully

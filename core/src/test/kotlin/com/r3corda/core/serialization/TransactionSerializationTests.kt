@@ -99,10 +99,10 @@ class TransactionSerializationTests {
 
     @Test
     fun timestamp() {
-        tx.setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
+        tx.setTime(TEST_TX_TIME, 30.seconds)
         tx.signWith(DUMMY_KEY_1)
         tx.signWith(DUMMY_NOTARY_KEY)
         val stx = tx.toSignedTransaction()
-        assertEquals(TEST_TX_TIME, (stx.tx.commands[1].value as TimestampCommand).midpoint)
+        assertEquals(TEST_TX_TIME, stx.tx.timestamp?.midpoint)
     }
 }

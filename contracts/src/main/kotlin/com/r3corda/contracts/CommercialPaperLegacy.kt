@@ -60,13 +60,7 @@ class CommercialPaperLegacy : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaperLegacy.Commands>()
-        // If it's an issue, we can't take notary from inputs, so it must be specified in the command
-        val cmdVal = command.value
-        val timestamp: TimestampCommand? = when (cmdVal) {
-             is Commands.Issue -> tx.getTimestampBy(cmdVal.notary)
-             is Commands.Redeem -> tx.getTimestampBy(cmdVal.notary)
-             else -> null
-        }
+        val timestamp: Timestamp? = tx.timestamp
 
         for ((inputs, outputs, key) in groups) {
             when (command.value) {

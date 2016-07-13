@@ -108,7 +108,7 @@ class AccountReceivable : Contract {
     override fun verify(tx: TransactionForContract) {
         val command = tx.commands.requireSingleCommand<AccountReceivable.Commands>()
 
-        val time = tx.commands.getTimestampByName("Notary Service", "Seller")?.midpoint ?:
+        val time = tx.timestamp?.midpoint ?:
                 throw IllegalArgumentException("must be timestamped")
 
         when (command.value) {

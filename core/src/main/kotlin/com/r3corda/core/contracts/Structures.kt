@@ -355,26 +355,6 @@ data class Timestamp(val after: Instant?, val before: Instant?) {
 }
 
 /**
- * If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
- * public keys are identified in the containing [Command] object. The true time must be between (after, before).
- *
- * @deprecated timestamps are now a field on a transaction, and this exists just for legacy reasons.
- */
-@Deprecated("timestamps are now a field on a transaction, and this exists just for legacy reasons.")
-data class TimestampCommand(val after: Instant?, val before: Instant?) : CommandData {
-    init {
-        if (after == null && before == null)
-            throw IllegalArgumentException("At least one of before/after must be specified")
-        if (after != null && before != null)
-            check(after <= before)
-    }
-
-    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
-
-    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
-}
-
-/**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted

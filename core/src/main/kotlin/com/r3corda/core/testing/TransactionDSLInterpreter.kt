@@ -47,6 +47,12 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun _command(signers: List<PublicKey>, commandData: CommandData)
 
     /**
+     * Adds a timestamp to the transaction.
+     * @param data The [TimestampCommand].
+     */
+    fun timestamp(data: Timestamp)
+
+            /**
      * Creates a local scoped copy of the transaction.
      * @param dsl The transaction DSL to be interpreted using the copy.
      */
@@ -102,16 +108,8 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      * Adds a timestamp command to the transaction.
      * @param time The [Instant] of the [TimestampCommand].
      * @param tolerance The tolerance of the [TimestampCommand].
-     * @param notary The notary to sign the command.
      */
     @JvmOverloads
-    fun timestamp(time: Instant, tolerance: Duration = 30.seconds, notary: PublicKey = DUMMY_NOTARY.owningKey) =
-            timestamp(TimestampCommand(time, tolerance), notary)
-    /**
-     * Adds a timestamp command to the transaction.
-     * @param data The [TimestampCommand].
-     * @param notary The notary to sign the command.
-     */
-    @JvmOverloads
-    fun timestamp(data: TimestampCommand, notary: PublicKey = DUMMY_NOTARY.owningKey) = command(notary, data)
+    fun timestamp(time: Instant, tolerance: Duration = 30.seconds) =
+            timestamp(Timestamp(time, tolerance))
 }

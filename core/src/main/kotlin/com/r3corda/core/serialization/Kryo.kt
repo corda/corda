@@ -232,6 +232,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.commands)
         kryo.writeClassAndObject(output, obj.signers)
         kryo.writeClassAndObject(output, obj.type)
+        kryo.writeClassAndObject(output, obj.timestamp)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -262,8 +263,9 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val commands = kryo.readClassAndObject(input) as List<Command>
             val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
+            val timestamp = kryo.readClassAndObject(input) as Timestamp?
 
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, signers, transactionType)
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, signers, transactionType, timestamp)
         }
     }
 }

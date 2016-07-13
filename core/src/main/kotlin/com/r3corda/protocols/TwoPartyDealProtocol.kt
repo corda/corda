@@ -101,9 +101,11 @@ object TwoPartyDealProtocol {
             untrustedPartialTX.validate { stx ->
                 progressTracker.nextStep()
 
+                // TODO: Verify the notary on the transaction is set correctly
+
                 // Check that the tx proposed by the buyer is valid.
                 val missingSigs = stx.verifySignatures(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
+                if (missingSigs != setOf(myKeyPair.public))
                     throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
 
                 val wtx: WireTransaction = stx.tx
@@ -323,7 +325,7 @@ object TwoPartyDealProtocol {
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
-            ptx.setTime(serviceHub.clock.instant(), notary, 30.seconds)
+            ptx.setTime(serviceHub.clock.instant(), 30.seconds)
             return Pair(ptx, arrayListOf(handshake.payload.parties.single { it.name == serviceHub.storageService.myLegalIdentity.name }.owningKey))
         }
 
@@ -375,7 +377,7 @@ object TwoPartyDealProtocol {
 
             val newDeal = deal
 
-            val ptx = TransactionType.General.Builder()
+            val ptx = TransactionType.General.Builder(txState.notary)
             val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0].identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
@@ -383,7 +385,7 @@ object TwoPartyDealProtocol {
 
                     // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
                     // to have one.
-                    ptx.setTime(serviceHub.clock.instant(), txState.notary, 30.seconds)
+                    ptx.setTime(serviceHub.clock.instant(), 30.seconds)
                 }
             }
             subProtocol(addFixing)

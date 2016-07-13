@@ -85,7 +85,7 @@ class AccountReceivableTests {
             }
 
             val gtx = invoice.generateInvoice(DUMMY_NOTARY).apply {
-                setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
+                setTime(TEST_TX_TIME, 30.seconds)
                 signWith(MINI_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }

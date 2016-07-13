@@ -109,8 +109,7 @@ class CommercialPaper : Contract {
                                 token: Issued<Terms>): Set<CommandData> {
                 val consumedCommands = super.verify(tx, inputs, outputs, commands, token)
                 val command = commands.requireSingleCommand<Commands.Issue>()
-                // If it's an issue, we can't take notary from inputs, so it must be specified in the command
-                val timestamp: TimestampCommand? = tx.getTimestampBy(command.value.notary)
+                val timestamp = tx.timestamp
                 val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
 
                 require(outputs.all { time < it.maturityDate }) { "maturity date is not in the past" }
@@ -151,8 +150,7 @@ class CommercialPaper : Contract {
                 // TODO: This should filter commands down to those with compatible subjects (underlying product and maturity date)
                 // before requiring a single command
                 val command = commands.requireSingleCommand<Commands.Redeem>()
-                // If it's an issue, we can't take notary from inputs, so it must be specified in the command
-                val timestamp: TimestampCommand? = tx.getTimestampBy(command.value.notary)
+                val timestamp = tx.timestamp
 
                 val input = inputs.single()
                 val received = tx.outputs.sumCashBy(input.owner)

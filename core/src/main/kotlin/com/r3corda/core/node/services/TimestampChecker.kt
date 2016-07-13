@@ -1,6 +1,6 @@
 package com.r3corda.core.node.services
 
-import com.r3corda.core.contracts.TimestampCommand
+import com.r3corda.core.contracts.Timestamp
 import com.r3corda.core.seconds
 import com.r3corda.core.until
 import java.time.Clock
@@ -11,7 +11,7 @@ import java.time.Duration
  */
 class TimestampChecker(val clock: Clock = Clock.systemUTC(),
                        val tolerance: Duration = 30.seconds) {
-    fun isValid(timestampCommand: TimestampCommand): Boolean {
+    fun isValid(timestampCommand: Timestamp): Boolean {
         val before = timestampCommand.before
         val after = timestampCommand.after
 

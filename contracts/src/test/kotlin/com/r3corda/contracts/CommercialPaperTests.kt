@@ -184,7 +184,7 @@ class CommercialPaperTestsGeneric {
     }
 
     fun cashOutputsToWallet(vararg outputs: TransactionState<Cash.State>): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), emptyList(), TransactionType.General())
+        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), emptyList(), null, TransactionType.General())
         return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 
@@ -205,7 +205,7 @@ class CommercialPaperTestsGeneric {
         val issuance = bigCorpServices.storageService.myLegalIdentity.ref(1)
         val issueTX: SignedTransaction =
             CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
+                setTime(TEST_TX_TIME, 30.seconds)
                 signWith(bigCorpServices.key)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -223,7 +223,7 @@ class CommercialPaperTestsGeneric {
 
         fun makeRedeemTX(time: Instant): SignedTransaction {
             val ptx = TransactionType.General.Builder()
-            ptx.setTime(time, DUMMY_NOTARY, 30.seconds)
+            ptx.setTime(time, 30.seconds)
             CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpWallet.statesOfType<Cash.State>())
             ptx.signWith(aliceServices.key)
             ptx.signWith(bigCorpServices.key)
