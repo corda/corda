@@ -6,7 +6,7 @@ require.config({
 		angularRoute: 'bower_components/angular-route/angular-route',
 		fcsaNumber: 'bower_components/angular-fcsa-number/src/fcsaNumber',
 		jquery: 'bower_components/jquery/dist/jquery',
-		semantic: '/semantic/semantic',
+		semantic: '../semantic/semantic',
 		lodash: 'bower_components/lodash/lodash',
 		maskedInput: 'bower_components/jquery.maskedinput/dist/jquery.maskedinput'
 	},

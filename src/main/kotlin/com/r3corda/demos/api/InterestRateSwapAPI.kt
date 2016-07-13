@@ -10,6 +10,7 @@ import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import org.apache.commons.io.IOUtils
 import java.net.URI
+import java.net.URLConnection
 import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.ws.rs.*
@@ -114,16 +115,13 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     }
 
     @GET
-    //@Path("{ref: .*(.html|.css|.js|.png|.jpg|.gif)}")
-    @Path("web")
-    @Produces(MediaType.TEXT_HTML)
-    fun serveWeb() : Response {
+    @Path("web/{filepath: (.*(.html|.css|.js|.png|.jpg|.gif|ttf|woff|woff2))?}")
+    fun serveWeb(@PathParam("filepath") filepath: String) : Response {
         try {
-            val resourcePath = "irswebdemo/index.html"
-            val resource = javaClass.getResourceAsStream(resourcePath)
+            val resourcePath = if(filepath == "") { "index.html" } else { filepath }
+            val resource = javaClass.getResourceAsStream("irswebdemo/" + resourcePath)
             if(resource != null) {
-                val responseContent = IOUtils.toString(resource)
-                return Response.ok(responseContent, MediaType.TEXT_HTML_TYPE).build()
+                return Response.ok(resource).build()
             }
 
             return Response.status(Response.Status.NOT_FOUND).build()
