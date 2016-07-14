@@ -32,7 +32,7 @@ repositories {
 }
 
 applicationDefaultJvmArgs = ["-javaagent:${rootProject.configurations.quasar.singleFile}"]
-mainClassName = 'com.r3cev.corda.netmap.NetworkExplorerKt'
+mainClassName = 'com.r3cev.corda.netmap.NetworkMapVisualiserKt'
 
 dependencies {
     compile project(":core")
