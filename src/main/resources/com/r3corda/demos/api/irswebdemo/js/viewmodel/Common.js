@@ -2,7 +2,7 @@
 
 define([], () => {
     return {
-        baseCurrency: "EUR",
+        baseCurrency: "USD",
         effectiveDate: new Date(2016, 2, 11),
         terminationDate: new Date(2026, 2, 11),
         eligibleCreditSupport: "Cash in an Eligible Currency",
