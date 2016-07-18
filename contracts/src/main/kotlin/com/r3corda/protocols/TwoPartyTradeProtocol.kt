@@ -205,9 +205,6 @@ object TwoPartyTradeProtocol {
 
             logger.trace { "Got signatures from seller, verifying ... " }
 
-            // TODO: figure out a way to do Notary verification along with other command signatures in SignedTransaction.verify()
-            verifyCorrectNotary(stx.tx, signatures.notarySig)
-
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
             fullySigned.verify()
 
@@ -261,11 +258,6 @@ object TwoPartyTradeProtocol {
             }
 
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
-        }
-
-        private fun verifyCorrectNotary(wtx: WireTransaction, sig: DigitalSignature.LegallyIdentifiable) {
-            val notary = serviceHub.loadState(wtx.inputs.first()).notary
-            check(sig.signer == notary) { "Transaction not signed by the required Notary" }
         }
 
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
