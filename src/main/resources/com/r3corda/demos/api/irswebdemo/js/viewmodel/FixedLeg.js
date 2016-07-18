@@ -6,12 +6,12 @@ define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
         notional: {
             quantity: 2500000000
         },
-        paymentFrequency: "Annual",
+        paymentFrequency: "SemiAnnual",
         effectiveDateAdjustment: null,
         terminationDateAdjustment: null,
         fixedRate: "1.676",
         dayCountBasis: dayCountBasisLookup["ACT/360"],
-        rollConvention: "Following",
+        rollConvention: "ModifiedFollowing",
         dayInMonth: 10,
         paymentRule: "InArrears",
         paymentDelay: "0",

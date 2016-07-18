@@ -3,8 +3,8 @@
 define([], () => {
     return {
         baseCurrency: "EUR",
-        effectiveDate: new Date(2016, 3, 11),
-        terminationDate: new Date(2026, 3, 11),
+        effectiveDate: new Date(2016, 2, 11),
+        terminationDate: new Date(2026, 2, 11),
         eligibleCreditSupport: "Cash in an Eligible Currency",
         independentAmounts: {
             quantity: 0
