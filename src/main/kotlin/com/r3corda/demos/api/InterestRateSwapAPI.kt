@@ -123,11 +123,14 @@ class InterestRateSwapAPI(val services: ServiceHub) {
             if(resource != null) {
                 val cacheControl = CacheControl();
                 cacheControl.maxAge = TimeUnit.SECONDS.toSeconds(0).toInt()
+                logger.info("200: serving ${filepath}")
                 return Response.ok(resource).cacheControl(cacheControl).build()
             }
 
+            logger.info("404: could not find: ${filepath}")
             return Response.status(Response.Status.NOT_FOUND).build()
         } catch(ex: Exception) {
+            logger.info("500: error when serving: ${filepath}. ${ex.toString()}")
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build()
         }
     }
