@@ -1,6 +1,6 @@
 'use strict';
 
-define(['viewmodel/fixedLeg', 'viewmodel/floatingLeg', 'viewmodel/common'], (fixedLeg, floatingLeg, common) => {
+define(['viewmodel/FixedLeg', 'viewmodel/FloatingLeg', 'viewmodel/Common'], (fixedLeg, floatingLeg, common) => {
     return {
         fixedLeg: fixedLeg,
         floatingLeg: floatingLeg,
