@@ -102,6 +102,14 @@ can see the other terminals whilst you run this command!:
 IRS web demo
 ------------
 
+To install the web demo please follo these steps;
+
+1. Install Node: https://nodejs.org/en/download/ and ensure the npm executable is on your classpath
+2. Open a terminal
+3. Run `npm install -g bower`
+4. In the terminal navigate to `<corda>/src/main/resources/com/r3corda/demos/api/irswebdemo`
+5. Run `bower install`
+
 To run the web demo, run the first two steps from the IRS Demo:
 
 Open two terminals and in the first:
