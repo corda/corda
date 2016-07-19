@@ -2,7 +2,7 @@
 
 define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
     let calculationModel = {
-        expression: "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) -(floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
+        expression: "( fixedLeg.notional.quantity * (fixedLeg.fixedRate.ratioUnit.value)) - (floatingLeg.notional.quantity * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))",
         floatingLegPaymentSchedule: {
 
         },
@@ -74,6 +74,6 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
 
             return json;
         };
-};
+    };
     return Deal;
 })
