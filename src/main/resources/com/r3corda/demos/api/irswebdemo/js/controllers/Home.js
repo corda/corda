@@ -11,7 +11,11 @@ define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, no
         $scope.infoMsg = "";
         $scope.errorText = "";
         $scope.date = { "year": "...", "month": "...", "day": "..." };
-        $scope.updateDate = (type) => { nodeService.updateDate(type).then((newDate) => {$scope.date = newDate}, handleHttpFail); };
+        $scope.updateDate = (type) => {
+            nodeService.updateDate(type).then((newDate) => {
+                $scope.date = newDate
+            }, handleHttpFail);
+        };
 
         nodeService.getDate().then((date) => $scope.date = date);
         nodeService.getDeals().then((deals) => $scope.deals = deals);
