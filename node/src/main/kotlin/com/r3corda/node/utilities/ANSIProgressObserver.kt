@@ -4,6 +4,7 @@ import com.r3corda.core.ThreadBox
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.services.statemachine.StateMachineManager
+import com.r3corda.protocols.TwoPartyDealProtocol
 import java.util.*
 
 /**
@@ -13,7 +14,7 @@ import java.util.*
 class ANSIProgressObserver(val smm: StateMachineManager) {
 
     init {
-        smm.changes.subscribe { change: Pair<ProtocolLogic<*>, AddOrRemove> ->
+        smm.changes.subscribe { change: Triple<ProtocolLogic<*>, AddOrRemove, Long> ->
             when (change.second) {
                 AddOrRemove.ADD -> addProtocolLogic(change.first)
                 AddOrRemove.REMOVE -> removeProtocolLogic(change.first)
