@@ -122,7 +122,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
             val resource = javaClass.getResourceAsStream("irswebdemo/" + resourcePath)
             if(resource != null) {
                 val cacheControl = CacheControl();
-                cacheControl.maxAge = TimeUnit.SECONDS.toSeconds(0).toInt()
+                cacheControl.maxAge = 0
                 logger.info("200: serving ${filepath}")
                 return Response.ok(resource).cacheControl(cacheControl).build()
             }
