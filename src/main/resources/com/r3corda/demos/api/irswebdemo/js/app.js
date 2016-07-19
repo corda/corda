@@ -18,8 +18,7 @@ define([
     'jquery',
     'fcsaNumber',
     'semantic'
-],
-(angular, angularRoute, $, fcsaNumber, semantic) => {
+], (angular, angularRoute, $, fcsaNumber, semantic) => {
     angular.module('irsViewer', ['ngRoute', 'fcsa-number']);
     requirejs(['routes']);
 });

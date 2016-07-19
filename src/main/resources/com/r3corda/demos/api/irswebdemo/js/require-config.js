@@ -20,8 +20,6 @@ require.config({
 	priority: [
 		"angular"
 	],
-	deps: [],
-	callback: null,
 	baseUrl: 'js',
 });
 
