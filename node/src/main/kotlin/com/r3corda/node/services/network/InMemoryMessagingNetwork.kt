@@ -283,24 +283,46 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
             return pumpReceiveInternal(block)
         }
 
+        /**
+         * Get the next transfer, and matching queue, that is ready to handle. Any pending transfers without handlers
+         * are placed into `pendingRedelivery` to try again later.
+         *
+         * @param block if this should block until a message it can process.
+         */
+        private fun getNextQueue(q: LinkedBlockingQueue<MessageTransfer>, block: Boolean): Pair<MessageTransfer, List<Handler>>? {
+            var deliverTo: List<Handler>? = null
+            // Pop transfers off the queue until we run out (and are not blocking), or find something we can process
+            while (deliverTo == null) {
+                val transfer = (if (block) q.take() else q.poll()) ?: return null
+                deliverTo = state.locked {
+                    val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
+
+                    if (h.isEmpty()) {
+                        // Got no handlers for this message yet. Keep the message around and attempt redelivery after a new
+                        // handler has been registered. The purpose of this path is to make unit tests that have multi-threading
+                        // reliable, as a sender may attempt to send a message to a receiver that hasn't finished setting
+                        // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
+                        // least sometimes.
+                        pendingRedelivery.add(transfer)
+                        null
+                    } else {
+                        h
+                    }
+                }
+                if (deliverTo != null) {
+                    return Pair(transfer, deliverTo)
+                }
+            }
+            return null
+        }
+
         private fun pumpReceiveInternal(block: Boolean): MessageTransfer? {
             val q = getQueueForHandle(handle)
-            val transfer = (if (block) q.take() else q.poll()) ?: return null
-            val deliverTo = state.locked {
-                val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
-
-                if (h.isEmpty()) {
-                    // Got no handlers for this message yet. Keep the message around and attempt redelivery after a new
-                    // handler has been registered. The purpose of this path is to make unit tests that have multi-threading
-                    // reliable, as a sender may attempt to send a message to a receiver that hasn't finished setting
-                    // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
-                    // least sometimes.
-                    pendingRedelivery.add(transfer)
-                    return null
-                }
-
-                h
+            val next = getNextQueue(q, block)
+            if (next == null) {
+                return null
             }
+            val (transfer, deliverTo) = next
 
             for (handler in deliverTo) {
                 // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.

@@ -82,4 +82,37 @@ class InMemoryMessagingTests {
         network.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
+
+    /**
+     * Tests that unhandled messages in the received queue are skipped and the next message processed, rather than
+     * causing processing to return null as if there was no message.
+     */
+    @Test
+    fun `skip unhandled messages`() {
+        val node1 = network.createNode()
+        val node2 = network.createNode()
+        var received: Int = 0
+
+        node1.net.addMessageHandler("valid_message") { msg, reg ->
+            received++
+        }
+
+        val invalidMessage = node2.net.createMessage("invalid_message", ByteArray(0))
+        val validMessage = node2.net.createMessage("valid_message", ByteArray(0))
+        node2.net.send(invalidMessage, node1.net.myAddress)
+        network.runNetwork()
+        assertEquals(0, received)
+
+        node2.net.send(validMessage, node1.net.myAddress)
+        network.runNetwork()
+        assertEquals(1, received)
+
+        // Here's the core of the test; previously the unhandled message would cause runNetwork() to abort early, so
+        // this would fail.
+        node2.net.send(invalidMessage, node1.net.myAddress)
+        node2.net.send(validMessage, node1.net.myAddress)
+        network.runNetwork()
+        assertEquals(2, received)
+
+    }
 }
