@@ -20,7 +20,7 @@ define([], () => {
         },
         valuationDate: "Every Local Business Day",
         notificationTime: "2:00pm London",
-        resolutionTime: "2:00pm London time on the first LocalBusiness Day following the date on which the notice is give",
+        resolutionTime: "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given",
         interestRate: {
             oracle: "Rates Service Provider",
             tenor: {

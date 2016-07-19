@@ -18,8 +18,9 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
             }
 
             let changeDateOnNode = (newDate) => {
-                const dateStr = formatDateForNode(newDate)
-                return load('date', $http.put('http://localhost:31338/api/irs/demodate', "\"" + dateStr + "\"")).then((resp) => {
+                const dateStr = formatDateForNode(newDate);
+                let endpoint = '/api/irs/demodate';
+                return load('date', $http.put(endpoint, "\"" + dateStr + "\"")).then((resp) => {
                     date = newDate;
                     return this.getDateModel(date);
                 });
