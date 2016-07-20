@@ -12,7 +12,7 @@
                     <td>Parties</td>
                     <td>
                         <span ng-repeat="party in deal.parties">
-                            <a href="#/party/{{party}}">{{party}}</a><span ng-show="!$last">,</span>
+                            {{party}}<span ng-show="!$last">,</span>
                         </span>
                     </td>
                 </tr>
@@ -49,7 +49,7 @@
                 <tbody>
                 <tr class="center aligned">
                     <td>Payer</td>
-                    <td><a href="#/party/{{deal.fixedLeg.fixedRatePayer}}">{{deal.fixedLeg.fixedRatePayer}}</a></td>
+                    <td>{{deal.fixedLeg.fixedRatePayer}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Notional Amount</td>
@@ -118,7 +118,7 @@
                 <tbody>
                 <tr class="center aligned">
                     <td>Payer</td>
-                    <td><a href="#/party/{{deal.floatingLeg.floatingRatePayer}}">{{deal.floatingLeg.floatingRatePayer}}</a></td>
+                    <td>{{deal.floatingLeg.floatingRatePayer}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Notional Amount</td>

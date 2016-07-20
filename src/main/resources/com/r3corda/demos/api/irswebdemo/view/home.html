@@ -40,9 +40,9 @@
             <tbody>
             <tr class="center aligned" ng-repeat="deal in deals">
                 <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
-                <td class="single line"><a href="#/party/{{deal.fixedLeg.fixedRatePayer}}">{{deal.fixedLeg.fixedRatePayer}}</a></td>
+                <td class="single line">{{deal.fixedLeg.fixedRatePayer}}</td>
                 <td class="single line">{{deal.fixedLeg.notional.quantity}} {{deal.fixedLeg.notional.token}}</td>
-                <td class="single line"><a href="#/party/{{deal.floatingLeg.floatingRatePayer}}">{{deal.floatingLeg.floatingRatePayer}}</a></td>
+                <td class="single line">{{deal.floatingLeg.floatingRatePayer}}</td>
                 <td class="single line">{{deal.floatingLeg.notional.quantity}} {{deal.floatingLeg.notional.token}}</td>
             </tr>
             </tbody>
