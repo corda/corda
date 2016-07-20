@@ -380,10 +380,68 @@ class CashTests {
             makeCash(80.SWISS_FRANCS, MINI_CORP, 2)
     )
 
+    /**
+     * Generate an exit transaction, removing some amount of cash from the ledger.
+     */
+    fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
+        val tx = TransactionType.General.Builder()
+        Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), OUR_PUBKEY_1, WALLET)
+        return tx.toWireTransaction()
+    }
+
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
         val tx = TransactionType.General.Builder()
         Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
+    }
+
+    /**
+     * Try exiting an amount which matches a single state.
+     */
+    @Test
+    fun generateSimpleExit() {
+        val wtx = makeExit(100.DOLLARS, MEGA_CORP, 1)
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(0, wtx.outputs.size)
+
+        val expected = Cash.Commands.Exit(Amount(10000, Issued(MEGA_CORP.ref(1), USD)))
+        val actual = wtx.commands.single().value
+        assertEquals(expected, actual)
+    }
+
+    /**
+     * Try exiting an amount smaller than the smallest available input state, and confirm change is generated correctly.
+     */
+    @Test
+    fun generatePartialExit() {
+        val wtx = makeExit(50.DOLLARS, MEGA_CORP, 1)
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(1, wtx.outputs.size)
+        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount / 2), wtx.outputs[0].data)
+    }
+
+    /**
+     * Try exiting a currency we don't have.
+     */
+    @Test
+    fun generateAbsentExit() {
+        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, MEGA_CORP, 1) }
+    }
+
+    /**
+     * Try exiting with a reference mis-match.
+     */
+    @Test
+    fun generateInvalidReferenceExit() {
+        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, MEGA_CORP, 2) }
+    }
+
+    /**
+     * Try exiting an amount greater than the maximum available.
+     */
+    @Test
+    fun generateInsufficientExit() {
+        assertFailsWith<InsufficientBalanceException> { makeExit(1000.DOLLARS, MEGA_CORP, 1) }
     }
 
     @Test

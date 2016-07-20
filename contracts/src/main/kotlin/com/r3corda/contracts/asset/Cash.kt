@@ -126,6 +126,75 @@ class Cash : ClauseVerifier() {
     }
 
     /**
+     * Generate an transaction exiting cash from the ledger.
+     *
+     * @param tx transaction builder to add states and commands to.
+     * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
+     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
+     * necessarily owned by us.
+     * @param cashStates the cash states to take funds from. No checks are done about ownership of these states, it is
+     * the responsibility of the caller to check that they do not exit funds held by others.
+     * @return the public key of the cash issuer, who must sign the transaction for it to be valid.
+     */
+    // TODO: I'm not at all sure we should support exiting funds others hold, but that's a bigger discussion around the
+    // contract logic, not just this function.
+    fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Currency>>,
+                     changeKey: PublicKey, cashStates: List<StateAndRef<State>>): PublicKey {
+        val currency = amountIssued.token.product
+        val issuer = amountIssued.token.issuer.party
+        val amount = Amount(amountIssued.quantity, currency)
+        var acceptableCoins = cashStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
+        val notary = acceptableCoins.firstOrNull()?.state?.notary
+        // TODO: We should be prepared to produce multiple transactions exiting inputs from
+        // different notaries, or at least group states by notary and take the set with the
+        // highest total value
+        acceptableCoins = acceptableCoins.filter { it.state.notary == notary }
+
+        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, Amount(amount.quantity, currency))
+        val takeChangeFrom = gathered.lastOrNull()
+        val change = if (takeChangeFrom != null && gatheredAmount > amount) {
+            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+        } else {
+            null
+        }
+
+        val outputs: List<TransactionState<Cash.State>> = if (change != null) {
+            // Add a change output and adjust the last output downwards.
+            listOf(TransactionState(State(amountIssued.token.issuer, Amount(change.quantity, currency), changeKey),
+                    notary!!))
+        } else emptyList()
+
+        for (state in gathered) tx.addInputState(state)
+        for (state in outputs) tx.addOutputState(state)
+        tx.addCommand(Commands.Exit(amountIssued), amountIssued.token.issuer.party.owningKey)
+        return amountIssued.token.issuer.party.owningKey
+    }
+
+    /**
+     * Gather coins from the given list of states, sufficient to match or exceed the given amount.
+     *
+     * @param acceptableCoins list of states to use as inputs.
+     * @param amount the amount to gather states up to.
+     * @throws InsufficientBalanceException if there isn't enough value in the states to cover the requested amount.
+     */
+    @Throws(InsufficientBalanceException::class)
+    private fun gatherCoins(acceptableCoins: List<StateAndRef<State>>,
+                            amount: Amount<Currency>): Pair<ArrayList<StateAndRef<State>>, Amount<Currency>> {
+        val gathered = arrayListOf<StateAndRef<State>>()
+        var gatheredAmount = Amount(0, amount.token)
+        for (c in acceptableCoins) {
+            if (gatheredAmount >= amount) break
+            gathered.add(c)
+            gatheredAmount += Amount(c.state.data.amount.quantity, amount.token)
+        }
+
+        if (gatheredAmount < amount)
+            throw InsufficientBalanceException(amount - gatheredAmount)
+
+        return Pair(gathered, gatheredAmount)
+    }
+
+    /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: PublicKey, notary: Party)
@@ -192,19 +261,8 @@ class Cash : ClauseVerifier() {
                 ofCurrency
         }
 
-        val gathered = arrayListOf<StateAndRef<State>>()
-        var gatheredAmount = Amount(0, currency)
-        var takeChangeFrom: StateAndRef<State>? = null
-        for (c in acceptableCoins) {
-            if (gatheredAmount >= amount) break
-            gathered.add(c)
-            gatheredAmount += Amount(c.state.data.amount.quantity, currency)
-            takeChangeFrom = c
-        }
-
-        if (gatheredAmount < amount)
-            throw InsufficientBalanceException(amount - gatheredAmount)
-
+        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
+        val takeChangeFrom = gathered.firstOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
             Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
         } else {
