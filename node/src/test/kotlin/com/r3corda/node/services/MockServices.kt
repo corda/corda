@@ -68,7 +68,7 @@ open class MockServices(
         if (net != null && storage != null) {
             // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
             // on the networking service, so that will keep it from being collected.
-            DataVendingService(net, storage, networkMapCache)
+            DataVendingService(net, this)
         }
     }
 }

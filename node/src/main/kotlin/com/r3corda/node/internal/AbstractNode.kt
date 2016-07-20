@@ -169,7 +169,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         // This object doesn't need to be referenced from this class because it registers handlers on the network
         // service and so that keeps it from being collected.
-        DataVendingService(net, storage, services.networkMapCache)
+        DataVendingService(net, services)
         NotaryChangeService(net, smm, services.networkMapCache)
 
         buildAdvertisedServices()
