@@ -89,13 +89,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     val allStateMachines: List<ProtocolLogic<*>>
         get() = stateMachines.keys.map { it.logic }
 
-    private val _changesPublisher = PublishSubject.create<Pair<ProtocolLogic<*>, AddOrRemove>>()
+    private val _changesPublisher = PublishSubject.create<Triple<ProtocolLogic<*>, AddOrRemove, Long>>()
 
-    val changes: Observable<Pair<ProtocolLogic<*>, AddOrRemove>>
+    val changes: Observable<Triple<ProtocolLogic<*>, AddOrRemove, Long>>
         get() = _changesPublisher
 
     private fun notifyChangeObservers(psm: ProtocolStateMachineImpl<*>, change: AddOrRemove) {
-        _changesPublisher.onNext(Pair(psm.logic, change))
+        _changesPublisher.onNext(Triple(psm.logic, change, psm.id))
     }
 
     // Used to work around a small limitation in Quasar.
