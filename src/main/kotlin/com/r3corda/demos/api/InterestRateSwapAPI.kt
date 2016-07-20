@@ -2,8 +2,10 @@ package com.r3corda.demos.api
 
 import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.failure
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.linearHeadsOfType
+import com.r3corda.core.success
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
@@ -68,8 +70,13 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     @Path("deals")
     @Consumes(MediaType.APPLICATION_JSON)
     fun storeDeal(newDeal: InterestRateSwap.State): Response {
-        services.invokeProtocolAsync<SignedTransaction>(AutoOfferProtocol.Requester::class.java, newDeal).get()
-        return Response.created(URI.create(generateDealLink(newDeal))).build()
+        try {
+            services.invokeProtocolAsync<SignedTransaction>(AutoOfferProtocol.Requester::class.java, newDeal).get()
+            return Response.created(URI.create(generateDealLink(newDeal))).build()
+        } catch (ex: Throwable) {
+            logger.info("Exception when creating deal: ${ex.toString()}")
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.toString()).build()
+        }
     }
 
     @GET
