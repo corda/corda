@@ -56,6 +56,7 @@ class ArtemisMessagingServiceTests {
 
     private fun createMessagingService(): ArtemisMessagingService {
         return ArtemisMessagingService(temporaryFolder.newFolder().toPath(), hostAndPort).apply {
+            configureWithDevSSLCertificate()
             messagingNetwork = this
         }
     }
