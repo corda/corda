@@ -8,11 +8,31 @@ apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
 
 allprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+}
+
+subprojects {
+    dependencies {
+        testCompile 'junit:junit:4.12'
+    }
+
+    jacocoTestReport {
+        additionalSourceDirs = files(sourceSets.main.allSource.srcDirs)
+        sourceDirectories = files(sourceSets.main.allSource.srcDirs)
+        classDirectories =  files(sourceSets.main.output)
+        reports {
+            html.enabled = true
+            xml.enabled = true
+            csv.enabled = false
+        }
     }
 }
 
@@ -165,4 +185,25 @@ applicationDistribution.into("bin") {
     from(getIRSDemo)
     from(getTraderDemo)
     fileMode = 0755
+}
+
+task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+    dependsOn = subprojects.test
+    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories = files(subprojects.sourceSets.main.output)
+    executionData = files(subprojects.jacocoTestReport.executionData)
+    reports {
+        html.enabled = true
+        xml.enabled = true
+        csv.enabled = false
+    }
+    onlyIf = {
+        true
+    }
+    doFirst {
+        executionData = files(executionData.findAll {
+            it.exists()
+        })
+    }
 }
