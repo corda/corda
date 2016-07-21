@@ -1,6 +1,5 @@
 group 'com.r3corda'
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'project-report'
@@ -17,13 +16,13 @@ allprojects {
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
+
+    // Our version: bump this on release.
+    group 'com.r3corda'
+    version '0.2-SNAPSHOT'
 }
 
 subprojects {
-    dependencies {
-        testCompile 'junit:junit:4.12'
-    }
-
     jacocoTestReport {
         additionalSourceDirs = files(sourceSets.main.allSource.srcDirs)
         sourceDirectories = files(sourceSets.main.allSource.srcDirs)
@@ -59,12 +58,6 @@ buildscript {
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
     }
-}
-
-allprojects {
-    // Our version: bump this on release.
-    group 'com.r3corda'
-    version '0.2-SNAPSHOT'
 }
 
 repositories {
@@ -174,18 +167,6 @@ task integrationTest(type: Test) {
 }
 test.finalizedBy(integrationTest)
 
-tasks.withType(Test) {
-    reports.html.destination = file("${reporting.baseDir}/${name}")
-}
-
-quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
-
-applicationDistribution.into("bin") {
-    from(getRateFixDemo)
-    from(getIRSDemo)
-    from(getTraderDemo)
-    fileMode = 0755
-}
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
     dependsOn = subprojects.test
@@ -206,4 +187,17 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
             it.exists()
         })
     }
+}
+
+tasks.withType(Test) {
+    reports.html.destination = file("${reporting.baseDir}/${name}")
+}
+
+quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
+
+applicationDistribution.into("bin") {
+    from(getRateFixDemo)
+    from(getIRSDemo)
+    from(getTraderDemo)
+    fileMode = 0755
 }

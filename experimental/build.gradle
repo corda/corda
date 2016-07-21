@@ -1,7 +1,6 @@
 group 'com.r3cev.prototyping'
 version '1.0-SNAPSHOT'
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
 
 sourceCompatibility = 1.5
