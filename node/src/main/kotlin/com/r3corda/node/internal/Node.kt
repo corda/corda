@@ -71,7 +71,10 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
 
     override fun startMessagingService() {
         // Start up the MQ service.
-        (net as ArtemisMessagingService).start()
+        (net as ArtemisMessagingService).apply {
+            configureWithDevSSLCertificate() //Provision a dev certificate and private key if required
+            start()
+        }
     }
 
     private fun initWebServer(): Server {
