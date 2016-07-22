@@ -54,7 +54,7 @@ class X509UtilitiesTest {
     @Test
     fun `create valid server certificate chain`() {
         val caCertAndKey = X509Utilities.createSelfSignedCACert("Test CA Cert")
-        val subjectDN = X509Utilities.GetX509Name("Server Cert")
+        val subjectDN = X509Utilities.getDevX509Name("Server Cert")
         val keypair = X509Utilities.generateECDSAKeyPairForSSL()
         val serverCert = X509Utilities.createServerCert(subjectDN, keypair.public, caCertAndKey, listOf("alias name"), listOf("10.0.0.54"))
         assertTrue { serverCert.subjectDN.name.contains("CN=Server Cert") } // using our subject common name

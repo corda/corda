@@ -55,7 +55,7 @@ object X509Utilities {
      * @param parentNotBefore if provided is used to lower bound the date interval returned
      * @param parentNotAfter if provided is used to upper bound the date interval returned
      */
-    private fun GetCertificateValidityWindow(daysBefore: Int, daysAfter: Int, parentNotBefore: Date? = null, parentNotAfter: Date? = null): Pair<Date, Date> {
+    private fun getCertificateValidityWindow(daysBefore: Int, daysAfter: Int, parentNotBefore: Date? = null, parentNotAfter: Date? = null): Pair<Date, Date> {
         val startOfDayUTC = Instant.now().truncatedTo(ChronoUnit.DAYS)
 
         var notBefore = Date.from(startOfDayUTC.minus(daysBefore.toLong(), ChronoUnit.DAYS))
@@ -94,7 +94,7 @@ object X509Utilities {
     /**
      * Helper method to create Subject field contents
      */
-    fun GetX509Name(domain: String): X500Name {
+    fun getDevX509Name(domain: String): X500Name {
         val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
         nameBuilder.addRDN(BCStyle.CN, domain)
         nameBuilder.addRDN(BCStyle.O, "R3")
@@ -121,6 +121,10 @@ object X509Utilities {
             }
         } else {
             keyStore.load(null, pass)
+            val output = FileOutputStream(keyStoreFilePath.toFile())
+            output.use {
+                keyStore.store(output, pass)
+            }
         }
         return keyStore
     }
@@ -231,11 +235,14 @@ object X509Utilities {
     fun createSelfSignedCACert(domain: String): CACertAndKey {
         val keyPair = generateECDSAKeyPairForSSL()
 
-        val issuer = GetX509Name(domain)
+        val issuer = getDevX509Name(domain)
         val serial = BigInteger.valueOf(random63BitValue())
         val subject = issuer
         val pubKey = keyPair.public
-        val window = GetCertificateValidityWindow(0, 365 * 10)
+
+        // Ten year certificate validity
+        // TODO how do we manage certificate expiry, revocation and loss
+        val window = getCertificateValidityWindow(0, 365 * 10)
 
         val builder = JcaX509v3CertificateBuilder(
                 issuer, serial, window.first, window.second, subject, pubKey)
@@ -276,10 +283,12 @@ object X509Utilities {
 
         val issuer = X509CertificateHolder(certificateAuthority.certificate.encoded).subject
         val serial = BigInteger.valueOf(random63BitValue())
-        val subject = GetX509Name(domain)
+        val subject = getDevX509Name(domain)
         val pubKey = keyPair.public
-        // One year certificate validity
-        val window = GetCertificateValidityWindow(0, 365, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
+
+        // Ten year certificate validity
+        // TODO how do we manage certificate expiry, revocation and loss
+        val window = getCertificateValidityWindow(0, 365*10, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
 
         val builder = JcaX509v3CertificateBuilder(
                 issuer, serial, window.first, window.second, subject, pubKey)
@@ -325,7 +334,10 @@ object X509Utilities {
 
         val issuer = X509CertificateHolder(certificateAuthority.certificate.encoded).subject
         val serial = BigInteger.valueOf(random63BitValue())
-        val window = GetCertificateValidityWindow(0, 365, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
+
+        // Ten year certificate validity
+        // TODO how do we manage certificate expiry, revocation and loss
+        val window = getCertificateValidityWindow(0, 365*10, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, window.first, window.second, subject, publicKey)
         builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(publicKey))
@@ -518,7 +530,7 @@ object X509Utilities {
 
         val serverKey = X509Utilities.generateECDSAKeyPairForSSL()
         val host = InetAddress.getLocalHost()
-        val subject = GetX509Name(host.canonicalHostName)
+        val subject = getDevX509Name(host.canonicalHostName)
         val serverCert = X509Utilities.createServerCert(subject,
                 serverKey.public,
                 intermediateCA,
