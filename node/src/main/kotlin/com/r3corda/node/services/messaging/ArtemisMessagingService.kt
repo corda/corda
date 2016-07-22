@@ -40,7 +40,7 @@ import javax.annotation.concurrent.ThreadSafe
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
  * Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
- * with each other using an Artemis specific protocol, but it supports other protocols like AQMP/1.0
+ * with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
  * as well for interop.
  *
  * The current implementation is skeletal and lacks features like security or firewall tunnelling (that is, you must
@@ -99,6 +99,14 @@ class ArtemisMessagingService(val directory: Path,
     private val keyStorePath = directory.resolve("certificates").resolve("sslkeystore.jks")
     private val trustStorePath = directory.resolve("certificates").resolve("truststore.jks")
     private val KEYSTORE_PASSWORD = "cordacadevpass" // TODO we need a proper way of managing keystores and passwords
+    private val CIPHER_SUITES = listOf(
+            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256")
 
     init {
         require(directory.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
@@ -321,9 +329,10 @@ class ArtemisMessagingService(val directory: Path,
                             HOST_PROP_NAME to host,
                             PORT_PROP_NAME to port.toInt(),
 
-                            // Turn on AMQP support, which needs the protoclo jar on the classpath.
+                            // Turn on AMQP support, which needs the protocol jar on the classpath.
                             // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
-                            // It does not use AMQP messages for its own
+                            // It does not use AMQP messages for its own messages e.g. topology and heartbeats
+                            // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
                             PROTOCOLS_PROP_NAME to "CORE,AMQP",
 
                             // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
@@ -335,15 +344,15 @@ class ArtemisMessagingService(val directory: Path,
                             TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
                             TRUSTSTORE_PATH_PROP_NAME to trustStorePath,
                             TRUSTSTORE_PASSWORD_PROP_NAME to "trustpass",
-                            ENABLED_CIPHER_SUITES_PROP_NAME to "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA256,TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256,TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,TLS_DHE_DSS_WITH_AES_128_CBC_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,TLS_DHE_RSA_WITH_AES_128_CBC_SHA,TLS_DHE_DSS_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,TLS_DHE_DSS_WITH_AES_128_GCM_SHA256",
+                            ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                             ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
                             NEED_CLIENT_AUTH_PROP_NAME to true
                     )
             )
 
     /**
-     * Strictly for dev only automatically construct a server certificate\private key signed from
-     * the CA certs in Node resources.
+     * Strictly for dev only automatically construct a server certificate/private key signed from
+     * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
      */
     fun configureWithDevSSLCertificate() {
         Files.createDirectories(directory.resolve("certificates"))
