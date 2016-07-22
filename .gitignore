@@ -1,9 +1,15 @@
 #object file
-.o
+*.o
 
 #library
-.a
+*.a
 
 #share object
-.so
-.so.*
+*.so
+*.so.*
+
+#generated proxy
+*_u.c
+*_u.h
+*_t.c
+*_t.h
