@@ -114,7 +114,7 @@ fun <T> Iterable<T>.noneOrSingle(): T? {
 // An alias that can sometimes make code clearer to read.
 val RunOnCallerThread = MoreExecutors.directExecutor()
 
-fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
+inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     val now = System.currentTimeMillis()
     val r = body()
     val elapsed = System.currentTimeMillis() - now
