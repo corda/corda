@@ -162,7 +162,7 @@ class X509UtilitiesTest {
         serverCertAndKey.certificate.verify(caCertAndKey.certificate.publicKey)
         val host = InetAddress.getLocalHost()
 
-        assertTrue { serverCertAndKey.certificate.subjectDN.name.contains("CN=" + host.hostName) }
+        assertTrue { serverCertAndKey.certificate.subjectDN.name.contains("CN=" + host.canonicalHostName) }
 
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
@@ -261,7 +261,7 @@ class X509UtilitiesTest {
         val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
         val x500name = X500Name(peerX500Principal.name)
         val cn = x500name.getRDNs(BCStyle.CN).first().first.value.toString()
-        val hostname = InetAddress.getLocalHost().hostName
+        val hostname = InetAddress.getLocalHost().canonicalHostName
         assertEquals(hostname, cn)
 
 
