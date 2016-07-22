@@ -2,6 +2,7 @@ package com.r3corda.node.services
 
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.testing.freeLocalHostAndPort
+import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -55,7 +56,15 @@ class ArtemisMessagingServiceTests {
     }
 
     private fun createMessagingService(): ArtemisMessagingService {
-        return ArtemisMessagingService(temporaryFolder.newFolder().toPath(), hostAndPort).apply {
+        val config = object: NodeConfiguration {
+            override val myLegalName: String = "me"
+            override val exportJMXto: String = ""
+            override val nearestCity: String = "London"
+            override val keyStorePassword: String = "testpass"
+            override val trustStorePassword: String = "trustpass"
+
+        }
+        return ArtemisMessagingService(temporaryFolder.newFolder().toPath(), hostAndPort, config).apply {
             configureWithDevSSLCertificate()
             messagingNetwork = this
         }
