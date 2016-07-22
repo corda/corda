@@ -91,6 +91,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     private val _changesPublisher = PublishSubject.create<Triple<ProtocolLogic<*>, AddOrRemove, Long>>()
 
+    /**
+     * An observable that emits triples of the changing protocol, the type of change, and a process-specific ID number
+     * which may change across restarts.
+     */
     val changes: Observable<Triple<ProtocolLogic<*>, AddOrRemove, Long>>
         get() = _changesPublisher
 
