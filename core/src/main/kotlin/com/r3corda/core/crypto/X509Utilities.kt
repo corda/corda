@@ -54,6 +54,8 @@ object X509Utilities {
      * @param daysAfter number of days to roll forward returned end date relative to current date
      * @param parentNotBefore if provided is used to lower bound the date interval returned
      * @param parentNotAfter if provided is used to upper bound the date interval returned
+     * Note we use Date rather than LocalDate as the consuming java.security and BouncyCastle certificate apis all use Date
+     * Thus we avoid too many round trip conversions.
      */
     private fun getCertificateValidityWindow(daysBefore: Int, daysAfter: Int, parentNotBefore: Date? = null, parentNotAfter: Date? = null): Pair<Date, Date> {
         val startOfDayUTC = Instant.now().truncatedTo(ChronoUnit.DAYS)

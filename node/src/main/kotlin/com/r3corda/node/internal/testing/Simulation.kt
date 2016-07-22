@@ -59,6 +59,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val myLegalName: String = "Bank $letter"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = city
+                override val keyStorePassword: String = "dummy"
+                override val trustStorePassword: String = "trustpass"
             }
             return SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
@@ -77,6 +79,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val myLegalName: String = "Network coordination center"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Amsterdam"
+                override val keyStorePassword: String = "dummy"
+                override val trustStorePassword: String = "trustpass"
             }
 
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
@@ -91,6 +95,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val myLegalName: String = "Notary Service"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Zurich"
+                override val keyStorePassword: String = "dummy"
+                override val trustStorePassword: String = "trustpass"
             }
             return SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
@@ -104,6 +110,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val myLegalName: String = "Rates Service Provider"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Madrid"
+                override val keyStorePassword: String = "dummy"
+                override val trustStorePassword: String = "trustpass"
             }
 
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
@@ -122,6 +130,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val myLegalName: String = "Regulator A"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Paris"
+                override val keyStorePassword: String = "dummy"
+                override val trustStorePassword: String = "trustpass"
             }
 
             val n = object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {

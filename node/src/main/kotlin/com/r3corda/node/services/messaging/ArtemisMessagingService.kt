@@ -9,6 +9,7 @@ import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.NodeConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.*
@@ -49,11 +50,13 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * @param directory A place where Artemis can stash its message journal and other files.
  * @param myHostPort What host and port to bind to for receiving inbound connections.
+ * @param config The config object is used to pass in the passwords for the certificate KeyStore and TrustStore
  * @param defaultExecutor This will be used as the default executor to run message handlers on, if no other is specified.
  */
 @ThreadSafe
 class ArtemisMessagingService(val directory: Path,
                               val myHostPort: HostAndPort,
+                              val config: NodeConfiguration,
                               val defaultExecutor: Executor = RunOnCallerThread) : SingletonSerializeAsToken(), MessagingService {
 
     // In future: can contain onion routing info, etc.
@@ -98,7 +101,10 @@ class ArtemisMessagingService(val directory: Path,
 
     private val keyStorePath = directory.resolve("certificates").resolve("sslkeystore.jks")
     private val trustStorePath = directory.resolve("certificates").resolve("truststore.jks")
-    private val KEYSTORE_PASSWORD = "cordacadevpass" // TODO we need a proper way of managing keystores and passwords
+
+    // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
+    // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
+    // in case we need to use keytool certificates in some demos
     private val CIPHER_SUITES = listOf(
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
             "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
@@ -340,10 +346,10 @@ class ArtemisMessagingService(val directory: Path,
                             SSL_ENABLED_PROP_NAME to true,
                             KEYSTORE_PROVIDER_PROP_NAME to "JKS",
                             KEYSTORE_PATH_PROP_NAME to keyStorePath,
-                            KEYSTORE_PASSWORD_PROP_NAME to KEYSTORE_PASSWORD, // TODO proper management of keystores and password
+                            KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
                             TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
                             TRUSTSTORE_PATH_PROP_NAME to trustStorePath,
-                            TRUSTSTORE_PASSWORD_PROP_NAME to "trustpass",
+                            TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
                             ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                             ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
                             NEED_CLIENT_AUTH_PROP_NAME to true
@@ -364,7 +370,7 @@ class ArtemisMessagingService(val directory: Path,
             val caKeyStore = X509Utilities.loadKeyStore(
                     javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordadevcakeys.jks"),
                     "cordacadevpass")
-            X509Utilities.createKeystoreForSSL(keyStorePath, KEYSTORE_PASSWORD, KEYSTORE_PASSWORD, caKeyStore, "cordacadevkeypass")
+            X509Utilities.createKeystoreForSSL(keyStorePath, config.keyStorePassword, config.keyStorePassword, caKeyStore, "cordacadevkeypass")
         }
     }
 

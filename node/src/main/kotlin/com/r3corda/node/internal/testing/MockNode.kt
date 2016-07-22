@@ -119,6 +119,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             override val myLegalName: String = legalName ?: "Mock Company $id"
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
+            override val keyStorePassword: String = "dummy"
+            override val trustStorePassword: String = "trustpass"
         }
         val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
         if (start) {

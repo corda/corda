@@ -8,6 +8,8 @@ interface NodeConfiguration {
     val myLegalName: String
     val exportJMXto: String
     val nearestCity: String
+    val keyStorePassword: String
+    val trustStorePassword: String
 }
 
 // Allow the use of "String by config" syntax. TODO: Make it more flexible.
@@ -17,4 +19,6 @@ class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : N
     override val myLegalName: String by config
     override val exportJMXto: String by config
     override val nearestCity: String by config
+    override val keyStorePassword: String by config
+    override val trustStorePassword: String by config
 }
