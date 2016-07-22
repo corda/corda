@@ -522,7 +522,7 @@ object X509Utilities {
         val serverCert = X509Utilities.createServerCert(subject,
                 serverKey.public,
                 intermediateCA,
-                listOf(),
+                if(host.canonicalHostName == host.hostName) listOf() else listOf(host.hostName),
                 listOf(host.hostAddress))
 
         val keypass = keyPassword.toCharArray()
