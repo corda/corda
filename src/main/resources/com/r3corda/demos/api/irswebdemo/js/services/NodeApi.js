@@ -27,7 +27,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
             }
 
             this.getDate = () => {
-                return load('date', $http.get('http://localhost:31338/api/irs/demodate')).then((resp) => {
+                return load('date', $http.get('/api/irs/demodate')).then((resp) => {
                     const parts = resp.data.split("-");
                     date = new Date(parts[0], parts[1] - 1, parts[2]); // JS uses 0 based months
                     return this.getDateModel(date);
@@ -54,13 +54,13 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
             };
 
             this.getDeals = () => {
-                return load('deals', $http.get('http://localhost:31338/api/irs/deals')).then((resp) => {
+                return load('deals', $http.get('/api/irs/deals')).then((resp) => {
                     return resp.data.reverse();
                 });
             };
 
             this.getDeal = (dealId) => {
-                return load('deal' + dealId, $http.get('http://localhost:31338/api/irs/deals/' + dealId)).then((resp) => {
+                return load('deal' + dealId, $http.get('/api/irs/deals/' + dealId)).then((resp) => {
                     // Do some data modification to simplify the model
                     let deal = resp.data;
                     deal.fixedLeg.fixedRate.value = (deal.fixedLeg.fixedRate.ratioUnit.value * 100).toString().slice(0, 6);
@@ -87,7 +87,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
             }
 
             this.createDeal = (deal) => {
-                return load('create-deal', $http.post('http://localhost:31338/api/irs/deals', deal.toJson()))
+                return load('create-deal', $http.post('/api/irs/deals', deal.toJson()))
                 .then((resp) => {
                     return deal.tradeId;
                 }, (resp) => {
