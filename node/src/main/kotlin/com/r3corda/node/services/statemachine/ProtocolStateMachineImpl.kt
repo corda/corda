@@ -28,7 +28,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient lateinit override var serviceHub: ServiceHubInternal
-    @Transient internal lateinit var suspendAction: (StateMachineManager.FiberRequest) -> Unit
+    @Transient internal lateinit var suspendAction: (FiberRequest) -> Unit
     @Transient internal lateinit var actionOnEnd: () -> Unit
     @Transient internal var receivedPayload: Any? = null
 
@@ -72,7 +72,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
-    private fun <T : Any> suspendAndExpectReceive(with: StateMachineManager.FiberRequest): UntrustworthyData<T> {
+    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): UntrustworthyData<T> {
         suspend(with)
         check(receivedPayload != null) { "Expected to receive something" }
         val untrustworthy = UntrustworthyData(receivedPayload as T)
@@ -87,24 +87,24 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
                                           sessionIDForReceive: Long,
                                           payload: Any,
                                           recvType: Class<T>): UntrustworthyData<T> {
-        val result = StateMachineManager.FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, payload, recvType)
+        val result = FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, payload, recvType)
         return suspendAndExpectReceive(result)
     }
 
     @Suspendable
     override fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T> {
-        val result = StateMachineManager.FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
+        val result = FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
         return suspendAndExpectReceive(result)
     }
 
     @Suspendable
     override fun send(topic: String, destination: Party, sessionID: Long, payload: Any) {
-        val result = StateMachineManager.FiberRequest.NotExpectingResponse(topic, destination, sessionID, payload)
+        val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, payload)
         suspend(result)
     }
 
     @Suspendable
-    private fun suspend(with: StateMachineManager.FiberRequest) {
+    private fun suspend(with: FiberRequest) {
         parkAndSerialize { fiber, serializer ->
             try {
                 suspendAction(with)
