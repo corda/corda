@@ -3,7 +3,7 @@
 
     <Properties>
         <Property name="log-path">logs</Property>
-        <Property name="log-name">main</Property>
+        <Property name="log-name">node-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
     </Properties>
 
@@ -24,7 +24,7 @@
                      fileName="${log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%d{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
+            <PatternLayout pattern="[%-5level] %d{ISO8601}{GMT+0} [%t] %c{1} - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>
