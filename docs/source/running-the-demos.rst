@@ -30,7 +30,7 @@ Open two terminals, and in the first run:
 
 **Other**::
 
-    Other: ./gradlew installDist && ./build/install/r3prototyping/bin/trader-demo --role=BUYER
+    ./gradlew installDist && ./build/install/r3prototyping/bin/trader-demo --role=BUYER
 
 It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
 start the node. You should see it waiting for a trade to begin.
