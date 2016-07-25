@@ -5,7 +5,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.linearHeadsOfType
-import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.api.*
 import java.time.LocalDateTime
@@ -67,15 +66,9 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
 
     private fun invokeProtocolAsync(type: ProtocolRef, args: Map<String, Any?>): ListenableFuture<out Any?> {
         if (type is ProtocolClassRef) {
-            val clazz = Class.forName(type.className)
-            if (ProtocolLogic::class.java.isAssignableFrom(clazz)) {
-                @Suppress("UNCHECKED_CAST")
-                val logic = clazz as Class<ProtocolLogic<ProtocolLogic<*>>>
-                val protocolLogicRef = node.services.protocolLogicRefFactory.createKotlin(logic, args)
-                val protocolInstance = node.services.protocolLogicRefFactory.toProtocolLogic(protocolLogicRef)
-                return node.services.startProtocol(clazz.name, protocolInstance)
-            }
-            throw UnsupportedOperationException("Could not find matching protocol and constructor for: $type $args")
+            val protocolLogicRef = node.services.protocolLogicRefFactory.createKotlin(type.className, args)
+            val protocolInstance = node.services.protocolLogicRefFactory.toProtocolLogic(protocolLogicRef)
+            return node.services.startProtocol(type.className, protocolInstance)
         } else {
             throw UnsupportedOperationException("Unsupported ProtocolRef type: $type")
         }
