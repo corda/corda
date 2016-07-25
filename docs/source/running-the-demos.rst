@@ -102,7 +102,7 @@ can see the other terminals whilst you run this command!:
 IRS web demo
 ------------
 
-To install the web demo please follo these steps;
+To install the web demo please follow these steps;
 
 1. Install Node: https://nodejs.org/en/download/ and ensure the npm executable is on your classpath
 2. Open a terminal
