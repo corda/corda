@@ -1,12 +1,12 @@
 <div class="ui container">
     <div class="ui negative message" id="form-error" ng-show="formError">{{formError}}</div>
-    <h2>New Deal</h2>
+    <h3 class="ui horizontal divider header">
+        <i class="list icon"></i>
+        New Deal
+    </h3>
     <form id="deal-form" class="ui form" ng-submit="createDeal()">
-        <div id="irscolumns" class="ui grid">
-            <div class="sixteen wide column">
-                <input type="submit" class="ui submit primary button fluid"/>
-            </div>
-            <div class="sixteen wide column">
+        <div id="irscolumns" class="ui centered grid">
+            <div class="sixteen wide tablet eight wide computer column">
                 <div class="field">
                     <label>Base Currency</label>
                     <select class="ui  fluid" name="token" ng-model="deal.common.baseCurrency">
@@ -29,7 +29,7 @@
                     <i class="exchange icon"></i>
                 </button>
             </div>
-            <div class="eight wide column" id="createfixedleg">
+            <div class="eight wide column irscolumn" id="createfixedleg">
                 <h3>Fixed Leg</h3>
                 <div class="field">
                     <label>Fixed Rate Payer</label>
@@ -89,7 +89,7 @@
                     </select>
                 </div>
             </div>
-            <div class="eight wide column" id="createfloatingleg">
+            <div class="eight wide column irscolumn" id="createfloatingleg">
                 <h3>Floating Leg</h3>
                 <div class="field">
                     <label>Floating Rate Payer</label>
@@ -178,7 +178,7 @@
                     </select>
                 </div>
             </div>
-            <div class="sixteen wide column">
+            <div class="sixteen wide tablet eight wide computer column">
                 <input type="submit" class="ui submit primary button fluid"/>
             </div>
         </div>

@@ -4,9 +4,14 @@
     <div class="ui active dimmer" ng-show="isLoading()">
         <div class="ui text loader">Loading</div>
     </div>
-    <div class="ui grid">
-        <div class="two column row">
-            <div class="left column">
+    <h3 class="ui horizontal divider header">
+            <i class="options icon"></i>
+        Controls
+    </h3>
+    <div class="ui card centered">
+        <div class="content">
+            <div class="header">Run fixings</div>
+            <div class="description">
                 <div class="ui left labeled button">
                     <span class="ui basic label">{{date.year}}</span>
                     <button class="ui icon button" ng-click="updateDate('year')"><i class="plus icon"></i></button>
@@ -20,16 +25,14 @@
                     <button class="ui icon button" ng-click="updateDate('day')"><i class="plus icon"></i></button>
                 </div>
             </div>
-            <div class="right aligned column">
-                <a class="ui primary button" href="#/create-deal">Create Deal</a>
-            </div>
         </div>
     </div>
+    <div class="ui hidden divider"></div>
     <div class="ui main">
-        <h2 class="ui horizontal divider header">
+        <h3 class="ui horizontal divider header">
             <i class="browser icon"></i>
             Recent deals
-        </h2>
+        </h3>
         <table class="ui striped table">
             <thead>
             <tr class="center aligned">
@@ -44,9 +47,9 @@
             <tr class="center aligned" ng-repeat="deal in deals">
                 <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
                 <td class="single line">{{deal.fixedLeg.fixedRatePayer}}</td>
-                <td class="single line">{{deal.fixedLeg.notional.quantity}} {{deal.fixedLeg.notional.token}}</td>
+                <td class="single line">{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
                 <td class="single line">{{deal.floatingLeg.floatingRatePayer}}</td>
-                <td class="single line">{{deal.floatingLeg.notional.quantity}} {{deal.floatingLeg.notional.token}}</td>
+                <td class="single line">{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
             </tr>
             </tbody>
         </table>

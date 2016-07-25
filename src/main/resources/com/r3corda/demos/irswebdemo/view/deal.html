@@ -1,4 +1,5 @@
 <div class="ui container">
+    <div class="ui hidden divider"></div>
     <div class="ui grid">
         <div class="sixteen wide column" id="common">
             <table class="ui striped table">
@@ -53,7 +54,7 @@
                 </tr>
                 <tr class="center aligned">
                     <td>Notional Amount</td>
-                    <td>{{deal.fixedLeg.notional.quantity}} {{deal.fixedLeg.notional.token}}</td>
+                    <td>{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
@@ -122,7 +123,7 @@
                 </tr>
                 <tr class="center aligned">
                     <td>Notional Amount</td>
-                    <td>{{deal.floatingLeg.notional.quantity}} {{deal.floatingLeg.notional.token}}</td>
+                    <td>{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
                 </tr>
                 <tr class="center aligned">
                     <td>Payment Frequency</td>
