@@ -121,24 +121,23 @@ class InterestRateSwapAPI(val services: ServiceHub) {
         return Response.ok().build()
     }
 
-    @GET
-    @Path("web/{filepath: (.*(.html|.css|.js|.png|.jpg|.gif|.json|ttf|woff|woff2))?}")
-    fun serveWeb(@PathParam("filepath") filepath: String) : Response {
-        try {
-            val resourcePath = if(filepath == "") { "index.html" } else { filepath }
-            val resource = javaClass.getResourceAsStream("irswebdemo/" + resourcePath)
-            if(resource != null) {
-                val cacheControl = CacheControl();
-                cacheControl.maxAge = 0
-                logger.info("200: serving ${filepath}")
-                return Response.ok(resource).cacheControl(cacheControl).build()
-            }
-
-            logger.info("404: could not find: ${filepath}")
-            return Response.status(Response.Status.NOT_FOUND).build()
-        } catch(ex: Exception) {
-            logger.info("500: error when serving: ${filepath}. ${ex.toString()}")
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build()
-        }
-    }
+    //@GET
+    //@Path("web/{filepath: (.*(.html|.css|.js|.png|.jpg|.gif|.json|ttf|woff|woff2))?}")
+    //fun serveWeb(@PathParam("filepath") filepath: String) : Response {
+    //    try {
+    //        val resourcePath = if(filepath == "") { "index.html" } else { filepath }
+    //        val resource = javaClass.getResourceAsStream("irswebdemo/" + resourcePath)
+    //        if(resource != null) {
+    //            val cacheControl = CacheControl();
+    //            cacheControl.maxAge = 0
+    //            logger.info("200: serving ${filepath}")
+    //            return Response.ok(resource).cacheControl(cacheControl).build()
+    //        }
+    //        logger.info("404: could not find: ${filepath}")
+    //        return Response.status(Response.Status.NOT_FOUND).build()
+    //    } catch(ex: Exception) {
+    //        logger.info("500: error when serving: ${filepath}. ${ex.toString()}")
+    //        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build()
+    //    }
+    //}
 }

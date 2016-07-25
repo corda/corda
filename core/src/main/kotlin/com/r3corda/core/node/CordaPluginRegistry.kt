@@ -13,6 +13,13 @@ interface CordaPluginRegistry {
     val webApis: List<Class<*>>
 
     /**
+     * Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
+     * Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
+     *  be specified with: javaClass.getResource("<folder-in-jar>").toExternalForm()
+     */
+    val staticServeDirs: Map<String, String>
+
+    /**
      * A Map with an entry for each consumed protocol used by the webAPIs.
      * The key of each map entry should contain the ProtocolLogic<T> class name.
      * The associated map values are the union of all concrete class names passed to the protocol constructor.

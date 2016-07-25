@@ -243,6 +243,7 @@ object CliParamsSpec {
 
 class IRSDemoPluginRegistry : CordaPluginRegistry {
     override val webApis: List<Class<*>> = listOf(InterestRateSwapAPI::class.java)
+    override val staticServeDirs: Map<String, String> = mapOf("irsdemo" to javaClass.getResource("irswebdemo").toExternalForm())
     override val requiredProtocols: Map<String, Set<String>> = mapOf(
             Pair(AutoOfferProtocol.Requester::class.java.name, setOf(InterestRateSwap.State::class.java.name)),
             Pair(UpdateBusinessDayProtocol.Broadcast::class.java.name, setOf(java.time.LocalDate::class.java.name)),
@@ -384,7 +385,6 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
     val node = logElapsedTime("Node startup") {
         Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).start()
     }
-
     // TODO: This should all be replaced by the identity service being updated
     // as the network map changes.
     if (params.tradeWithAddrs.size != params.tradeWithIdentities.size) {

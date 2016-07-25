@@ -16,8 +16,13 @@ import com.r3corda.node.servlets.Config
 import com.r3corda.node.servlets.DataUploadServlet
 import com.r3corda.node.servlets.ResponseFilter
 import com.r3corda.node.utilities.AffinityExecutor
+import org.eclipse.jetty.server.Handler
 import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.handler.DefaultHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
+import org.eclipse.jetty.server.handler.HandlerList
+import org.eclipse.jetty.server.handler.ResourceHandler
+import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.webapp.WebAppContext
@@ -114,6 +119,16 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
                 log.info("Add Plugin web API from attachment ${webapi.name}")
                 val customAPI = webapi.getConstructor(ServiceHub::class.java).newInstance(services)
                 resourceConfig.register(customAPI)
+            }
+
+            val staticDirMaps = pluginRegistries.map { x -> x.staticServeDirs }
+            val staticDirs = staticDirMaps.flatMap { it.keys }.zip(staticDirMaps.flatMap { it.values })
+            staticDirs.forEach {
+                val staticDir = ServletHolder(DefaultServlet::class.java)
+                staticDir.setInitParameter("resourceBase", it.second)
+                staticDir.setInitParameter("dirAllowed", "true")
+                staticDir.setInitParameter("pathInfoOnly", "true")
+                addServlet(staticDir, "/web/${it.first}/*")
             }
 
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
