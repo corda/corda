@@ -138,11 +138,11 @@ Now open your web browser to this URL:
 
 **Node A**:
 
-    http://localhost:31338/api/irs/web/
+    http://localhost:31338/web/irsdemo
 
 **Node B**:
 
-    http://localhost:31340/api/irs/web/
+    http://localhost:31340/web/irsdemo
 
 To use the demos click the "Create Deal" button, fill in the form, then click the "Submit" button. Now you will be
 able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
