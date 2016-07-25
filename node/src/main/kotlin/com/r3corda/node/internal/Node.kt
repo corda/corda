@@ -102,7 +102,15 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
         }
 
         // API, data upload and download to services (attachments, rates oracles etc)
-        handlerCollection.addHandler(ServletContextHandler().apply {
+        handlerCollection.addHandler(buildServletContextHandler())
+
+        server.handler = handlerCollection
+        server.start()
+        return server
+    }
+
+    private fun buildServletContextHandler(): ServletContextHandler {
+        return ServletContextHandler().apply {
             contextPath = "/"
             setAttribute("node", this@Node)
             addServlet(DataUploadServlet::class.java, "/upload/*")
@@ -139,11 +147,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
             val jerseyServlet = ServletHolder(container)
             addServlet(jerseyServlet, "/api/*")
             jerseyServlet.initOrder = 0 // Initialise at server start
-        })
-
-        server.handler = handlerCollection
-        server.start()
-        return server
+        }
     }
 
     override fun start(): Node {
