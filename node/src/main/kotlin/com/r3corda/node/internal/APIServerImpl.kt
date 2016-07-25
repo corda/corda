@@ -5,14 +5,10 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.linearHeadsOfType
-import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.api.*
 import java.time.LocalDateTime
-import java.util.*
 import javax.ws.rs.core.Response
-import kotlin.reflect.KParameter
-import kotlin.reflect.jvm.javaType
 
 class APIServerImpl(val node: AbstractNode) : APIServer {
 
@@ -70,38 +66,9 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
 
     private fun invokeProtocolAsync(type: ProtocolRef, args: Map<String, Any?>): ListenableFuture<out Any?> {
         if (type is ProtocolClassRef) {
-            val clazz = Class.forName(type.className)
-            if (ProtocolLogic::class.java.isAssignableFrom(clazz)) {
-                // TODO for security, check annotated as exposed on API?  Or have PublicProtocolLogic... etc
-                nextConstructor@ for (constructor in clazz.kotlin.constructors) {
-                    val params = HashMap<KParameter, Any?>()
-                    for (parameter in constructor.parameters) {
-                        if (parameter.isOptional && !args.containsKey(parameter.name)) {
-                            // OK to be missing
-                        } else if (args.containsKey(parameter.name)) {
-                            val value = args[parameter.name]
-                            if (value is Any) {
-                                // TODO consider supporting more complex test here to support coercing numeric/Kotlin types
-                                if (!(parameter.type.javaType as Class<*>).isAssignableFrom(value.javaClass)) {
-                                    // Not null and not assignable
-                                    break@nextConstructor
-                                }
-                            } else if (!parameter.type.isMarkedNullable) {
-                                // Null and not nullable
-                                break@nextConstructor
-                            }
-                            params[parameter] = value
-                        } else {
-                            break@nextConstructor
-                        }
-                    }
-                    // If we get here then we matched every parameter
-                    val protocol = constructor.callBy(params) as ProtocolLogic<*>
-                    val future = node.smm.add("api-call", protocol)
-                    return future
-                }
-            }
-            throw UnsupportedOperationException("Could not find matching protocol and constructor for: $type $args")
+            val protocolLogicRef = node.services.protocolLogicRefFactory.createKotlin(type.className, args)
+            val protocolInstance = node.services.protocolLogicRefFactory.toProtocolLogic(protocolLogicRef)
+            return node.services.startProtocol(type.className, protocolInstance)
         } else {
             throw UnsupportedOperationException("Unsupported ProtocolRef type: $type")
         }

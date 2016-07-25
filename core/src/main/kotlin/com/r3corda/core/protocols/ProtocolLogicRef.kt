@@ -50,6 +50,22 @@ class ProtocolLogicRefFactory(private val protocolWhitelist: Map<String, Set<Str
     }
 
     /**
+     * Create a [ProtocolLogicRef] for the Kotlin primary constructor of a named [ProtocolLogic]
+     */
+    fun createKotlin(protocolLogicClassName: String, args: Map<String,Any?>, attachments: List<SecureHash> = emptyList()): ProtocolLogicRef {
+        val context = AppContext(attachments)
+        validateProtocolClassName(protocolLogicClassName, context)
+        for(arg in args.values.filterNotNull()) {
+            validateArgClassName(protocolLogicClassName, arg.javaClass.name, context)
+        }
+        val clazz = Class.forName(protocolLogicClassName)
+        require(ProtocolLogic::class.java.isAssignableFrom(clazz)) { "$protocolLogicClassName is not a ProtocolLogic" }
+        @Suppress("UNCHECKED_CAST")
+        val logic = clazz as Class<ProtocolLogic<ProtocolLogic<*>>>
+        return createKotlin(logic, args)
+    }
+
+    /**
      * Create a [ProtocolLogicRef] for the Kotlin primary constructor or Java constructor and the given args.
      */
     fun create(type: Class<out ProtocolLogic<*>>, vararg args: Any?): ProtocolLogicRef {
