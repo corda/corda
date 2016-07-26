@@ -24,7 +24,7 @@ fun registerWhitelistTrustManager() {
 }
 
 /**
- * Custom Securtity Provider that forces the TrustManagerFactory to be our custom one.
+ * Custom Security Provider that forces the TrustManagerFactory to be our custom one.
  * Also holds the identity of the original TrustManager algorithm so
  * that we can delegate most of the checking to the proper Java code. We simply add some more checks.
  *
@@ -49,30 +49,41 @@ object WhitelistTrustManagerProvider : Provider("WhitelistTrustManager",
         put("TrustManagerFactory.whitelistTrustManager", "com.r3corda.core.crypto.WhitelistTrustManagerSpi")
 
         // Forcibly change the TrustManagerFactory defaultAlgorithm to be us
+        // This will apply to all code using TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        // Which includes the standard HTTPS implementation and most other SSL code
+        // TrustManagerFactory.getInstance(WhitelistTrustManagerProvider.originalTrustProviderAlgorithm)) will
+        // Allow access to the original implementation which is normally "PKIX"
         Security.setProperty("ssl.TrustManagerFactory.algorithm", "whitelistTrustManager")
     }
 
     /**
      * Adds an extra name to the whitelist if not already present
+     * If this is a new entry it will internally request a DNS lookup which may block the calling thread.
      */
     fun addWhitelistEntry(serverName: String) {
-        if(!_whitelist.contains(serverName)) {
-            addWhitelistEntries(listOf(serverName))
+        synchronized(WhitelistTrustManagerProvider) {
+            if (!_whitelist.contains(serverName)) {
+                addWhitelistEntries(listOf(serverName))
+            }
         }
     }
 
     /**
      * Adds a list of servers to the whitelist and also adds their fully resolved name after DNS lookup
+     * If the server name is not an actual DNS name this is silently ignored
+     * The DNS request may block the calling thread.
      */
     fun addWhitelistEntries(serverNames: List<String>) {
-        _whitelist.addAll(serverNames)
-        for(serveName in serverNames) {
-            try {
-                val addresses = InetAddress.getAllByName(serveName).toList()
-                _whitelist.addAll(addresses.map { y -> y.canonicalHostName })
-                _whitelist.addAll(addresses.map { y -> y.hostAddress })
-            } catch (ex: UnknownHostException) {
-                // Ignore if the server name is not resolvable e.g. for wildcard addresses, or addresses that can only be resolved externally
+        synchronized(WhitelistTrustManagerProvider) {
+            _whitelist.addAll(serverNames)
+            for (name in serverNames) {
+                try {
+                    val addresses = InetAddress.getAllByName(name).toList()
+                    _whitelist.addAll(addresses.map { y -> y.canonicalHostName })
+                    _whitelist.addAll(addresses.map { y -> y.hostAddress })
+                } catch (ex: UnknownHostException) {
+                    // Ignore if the server name is not resolvable e.g. for wildcard addresses, or addresses that can only be resolved externally
+                }
             }
         }
     }
@@ -82,7 +93,7 @@ object WhitelistTrustManagerProvider : Provider("WhitelistTrustManager",
  * Registered TrustManagerFactorySpi
  */
 class WhitelistTrustManagerSpi : TrustManagerFactorySpi() {
-    //Get the original implementation to delegate to (can't use Kotlin delegation on abstract classes unfortunately).
+    // Get the original implementation to delegate to (can't use Kotlin delegation on abstract classes unfortunately).
     val originalProvider = TrustManagerFactory.getInstance(WhitelistTrustManagerProvider.originalTrustProviderAlgorithm)
 
     override fun engineInit(keyStore: KeyStore?) {
@@ -95,7 +106,7 @@ class WhitelistTrustManagerSpi : TrustManagerFactorySpi() {
 
     override fun engineGetTrustManagers(): Array<out TrustManager> {
         val parent = originalProvider.trustManagers.first() as X509ExtendedTrustManager
-        //Wrap original provider in ours and return
+        // Wrap original provider in ours and return
         return arrayOf(WhitelistTrustManager(parent))
     }
 }
@@ -110,6 +121,7 @@ class WhitelistTrustManager(val originalProvider: X509ExtendedTrustManager) : X5
 
     private fun checkIdentity(hostname: String?, cert: X509Certificate) {
         // Based on standard code in sun.security.ssl.X509TrustManagerImpl.checkIdentity
+        // if IPv6 strip off the "[]"
         if ((hostname != null) && hostname.startsWith("[") && hostname.endsWith("]")) {
             checker.match(hostname.substring(1, hostname.length - 1), cert)
         } else {
@@ -126,7 +138,7 @@ class WhitelistTrustManager(val originalProvider: X509ExtendedTrustManager) : X5
                 checkIdentity(whiteListEntry, cert)
                 return // if we get here without throwing we had a match
             } catch(ex: CertificateException) {
-                //
+                // Ignore and check the next entry until we find a match, or exhaust the whitelist
             }
         }
         throw CertificateException("Certificate not on whitelist ${cert.subjectDN}")
