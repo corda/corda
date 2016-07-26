@@ -439,12 +439,12 @@ object TwoPartyDealProtocol {
      */
     class FixingRoleDecider(val ref: StateRef,
                             val timeout: Duration,
-                            override val progressTracker: ProgressTracker = tracker(ref.toString())) : ProtocolLogic<Unit>() {
+                            override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
 
         companion object {
-            class LOADING(ref: String) : ProgressTracker.Step("Loading state $ref to decide fixing role")
+            class LOADING() : ProgressTracker.Step("Loading state to decide fixing role")
 
-            fun tracker(ref: String) = ProgressTracker(LOADING(ref))
+            fun tracker() = ProgressTracker(LOADING())
         }
 
         override val topic: String get() = FIX_INITIATE_TOPIC
