@@ -13,7 +13,7 @@ import javafx.scene.shape.Line
 import javafx.util.Duration
 import java.util.*
 
-class VisualiserModel() {
+class VisualiserViewModel {
     enum class Style {
         MAP, CIRCLE;
 

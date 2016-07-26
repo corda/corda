@@ -21,14 +21,11 @@ import javafx.scene.shape.Polygon
 import javafx.scene.text.Font
 import javafx.stage.Stage
 import javafx.util.Duration
-import com.r3cev.corda.netmap.VisualiserModel.Style
-import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyCodeCombination
+import com.r3cev.corda.netmap.VisualiserViewModel.Style
 
 data class TrackerWidget(val vbox: VBox, val cursorBox: Pane, val label: Label, val cursor: Polygon)
 
 internal class VisualiserView() {
-    // Structural elements
     lateinit var root: Pane
     lateinit var stage: Stage
     lateinit var splitter: SplitPane
@@ -43,12 +40,10 @@ internal class VisualiserView() {
     var scrollPane: ScrollPane? = null
     var hideButton = Button("«").apply { styleClass += "hide-sidebar-button" }
 
-    // Content
 
     // -23.2031,29.8406,33.0469,64.3209
     val mapImage = ImageView(Image(NetworkMapVisualiser::class.java.getResourceAsStream("Europe.jpg")))
 
-    // Display properties
     val backgroundColor: Color = mapImage.image.pixelReader.getColor(0, 0)
 
     val stageWidth = 1024.0

@@ -44,16 +44,13 @@ import java.util.*
 import kotlin.concurrent.schedule
 import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.system.exitProcess
-import com.r3cev.corda.netmap.VisualiserModel.Style
+import com.r3cev.corda.netmap.VisualiserViewModel.Style
 
 fun <T : Any> WritableValue<T>.keyValue(endValue: T, interpolator: Interpolator = Interpolator.EASE_OUT) = KeyValue(this, endValue, interpolator)
 
 // TODO: This code is all horribly ugly. Refactor to use TornadoFX to clean it up.
 
 class NetworkMapVisualiser : Application() {
-    //========================
-    // Enums
-    //========================
     enum class NodeType {
         BANK, SERVICE
     }
@@ -66,9 +63,6 @@ class NetworkMapVisualiser : Application() {
         }
     }
 
-    //========================
-    // Classes
-    //========================
     sealed class RunningPausedState {
         class Running(val tickTimer: TimerTask): RunningPausedState()
         class Paused(): RunningPausedState()
@@ -82,32 +76,27 @@ class NetworkMapVisualiser : Application() {
             }
     }
 
-    //========================
-    // Object variables
-    //========================
     private val view = VisualiserView()
-    private val model = VisualiserModel()
+    private val viewModel = VisualiserViewModel()
 
     val timer = Timer()
     val uiThread: Scheduler = Schedulers.from { Platform.runLater(it) }
 
-    //========================
-    // Init and shutdown
-    //========================
     init {
         BriefLogFormatter.initVerbose(InMemoryMessagingNetwork.MESSAGES_LOG_NAME)
     }
 
     override fun start(stage: Stage) {
-        model.view = view
-        model.presentationMode = "--presentation-mode" in parameters.raw
+        viewModel.view = view
+        viewModel.presentationMode = "--presentation-mode" in parameters.raw
         buildScene(stage)
-        model.displayStyle = if ("--circle" in parameters.raw) { Style.CIRCLE } else { model.displayStyle }
+        viewModel.displayStyle = if ("--circle" in parameters.raw) { Style.CIRCLE } else { viewModel.displayStyle }
 
+        val simulation = viewModel.simulation
         // Update the white-backgrounded label indicating what protocol step it's up to.
-        model.simulation.allProtocolSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
+        simulation.allProtocolSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
             val (node, change) = step
-            val label = model.nodesToWidgets[node]!!.statusLabel
+            val label = viewModel.nodesToWidgets[node]!!.statusLabel
             if (change is ProgressTracker.Change.Position) {
                 // Fade in the status label if it's our first step.
                 if (label.text == "") {
@@ -134,18 +123,18 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Fire the message bullets between nodes.
-        model.simulation.network.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = model.simulation.network.addressToNode(msg.sender.myAddress)
-            val destNode: MockNetwork.MockNode = model.simulation.network.addressToNode(msg.recipients as SingleMessageRecipient)
+        simulation.network.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
+            val senderNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.sender.myAddress)
+            val destNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.recipients as SingleMessageRecipient)
 
             if (transferIsInteresting(msg)) {
-                model.nodesToWidgets[senderNode]!!.pulseAnim.play()
-                model.fireBulletBetweenNodes(senderNode, destNode, "bank", "bank")
+                viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()
+                viewModel.fireBulletBetweenNodes(senderNode, destNode, "bank", "bank")
             }
         }
         // Pulse all parties in a trade when the trade completes
-        model.simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<Simulation.SimulatedNode> ->
-            nodes.forEach { model.nodesToWidgets[it]!!.longPulseAnim.play() }
+        simulation.doneSteps.observeOn(uiThread).subscribe { nodes: Collection<Simulation.SimulatedNode> ->
+            nodes.forEach { viewModel.nodesToWidgets[it]!!.longPulseAnim.play() }
         }
 
         stage.setOnCloseRequest { exitProcess(0) }
@@ -169,15 +158,12 @@ class NetworkMapVisualiser : Application() {
         }
     }
 
-    //========================
-    // View functions
-    //========================
     private fun buildScene(stage: Stage) {
         view.stage = stage
-        view.setup(model.runningPausedState, model.displayStyle, model.presentationMode)
+        view.setup(viewModel.runningPausedState, viewModel.displayStyle, viewModel.presentationMode)
         bindSidebar()
         bindTopbar()
-        model.createNodes()
+        viewModel.createNodes()
 
         // Spacebar advances simulation by one step.
         stage.scene.accelerators[KeyCodeCombination(KeyCode.SPACE)] = Runnable { onNextInvoked() }
@@ -194,17 +180,17 @@ class NetworkMapVisualiser : Application() {
     private fun bindTopbar() {
         view.resetButton.setOnAction({reset()})
         view.nextButton.setOnAction {
-            if (!view.simulateInitialisationCheckbox.isSelected && !model.simulation.networkInitialisationFinished.isDone) {
+            if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone) {
                 skipNetworkInitialisation()
             } else {
                 onNextInvoked()
             }
         }
-        model.simulation.networkInitialisationFinished.then {
+        viewModel.simulation.networkInitialisationFinished.then {
             view.simulateInitialisationCheckbox.isVisible = false
         }
         view.runPauseButton.setOnAction {
-            val oldRunningPausedState = model.runningPausedState
+            val oldRunningPausedState = viewModel.runningPausedState
             val newRunningPausedState = when (oldRunningPausedState) {
                 is NetworkMapVisualiser.RunningPausedState.Running -> {
                     oldRunningPausedState.tickTimer.cancel()
@@ -215,7 +201,7 @@ class NetworkMapVisualiser : Application() {
                     NetworkMapVisualiser.RunningPausedState.Paused()
                 }
                 is NetworkMapVisualiser.RunningPausedState.Paused -> {
-                    val tickTimer = timer.scheduleAtFixedRate(model.stepDuration.toMillis().toLong(), model.stepDuration.toMillis().toLong()) {
+                    val tickTimer = timer.scheduleAtFixedRate(viewModel.stepDuration.toMillis().toLong(), viewModel.stepDuration.toMillis().toLong()) {
                         Platform.runLater {
                             onNextInvoked()
                         }
@@ -224,7 +210,7 @@ class NetworkMapVisualiser : Application() {
                     view.nextButton.isDisable = true
                     view.resetButton.isDisable = true
 
-                    if (!view.simulateInitialisationCheckbox.isSelected && !model.simulation.networkInitialisationFinished.isDone) {
+                    if (!view.simulateInitialisationCheckbox.isSelected && !viewModel.simulation.networkInitialisationFinished.isDone) {
                         skipNetworkInitialisation()
                     }
 
@@ -233,16 +219,17 @@ class NetworkMapVisualiser : Application() {
             }
 
             view.runPauseButton.text = newRunningPausedState.buttonLabel.toString()
-            model.runningPausedState = newRunningPausedState
+            viewModel.runningPausedState = newRunningPausedState
         }
         view.styleChoice.selectionModel.selectedItemProperty()
-                .addListener { ov, value, newValue -> model.displayStyle = newValue }
-        model.simulation.dateChanges.observeOn(uiThread).subscribe { view.dateLabel.text = it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) }
+                .addListener { ov, value, newValue -> viewModel.displayStyle = newValue }
+        viewModel.simulation.dateChanges.observeOn(uiThread).subscribe { view.dateLabel.text = it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) }
     }
 
     private fun reloadStylesheet(stage: Stage) {
         stage.scene.stylesheets.clear()
 
+        // TODO: Improve path resolution to avoid hardcoding a specific user directory.
         // Enable hot reload without needing to rebuild.
         val mikesCSS = "/Users/mike/Source/R3/r3dlg-prototyping/network-explorer/src/main/resources/com/r3cev/corda/netmap/styles.css"
         if (Files.exists(Paths.get(mikesCSS)))
@@ -251,11 +238,8 @@ class NetworkMapVisualiser : Application() {
             stage.scene.stylesheets.add(NetworkMapVisualiser::class.java.getResource("styles.css").toString())
     }
 
-    //========================
-    // Temp
-    //========================
     private fun bindSidebar() {
-        model.simulation.allProtocolSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
+        viewModel.simulation.allProtocolSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
             val (node, change) = step
 
             if (change is ProgressTracker.Change.Position) {
@@ -265,18 +249,18 @@ class NetworkMapVisualiser : Application() {
                         // Protocol done; schedule it for removal in a few seconds. We batch them up to make nicer
                         // animations.
                         println("Protocol done for ${node.info.identity.name}")
-                        model.doneTrackers += tracker
+                        viewModel.doneTrackers += tracker
                     } else {
                         // Subprotocol is done; ignore it.
                     }
-                } else if (!model.trackerBoxes.containsKey(tracker)) {
+                } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New protocol started up; add.
-                    val extraLabel = model.simulation.extraNodeLabels[node]
+                    val extraLabel = viewModel.simulation.extraNodeLabels[node]
                     val label = if (extraLabel != null) "${node.storage.myLegalIdentity.name}: $extraLabel" else node.storage.myLegalIdentity.name
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     bindProgressTracketWidget(tracker.topLevelTracker, widget)
                     println("Added: ${tracker}, ${widget}")
-                    model.trackerBoxes[tracker] = widget.vbox
+                    viewModel.trackerBoxes[tracker] = widget.vbox
                     view.sidebar.children += widget.vbox
                 }
             }
@@ -284,8 +268,8 @@ class NetworkMapVisualiser : Application() {
 
         Timer().scheduleAtFixedRate(0, 500) {
             Platform.runLater {
-                for (tracker in model.doneTrackers) {
-                    val pane = model.trackerBoxes[tracker]!!
+                for (tracker in viewModel.doneTrackers) {
+                    val pane = viewModel.trackerBoxes[tracker]!!
                     // Slide the other tracker widgets up and over this one.
                     val slideProp = SimpleDoubleProperty(0.0)
                     slideProp.addListener { obv -> pane.padding = Insets(0.0, 0.0, slideProp.value, 0.0) }
@@ -297,12 +281,12 @@ class NetworkMapVisualiser : Application() {
                     )
                     timeline.setOnFinished {
                         println("Removed: ${tracker}")
-                        val vbox = model.trackerBoxes.remove(tracker)
+                        val vbox = viewModel.trackerBoxes.remove(tracker)
                         view.sidebar.children.remove(vbox)
                     }
                     timeline.play()
                 }
-                model.doneTrackers.clear()
+                viewModel.doneTrackers.clear()
             }
         }
     }
@@ -322,35 +306,32 @@ class NetworkMapVisualiser : Application() {
                 }
             } else if (step is ProgressTracker.Change.Structural) {
                 val new = view.buildProgressTrackerWidget(widget.label.text, tracker)
-                val prevWidget = model.trackerBoxes[step.tracker] ?: throw AssertionError("No previous widget for tracker: ${step.tracker}")
-                val i = (prevWidget.parent as VBox).children.indexOf(model.trackerBoxes[step.tracker])
+                val prevWidget = viewModel.trackerBoxes[step.tracker] ?: throw AssertionError("No previous widget for tracker: ${step.tracker}")
+                val i = (prevWidget.parent as VBox).children.indexOf(viewModel.trackerBoxes[step.tracker])
                 (prevWidget.parent as VBox).children[i] = new.vbox
-                model.trackerBoxes[step.tracker] = new.vbox
+                viewModel.trackerBoxes[step.tracker] = new.vbox
             }
         }
     }
 
-    //========================
-    // Controller functions
-    //========================
     var started = false
     private fun startSimulation() {
         if (!started) {
-            model.simulation.start()
+            viewModel.simulation.start()
             started = true
         }
     }
 
     private fun reset() {
-        model.simulation.stop()
-        model.simulation = IRSSimulation(true, false, null)
+        viewModel.simulation.stop()
+        viewModel.simulation = IRSSimulation(true, false, null)
         started = false
         start(view.stage)
     }
 
     private fun skipNetworkInitialisation() {
         startSimulation()
-        while (!model.simulation.networkInitialisationFinished.isDone) {
+        while (!viewModel.simulation.networkInitialisationFinished.isDone) {
             iterateSimulation()
         }
     }
@@ -366,7 +347,7 @@ class NetworkMapVisualiser : Application() {
     private fun iterateSimulation() {
         // Loop until either we ran out of things to do, or we sent an interesting message.
         while (true) {
-            val transfer: InMemoryMessagingNetwork.MessageTransfer = model.simulation.iterate() ?: break
+            val transfer: InMemoryMessagingNetwork.MessageTransfer = viewModel.simulation.iterate() ?: break
             if (transferIsInteresting(transfer))
                 break
             else
