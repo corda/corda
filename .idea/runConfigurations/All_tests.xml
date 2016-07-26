@@ -17,6 +17,7 @@
       <value defaultName="wholeProject" />
     </option>
     <envs />
+    <fork_mode value="class" />
     <patterns />
     <method />
   </configuration>
