@@ -61,7 +61,7 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     operator fun div(other: Int): Amount<T> = Amount(quantity / other, token)
     operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), token)
     
-    override fun toString(): String = (BigDecimal(quantity).divide(BigDecimal(100))).setScale(2).toPlainString()
+    override fun toString(): String = (BigDecimal(quantity).divide(BigDecimal(100))).setScale(2).toPlainString() + " " + token
 
     override fun compareTo(other: Amount<T>): Int {
         checkCurrency(other)

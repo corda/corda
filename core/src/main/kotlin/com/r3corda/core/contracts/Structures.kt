@@ -146,10 +146,9 @@ interface IssuanceDefinition
  *
  * @param P the type of product underlying the definition, for example [Currency].
  */
-data class Issued<out P>(
-        val issuer: PartyAndReference,
-        val product: P
-)
+data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
+    override fun toString() = "$product issued by $issuer"
+}
 
 /**
  * A contract state that can have a single owner.
