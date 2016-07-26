@@ -34,7 +34,7 @@ fun registerWhitelistTrustManager() {
  */
 object WhitelistTrustManagerProvider : Provider("WhitelistTrustManager",
         1.0,
-        "Provider for  custom trust manager that always validates certificate names") {
+        "Provider for custom trust manager that always validates certificate names") {
 
     val originalTrustProviderAlgorithm = Security.getProperty("ssl.TrustManagerFactory.algorithm")
 
