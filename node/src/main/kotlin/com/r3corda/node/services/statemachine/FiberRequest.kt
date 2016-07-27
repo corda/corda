@@ -68,6 +68,10 @@ sealed class FiberRequest(val topic: String,
         override fun toString(): String {
             return "Expecting response via topic ${receiveTopic} of type ${responseTypeName}"
         }
+
+        // We have to do an unchecked cast, but unless the serialized form is damaged, this was
+        // correct when the request was instantiated
+        @Suppress("UNCHECKED_CAST")
         val responseType: Class<R>
             get() = Class.forName(responseTypeName) as Class<R>
     }
