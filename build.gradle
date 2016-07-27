@@ -27,6 +27,7 @@ buildscript {
 	ext.jolokia_version = '2.0.0-M1'
     ext.assertj_version = '3.5.1'
     ext.log4j_version = '2.6.2'
+    ext.bouncycastle_version = '1.54'
 
     repositories {
         mavenCentral()

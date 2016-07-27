@@ -76,6 +76,8 @@ fun main(args: Array<String>) {
         override val myLegalName: String = "Rate fix demo node"
         override val exportJMXto: String = "http"
         override val nearestCity: String = "Atlantis"
+        override val keyStorePassword: String = "cordacadevpass"
+        override val trustStorePassword: String = "trustpass"
     }
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)

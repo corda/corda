@@ -52,6 +52,7 @@ dependencies {
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
+    runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:1.13"

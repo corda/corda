@@ -67,11 +67,14 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
-    override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, serverThread)
+    override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, configuration, serverThread)
 
     override fun startMessagingService() {
         // Start up the MQ service.
-        (net as ArtemisMessagingService).start()
+        (net as ArtemisMessagingService).apply {
+            configureWithDevSSLCertificate() // TODO Create proper certificate provisioning process
+            start()
+        }
     }
 
     private fun initWebServer(): Server {

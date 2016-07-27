@@ -3,11 +3,13 @@ package com.r3corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.ThreadBox
+import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.NodeConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.*
@@ -15,12 +17,9 @@ import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
-import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
-import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
-import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants.HOST_PROP_NAME
-import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants.PORT_PROP_NAME
+import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants.*
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
@@ -28,6 +27,7 @@ import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.InVMLoginModule
 import java.math.BigInteger
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.util.*
@@ -37,13 +37,12 @@ import javax.annotation.concurrent.ThreadSafe
 
 // TODO: Verify that nobody can connect to us and fiddle with our config over the socket due to the secman.
 // TODO: Implement a discovery engine that can trigger builds of new connections when another node registers? (later)
-// TODO: SSL
 
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
  * Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
- * with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
- * as well.
+ * with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
+ * as well for interop.
  *
  * The current implementation is skeletal and lacks features like security or firewall tunnelling (that is, you must
  * be able to receive TCP connections in order to receive messages). It is good enough for local communication within
@@ -51,11 +50,13 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * @param directory A place where Artemis can stash its message journal and other files.
  * @param myHostPort What host and port to bind to for receiving inbound connections.
+ * @param config The config object is used to pass in the passwords for the certificate KeyStore and TrustStore
  * @param defaultExecutor This will be used as the default executor to run message handlers on, if no other is specified.
  */
 @ThreadSafe
 class ArtemisMessagingService(val directory: Path,
                               val myHostPort: HostAndPort,
+                              val config: NodeConfiguration,
                               val defaultExecutor: Executor = RunOnCallerThread) : SingletonSerializeAsToken(), MessagingService {
 
     // In future: can contain onion routing info, etc.
@@ -98,6 +99,21 @@ class ArtemisMessagingService(val directory: Path,
     // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
     private val undeliveredMessages = CopyOnWriteArrayList<Message>()
 
+    private val keyStorePath = directory.resolve("certificates").resolve("sslkeystore.jks")
+    private val trustStorePath = directory.resolve("certificates").resolve("truststore.jks")
+
+    // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
+    // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
+    // in case we need to use keytool certificates in some demos
+    private val CIPHER_SUITES = listOf(
+            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256")
+
     init {
         require(directory.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
     }
@@ -138,9 +154,9 @@ class ArtemisMessagingService(val directory: Path,
         activeMQServer.registerActivationFailureListener { exception -> throw exception }
         activeMQServer.start()
 
-        // Connect to our in-memory server.
+        // Connect to our server.
         clientFactory = ActiveMQClient.createServerLocatorWithoutHA(
-                TransportConfiguration(InVMConnectorFactory::class.java.name)).createSessionFactory()
+                tcpTransport(ConnectionDirection.OUTBOUND, myHostPort.hostText, myHostPort.port)).createSessionFactory()
 
         // Create a queue on which to receive messages and set up the handler.
         val session = clientFactory.createSession()
@@ -303,8 +319,7 @@ class ArtemisMessagingService(val directory: Path,
         setConfigDirectories(config, directory)
         // We will be talking to our server purely in memory.
         config.acceptorConfigurations = setOf(
-                tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port),
-                TransportConfiguration(InVMAcceptorFactory::class.java.name)
+                tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port)
         )
         return config
     }
@@ -316,9 +331,47 @@ class ArtemisMessagingService(val directory: Path,
                         ConnectionDirection.OUTBOUND -> NettyConnectorFactory::class.java.name
                     },
                     mapOf(
+                            // Basic TCP target details
                             HOST_PROP_NAME to host,
-                            PORT_PROP_NAME to port.toInt()
+                            PORT_PROP_NAME to port.toInt(),
+
+                            // Turn on AMQP support, which needs the protocol jar on the classpath.
+                            // Unfortunately we cannot disable core protocol as artemis only uses AMQP for interop
+                            // It does not use AMQP messages for its own messages e.g. topology and heartbeats
+                            // TODO further investigate how to ensure we use a well defined wire level protocol for Node to Node communications
+                            PROTOCOLS_PROP_NAME to "CORE,AMQP",
+
+                            // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
+                            // and AES encryption
+                            SSL_ENABLED_PROP_NAME to true,
+                            KEYSTORE_PROVIDER_PROP_NAME to "JKS",
+                            KEYSTORE_PATH_PROP_NAME to keyStorePath,
+                            KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
+                            TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
+                            TRUSTSTORE_PATH_PROP_NAME to trustStorePath,
+                            TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
+                            ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
+                            ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
+                            NEED_CLIENT_AUTH_PROP_NAME to true
                     )
             )
+
+    /**
+     * Strictly for dev only automatically construct a server certificate/private key signed from
+     * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
+     */
+    fun configureWithDevSSLCertificate() {
+        Files.createDirectories(directory.resolve("certificates"))
+        if (!Files.exists(trustStorePath)) {
+            Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
+                    trustStorePath)
+        }
+        if (!Files.exists(keyStorePath)) {
+            val caKeyStore = X509Utilities.loadKeyStore(
+                    javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordadevcakeys.jks"),
+                    "cordacadevpass")
+            X509Utilities.createKeystoreForSSL(keyStorePath, config.keyStorePassword, config.keyStorePassword, caKeyStore, "cordacadevkeypass")
+        }
+    }
 
 }
