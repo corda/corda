@@ -1,7 +1,9 @@
 package com.r3corda.node.services.api
 
 import com.r3corda.core.serialization.SerializedBytes
+import com.r3corda.node.services.statemachine.FiberRequest
 import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
+import com.r3corda.node.services.statemachine.StateMachineManager
 
 /**
  * Thread-safe storage of fiber checkpoints.
@@ -31,7 +33,5 @@ interface CheckpointStorage {
 // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
 data class Checkpoint(
         val serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
-        val awaitingTopic: String?,
-        val awaitingPayloadType: String?,
-        val receivedPayload: Any?
+        val request: FiberRequest?
 )
