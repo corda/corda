@@ -19,6 +19,14 @@ configurations {
     runtime.exclude module: 'isolated'
 }
 
+sourceSets {
+    test {
+        resources {
+            srcDir "../config/test"
+        }
+    }
+}
+
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
@@ -26,7 +34,10 @@ dependencies {
     compile project(':contracts')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
-    compile "org.slf4j:slf4j-jdk14:${slf4j_version}"
+
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
