@@ -294,14 +294,16 @@ class IRSTests {
     @Test
     fun generateIRSandFixSome() {
         var previousTXN = generateIRSTxn(1)
-        var currentIRS = previousTXN.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
-        println(currentIRS.prettyPrint())
+        fun currentIRS() = previousTXN.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
+
+        val txns = HashSet<LedgerTransaction>()
+        txns += previousTXN
+
         while (true) {
-            val nextFixingDate = currentIRS.calculation.nextFixingDate() ?: break
-            println("\n\n\n ***** Applying a fixing to $nextFixingDate \n\n\n")
+            val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
             val fixTX: LedgerTransaction = run {
                 val tx = TransactionType.General.Builder()
-                val fixing = Pair(nextFixingDate, FixedRate("0.052".percent))
+                val fixing = Fix(nextFix, "0.052".percent.value)
                 InterestRateSwap().generateFix(tx, previousTXN.outRef(0), fixing)
                 with(tx) {
                     setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
@@ -311,10 +313,10 @@ class IRSTests {
                 }
                 tx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
             }
-            currentIRS = previousTXN.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
-            println(currentIRS.prettyPrint())
             previousTXN = fixTX
+            txns += fixTX
         }
+        TransactionGroup(txns, emptySet()).verify()
     }
 
     // Move these later as they aren't IRS specific.
@@ -385,10 +387,7 @@ class IRSTests {
                     )
                 }
                 command(ORACLE_PUBKEY) {
-                    InterestRateSwap.Commands.Fix()
-                }
-                command(ORACLE_PUBKEY) {
-                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
+                    InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd))
                 }
                 timestamp(TEST_TX_TIME)
                 this.verifies()
@@ -580,32 +579,25 @@ class IRSTests {
             // Templated tweak for reference. A corrent fixing applied should be ok
             tweak {
                 command(ORACLE_PUBKEY) {
-                    InterestRateSwap.Commands.Fix()
+                    InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd))
                 }
                 timestamp(TEST_TX_TIME)
-                command(ORACLE_PUBKEY) {
-                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
-                }
                 output() { newIRS }
                 this.verifies()
             }
 
             // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
             tweak {
-                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
                 timestamp(TEST_TX_TIME)
-                command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
                 output() { oldIRS }
                 this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
             }
 
             // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
             tweak {
-                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
                 timestamp(TEST_TX_TIME)
-                command(ORACLE_PUBKEY) {
-                    Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)
-                }
 
                 val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.first()
                 val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
@@ -625,9 +617,8 @@ class IRSTests {
 
             // This tests modifies the payment currency for the fixing
             tweak {
-                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Fix() }
+                command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
                 timestamp(TEST_TX_TIME)
-                command(ORACLE_PUBKEY) { Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd) }
 
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
                 val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
@@ -711,10 +702,7 @@ class IRSTests {
                 }
 
                 command(ORACLE_PUBKEY) {
-                    InterestRateSwap.Commands.Fix()
-                }
-                command(ORACLE_PUBKEY) {
-                    Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1)
+                    InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1))
                 }
                 timestamp(TEST_TX_TIME)
                 this.verifies()

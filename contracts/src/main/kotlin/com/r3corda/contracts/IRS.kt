@@ -575,14 +575,14 @@ class InterestRateSwap() : ClauseVerifier() {
 
         class Fix : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Fix::class.java)
+                get() = setOf(Commands.Refix::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: Collection<AuthenticatedObject<CommandData>>,
                                 token: String): Set<CommandData> {
-                val command = tx.commands.requireSingleCommand<Commands.Fix>()
+                val command = tx.commands.requireSingleCommand<Commands.Refix>()
                 val irs = outputs.filterIsInstance<State>().single()
                 val prevIrs = inputs.filterIsInstance<State>().single()
                 val paymentDifferences = getFloatingLegPaymentsDifferences(prevIrs.calculation.floatingLegPaymentSchedule, irs.calculation.floatingLegPaymentSchedule)
@@ -596,8 +596,7 @@ class InterestRateSwap() : ClauseVerifier() {
 
                 val changedRates = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
                 val (oldFloatingRatePaymentEvent, newFixedRatePaymentEvent) = changedRates
-                val fixCommand = tx.commands.requireSingleCommand<com.r3corda.core.contracts.Fix>()
-                val fixValue = fixCommand.value
+                val fixValue = command.value.fix
                 // Need to check that everything is the same apart from the new fixed rate entry.
                 requireThat {
                     "The fixed leg parties are constant" by (irs.fixedLeg.fixedRatePayer == prevIrs.fixedLeg.fixedRatePayer) // Although superseded by the below test, this is included for a regression issue
@@ -659,7 +658,7 @@ class InterestRateSwap() : ClauseVerifier() {
     }
 
     interface Commands : CommandData {
-        class Fix : TypeOnlyCommandData(), Commands    // Receive interest rate from oracle, Both sides agree
+        data class Refix(val fix: Fix) : Commands      // Receive interest rate from oracle, Both sides agree
         class Pay : TypeOnlyCommandData(), Commands    // Not implemented just yet
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to trade
         class Mature : TypeOnlyCommandData(), Commands // Trade has matured; no more actions. Cleanup. // TODO: Do we need this?
@@ -716,7 +715,7 @@ class InterestRateSwap() : ClauseVerifier() {
         override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
-            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), Pair(fix.of.forDay, Rate(RatioUnit(fix.value))))
+            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), fix)
         }
 
         override fun nextFixingOf(): FixOf? {
@@ -821,15 +820,13 @@ class InterestRateSwap() : ClauseVerifier() {
         }
     }
 
-    // XXX: This generateFix method appears to be buggy, but the fixing code in general appears to have got messy after the clauses refactoring.
-
-    // TODO: Replace with rates oracle
-    fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Pair<LocalDate, Rate>) {
+    fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Fix) {
         tx.addInputState(irs)
+        val fixedRate = FixedRate(RatioUnit(fixing.value))
         tx.addOutputState(
-                irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.first, FixedRate(fixing.second))),
+                irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.of.forDay, fixedRate)),
                 irs.state.notary
         )
-        tx.addCommand(Commands.Fix(), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))
+        tx.addCommand(Commands.Refix(fixing), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))
     }
 }
