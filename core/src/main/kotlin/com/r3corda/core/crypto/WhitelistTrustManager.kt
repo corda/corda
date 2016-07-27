@@ -17,6 +17,7 @@ import javax.net.ssl.*
  * implementation. This is a work around to the fact that ArtemisMQ and probably many other libraries
  * don't correctly configure the SSLParameters with setEndpointIdentificationAlgorithm and thus don't check
  * that the certificate matches with the DNS entry requested. This exposes us to man in the middle attacks.
+ * The issue has been raised with ArtemisMQ: https://issues.apache.org/jira/browse/ARTEMIS-656
  */
 fun registerWhitelistTrustManager() {
     if (Security.getProvider("WhitelistTrustManager") == null) {
@@ -62,7 +63,7 @@ object WhitelistTrustManagerProvider : Provider("WhitelistTrustManager",
      * If this is a new entry it will internally request a DNS lookup which may block the calling thread.
      */
     fun addWhitelistEntry(serverName: String) {
-        if (!_whitelist.contains(serverName)) { // Double check locking to avoid DNS cost. Safe as we never delete from the set
+        if (!_whitelist.contains(serverName)) { // Safe as we never delete from the set
             addWhitelistEntries(listOf(serverName))
         }
     }
