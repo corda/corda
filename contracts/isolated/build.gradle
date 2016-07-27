@@ -79,3 +79,11 @@ repositories {
 dependencies {
     compile project(':core')
 }
+
+sourceSets {
+    test {
+        resources {
+            srcDir "../../config/test"
+        }
+    }
+}

@@ -25,8 +25,8 @@ buildscript {
     ext.jetty_version = '9.3.9.v20160517'
     ext.jersey_version = '2.23.1'
 	ext.jolokia_version = '2.0.0-M1'
-    ext.slf4j_version = '1.7.21'
     ext.assertj_version = '3.5.1'
+    ext.log4j_version = '2.6.2'
     ext.bouncycastle_version = '1.54'
 
     repositories {
@@ -62,6 +62,16 @@ sourceSets {
             compileClasspath += main.output + test.output
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
+        }
+    }
+    main {
+        resources {
+            srcDir "config/dev"
+        }
+    }
+    test {
+        resources {
+            srcDir "config/test"
         }
     }
 }
