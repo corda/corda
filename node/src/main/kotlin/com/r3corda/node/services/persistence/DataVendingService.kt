@@ -1,14 +1,19 @@
 package com.r3corda.node.services.persistence
 
 import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.failure
 import com.r3corda.core.messaging.MessagingService
-import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.StorageService
+import com.r3corda.core.serialization.serialize
+import com.r3corda.core.success
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.FetchAttachmentsProtocol
 import com.r3corda.protocols.FetchDataProtocol
 import com.r3corda.protocols.FetchTransactionsProtocol
+import com.r3corda.protocols.PartyRequestMessage
+import com.r3corda.protocols.ResolveTransactionsProtocol
 import java.io.InputStream
 import javax.annotation.concurrent.ThreadSafe
 
@@ -25,10 +30,21 @@ import javax.annotation.concurrent.ThreadSafe
  * Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.
  */
 @ThreadSafe
-class DataVendingService(net: MessagingService, private val storage: StorageService, networkMapCache: NetworkMapCache) : AbstractNodeService(net, networkMapCache) {
+// TODO:  I don't like that this needs ServiceHubInternal, but passing in a state machine breaks MockServices because
+//        the state machine isn't set when this is constructed. [NodeSchedulerService] has the same problem, and both
+//        should be fixed at the same time.
+class DataVendingService(net: MessagingService, private val services: ServiceHubInternal) : AbstractNodeService(net, services.networkMapCache) {
     companion object {
         val logger = loggerFor<DataVendingService>()
+
+        /** Topic for messages notifying a node of a new transaction */
+        val NOTIFY_TX_PROTOCOL_TOPIC = "platform.wallet.notify_tx"
     }
+
+    val storage = services.storageService
+
+    data class NotifyTxRequestMessage(val tx: SignedTransaction, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
+    data class NotifyTxResponseMessage(val accepted: Boolean)
 
     init {
         addMessageHandler(FetchTransactionsProtocol.TOPIC,
@@ -39,6 +55,30 @@ class DataVendingService(net: MessagingService, private val storage: StorageServ
                 { req: FetchDataProtocol.Request -> handleAttachmentRequest(req) },
                 { message, e -> logger.error("Failure processing data vending request.", e) }
         )
+        addMessageHandler(NOTIFY_TX_PROTOCOL_TOPIC,
+                { req: NotifyTxRequestMessage -> handleTXNotification(req) },
+                { message, e -> logger.error("Failure processing data vending request.", e) }
+        )
+    }
+
+    private fun handleTXNotification(req: NotifyTxRequestMessage): Unit {
+        // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
+        //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
+
+        // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
+        //       cash without from unknown parties?
+
+        services.startProtocol(NOTIFY_TX_PROTOCOL_TOPIC, ResolveTransactionsProtocol(req.tx, req.replyToParty))
+                .success {
+                    services.recordTransactions(req.tx)
+                    val resp = NotifyTxResponseMessage(true)
+                    val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC + "." + req.sessionID, resp.serialize().bits)
+                    net.send(msg, req.getReplyTo(services.networkMapCache))
+                }.failure {
+                    val resp = NotifyTxResponseMessage(false)
+                    val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC + "." + req.sessionID, resp.serialize().bits)
+                    net.send(msg, req.getReplyTo(services.networkMapCache))
+                }
     }
 
     private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {

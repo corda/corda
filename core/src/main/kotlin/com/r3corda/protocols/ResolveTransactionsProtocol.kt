@@ -33,10 +33,16 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     private var stx: SignedTransaction? = null
     private var wtx: WireTransaction? = null
 
+    /**
+     * Resolve the full history of a transaction and verify it with its dependencies.
+     */
     constructor(stx: SignedTransaction, otherSide: Party) : this(stx.tx, otherSide) {
         this.stx = stx
     }
 
+    /**
+     * Resolve the full history of a transaction and verify it with its dependencies.
+     */
     constructor(wtx: WireTransaction, otherSide: Party) : this(dependencyIDs(wtx), otherSide) {
         this.wtx = wtx
     }

@@ -71,6 +71,8 @@ class Wallet(val states: List<StateAndRef<ContractState>>) {
  * wallet service vends immutable snapshots of the current wallet for working with: if you build a transaction based
  * on a wallet that isn't current, be aware that it may end up being invalid if the states that were used have been
  * consumed by someone else first!
+ *
+ * Note that transactions we've seen are held by the storage service, not the wallet.
  */
 interface WalletService {
     /**
