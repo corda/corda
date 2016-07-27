@@ -77,7 +77,7 @@ abstract class RatePaymentEvent(date: LocalDate,
     // TODO : Fix below (use daycount convention for division, not hardcoded 360 etc)
     val dayCountFactor: BigDecimal get() = (BigDecimal(days).divide(BigDecimal(360.0), 8, RoundingMode.HALF_UP)).setScale(4, RoundingMode.HALF_UP)
 
-    open fun asCSV() = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},${notional},$rate,$flow"
+    open fun asCSV() = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},$notional,$rate,$flow"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -114,8 +114,7 @@ class FixedRatePaymentEvent(date: LocalDate,
         val CSVHeader = RatePaymentEvent.CSVHeader
     }
 
-    override val flow: Amount<Currency> get() =
-    Amount<Currency>(dayCountFactor.times(BigDecimal(notional.quantity)).times(rate.ratioUnit!!.value).toLong(), notional.token)
+    override val flow: Amount<Currency> get() = Amount(dayCountFactor.times(BigDecimal(notional.quantity)).times(rate.ratioUnit!!.value).toLong(), notional.token)
 
     override fun toString(): String =
             "FixedRatePaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate : $flow"
@@ -140,13 +139,13 @@ class FloatingRatePaymentEvent(date: LocalDate,
 
     override val flow: Amount<Currency> get() {
         // TODO: Should an uncalculated amount return a zero ? null ? etc.
-        val v = rate.ratioUnit?.value ?: return Amount<Currency>(0, notional.token)
-        return Amount<Currency>(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
+        val v = rate.ratioUnit?.value ?: return Amount(0, notional.token)
+        return Amount(dayCountFactor.times(BigDecimal(notional.quantity)).times(v).toLong(), notional.token)
     }
 
     override fun toString(): String = "FloatingPaymentEvent $accrualStartDate -> $accrualEndDate : $dayCountFactor : $days : $date : $notional : $rate (fix on $fixingDate): $flow"
 
-    override fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},${notional},$fixingDate,$rate,$flow"
+    override fun asCSV(): String = "$accrualStartDate,$accrualEndDate,$dayCountFactor,$days,$date,${notional.token},$notional,$fixingDate,$rate,$flow"
 
     /**
      * Used for making immutables.
@@ -450,7 +449,7 @@ class InterestRateSwap() : ClauseVerifier() {
 
     override val clauses: List<SingleClause> = listOf(Clause.Timestamped(), Clause.Group())
     override fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
-        = tx.commands.select<Commands>() + tx.commands.select<TimestampCommand>()
+            = tx.commands.select<Commands>() + tx.commands.select<TimestampCommand>()
 
     interface Clause {
         /**
@@ -498,8 +497,9 @@ class InterestRateSwap() : ClauseVerifier() {
             fun getFloatingLegPaymentsDifferences(payments1: Map<LocalDate, Event>, payments2: Map<LocalDate, Event>): List<Pair<LocalDate, Pair<FloatingRatePaymentEvent, FloatingRatePaymentEvent>>> {
                 val diff1 = payments1.filter { payments1[it.key] != payments2[it.key] }
                 val diff2 = payments2.filter { payments1[it.key] != payments2[it.key] }
-                val ret = (diff1.keys + diff2.keys).map { it to Pair(diff1.get(it) as FloatingRatePaymentEvent, diff2.get(it) as FloatingRatePaymentEvent) }
-                return ret
+                return (diff1.keys + diff2.keys).map {
+                    it to Pair(diff1[it] as FloatingRatePaymentEvent, diff2[it] as FloatingRatePaymentEvent)
+                }
             }
         }
 
@@ -513,6 +513,7 @@ class InterestRateSwap() : ClauseVerifier() {
                 // Group by Trade ID for in / out states
                 return tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
             }
+
             override val clauses: List<GroupClause<State, String>>
                 get() = listOf(Agree(), Fix(), Pay(), Mature())
         }
@@ -530,12 +531,11 @@ class InterestRateSwap() : ClauseVerifier() {
                 // derived as the correct notary
                 @Suppress("DEPRECATION")
                 val command = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
-                val time = command?.midpoint
-                if (time == null) throw IllegalArgumentException("must be timestamped")
-
-                return setOf(command!!)
+                        ?: throw IllegalArgumentException("must be timestamped")
+                return setOf(command)
             }
         }
+
         class Agree : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(Commands.Agree::class.java)
@@ -572,6 +572,7 @@ class InterestRateSwap() : ClauseVerifier() {
                 return setOf(command.value)
             }
         }
+
         class Fix : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(Commands.Fix::class.java)
@@ -618,6 +619,7 @@ class InterestRateSwap() : ClauseVerifier() {
                 return setOf(command.value)
             }
         }
+
         class Pay : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(Commands.Pay::class.java)
@@ -634,6 +636,7 @@ class InterestRateSwap() : ClauseVerifier() {
                 return setOf(command.value)
             }
         }
+
         class Mature : AbstractIRSClause() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(Commands.Mature::class.java)
@@ -732,9 +735,9 @@ class InterestRateSwap() : ClauseVerifier() {
         fun evaluateCalculation(businessDate: LocalDate, expression: Expression = calculation.expression): Any {
             // TODO: Jexl is purely for prototyping. It may be replaced
             // TODO: Whatever we do use must be secure and sandboxed
-            var jexl = JexlBuilder().create()
-            var expr = jexl.createExpression(expression.expr)
-            var jc = MapContext()
+            val jexl = JexlBuilder().create()
+            val expr = jexl.createExpression(expression.expr)
+            val jc = MapContext()
             jc.set("fixedLeg", fixedLeg)
             jc.set("floatingLeg", floatingLeg)
             jc.set("calculation", calculation)
@@ -783,12 +786,12 @@ class InterestRateSwap() : ClauseVerifier() {
                 floatingLeg.rollConvention,
                 endDate = floatingLeg.terminationDate)
 
-        var floatingLegPaymentSchedule: MutableMap<LocalDate, FloatingRatePaymentEvent> = HashMap()
+        val floatingLegPaymentSchedule: MutableMap<LocalDate, FloatingRatePaymentEvent> = HashMap()
         periodStartDate = floatingLeg.effectiveDate
 
         // Now create a schedule for the floating and fixes.
         for (periodEndDate in dates) {
-            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, floatingLeg.paymentDelay) 
+            val paymentDate = BusinessCalendar.getOffsetDate(periodEndDate, Frequency.Daily, floatingLeg.paymentDelay)
             val paymentEvent = FloatingRatePaymentEvent(
                     paymentDate,
                     periodStartDate,
@@ -817,6 +820,8 @@ class InterestRateSwap() : ClauseVerifier() {
             else -> calendar.moveBusinessDays(date, DateRollDirection.BACKWARD, fixingPeriodOffset)
         }
     }
+
+    // XXX: This generateFix method appears to be buggy, but the fixing code in general appears to have got messy after the clauses refactoring.
 
     // TODO: Replace with rates oracle
     fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Pair<LocalDate, Rate>) {
