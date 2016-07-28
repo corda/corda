@@ -146,18 +146,18 @@ class BillOfLadingAgreementTests {
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
             //There are multiple commands
-            this.`fails requirement`("List has more than one element.");
+            this.`fails with`("List has more than one element.");
         }
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
             timestamp(Instant.now())
             //There are no commands
-            this.`fails requirement`("Required ${BillOfLadingAgreement.Commands::class.qualifiedName} command");
+            this.`fails with`("Required ${BillOfLadingAgreement.Commands::class.qualifiedName} command");
         }
 
     }
@@ -166,24 +166,24 @@ class BillOfLadingAgreementTests {
     fun issueTests() {
         transaction {
             output { Bill }
-            arg(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.IssueBL() }
+            command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.IssueBL() }
             timestamp(Instant.now())
-            this.accepts();
+            this.verifies();
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.IssueBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.IssueBL() }
             timestamp(Instant.now())
-            this.`fails requirement`("there is no input state");
+            this.`fails with`("there is no input state");
         }
 
         transaction {
             output { Bill }
-            arg(BOB_PUBKEY) { BillOfLadingAgreement.Commands.IssueBL() }
+            command(BOB_PUBKEY) { BillOfLadingAgreement.Commands.IssueBL() }
             timestamp(Instant.now())
-            this.`fails requirement`("the transaction is signed by the carrier");
+            this.`fails with`("the transaction is signed by the carrier");
         }
 
     }
@@ -193,77 +193,77 @@ class BillOfLadingAgreementTests {
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
-            this.accepts();
+            this.verifies();
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             //There is no timestamp
-            this.`fails requirement`("must be timestamped");
+            this.`fails with`("must be timestamped");
         }
 
         transaction {
             input { Bill }
             input { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
             //There are two inputs
-            this.`fails requirement`("List has more than one element.");
+            this.`fails with`("List has more than one element.");
         }
 
         transaction {
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
             //There are no inputs
-            this.`fails requirement`("List is empty.");
+            this.`fails with`("List is empty.");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
             output { Bill }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
             //There are two outputs
-            this.`fails requirement`("List has more than one element.");
+            this.`fails with`("List has more than one element.");
         }
 
         transaction {
             input { Bill }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
             //There are no outputs
-            this.`fails requirement`("List is empty.");
+            this.`fails with`("List is empty.");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
-            this.`fails requirement`("the transaction is signed by the beneficiary");
+            this.`fails with`("the transaction is signed by the beneficiary");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE) }
-            arg(BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
-            this.`fails requirement`("the transaction is signed by the state object owner");
+            this.`fails with`("the transaction is signed by the state object owner");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, beneficiary = CHARLIE, props = pros.copy(nameOfVessel = "Svet")) }
-            arg(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
+            command(MEGA_CORP_PUBKEY, BOB_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             timestamp(Instant.now())
-            this.`fails requirement`("the bill of lading agreement properties are unchanged");
+            this.`fails with`("the bill of lading agreement properties are unchanged");
         }
 
     }
@@ -273,78 +273,78 @@ class BillOfLadingAgreementTests {
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
-            this.accepts();
+            this.verifies();
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             //There is no timestamp
-            this.`fails requirement`("must be timestamped");
+            this.`fails with`("must be timestamped");
         }
 
         transaction {
             input { Bill }
             input { Bill.copy(owner = BOB_PUBKEY) }
             output { Bill.copy(owner = CHARLIE_PUBKEY) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
             //There are two inputs
-            this.`fails requirement`("List has more than one element.");
+            this.`fails with`("List has more than one element.");
         }
 
         transaction {
             output { Bill.copy(owner = CHARLIE_PUBKEY) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
             //There are no inputs
-            this.`fails requirement`("List is empty.");
+            this.`fails with`("List is empty.");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY) }
             output { Bill.copy(owner = ALICE_PUBKEY) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
             //There are two outputs
-            this.`fails requirement`("List has more than one element.");
+            this.`fails with`("List has more than one element.");
         }
 
         transaction {
             input { Bill }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
             //There are no outputs
-            this.`fails requirement`("List is empty.");
+            this.`fails with`("List is empty.");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY) }
-            arg(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
-            this.`fails requirement`("the transaction is signed by the state object owner");
+            this.`fails with`("the transaction is signed by the state object owner");
         }
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY,beneficiary = CHARLIE) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
-            this.`fails requirement`("the beneficiary is unchanged");
+            this.`fails with`("the beneficiary is unchanged");
         }
 
 
         transaction {
             input { Bill }
             output { Bill.copy(owner = CHARLIE_PUBKEY, props = pros.copy(nameOfVessel = "Svet")) }
-            arg(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
+            command(MEGA_CORP_PUBKEY) { BillOfLadingAgreement.Commands.TransferPossession() }
             timestamp(Instant.now())
-            this.`fails requirement`("the bill of lading agreement properties are unchanged");
+            this.`fails with`("the bill of lading agreement properties are unchanged");
         }
 
     }
