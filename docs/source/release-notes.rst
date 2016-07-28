@@ -3,11 +3,63 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
-Unreleased
-----------
+Milestone 2
+-----------
+
+* Big improvements to the interest rate swap app:
+
+    * A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
+      the Corda API from the web.
+    * Simplifications to the way the demo is used from the command line.
+    * :doc:`Detailed documentation on how the contract works and can be used <contract-irs>` has been written.
+    * Better integration testing of the app.
 
 * Smart contracts have been redesigned around reusable components, referred to as "clauses". The cash, commercial paper
   and obligation contracts now share a common issue clause.
+* New code in the experimental module (note that this module is a place for work-in-progress code which has not yet gone
+  through code review and which may, in general, not even function correctly):
+
+    * Thanks to the prolific Sofus Mortensen @ Nordea Bank, an experimental generic contract DSL that is based on the famous
+      2001 "Composing contracts" paper has been added. We thank Sofus for this great and promising research, which is so
+      relevant in the wake of TheDAO hack.
+    * The contract code from the recent trade finance demos is now in experimental. This code comes thanks to a
+      collaboration of the members; all credit to:
+
+        * Mustafa Ozturk @ Natixis
+        * David Nee @ US Bank
+        * Johannes Albertsen @ Dankse Bank
+        * Rui Hu @ Nordea
+        * Daniele Barreca @ Unicredit
+        * Sukrit Handa @ Scotiabank
+        * Giuseppe Cardone @ Banco Intesa
+        * Robert Santiago @ BBVA
+
+* The usability of the command line demo programs has been improved.
+* All example code and existing contracts have been ported to use the new Java/Kotlin unit testing domain-specific
+  languages (DSLs) which make it easy to construct chains of transactions and verify them together. This cleans up
+  and unifies the previous ad-hoc set of similar DSLs. A tutorial on how to use it has been added to the documentation.
+  We believe this largely completes our testing story for now around smart contracts. Feedback from bank developers
+  during the Trade Finance project has indicated that the next thing to tackle is docs and usability improvements in
+  the protocols API.
+* Significant work done towards defining the "CorDapp" concept in code, with dynamic loading of API services and more to
+  come.
+* Inter-node communication now uses SSL/TLS and AMQP/1.0, albeit without all nodes self-signing at the moment. A real
+  PKI for the p2p network will come later.
+* Logging is now saved to files with log rotation provided by Log4J.
+
+API changes:
+
+* Some utility methods and extension functions that are specific to certain contract types have moved packages: just
+  delete the import lines that no longer work and let IntelliJ replace them with the correct package paths.
+* The ``arg`` method in the test DSL is now called ``command`` to be consistent with the rest of the data model.
+* The messaging APIs have changed somewhat to now use a new ``TopicSession`` object. These APIs will continue to change
+  in the upcoming releases.
+
+New documentation:
+
+* :doc:`contract-catalogue`
+* :doc:`contract-irs`
+* :doc:`tutorial-test-dsl`
 
 Milestone 1
 -----------

@@ -1,5 +1,5 @@
-The Interest Rate Swap Contract
-===============================
+Interest Rate Swaps
+===================
 
 
 The Interest Rate Swap (IRS) Contract (source: IRS.kt, IRSUtils.kt, IRSExport.kt) is a bilateral contract to implement a
