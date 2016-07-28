@@ -15,6 +15,10 @@ License
 -------
 See License.txt for details.
 
+Contributing
+-------
+See CONTRIBUTING.md for details.
+
 Documentation
 -------------
 - [Intel(R) SGX for Linux\* OS][1] project home page on [01.org](http://01.org)
