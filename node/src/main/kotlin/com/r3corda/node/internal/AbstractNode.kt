@@ -21,10 +21,7 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.api.APIServer
 import com.r3corda.node.services.NotaryChangeService
-import com.r3corda.node.services.api.AcceptsFileUpload
-import com.r3corda.node.services.api.CheckpointStorage
-import com.r3corda.node.services.api.MonitoringService
-import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.node.services.api.*
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.events.NodeSchedulerService
@@ -87,8 +84,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
     val services = object : ServiceHubInternal() {
-        override val networkService: MessagingService get() = net
-        override val networkMapCache: NetworkMapCache = InMemoryNetworkMapCache()
+        override val networkService: MessagingServiceInternal get() = net
+        override val networkMapCache: NetworkMapCache get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
         override val walletService: WalletService get() = wallet
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -122,7 +119,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeNotaryService: NotaryService? = null
     lateinit var identity: IdentityService
-    lateinit var net: MessagingService
+    lateinit var net: MessagingServiceInternal
+    lateinit var netMapCache: NetworkMapCache
     lateinit var api: APIServer
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
@@ -151,6 +149,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         storage = storageServices.first
         checkpointStorage = storageServices.second
         net = makeMessagingService()
+        netMapCache = InMemoryNetworkMapCache(net)
         wallet = NodeWalletService(services)
         makeInterestRatesOracleService()
         identity = makeIdentityService()
@@ -312,7 +311,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net.stop()
     }
 
-    protected abstract fun makeMessagingService(): MessagingService
+    protected abstract fun makeMessagingService(): MessagingServiceInternal
 
     protected abstract fun startMessagingService()
 

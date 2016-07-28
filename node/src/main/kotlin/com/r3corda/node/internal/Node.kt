@@ -8,6 +8,7 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
+import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.servlets.AttachmentDownloadServlet
@@ -72,7 +73,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
-    override fun makeMessagingService(): MessagingService = ArtemisMessagingService(dir, p2pAddr, configuration, serverThread)
+    override fun makeMessagingService(): MessagingServiceInternal = ArtemisMessagingService(dir, p2pAddr, configuration, serverThread)
 
     override fun startMessagingService() {
         // Start up the MQ service.

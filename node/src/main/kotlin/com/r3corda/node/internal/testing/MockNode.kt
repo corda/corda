@@ -12,6 +12,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
@@ -77,7 +78,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
 
-        override fun makeMessagingService(): MessagingService {
+        override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName).start().get()
         }

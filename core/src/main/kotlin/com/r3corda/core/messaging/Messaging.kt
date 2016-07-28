@@ -53,8 +53,6 @@ interface MessagingService {
      */
     fun send(message: Message, target: MessageRecipients)
 
-    fun stop()
-
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
      */
@@ -81,19 +79,6 @@ fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = 
 
 fun MessagingService.send(topic: String, payload: Any, to: MessageRecipients) {
     send(createMessage(topic, payload.serialize().bits), to)
-}
-
-/**
- * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
- * on the messaging service interface until you have successfully started up the system. One of these objects should
- * be the only way to obtain a reference to a [MessagingService]. Startup may be a slow process: some implementations
- * may let you cast the returned future to an object that lets you get status info.
- *
- * A specific implementation of the controller class will have extra features that let you customise it before starting
- * it up.
- */
-interface MessagingServiceBuilder<out T : MessagingService> {
-    fun start(): ListenableFuture<out T>
 }
 
 interface MessageHandlerRegistration

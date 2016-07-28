@@ -10,6 +10,8 @@ import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
+import com.r3corda.node.services.api.MessagingServiceBuilder
+import com.r3corda.node.services.api.MessagingServiceInternal
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -194,7 +196,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * An instance can be obtained by creating a builder and then using the start method.
      */
     @ThreadSafe
-    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), MessagingService {
+    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), MessagingServiceInternal {
+
         inner class Handler(val executor: Executor?, val topic: String,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
@@ -220,6 +223,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                     }
                 }
             }
+
+        override fun registerTrustedAddress(address: SingleMessageRecipient) {}
 
         override fun addMessageHandler(topic: String, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
             check(running)

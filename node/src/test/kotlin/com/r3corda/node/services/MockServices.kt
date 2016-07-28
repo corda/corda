@@ -3,13 +3,13 @@ package com.r3corda.node.services
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.testing.MOCK_IDENTITY_SERVICE
 import com.r3corda.node.serialization.NodeClock
+import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.network.MockNetworkMapCache
@@ -22,7 +22,7 @@ import java.time.Clock
 open class MockServices(
         customWallet: WalletService? = null,
         val keyManagement: KeyManagementService? = null,
-        val net: MessagingService? = null,
+        val net: MessagingServiceInternal? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         val storage: TxWritableStorageService? = MockStorageService(),
         val mapCache: NetworkMapCache? = MockNetworkMapCache(),
@@ -36,7 +36,7 @@ open class MockServices(
         get() = keyManagement ?: throw UnsupportedOperationException()
     override val identityService: IdentityService
         get() = identity ?: throw UnsupportedOperationException()
-    override val networkService: MessagingService
+    override val networkService: MessagingServiceInternal
         get() = net ?: throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache
         get() = mapCache ?: throw UnsupportedOperationException()
