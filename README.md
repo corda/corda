@@ -30,7 +30,7 @@ Build the Intel(R) SGX SDK and Intel(R) SGX PSW Package
 -------------------------------------------------------
 ###Prerequisites:
 - Ensure that you have the following required operating systems:  
-  Ubuntu\*-14.04-LTS 64bits
+  Ubuntu\* Desktop-14.04-LTS 64bits
 - Use the following command to install the required tools to build Intel(R) SGX SDK:  
 ```
   $ sudo apt-get install build-essential ocaml automake autoconf libtool
