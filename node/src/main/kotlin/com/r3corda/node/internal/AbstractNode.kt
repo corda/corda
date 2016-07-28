@@ -123,10 +123,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var api: APIServer
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
-    var customServices: List<Any> = emptyList()
-    inline fun <reified T: Any>getCustomService() : T {
-        return customServices.single{ x-> x is T } as T
-    }
+    val customServices: ArrayList<Any> = ArrayList()
+
+    /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
+    inline fun <reified T: Any> findService() = customServices.filterIsInstance<T>().single()
 
     var isPreviousCheckpointsPresent = false
         private set
@@ -168,8 +168,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         val tokenizableServices = mutableListOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler)
 
-        buildPluginServices(tokenizableServices)
-
+        customServices.clear()
+        customServices.addAll(buildPluginServices(tokenizableServices))
 
         smm = StateMachineManager(services,
                 listOf(tokenizableServices),
@@ -204,7 +204,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return ProtocolLogicRefFactory(protocolWhitelist)
     }
 
-    private fun buildPluginServices(tokenizableServices: MutableList<Any>) {
+    private fun buildPluginServices(tokenizableServices: MutableList<Any>): List<Any> {
         val pluginServices = pluginRegistries.flatMap { x -> x.servicePlugins }
         val serviceList = mutableListOf<Any>()
         for (serviceClass in pluginServices) {
@@ -215,7 +215,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 _servicesThatAcceptUploads += service
             }
         }
-        customServices = serviceList
+        return serviceList
     }
 
 
