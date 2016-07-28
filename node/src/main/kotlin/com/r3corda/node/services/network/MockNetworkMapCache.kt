@@ -9,7 +9,7 @@ import com.r3corda.core.node.NodeInfo
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache() : InMemoryNetworkMapCache() {
+class MockNetworkMapCache() : InMemoryNetworkMapCache(null) {
     data class MockAddress(val id: String): SingleMessageRecipient
 
     init {

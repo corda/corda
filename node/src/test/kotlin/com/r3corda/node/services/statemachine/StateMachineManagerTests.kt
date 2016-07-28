@@ -7,6 +7,7 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.node.services.MockServices
 import com.r3corda.node.services.api.Checkpoint
 import com.r3corda.node.services.api.CheckpointStorage
+import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.utilities.AffinityExecutor
 import org.assertj.core.api.Assertions.assertThat
@@ -45,7 +46,7 @@ class StateMachineManagerTests {
     }
 
     private fun createManager() = StateMachineManager(object : MockServices() {
-        override val networkService: MessagingService get() = network
+        override val networkService: MessagingServiceInternal get() = network
     }, emptyList(), checkpointStorage, AffinityExecutor.SAME_THREAD)
 
 

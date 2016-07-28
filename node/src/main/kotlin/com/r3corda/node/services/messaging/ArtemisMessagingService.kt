@@ -3,12 +3,15 @@ package com.r3corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.ThreadBox
+import com.r3corda.core.crypto.WhitelistTrustManagerProvider
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.newSecureRandom
+import com.r3corda.core.crypto.registerWhitelistTrustManager
 import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
@@ -57,12 +60,19 @@ import javax.annotation.concurrent.ThreadSafe
 class ArtemisMessagingService(val directory: Path,
                               val myHostPort: HostAndPort,
                               val config: NodeConfiguration,
-                              val defaultExecutor: Executor = RunOnCallerThread) : SingletonSerializeAsToken(), MessagingService {
+                              val defaultExecutor: Executor = RunOnCallerThread) : SingletonSerializeAsToken(), MessagingServiceInternal {
 
     // In future: can contain onion routing info, etc.
     private data class Address(val hostAndPort: HostAndPort) : SingleMessageRecipient
 
     companion object {
+        init {
+            // Until  https://issues.apache.org/jira/browse/ARTEMIS-656 is resolved gate acceptable
+            // certificate hosts manually.
+            registerWhitelistTrustManager()
+        }
+
+
         val log = loggerFor<ArtemisMessagingService>()
 
         // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
@@ -238,6 +248,12 @@ class ArtemisMessagingService(val directory: Path,
 
             running = false
         }
+    }
+
+    override fun registerTrustedAddress(address: SingleMessageRecipient) {
+        require(address is Address) { "Address is not an Artemis Message Address" }
+        val hostName = (address as Address).hostAndPort.hostText
+        WhitelistTrustManagerProvider.addWhitelistEntry(hostName)
     }
 
     override fun send(message: Message, target: MessageRecipients) {
