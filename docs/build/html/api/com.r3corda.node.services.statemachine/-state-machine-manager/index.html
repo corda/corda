@@ -34,12 +34,6 @@ TODO: Implement stub/skel classes that provide a basic RPC framework on top of t
 <tbody>
 <tr>
 <td>
-<a href="-fiber-request/index.html">FiberRequest</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">FiberRequest</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="-fiber-scheduler/index.html">FiberScheduler</a></td>
 <td>
 <code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">FiberScheduler</span></code></td>
@@ -72,7 +66,9 @@ Each such object represents an instantiation of a (two-party) protocol that has 
 <td>
 <a href="changes.html">changes</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">changes</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.node.utilities/-add-or-remove/index.html"><span class="identifier">AddOrRemove</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">changes</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.node.utilities/-add-or-remove/index.html"><span class="identifier">AddOrRemove</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Long</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>An observable that emits triples of the changing protocol, the type of change, and a process-specific ID number
+which may change across restarts.</p>
+</td>
 </tr>
 <tr>
 <td>

@@ -12,6 +12,15 @@
 <tbody>
 <tr>
 <td>
+<a href="-abstract-state-replacement-protocol/index.html">AbstractStateReplacementProtocol</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractStateReplacementProtocol</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Abstract protocol to be used for replacing one state with another, for example when changing the notary of a state.
+Notably this requires a one to one replacement of states, states cannot be split, merged or issued as part of these
+protocols.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-fetch-attachments-protocol/index.html">FetchAttachmentsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FetchAttachmentsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">&gt;</span></code><p>Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
@@ -30,6 +39,14 @@ attachments are saved to local storage automatically.</p>
 <a href="-fetch-transactions-protocol/index.html">FetchTransactionsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FetchTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-notary-change-protocol/index.html">NotaryChangeProtocol</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NotaryChangeProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-state-replacement-protocol/index.html"><span class="identifier">AbstractStateReplacementProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">&gt;</span></code><p>A protocol to be used for changing a states Notary. This is required since all input states to a transaction
+must point to the same notary.</p>
 </td>
 </tr>
 <tr>
@@ -79,6 +96,13 @@ fields such as replyTo and sessionID.</p>
 </tr>
 <tr>
 <td>
+<a href="-state-replacement-refused/index.html">StateReplacementRefused</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">StateReplacementRefused</span></code><p>Thrown when a participant refuses proposed the state replacement</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-two-party-deal-protocol/index.html">TwoPartyDealProtocol</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">TwoPartyDealProtocol</span></code><p>Classes for manipulating a two party deal or agreement.</p>
@@ -112,6 +136,12 @@ indeed valid.</p>
 <a href="-notary-exception/index.html">NotaryException</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">NotaryException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-state-replacement-exception/index.html">StateReplacementException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">StateReplacementException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
 </tr>
 </tbody>
 </table>

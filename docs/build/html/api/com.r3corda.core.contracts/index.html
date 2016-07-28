@@ -47,7 +47,7 @@ of how attachments are meant to be used include:</p>
 <td>
 <a href="-bilateral-nettable-state/index.html">BilateralNettableState</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">BilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Interface for state objects that support being netted with other state objects.</p>
+<code><span class="keyword">interface </span><span class="identifier">BilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">N</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Interface for state objects that support being netted with other state objects.</p>
 </td>
 </tr>
 <tr>
@@ -244,6 +244,13 @@ with the commands from the wire, and verified/looked up.</p>
 </tr>
 <tr>
 <td>
+<a href="-multilateral-nettable-state/index.html">MultilateralNettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MultilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code><p>Interface for state objects that support being netted with other state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-named-by-hash/index.html">NamedByHash</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">NamedByHash</span></code><p>Implemented by anything that can be named by a secure hash value (e.g. transactions, attachments).</p>
@@ -256,6 +263,12 @@ with the commands from the wire, and verified/looked up.</p>
 <code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">NetType</span></code><p>Enum for the types of netting that can be applied to state objects. Exact behaviour
 for each type of netting is left to the contract to determine.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-nettable-state.html">NettableState</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">NettableState</span><span class="symbol">&lt;</span><span class="identifier">N</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-bilateral-nettable-state/index.html"><span class="identifier">BilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">N</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="-multilateral-nettable-state/index.html"><span class="identifier">MultilateralNettableState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

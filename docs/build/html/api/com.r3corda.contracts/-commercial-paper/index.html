@@ -7,12 +7,18 @@
 <a href="../index.html">com.r3corda.contracts</a>&nbsp;/&nbsp;<a href=".">CommercialPaper</a><br/>
 <br/>
 <h1>CommercialPaper</h1>
-<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><br/>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><br/>
 <br/>
 <br/>
 <h3>Types</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-clauses/index.html">Clauses</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Clauses</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="-commands/index.html">Commands</a></td>
@@ -24,6 +30,12 @@
 <a href="-state/index.html">State</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-terms/index.html">Terms</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Terms</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -43,6 +55,12 @@
 <tbody>
 <tr>
 <td>
+<a href="clauses.html">clauses</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">clauses</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts.clauses/-single-clause.html"><span class="identifier">SingleClause</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="legal-contract-reference.html">legalContractReference</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">legalContractReference</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
@@ -56,9 +74,15 @@ the contracts contents).</p>
 <tbody>
 <tr>
 <td>
+<a href="extract-commands.html">extractCommands</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">extractCommands</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$extractCommands(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="generate-issue.html">generateIssue</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">generateIssue</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/faceValue">faceValue</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/maturityDate">maturityDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Returns a transaction that issues commercial paper, owned by the issuing parties key. Does not update
+<code><span class="keyword">fun </span><span class="identifier">generateIssue</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.PartyAndReference, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/issuance">issuance</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.PartyAndReference, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/faceValue">faceValue</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.PartyAndReference, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/maturityDate">maturityDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$generateIssue(com.r3corda.core.contracts.PartyAndReference, com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((java.util.Currency)))), java.time.Instant, com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Returns a transaction that issues commercial paper, owned by the issuing parties key. Does not update
 an existing transaction because you arent able to issue multiple pieces of CP in a single transaction
 at the moment: this restriction is not fundamental and may be lifted later.</p>
 </td>
@@ -79,11 +103,16 @@ to redeem the paper. We must therefore send enough money to the key that owns th
 value, and then ensure the paper is removed from the ledger.</p>
 </td>
 </tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
 <tr>
 <td>
-<a href="verify.html">verify</a></td>
+<a href="../../com.r3corda.core.contracts.clauses/-clause-verifier/verify.html">verify</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.CommercialPaper$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses.ClauseVerifier$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
 Must throw an exception if theres a problem that should prevent state transition. Takes a single object
 rather than an argument so that additional data can be added without breaking binary compatibility with
 existing contract code.</p>

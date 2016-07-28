@@ -103,8 +103,8 @@ take the registration object, unlike the callback to <a href="add-message-handle
 <td>
 <code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">MessagingService</span></code><p>This class implements the MessagingService API using Apache Artemis, the successor to their ActiveMQ product.
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
-with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
-as well.</p>
+with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
+as well for interop.</p>
 </td>
 </tr>
 <tr>

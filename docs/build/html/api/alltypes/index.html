@@ -39,6 +39,22 @@ if the terminal supports it. Otherwise it just prints out the name of the step w
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html">com.r3corda.contracts.clause.AbstractConserveAmount</a></td>
+<td>
+<p>Standardised clause for checking input/output balances of fungible assets. Requires that a
+Move command is provided, and errors if absent. Must be the last clause under a grouping clause;
+errors on no-match, ends on match.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-abstract-issue/index.html">com.r3corda.contracts.clause.AbstractIssue</a></td>
+<td>
+<p>Standard issue clause for contracts that issue fungible assets.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.internal/-abstract-node/index.html">com.r3corda.node.internal.AbstractNode</a></td>
 <td>
 <p>A base node implementation that can be customised either for production (with real implementations that do real
@@ -54,7 +70,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="../protocols/-abstract-state-replacement-protocol/index.html">protocols.AbstractStateReplacementProtocol</a></td>
+<a href="../com.r3corda.protocols/-abstract-state-replacement-protocol/index.html">com.r3corda.protocols.AbstractStateReplacementProtocol</a></td>
 <td>
 <p>Abstract protocol to be used for replacing one state with another, for example when changing the notary of a state.
 Notably this requires a one to one replacement of states, states cannot be split, merged or issued as part of these
@@ -135,8 +151,8 @@ properties loaded from the attachments.  And perhaps the authenticated user for 
 <td>
 <p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
-with each other using (by default) an Artemis specific protocol, but it supports other protocols like AQMP/1.0
-as well.</p>
+with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
+as well for interop.</p>
 </td>
 </tr>
 <tr>
@@ -191,6 +207,15 @@ file paths.</p>
 <td>
 <p>This whole class is really part of a demo just to initiate the agreement of a deal with a simple
 API call from a single party without bi-directional access to the database of offers etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-bilateral-net-state/index.html">com.r3corda.contracts.clause.BilateralNetState</a></td>
+<td>
+<p>Subset of state, containing the elements which must match for two obligation transactions to be nettable.
+If two obligation state objects produce equal bilateral net states, they are considered safe to net directly.
+Bilateral states are used in close-out netting.</p>
 </td>
 </tr>
 <tr>
@@ -321,6 +346,12 @@ that delegates to the supplied list of clauses.</p>
 <tr>
 <td>
 <a href="../com.r3corda.contracts/-commercial-paper/index.html">com.r3corda.contracts.CommercialPaper</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts/-commercial-paper-legacy/index.html">com.r3corda.contracts.CommercialPaperLegacy</a></td>
 <td>
 </td>
 </tr>
@@ -622,6 +653,12 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.services.statemachine/-fiber-request/index.html">com.r3corda.node.services.statemachine.FiberRequest</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-fix/index.html">com.r3corda.core.contracts.Fix</a></td>
 <td>
 <p>A <a href="../com.r3corda.core.contracts/-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
@@ -691,19 +728,12 @@ that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
 <td>
 <a href="../com.r3corda.contracts.asset/-fungible-asset/index.html">com.r3corda.contracts.asset.FungibleAsset</a></td>
 <td>
-<p>Superclass for contracts representing assets which are fungible, countable and issued by a specific party. States
-contain assets which are equivalent (such as cash of the same currency), so records of their existence can
-be merged or split as needed where the issuer is the same. For instance, dollars issued by the Fed are fungible and
-countable (in cents), barrels of West Texas crude are fungible and countable (oil from two small containers
-can be poured into one large container), shares of the same class in a specific company are fungible and
-countable, and so on.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.contracts.asset/-fungible-asset-state/index.html">com.r3corda.contracts.asset.FungibleAssetState</a></td>
-<td>
-<p>Common elements of cash contract states.</p>
+<p>Interface for contract states representing assets which are fungible, countable and issued by a
+specific party. States contain assets which are equivalent (such as cash of the same currency),
+so records of their existence can be merged or split as needed where the issuer is the same. For
+instance, dollars issued by the Fed are fungible and countable (in cents), barrels of West Texas
+crude are fungible and countable (oil from two small containers can be poured into one large
+container), shares of the same class in a specific company are fungible and countable, and so on.</p>
 </td>
 </tr>
 <tr>
@@ -1143,6 +1173,25 @@ This is not an interface because it is too lightweight to bother mocking out.</p
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.contracts.clause/-multilateral-net-state/index.html">com.r3corda.contracts.clause.MultilateralNetState</a></td>
+<td>
+<p>Subset of state, containing the elements which must match for two or more obligation transactions to be candidates
+for netting (this does not include the checks to enforce that everyones amounts received are the same at the end,
+which is handled under the verify() function).
+In comparison to <a href="../com.r3corda.contracts.clause/-bilateral-net-state/index.html">BilateralNetState</a>, this doesnt include the parties keys, as ensuring balances match on
+input and output is handled elsewhere.
+Used in cases where all parties (or their proxies) are signing, such as central clearing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts/-multilateral-nettable-state/index.html">com.r3corda.core.contracts.MultilateralNettableState</a></td>
+<td>
+<p>Interface for state objects that support being netted with other state objects.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.utilities/-mutable-clock/index.html">com.r3corda.node.utilities.MutableClock</a></td>
 <td>
 <p>An abstract class with helper methods for a type of Clock that might have its concept of "now"
@@ -1158,10 +1207,31 @@ adjusted externally.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.contracts.clause/-net-clause/index.html">com.r3corda.contracts.clause.NetClause</a></td>
+<td>
+<p>Clause for netting contract states. Currently only supports obligation contract.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-net-state/index.html">com.r3corda.contracts.clause.NetState</a></td>
+<td>
+<p>Common interface for the state subsets used when determining nettability of two or more states. Exposes the
+underlying issued thing.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-net-type/index.html">com.r3corda.core.contracts.NetType</a></td>
 <td>
 <p>Enum for the types of netting that can be applied to state objects. Exact behaviour
 for each type of netting is left to the contract to determine.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts/-nettable-state.html">com.r3corda.core.contracts.NettableState</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1194,6 +1264,14 @@ replace each other based on a serial number present in the change.</p>
 <td>
 <a href="../com.r3corda.core.serialization/-no-references-serializer/index.html">com.r3corda.core.serialization.NoReferencesSerializer</a></td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-no-zero-sized-outputs/index.html">com.r3corda.contracts.clause.NoZeroSizedOutputs</a></td>
+<td>
+<p>Clause for fungible asset contracts, which enforces that no output state should have
+a balance of zero.</p>
 </td>
 </tr>
 <tr>
@@ -1293,7 +1371,7 @@ trying to construct the set.</p>
 </tr>
 <tr>
 <td>
-<a href="../protocols/-notary-change-protocol/index.html">protocols.NotaryChangeProtocol</a></td>
+<a href="../com.r3corda.protocols/-notary-change-protocol/index.html">com.r3corda.protocols.NotaryChangeProtocol</a></td>
 <td>
 <p>A protocol to be used for changing a states Notary. This is required since all input states to a transaction
 must point to the same notary.</p>
@@ -1304,7 +1382,7 @@ must point to the same notary.</p>
 <a href="../com.r3corda.node.services/-notary-change-service/index.html">com.r3corda.node.services.NotaryChangeService</a></td>
 <td>
 <p>A service that monitors the network for requests for changing the notary of a state,
-and immediately runs the <a href="../protocols/-notary-change-protocol/index.html">NotaryChangeProtocol</a> if the auto-accept criteria are met.</p>
+and immediately runs the <a href="../com.r3corda.protocols/-notary-change-protocol/index.html">NotaryChangeProtocol</a> if the auto-accept criteria are met.</p>
 </td>
 </tr>
 <tr>
@@ -1873,13 +1951,13 @@ transaction defined the state and where in that transaction it was.</p>
 </tr>
 <tr>
 <td>
-<a href="../protocols/-state-replacement-exception/index.html">protocols.StateReplacementException</a></td>
+<a href="../com.r3corda.protocols/-state-replacement-exception/index.html">com.r3corda.protocols.StateReplacementException</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../protocols/-state-replacement-refused/index.html">protocols.StateReplacementRefused</a></td>
+<a href="../com.r3corda.protocols/-state-replacement-refused/index.html">com.r3corda.protocols.StateReplacementRefused</a></td>
 <td>
 <p>Thrown when a participant refuses proposed the state replacement</p>
 </td>
@@ -2220,6 +2298,30 @@ consumed by someone else first</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.crypto/-whitelist-trust-manager/index.html">com.r3corda.core.crypto.WhitelistTrustManager</a></td>
+<td>
+<p>Our TrustManager extension takes the standard certificate checker and first delegates all the
+chain checking to that. If everything is well formed we then simply add a check against our whitelist</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.crypto/-whitelist-trust-manager-provider/index.html">com.r3corda.core.crypto.WhitelistTrustManagerProvider</a></td>
+<td>
+<p>Custom Security Provider that forces the TrustManagerFactory to be our custom one.
+Also holds the identity of the original TrustManager algorithm so
+that we can delegate most of the checking to the proper Java code. We simply add some more checks.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.crypto/-whitelist-trust-manager-spi/index.html">com.r3corda.core.crypto.WhitelistTrustManagerSpi</a></td>
+<td>
+<p>Registered TrustManagerFactorySpi</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.network/-wire-node-registration/index.html">com.r3corda.node.services.network.WireNodeRegistration</a></td>
 <td>
 <p>A node registration and its signature as a pair.</p>
@@ -2244,6 +2346,12 @@ consumed by someone else first</p>
 <a href="../com.r3corda.core.node/-world-coordinate/index.html">com.r3corda.core.node.WorldCoordinate</a></td>
 <td>
 <p>A latitude/longitude pair.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.crypto/-x509-utilities/index.html">com.r3corda.core.crypto.X509Utilities</a></td>
+<td>
 </td>
 </tr>
 </tbody>

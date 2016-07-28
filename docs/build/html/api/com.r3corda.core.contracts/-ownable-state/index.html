@@ -71,9 +71,14 @@
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts.asset/-fungible-asset-state/index.html">FungibleAssetState</a></td>
+<a href="../../com.r3corda.contracts.asset/-fungible-asset/index.html">FungibleAsset</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">FungibleAssetState</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">, </span><span class="identifier">I</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OwnableState</span></code><p>Common elements of cash contract states.</p>
+<code><span class="keyword">interface </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OwnableState</span></code><p>Interface for contract states representing assets which are fungible, countable and issued by a
+specific party. States contain assets which are equivalent (such as cash of the same currency),
+so records of their existence can be merged or split as needed where the issuer is the same. For
+instance, dollars issued by the Fed are fungible and countable (in cents), barrels of West Texas
+crude are fungible and countable (oil from two small containers can be poured into one large
+container), shares of the same class in a specific company are fungible and countable, and so on.</p>
 </td>
 </tr>
 <tr>
@@ -85,6 +90,12 @@
 <tr>
 <td>
 <a href="../../com.r3corda.contracts/-commercial-paper/-state/index.html">State</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OwnableState</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts/-commercial-paper-legacy/-state/index.html">State</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">OwnableState</span></code></td>
 </tr>

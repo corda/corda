@@ -1,0 +1,113 @@
+<HTML>
+<HEAD>
+<title>FiberRequest.ExpectingResponse - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.node.services.statemachine</a>&nbsp;/&nbsp;<a href="../index.html">FiberRequest</a>&nbsp;/&nbsp;<a href=".">ExpectingResponse</a><br/>
+<br/>
+<h1>ExpectingResponse</h1>
+<code><span class="keyword">class </span><span class="identifier">ExpectingResponse</span><span class="symbol">&lt;</span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">FiberRequest</span></a></code><br/>
+<p>A fiber which is expecting a message response.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">ExpectingResponse</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$<init>(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any, java.lang.Class((com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$<init>(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any, java.lang.Class((com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse.R)))/destination">destination</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$<init>(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any, java.lang.Class((com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse.R)))/sessionIDForSend">sessionIDForSend</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$<init>(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any, java.lang.Class((com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse.R)))/sessionIDForReceive">sessionIDForReceive</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$<init>(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any, java.lang.Class((com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse.R)))/obj">obj</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$<init>(kotlin.String, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long, kotlin.Any, java.lang.Class((com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse.R)))/type">type</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><p>A fiber which is expecting a message response.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="response-type.html">responseType</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">responseType</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../destination.html">destination</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">destination</span><span class="symbol">: </span><a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../payload.html">payload</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">payload</span><span class="symbol">: </span><span class="identifier">Any</span><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../receive-topic.html">receiveTopic</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">receiveTopic</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../session-i-d-for-receive.html">sessionIDForReceive</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sessionIDForReceive</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../session-i-d-for-send.html">sessionIDForSend</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sessionIDForSend</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../stack-trace-in-case-of-problems.html">stackTraceInCaseOfProblems</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">stackTraceInCaseOfProblems</span><span class="symbol">: </span><a href="../../-stack-snapshot/index.html"><span class="identifier">StackSnapshot</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../topic.html">topic</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">topic</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="equals.html">equals</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">equals</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.statemachine.FiberRequest.ExpectingResponse$equals(kotlin.Any)/other">other</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="to-string.html">toString</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../hash-code.html">hashCode</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

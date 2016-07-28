@@ -36,5 +36,73 @@
 </tr>
 </tbody>
 </table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html">AbstractConserveAmount</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractConserveAmount</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.contracts.asset/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Standardised clause for checking input/output balances of fungible assets. Requires that a
+Move command is provided, and errors if absent. Must be the last clause under a grouping clause;
+errors on no-match, ends on match.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts/-commercial-paper/-clauses/-abstract-group-clause/index.html">AbstractGroupClause</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractGroupClause</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><a href="../com.r3corda.contracts/-commercial-paper/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.contracts/-commercial-paper/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts/-interest-rate-swap/-clause/-abstract-i-r-s-clause/index.html">AbstractIRSClause</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractIRSClause</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><a href="../com.r3corda.contracts/-interest-rate-swap/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">String</span><span class="symbol">&gt;</span></code><p>Common superclass for IRS contract clauses, which defines behaviour on match/no-match, and provides
+helper functions for the clauses.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-abstract-issue/index.html">AbstractIssue</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Standard issue clause for contracts that issue fungible assets.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.clause/-no-zero-sized-outputs/index.html">NoZeroSizedOutputs</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">NoZeroSizedOutputs</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.contracts.asset/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Clause for fungible asset contracts, which enforces that no output state should have
+a balance of zero.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.asset/-obligation/-clauses/-set-lifecycle/index.html">SetLifecycle</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">SetLifecycle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Obligation-specific clause for changing the lifecycle of one or more states.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.asset/-obligation/-clauses/-settle/index.html">Settle</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Settle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">GroupClause</span><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Obligation-specific clause for settling an outstanding obligation by witnessing
+change of ownership of other states to fulfil</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.asset/-obligation/-clauses/-verify-lifecycle/index.html">VerifyLifecycle</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">VerifyLifecycle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-single-clause.html"><span class="identifier">SingleClause</span></a><span class="symbol">, </span><span class="identifier">GroupClause</span><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.contracts.asset/-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Obligation-specific clause for verifying that all states are in
+normal lifecycle. In a group clause set, this must be run after
+any lifecycle change clause, which is the only clause that involve
+non-standard lifecycle states on input/output.</p>
+</td>
+</tr>
+</tbody>
+</table>
 </BODY>
 </HTML>

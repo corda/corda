@@ -70,5 +70,47 @@ existing contract code.</p>
 </tr>
 </tbody>
 </table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.asset/-cash/index.html">Cash</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
+(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
+the same transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts/-commercial-paper/index.html">CommercialPaper</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts/-interest-rate-swap/index.html">InterestRateSwap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
+It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
+Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
+This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.asset/-obligation/index.html">Obligation</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Obligation</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code><p>An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
+<a href="../../com.r3corda.contracts.asset/-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
+multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
+to be netted/merged, with settlement only for any remainder amount.</p>
+</td>
+</tr>
+</tbody>
+</table>
 </BODY>
 </HTML>

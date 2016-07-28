@@ -14,7 +14,13 @@
 <td>
 <a href="-commercial-paper/index.html">CommercialPaper</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-commercial-paper-legacy/index.html">CommercialPaperLegacy</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaperLegacy</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -57,7 +63,7 @@ If the rate is null returns a zero payment. // TODO: Is this the desired behavio
 <td>
 <a href="-interest-rate-swap/index.html">InterestRateSwap</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
 This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
 It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
 Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
@@ -139,6 +145,14 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 <h3>Properties</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-c-p_-l-e-g-a-c-y_-p-r-o-g-r-a-m_-i-d.html">CP_LEGACY_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">CP_LEGACY_PROGRAM_ID</span><span class="symbol">: </span><a href="-commercial-paper-legacy/index.html"><span class="identifier">CommercialPaperLegacy</span></a></code><p>Legacy version of <a href="-commercial-paper/index.html">CommercialPaper</a> that includes the full verification logic itself, rather than breaking it
+into clauses. This is here just as an example for the contract tutorial.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="-c-p_-p-r-o-g-r-a-m_-i-d.html">CP_PROGRAM_ID</a></td>

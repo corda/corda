@@ -7,14 +7,15 @@
 <a href="../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href=".">FungibleAsset</a><br/>
 <br/>
 <h1>FungibleAsset</h1>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><br/>
-<p>Superclass for contracts representing assets which are fungible, countable and issued by a specific party. States
-contain assets which are equivalent (such as cash of the same currency), so records of their existence can
-be merged or split as needed where the issuer is the same. For instance, dollars issued by the Fed are fungible and
-countable (in cents), barrels of West Texas crude are fungible and countable (oil from two small containers
-can be poured into one large container), shares of the same class in a specific company are fungible and
-countable, and so on.</p>
-<p>See <a href="../-cash/index.html">Cash</a> for an example subclass that implements currency.</p>
+<code><span class="keyword">interface </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a></code><br/>
+<p>Interface for contract states representing assets which are fungible, countable and issued by a
+specific party. States contain assets which are equivalent (such as cash of the same currency),
+so records of their existence can be merged or split as needed where the issuer is the same. For
+instance, dollars issued by the Fed are fungible and countable (in cents), barrels of West Texas
+crude are fungible and countable (oil from two small containers can be poured into one large
+container), shares of the same class in a specific company are fungible and countable, and so on.</p>
+<p>See <a href="../-cash/index.html">Cash</a> for an example contract that implements currency using state objects that implement
+this interface.</p>
 <br/>
 <br/>
 <h3>Parameters</h3>
@@ -32,41 +33,43 @@ countable, and so on.</p>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">Commands</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a></code></td>
 </tr>
-<tr>
-<td>
-<a href="-state/index.html">State</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-fungible-asset-state/index.html"><span class="identifier">FungibleAssetState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A state representing a cash claim against some party</p>
-</td>
-</tr>
 </tbody>
 </table>
-<h3>Constructors</h3>
+<h3>Properties</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="-init-.html">&lt;init&gt;</a></td>
+<a href="amount.html">amount</a></td>
 <td>
-<code><span class="identifier">FungibleAsset</span><span class="symbol">(</span><span class="symbol">)</span></code><p>Superclass for contracts representing assets which are fungible, countable and issued by a specific party. States
-contain assets which are equivalent (such as cash of the same currency), so records of their existence can
-be merged or split as needed where the issuer is the same. For instance, dollars issued by the Fed are fungible and
-countable (in cents), barrels of West Texas crude are fungible and countable (oil from two small containers
-can be poured into one large container), shares of the same class in a specific company are fungible and
-countable, and so on.</p>
-</td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">amount</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
-</tbody>
-</table>
-<h3>Inherited Properties</h3>
-<table>
-<tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.core.contracts/-contract/legal-contract-reference.html">legalContractReference</a></td>
+<a href="deposit.html">deposit</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">legalContractReference</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
-the contracts contents).</p>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">deposit</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a></code><p>Where the underlying asset backing this ledger entry can be found. The reference
+is only intended for use by the issuer, and is not intended to be meaningful to others.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="exit-keys.html">exitKeys</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="issuance-def.html">issuanceDef</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">issuanceDef</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="owner.html">owner</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">owner</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code><p>There must be a MoveCommand signed by this key to claim the amount</p>
 </td>
 </tr>
 </tbody>
@@ -76,9 +79,32 @@ the contracts contents).</p>
 <tbody>
 <tr>
 <td>
-<a href="verify.html">verify</a></td>
+<a href="move.html">move</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.FungibleAsset$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>This is the function EVERYONE runs</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">move</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.FungibleAsset$move(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((com.r3corda.contracts.asset.FungibleAsset.T)))), java.security.PublicKey)/newAmount">newAmount</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.asset.FungibleAsset$move(com.r3corda.core.contracts.Amount((com.r3corda.core.contracts.Issued((com.r3corda.contracts.asset.FungibleAsset.T)))), java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.contracts/-ownable-state/with-new-owner.html">withNewOwner</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">withNewOwner</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.OwnableState$withNewOwner(java.security.PublicKey)/newOwner">newOwner</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span></code><p>Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.contracts/hash.html">hash</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">.</span><span class="identifier">hash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a></code><p>Returns the SHA-256 hash of the serialised contents of this state (not cached)</p>
 </td>
 </tr>
 </tbody>
@@ -88,12 +114,18 @@ the contracts contents).</p>
 <tbody>
 <tr>
 <td>
-<a href="../-cash/index.html">Cash</a></td>
+<a href="../-cash/-state/index.html">State</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
-input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
-(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
-the same transaction.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><p>A state representing a cash claim against some party</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-obligation/-state/index.html">State</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">State</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">FungibleAsset</span><span class="symbol">&lt;</span><a href="../-obligation/-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="../../com.r3corda.core.contracts/-nettable-state.html"><span class="identifier">NettableState</span></a><span class="symbol">&lt;</span><a href="../-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.contracts.clause/-multilateral-net-state/index.html"><span class="identifier">MultilateralNetState</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>A state representing the obligation of one party (obligor) to deliver a specified number of
+units of an underlying asset (described as token.acceptableIssuedProducts) to the beneficiary
+no later than the specified time.</p>
 </td>
 </tr>
 </tbody>
