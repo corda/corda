@@ -18,6 +18,7 @@ object DataVending {
 
     class Plugin : CordaPluginRegistry {
         override val webApis: List<Class<*>> = emptyList()
+        override val staticServeDirs: Map<String, String> = emptyMap()
         override val requiredProtocols: Map<String, Set<String>> = emptyMap()
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }

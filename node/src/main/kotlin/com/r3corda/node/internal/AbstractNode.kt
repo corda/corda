@@ -21,9 +21,7 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.api.APIServer
-import com.r3corda.node.services.NotaryChangeService
 import com.r3corda.node.services.api.*
-import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
