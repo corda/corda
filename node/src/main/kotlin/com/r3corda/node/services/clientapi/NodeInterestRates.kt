@@ -102,7 +102,7 @@ object NodeInterestRates {
         class FixingServicePlugin : CordaPluginRegistry {
             override val webApis: List<Class<*>> = emptyList()
             override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
-
+            override val staticServeDirs: Map<String, String> = emptyMap()
         }
 
         // File upload support

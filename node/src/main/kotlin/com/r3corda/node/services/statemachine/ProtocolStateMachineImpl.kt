@@ -109,9 +109,10 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
             try {
                 suspendAction(with)
             } catch (t: Throwable) {
+                // Do not throw exception again - Quasar completely bins it.
                 logger.warn("Captured exception which was swallowed by Quasar", t)
-                // TODO to throw or not to throw, that is the question
-                throw t
+                actionOnEnd()
+                _resultFuture?.setException(t)
             }
         }
     }
