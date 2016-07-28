@@ -4,20 +4,20 @@ package com.r3corda.core.node
  * Implement this interface on a class advertised in a META-INF/services/com.r3corda.core.node.CordaPluginRegistry file
  * to extend a Corda node with additional application services.
  */
-interface CordaPluginRegistry {
+abstract class CordaPluginRegistry {
     /**
      * List of JAX-RS classes inside the contract jar. They are expected to have a single parameter constructor that takes a ServiceHub as input.
-     * These are listed as Class<*>, because they will be instantiated inside an AttachmentClassLoader so that subsequent protocols, contracts, etc
-     * will be running in the appropriate isolated context.
+     * These are listed as Class<*>, because in the future they will be instantiated inside a ClassLoader so that
+     * Cordapp code can be loaded dynamically.
      */
-    val webApis: List<Class<*>>
+    open val webApis: List<Class<*>> = emptyList()
 
     /**
      * Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
      * Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
      *  be specified with: javaClass.getResource("<folder-in-jar>").toExternalForm()
      */
-    val staticServeDirs: Map<String, String>
+    open val staticServeDirs: Map<String, String> = emptyMap()
 
     /**
      * A Map with an entry for each consumed protocol used by the webAPIs.
@@ -26,7 +26,7 @@ interface CordaPluginRegistry {
      * Standard java.lang.* and kotlin.* types do not need to be included explicitly.
      * This is used to extend the white listed protocols that can be initiated from the ServiceHub invokeProtocolAsync method.
      */
-    val requiredProtocols: Map<String, Set<String>>
+    open val requiredProtocols: Map<String, Set<String>> = emptyMap()
 
     /**
      * List of additional long lived services to be hosted within the node.
@@ -34,5 +34,5 @@ interface CordaPluginRegistry {
      * The ServiceHubInternal will be fully constructed before the plugin service is created and will
      * allow access to the protocol factory and protocol initiation entry points there.
      */
-    val servicePlugins: List<Class<*>>
+    open val servicePlugins: List<Class<*>> = emptyList()
 }

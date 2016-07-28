@@ -46,9 +46,7 @@ object NodeInterestRates {
     /**
      * Register the protocol that is used with the Fixing integration tests.
      */
-    class Plugin : CordaPluginRegistry {
-        override val webApis: List<Class<*>> = emptyList()
-        override val staticServeDirs: Map<String, String> = emptyMap()
+    class Plugin : CordaPluginRegistry() {
         override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
         override val servicePlugins: List<Class<*>> = listOf(NodeInterestRates.Service::class.java)
     }

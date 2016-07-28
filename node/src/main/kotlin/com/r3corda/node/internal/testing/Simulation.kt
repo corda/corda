@@ -117,7 +117,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
-                    getCustomService<NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
+                    findService<NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
                     return this
                 }
             }

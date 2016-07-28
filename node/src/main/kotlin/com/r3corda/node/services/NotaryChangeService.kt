@@ -9,10 +9,7 @@ import com.r3corda.protocols.NotaryChangeProtocol
 
 
 object NotaryChange {
-    class Plugin : CordaPluginRegistry {
-        override val webApis: List<Class<*>> = emptyList()
-        override val requiredProtocols: Map<String, Set<String>> = emptyMap()
-        override val staticServeDirs: Map<String, String> = emptyMap()
+    class Plugin : CordaPluginRegistry() {
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 

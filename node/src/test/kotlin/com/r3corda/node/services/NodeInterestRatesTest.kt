@@ -105,7 +105,7 @@ class NodeInterestRatesTest {
     fun network() {
         val net = MockNetwork()
         val (n1, n2) = net.createTwoNodes()
-        n2.getCustomService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
+        n2.findService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
 
         val tx = TransactionType.General.Builder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")

@@ -257,14 +257,13 @@ object CliParamsSpec {
     val help = parser.accepts("help", "Prints this help").forHelp()
 }
 
-class IRSDemoPluginRegistry : CordaPluginRegistry {
+class IRSDemoPluginRegistry : CordaPluginRegistry() {
     override val webApis: List<Class<*>> = listOf(InterestRateSwapAPI::class.java)
     override val staticServeDirs: Map<String, String> = mapOf("irsdemo" to javaClass.getResource("irswebdemo").toExternalForm())
     override val requiredProtocols: Map<String, Set<String>> = mapOf(
             Pair(AutoOfferProtocol.Requester::class.java.name, setOf(InterestRateSwap.State::class.java.name)),
             Pair(UpdateBusinessDayProtocol.Broadcast::class.java.name, setOf(java.time.LocalDate::class.java.name)),
             Pair(ExitServerProtocol.Broadcast::class.java.name, setOf(kotlin.Int::class.java.name)))
-    override val servicePlugins: List<Class<*>> = emptyList()
 }
 
 private class NotSetupException: Throwable {
