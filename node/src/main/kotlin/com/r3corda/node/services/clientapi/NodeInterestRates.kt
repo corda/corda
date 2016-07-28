@@ -13,9 +13,9 @@ import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.AcceptsFileUpload
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.FiberBox
 import com.r3corda.protocols.RatesFixProtocol
 import com.r3corda.protocols.ServiceRequestMessage
@@ -42,12 +42,21 @@ import javax.annotation.concurrent.ThreadSafe
  */
 object NodeInterestRates {
     object Type : ServiceType("corda.interest_rates")
+
+    /**
+     * Register the protocol that is used with the Fixing integration tests.
+     */
+    class Plugin : CordaPluginRegistry() {
+        override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
+        override val servicePlugins: List<Class<*>> = listOf(NodeInterestRates.Service::class.java)
+    }
+
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(node: AbstractNode) : AcceptsFileUpload, AbstractNodeService(node.services.networkService, node.services.networkMapCache) {
-        val ss = node.services.storageService
-        val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey, node.services.clock)
+    class Service(services: ServiceHubInternal) : AcceptsFileUpload, AbstractNodeService(services.networkService, services.networkMapCache) {
+        val ss = services.storageService
+        val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey, services.clock)
 
         private val logger = LoggerFactory.getLogger(Service::class.java)
 
@@ -65,7 +74,7 @@ object NodeInterestRates {
                              * Interest rates become available when they are uploaded via the web as per [DataUploadServlet],
                              * if they haven't already been uploaded that way.
                              */
-                            node.smm.add("fixing", FixQueryHandler(this, req as RatesFixProtocol.QueryRequest))
+                            services.startProtocol("fixing", FixQueryHandler(this, req as RatesFixProtocol.QueryRequest))
                             Unit
                         }
                     },
@@ -94,15 +103,6 @@ object NodeInterestRates {
                 progressTracker.currentStep = SENDING
                 send(request.replyToParty, request.sessionID, answers)
             }
-        }
-
-        /**
-         * Register the protocol that is used with the Fixing integration tests.
-         */
-        class FixingServicePlugin : CordaPluginRegistry {
-            override val webApis: List<Class<*>> = emptyList()
-            override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
-            override val staticServeDirs: Map<String, String> = emptyMap()
         }
 
         // File upload support

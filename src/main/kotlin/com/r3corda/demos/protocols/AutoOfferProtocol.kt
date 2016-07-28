@@ -6,11 +6,12 @@ import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.internal.Node
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.TwoPartyDealProtocol
 
 /**
@@ -27,7 +28,12 @@ object AutoOfferProtocol {
                                 val notary: Party,
                                 val otherSessionID: Long, val dealBeingOffered: DealState)
 
-    object Handler {
+    class Plugin: CordaPluginRegistry() {
+        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
+    }
+
+
+    class Service(services: ServiceHubInternal) {
 
         object RECEIVED : ProgressTracker.Step("Received offer")
         object DEALING : ProgressTracker.Step("Starting the deal protocol") {
@@ -46,16 +52,16 @@ object AutoOfferProtocol {
             }
         }
 
-        fun register(node: Node) {
-            node.net.addMessageHandler("$TOPIC.0") { msg, registration ->
+        init {
+            services.networkService.addMessageHandler("$TOPIC.0") { msg, registration ->
                 val progressTracker = tracker()
                 progressTracker.currentStep = RECEIVED
                 val autoOfferMessage = msg.data.deserialize<AutoOfferMessage>()
                 // Put the deal onto the ledger
                 progressTracker.currentStep = DEALING
                 val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, autoOfferMessage.notary,
-                        autoOfferMessage.dealBeingOffered, node.services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.getChildProgressTracker(DEALING)!!)
-                val future = node.smm.add("${TwoPartyDealProtocol.DEAL_TOPIC}.seller", seller)
+                        autoOfferMessage.dealBeingOffered, services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.getChildProgressTracker(DEALING)!!)
+                val future = services.startProtocol("${TwoPartyDealProtocol.DEAL_TOPIC}.seller", seller)
                 // This is required because we are doing child progress outside of a subprotocol.  In future, we should just wrap things like this in a protocol to avoid it
                 Futures.addCallback(future, Callback() {
                     seller.progressTracker.currentStep = ProgressTracker.DONE

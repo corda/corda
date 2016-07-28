@@ -17,7 +17,6 @@ import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
 import com.r3corda.node.internal.testing.MockNetwork
-import com.r3corda.node.services.FixingSessionInitiationHandler
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
@@ -258,7 +257,7 @@ object CliParamsSpec {
     val help = parser.accepts("help", "Prints this help").forHelp()
 }
 
-class IRSDemoPluginRegistry : CordaPluginRegistry {
+class IRSDemoPluginRegistry : CordaPluginRegistry() {
     override val webApis: List<Class<*>> = listOf(InterestRateSwapAPI::class.java)
     override val staticServeDirs: Map<String, String> = mapOf("irsdemo" to javaClass.getResource("irswebdemo").toExternalForm())
     override val requiredProtocols: Map<String, Set<String>> = mapOf(
@@ -332,11 +331,6 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
         val networkMap = createRecipient(cliParams.mapAddress)
 
         val node = startNode(cliParams, networkMap)
-        // Register handlers for the demo
-        AutoOfferProtocol.Handler.register(node)
-        UpdateBusinessDayProtocol.Handler.register(node)
-        ExitServerProtocol.Handler.register(node)
-        FixingSessionInitiationHandler.register(node)
 
         if (cliParams.uploadRates) {
             runUploadRates(cliParams.apiAddress)

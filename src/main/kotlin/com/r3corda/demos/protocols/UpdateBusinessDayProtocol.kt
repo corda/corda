@@ -1,12 +1,14 @@
 package com.r3corda.demos.protocols
 
 import co.paralleluniverse.fibers.Suspendable
+import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.demos.DemoClock
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.network.MockNetworkMapCache
 import java.time.LocalDate
 
@@ -19,12 +21,16 @@ object UpdateBusinessDayProtocol {
 
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
-    object Handler {
+    class Plugin: CordaPluginRegistry() {
+        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
+    }
 
-        fun register(node: Node) {
-            node.net.addMessageHandler("${TOPIC}.0") { msg, registration ->
+    class Service(services: ServiceHubInternal) {
+
+        init {
+            services.networkService.addMessageHandler("${TOPIC}.0") { msg, registration ->
                 val updateBusinessDayMessage = msg.data.deserialize<UpdateBusinessDayMessage>()
-                (node.services.clock as DemoClock).updateDate(updateBusinessDayMessage.date)
+                (services.clock as DemoClock).updateDate(updateBusinessDayMessage.date)
             }
         }
     }

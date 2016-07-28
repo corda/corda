@@ -17,12 +17,11 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.api.APIServer
-import com.r3corda.node.services.NotaryChangeService
 import com.r3corda.node.services.api.*
-import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
@@ -60,7 +59,7 @@ import java.util.*
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val networkMapService: NodeInfo?,
-                            val advertisedServices: Set<ServiceType>, val platformClock: Clock) {
+                            val advertisedServices: Set<ServiceType>, val platformClock: Clock): SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -124,6 +123,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var api: APIServer
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
+    val customServices: ArrayList<Any> = ArrayList()
+
+    /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
+    inline fun <reified T: Any> findService() = customServices.filterIsInstance<T>().single()
+
     var isPreviousCheckpointsPresent = false
         private set
 
@@ -151,7 +155,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net = makeMessagingService()
         netMapCache = InMemoryNetworkMapCache(net)
         wallet = NodeWalletService(services)
-        makeInterestRatesOracleService()
+
         identity = makeIdentityService()
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
@@ -159,17 +163,18 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
         api = APIServerImpl(this)
         scheduler = NodeSchedulerService(services)
-        smm = StateMachineManager(services,
-                listOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler, interestRatesService),
-                checkpointStorage,
-                serverThread)
 
         protocolLogicFactory = initialiseProtocolLogicFactory()
 
-        // This object doesn't need to be referenced from this class because it registers handlers on the network
-        // service and so that keeps it from being collected.
-        DataVendingService(net, services)
-        NotaryChangeService(net, smm, services.networkMapCache)
+        val tokenizableServices = mutableListOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler)
+
+        customServices.clear()
+        customServices.addAll(buildPluginServices(tokenizableServices))
+
+        smm = StateMachineManager(services,
+                listOf(tokenizableServices),
+                checkpointStorage,
+                serverThread)
 
         buildAdvertisedServices()
 
@@ -197,6 +202,20 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         }
 
         return ProtocolLogicRefFactory(protocolWhitelist)
+    }
+
+    private fun buildPluginServices(tokenizableServices: MutableList<Any>): List<Any> {
+        val pluginServices = pluginRegistries.flatMap { x -> x.servicePlugins }
+        val serviceList = mutableListOf<Any>()
+        for (serviceClass in pluginServices) {
+            val service = serviceClass.getConstructor(ServiceHubInternal::class.java).newInstance(services)
+            serviceList.add(service)
+            tokenizableServices.add(service)
+            if(service is AcceptsFileUpload) {
+                _servicesThatAcceptUploads += service
+            }
+        }
+        return serviceList
     }
 
 
@@ -278,14 +297,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
             else -> null
         }
-    }
-
-    lateinit var interestRatesService: NodeInterestRates.Service
-
-    open protected fun makeInterestRatesOracleService() {
-        // TODO: Once the service has data, automatically register with the network map service (once built).
-        interestRatesService = NodeInterestRates.Service(this)
-        _servicesThatAcceptUploads += interestRatesService
     }
 
     protected open fun makeIdentityService(): IdentityService {
