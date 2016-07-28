@@ -54,6 +54,9 @@ import java.util.*
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
  * I/O), or a mock implementation suitable for unit test environments.
+ *
+ * Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
+ * sweeping up the Node into the Kryo checkpoint serialization via any protocols holding a reference to ServiceHub.
  */
 // TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
