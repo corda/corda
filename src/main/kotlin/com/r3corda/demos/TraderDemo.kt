@@ -164,7 +164,7 @@ fun runTraderDemo(args: Array<String>): Int {
 
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
     // will contact the buyer and actually make something happen.
-    val amount = 1000.DOLLARS `issued by` cashIssuer.ref(0) // Note: "0" has to match the reference used in the wallet filler
+    val amount = 1000.DOLLARS
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
@@ -174,7 +174,7 @@ fun runTraderDemo(args: Array<String>): Int {
     return 0
 }
 
-private fun runSeller(node: Node, amount: Amount<Issued<Currency>>, otherSide: Party) {
+private fun runSeller(node: Node, amount: Amount<Currency>, otherSide: Party) {
     // The seller will sell some commercial paper to the buyer, who will pay with (self issued) cash.
     //
     // The CP sale transaction comes with a prospectus PDF, which will tag along for the ride in an
@@ -202,7 +202,7 @@ private fun runSeller(node: Node, amount: Amount<Issued<Currency>>, otherSide: P
     node.stop()
 }
 
-private fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
+private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
     // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
     val attachmentsPath = (node.storage.attachments as NodeAttachmentService).let {
@@ -236,7 +236,7 @@ val DEMO_TOPIC = "initiate.demo.trade"
 
 private class TraderDemoProtocolBuyer(val otherSide: Party,
                                       private val attachmentsPath: Path,
-                                      val amount: Amount<Issued<Currency>>,
+                                      val amount: Amount<Currency>,
                                       override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : ProtocolLogic<Unit>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
@@ -294,7 +294,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
 }
 
 private class TraderDemoProtocolSeller(val otherSide: Party,
-                                       val amount: Amount<Issued<Currency>>,
+                                       val amount: Amount<Currency>,
                                        override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<SignedTransaction>() {
     companion object {
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")

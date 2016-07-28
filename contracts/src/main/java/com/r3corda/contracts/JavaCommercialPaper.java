@@ -344,7 +344,7 @@ public class JavaCommercialPaper extends ClauseVerifier {
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
-        new Cash().generateSpend(tx, paper.getState().getData().getFaceValue(), paper.getState().getData().getOwner(), wallet);
+        new Cash().generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), wallet, null);
         tx.addInputState(paper);
         tx.addCommand(new Command(new Commands.Redeem(paper.getState().getNotary()), paper.getState().getData().getOwner()));
     }

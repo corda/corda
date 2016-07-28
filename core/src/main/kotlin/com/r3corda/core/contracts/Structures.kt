@@ -151,6 +151,13 @@ data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
 }
 
 /**
+ * Strips the issuer and returns an [Amount] of the raw token directly. This is useful when you are mixing code that
+ * cares about specific issuers with code that will accept any, or which is imposing issuer constraints via some
+ * other mechanism and the additional type safety is not wanted.
+ */
+fun <T> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
+
+/**
  * A contract state that can have a single owner.
  */
 interface OwnableState : ContractState {

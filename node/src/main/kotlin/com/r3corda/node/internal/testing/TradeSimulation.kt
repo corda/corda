@@ -8,8 +8,6 @@ import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.`issued by`
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.days
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
@@ -43,8 +41,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         }
         seller.services.recordTransactions(issuance)
 
-        val cashIssuerKey = generateKeyPair()
-        val amount = 1000.DOLLARS `issued by` Party("Big friendly bank", cashIssuerKey.public).ref(1)
+        val amount = 1000.DOLLARS
         val sessionID = random63BitValue()
         val buyerProtocol = TwoPartyTradeProtocol.Buyer(
                 seller.info.identity,
