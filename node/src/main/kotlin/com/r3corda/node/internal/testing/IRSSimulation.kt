@@ -15,7 +15,6 @@ import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.success
-import com.r3corda.node.services.FixingSessionInitiationHandler
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.utilities.JsonSupport
 import com.r3corda.protocols.TwoPartyDealProtocol
@@ -40,11 +39,6 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): ListenableFuture<Unit> {
-
-        // TODO: until we have general session initiation
-        FixingSessionInitiationHandler.register(banks[0])
-        FixingSessionInitiationHandler.register(banks[1])
-
         val future = SettableFuture.create<Unit>()
 
         nodeAKey = banks[0].keyManagement.freshKey()

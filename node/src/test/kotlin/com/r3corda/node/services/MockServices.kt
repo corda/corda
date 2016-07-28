@@ -14,7 +14,7 @@ import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.network.MockNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.persistence.DataVendingService
+import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.wallet.NodeWalletService
 import java.time.Clock
@@ -68,7 +68,7 @@ open class MockServices(
         if (net != null && storage != null) {
             // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
             // on the networking service, so that will keep it from being collected.
-            DataVendingService(net, this)
+            DataVending.Service(this)
         }
     }
 }

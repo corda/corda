@@ -17,7 +17,6 @@ import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
 import com.r3corda.node.internal.testing.MockNetwork
-import com.r3corda.node.services.FixingSessionInitiationHandler
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
@@ -265,6 +264,7 @@ class IRSDemoPluginRegistry : CordaPluginRegistry {
             Pair(AutoOfferProtocol.Requester::class.java.name, setOf(InterestRateSwap.State::class.java.name)),
             Pair(UpdateBusinessDayProtocol.Broadcast::class.java.name, setOf(java.time.LocalDate::class.java.name)),
             Pair(ExitServerProtocol.Broadcast::class.java.name, setOf(kotlin.Int::class.java.name)))
+    override val servicePlugins: List<Class<*>> = emptyList()
 }
 
 private class NotSetupException: Throwable {
@@ -332,11 +332,6 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
         val networkMap = createRecipient(cliParams.mapAddress)
 
         val node = startNode(cliParams, networkMap)
-        // Register handlers for the demo
-        AutoOfferProtocol.Handler.register(node)
-        UpdateBusinessDayProtocol.Handler.register(node)
-        ExitServerProtocol.Handler.register(node)
-        FixingSessionInitiationHandler.register(node)
 
         if (cliParams.uploadRates) {
             runUploadRates(cliParams.apiAddress)
