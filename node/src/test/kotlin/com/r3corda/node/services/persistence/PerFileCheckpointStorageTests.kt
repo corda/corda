@@ -96,7 +96,7 @@ class PerFileCheckpointStorageTests {
 
     private var checkpointCount = 1
     private val request = FiberRequest.ExpectingResponse("topic", null, random63BitValue(), random63BitValue(), null,
-            java.lang.String::class.java)
+            kotlin.String::class.java)
     private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)), request)
 
 }
