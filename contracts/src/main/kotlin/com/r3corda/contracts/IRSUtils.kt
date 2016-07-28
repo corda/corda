@@ -11,21 +11,10 @@ import java.util.*
 /**
  * A utility class to prevent the various mixups between percentages, decimals, bips etc.
  */
-open class RatioUnit(value: BigDecimal) { // TODO: Discuss this type
-    val value = value
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other?.javaClass != javaClass) return false
-
-        other as RatioUnit
-
-        if (value != other.value) return false
-
-        return true
-    }
-
+open class RatioUnit(val value: BigDecimal) { // TODO: Discuss this type
+    override fun equals(other: Any?) = (other as? RatioUnit)?.value == value
     override fun hashCode() = value.hashCode()
+    override fun toString() = value.toString()
 }
 
 /**
@@ -63,21 +52,16 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
      * for equality.
      */
     override fun hashCode() = ratioUnit?.hashCode() ?: 0
+    override fun toString() = ratioUnit.toString()
 }
 
 /**
  * A very basic subclass to represent a fixed rate.
  */
 class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
-
-    constructor(otherRate: Rate) : this(ratioUnit = otherRate.ratioUnit!!)
-
-    override fun toString(): String = "$ratioUnit"
-
     fun isPositive(): Boolean = ratioUnit!!.value > BigDecimal("0.0")
 
     override fun equals(other: Any?) = other?.javaClass == javaClass && super.equals(other)
-
     override fun hashCode() = super.hashCode()
 }
 
