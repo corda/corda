@@ -38,7 +38,7 @@ object DataVending {
     // TODO:  I don't like that this needs ServiceHubInternal, but passing in a state machine breaks MockServices because
 //        the state machine isn't set when this is constructed. [NodeSchedulerService] has the same problem, and both
 //        should be fixed at the same time.
-    class Service(net: MessagingService, private val services: ServiceHubInternal) : AbstractNodeService(net, services.networkMapCache) {
+    class Service(val services: ServiceHubInternal) : AbstractNodeService(services.networkService, services.networkMapCache) {
         companion object {
             val logger = loggerFor<DataVending.Service>()
 

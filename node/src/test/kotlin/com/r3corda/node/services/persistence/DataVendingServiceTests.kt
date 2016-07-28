@@ -2,23 +2,19 @@ package com.r3corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.core.testing.MEGA_CORP_KEY
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.TimeUnit
-import javax.annotation.Signed
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -38,12 +34,12 @@ class DataVendingServiceTests {
 
     class NotifyPSM(val server: NodeInfo, val tx: SignedTransaction)
     : ProtocolLogic<Boolean>() {
-        override val topic: String get() = DataVendingService.NOTIFY_TX_PROTOCOL_TOPIC
+        override val topic: String get() = DataVending.Service.NOTIFY_TX_PROTOCOL_TOPIC
         @Suspendable
         override fun call(): Boolean {
             val sessionID = random63BitValue()
-            val req = DataVendingService.NotifyTxRequestMessage(tx, serviceHub.storageService.myLegalIdentity, sessionID)
-            return sendAndReceive<DataVendingService.NotifyTxResponseMessage>(server.identity, 0, sessionID, req).validate { it.accepted }
+            val req = DataVending.Service.NotifyTxRequestMessage(tx, serviceHub.storageService.myLegalIdentity, sessionID)
+            return sendAndReceive<DataVending.Service.NotifyTxResponseMessage>(server.identity, 0, sessionID, req).validate { it.accepted }
         }
     }
 
@@ -62,7 +58,7 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction()
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
-        val notifyPsm = registerNode.smm.add(DataVendingService.NOTIFY_TX_PROTOCOL_TOPIC, NotifyPSM(walletServiceNode.info, tx))
+        val notifyPsm = registerNode.smm.add(DataVending.Service.NOTIFY_TX_PROTOCOL_TOPIC, NotifyPSM(walletServiceNode.info, tx))
 
         // Check it was accepted
         network.runNetwork()
@@ -93,7 +89,7 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction(false)
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
-        val notifyPsm = registerNode.smm.add(DataVendingService.NOTIFY_TX_PROTOCOL_TOPIC, NotifyPSM(walletServiceNode.info, tx))
+        val notifyPsm = registerNode.smm.add(DataVending.Service.NOTIFY_TX_PROTOCOL_TOPIC, NotifyPSM(walletServiceNode.info, tx))
 
         // Check it was accepted
         network.runNetwork()
