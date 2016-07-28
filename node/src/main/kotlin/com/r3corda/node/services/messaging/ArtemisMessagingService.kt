@@ -102,9 +102,9 @@ class ArtemisMessagingService(val directory: Path,
     private val mutex = ThreadBox(InnerState())
 
     /** A registration to handle messages of different types */
-    inner class Handler(val executor: Executor?,
-                        val topicSession: TopicSession,
-                        val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+    data class Handler(val executor: Executor?,
+                       val topicSession: TopicSession,
+                       val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
     private val handlers = CopyOnWriteArrayList<Handler>()
 
