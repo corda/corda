@@ -2,6 +2,8 @@
 package com.r3corda.contracts.testing
 
 import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
+import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.SignedTransaction
@@ -11,16 +13,14 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.DUMMY_NOTARY
+import java.security.PublicKey
 import java.util.*
 
 
 /**
  * Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
- * to the wallet. This is intended for unit tests.
- *
- * The cash is self issued with the current nodes identity, as fetched from the storage service. Thus it
- * would not be trusted by any sensible market participant and is effectively an IOU. If it had been issued by
- * the central bank, well ... that'd be a different story altogether.
+ * to the wallet. This is intended for unit tests. The cash is issued by [DUMMY_CASH_ISSUER] and owned by the legal
+ * identity key from the storage service.
  *
  * The service hub needs to provide at least a key management service and a storage service.
  *
@@ -31,23 +31,18 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atLeastThisManyStates: Int = 3,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
-                                    ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 0 }))): Wallet {
+                                    ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
+                                    ownedBy: PublicKey? = null): Wallet {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myIdentity = storageService.myLegalIdentity
-    val myKey = storageService.myLegalIdentityKey
+    val myKey: PublicKey = ownedBy ?: storageService.myLegalIdentityKey.public
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
-        // This line is what makes the cash self issued. We just use zero as our deposit reference: we don't need
-        // this field as there's no other database or source of truth we need to sync with.
-        val depositRef = myIdentity.ref(ref)
-
         val issuance = TransactionType.General.Builder()
-        val freshKey = keyManagementService.freshKey()
-        cash.generateIssue(issuance, Amount(pennies, Issued(depositRef, howMuch.token)), freshKey.public, notary)
-        issuance.signWith(myKey)
+        cash.generateIssue(issuance, Amount(pennies, Issued(DUMMY_CASH_ISSUER.copy(reference = ref), howMuch.token)), myKey, notary)
+        issuance.signWith(DUMMY_CASH_ISSUER_KEY)
 
         return@map issuance.toSignedTransaction(true)
     }
@@ -77,7 +72,7 @@ private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, m
             // Handle inexact rounding.
             amounts[i] = howMuch.quantity - filledSoFar
         }
-        check(amounts[i] >= 0) { amounts[i] }
+        check(amounts[i] >= 0) { "${amounts[i]} : $filledSoFar : $howMuch" }
     }
     check(amounts.sum() == howMuch.quantity)
     return amounts

@@ -1,14 +1,14 @@
 package com.r3corda.node.services
 
 import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.testing.MockKeyManagementService
+import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockStorageService
-import com.r3corda.core.serialization.OpaqueBytes
+import com.r3corda.core.node.services.testing.UnitTestServices
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.services.wallet.NodeWalletService
@@ -23,11 +23,22 @@ import kotlin.test.assertNull
 // TODO: Move this to the cash contract tests once mock services are further split up.
 
 class WalletWithCashTest {
-    val kms = MockKeyManagementService(ALICE_KEY)
+    lateinit var services: UnitTestServices
+    val wallet: WalletService get() = services.walletService
 
     @Before
     fun setUp() {
         BriefLogFormatter.loggingOn(NodeWalletService::class)
+        services = object : UnitTestServices() {
+            override val walletService: WalletService = NodeWalletService(this)
+
+            override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                for (stx in txs) {
+                    storageService.validatedTransactions.addTransaction(stx)
+                    walletService.notify(stx.tx)
+                }
+            }
+        }
     }
 
     @After
@@ -35,37 +46,24 @@ class WalletWithCashTest {
         BriefLogFormatter.loggingOff(NodeWalletService::class)
     }
 
-    fun make(): Pair<NodeWalletService, ServiceHub> {
-        val services = MockServices(keyManagement = kms)
-        return Pair(services.walletService as NodeWalletService, services)
-    }
-
     @Test
     fun splits() {
-        val (wallet, services) = make()
-        val ref = OpaqueBytes(ByteArray(1, {0}))
-
-        kms.nextKeys += Array(3) { ALICE_KEY }
         // Fix the PRNG so that we get the same splits every time.
-        services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ref)
+        services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
         val w = wallet.currentWallet
         assertEquals(3, w.states.size)
 
         val state = w.states[0].state.data as Cash.State
-        val myIdentity = services.storageService.myLegalIdentity
-        val myPartyRef = myIdentity.ref(ref)
-        assertEquals(29.01.DOLLARS `issued by` myPartyRef, state.amount)
-        assertEquals(ALICE_PUBKEY, state.owner)
+        assertEquals(29.01.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
+        assertEquals(services.key.public, state.owner)
 
-        assertEquals(35.38.DOLLARS `issued by` myPartyRef, (w.states[2].state.data as Cash.State).amount)
-        assertEquals(35.61.DOLLARS `issued by` myPartyRef, (w.states[1].state.data as Cash.State).amount)
+        assertEquals(35.38.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states[2].state.data as Cash.State).amount)
+        assertEquals(35.61.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states[1].state.data as Cash.State).amount)
     }
 
     @Test
     fun basics() {
-        val (wallet, services) = make()
-
         // A tx that sends us money.
         val freshKey = services.keyManagementService.freshKey()
         val usefulTX = TransactionType.General.Builder().apply {
@@ -102,10 +100,7 @@ class WalletWithCashTest {
 
     @Test
     fun branchingLinearStatesFails() {
-        val (wallet, services) = make()
-
         val freshKey = services.keyManagementService.freshKey()
-
         val thread = SecureHash.sha256("thread")
 
         // Issue a linear state
@@ -131,8 +126,6 @@ class WalletWithCashTest {
 
     @Test
     fun sequencingLinearStatesWorks() {
-        val (wallet, services) = make()
-
         val freshKey = services.keyManagementService.freshKey()
 
         val thread = SecureHash.sha256("thread")
