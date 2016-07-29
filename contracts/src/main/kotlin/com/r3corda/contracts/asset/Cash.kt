@@ -8,6 +8,7 @@ import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
+import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
 
@@ -334,7 +335,7 @@ infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = wi
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 
 /** A randomly generated key. */
-val DUMMY_CASH_ISSUER_KEY by lazy { generateKeyPair() }
+val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
 val DUMMY_CASH_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */

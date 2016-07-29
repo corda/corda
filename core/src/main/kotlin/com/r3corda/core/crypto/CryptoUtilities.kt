@@ -5,10 +5,14 @@ import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import net.i2p.crypto.eddsa.EdDSAEngine
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.KeyPairGenerator
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
 import java.security.*
-import net.i2p.crypto.eddsa.KeyPairGenerator as EddsaKeyPairGenerator
 
 fun newSecureRandom(): SecureRandom {
     if (System.getProperty("os.name") == "Linux") {
@@ -115,6 +119,7 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun toString() = "NULL_KEY"
 }
 
+// TODO: Clean up this duplication between Null and Dummy public key
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()
@@ -124,6 +129,9 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun hashCode(): Int = s.hashCode()
     override fun toString() = "PUBKEY[$s]"
 }
+
+/** A signature with a key and value of zero. Useful when you want a signature object that you know won't ever be used. */
+object NullSignature : DigitalSignature.WithKey(NullPublicKey, ByteArray(32))
 
 /** Utility to simplify the act of signing a byte array */
 fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
@@ -163,10 +171,24 @@ fun PublicKey.toStringShort(): String {
     } ?: toString()
 }
 
+fun Iterable<PublicKey>.toStringsShort(): String = map { it.toStringShort() }.toString()
+
 // Allow Kotlin destructuring:    val (private, public) = keypair
 operator fun KeyPair.component1() = this.private
-
 operator fun KeyPair.component2() = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
-fun generateKeyPair(): KeyPair = EddsaKeyPairGenerator().generateKeyPair()
+fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()
+
+/**
+ * Returns a keypair derived from the given private key entropy. This is useful for unit tests and other cases where
+ * you want hard-coded private keys.
+ */
+fun entropyToKeyPair(entropy: BigInteger): KeyPair {
+    val params = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+    val bits = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
+    val priv = EdDSAPrivateKeySpec(bits, params)
+    val pub = EdDSAPublicKeySpec(priv.a, params)
+    val key = KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+    return key
+}
