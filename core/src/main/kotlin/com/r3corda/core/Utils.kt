@@ -114,7 +114,9 @@ fun <T> Iterable<T>.noneOrSingle(): T? {
 // An alias that can sometimes make code clearer to read.
 val RunOnCallerThread = MoreExecutors.directExecutor()
 
-inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
+// TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
+// returns in the IRSSimulationTest. If not, commit the inline back.
+fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
     val now = System.currentTimeMillis()
     val r = body()
     val elapsed = System.currentTimeMillis() - now
