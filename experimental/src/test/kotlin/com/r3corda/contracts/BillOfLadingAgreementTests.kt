@@ -48,8 +48,9 @@ class BillOfLadingAgreementTests {
 
     @Test
     fun issueGenerationMethod() {
-        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary,Bill.props, notary = DUMMY_NOTARY).apply {
+        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary,Bill.props).apply {
             signWith(ALICE_KEY)
+            signWith(DUMMY_NOTARY_KEY)
         }
         val stx = ptx.toSignedTransaction()
         stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
