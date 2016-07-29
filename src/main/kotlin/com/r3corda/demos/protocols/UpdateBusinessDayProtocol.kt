@@ -3,6 +3,7 @@ package com.r3corda.demos.protocols
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
@@ -28,7 +29,7 @@ object UpdateBusinessDayProtocol {
     class Service(services: ServiceHubInternal) {
 
         init {
-            services.networkService.addMessageHandler("${TOPIC}.0") { msg, registration ->
+            services.networkService.addMessageHandler(TOPIC, DEFAULT_SESSION_ID) { msg, registration ->
                 val updateBusinessDayMessage = msg.data.deserialize<UpdateBusinessDayMessage>()
                 (services.clock as DemoClock).updateDate(updateBusinessDayMessage.date)
             }

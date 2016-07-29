@@ -75,11 +75,11 @@ object DataVending {
                     .success {
                         services.recordTransactions(req.tx)
                         val resp = NotifyTxResponseMessage(true)
-                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC + "." + req.sessionID, resp.serialize().bits)
+                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
                         net.send(msg, req.getReplyTo(services.networkMapCache))
                     }.failure {
                 val resp = NotifyTxResponseMessage(false)
-                val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC + "." + req.sessionID, resp.serialize().bits)
+                val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
                 net.send(msg, req.getReplyTo(services.networkMapCache))
             }
         }

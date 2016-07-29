@@ -10,9 +10,10 @@ import java.security.PrivateKey
 import java.security.PublicKey
 
 /**
- * Postfix for base topics when sending a request to a service.
+ * Session ID to use for services listening for the first message in a session (before a
+ * specific session ID has been established).
  */
-val TOPIC_DEFAULT_POSTFIX = ".0"
+val DEFAULT_SESSION_ID = 0L
 
 /**
  * This file defines various 'services' which are not currently fleshed out. A service is a module that provides

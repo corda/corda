@@ -1,10 +1,10 @@
 package com.r3corda.node.services
 
 import com.r3corda.core.messaging.Message
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.testing.freeLocalHostAndPort
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
-import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Rule
@@ -14,6 +14,9 @@ import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class ArtemisMessagingServiceTests {
 
@@ -48,11 +51,13 @@ class ArtemisMessagingServiceTests {
             receivedMessages.add(message)
         }
 
-        val message = messagingNetwork.createMessage(topic, "first msg".toByteArray())
+        val message = messagingNetwork.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
         messagingNetwork.send(message, messagingNetwork.myAddress)
 
-        assertThat(String(receivedMessages.poll(2, SECONDS).data)).isEqualTo("first msg")
-        assertThat(receivedMessages.poll(200, MILLISECONDS)).isNull()
+        val actual = receivedMessages.poll(2, SECONDS)
+        assertNotNull(actual)
+        assertEquals("first msg", String(actual.data))
+        assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
     private fun createMessagingService(): ArtemisMessagingService {

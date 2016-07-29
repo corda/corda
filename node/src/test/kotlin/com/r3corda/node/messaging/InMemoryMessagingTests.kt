@@ -4,6 +4,7 @@ package com.r3corda.node.messaging
 
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.TopicStringValidator
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.node.internal.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test
@@ -61,7 +62,7 @@ class InMemoryMessagingTests {
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
-        node1.net.send(node1.net.createMessage("test.topic", bits), node2.info.address)
+        node1.net.send(node1.net.createMessage("test.topic", DEFAULT_SESSION_ID, bits), node2.info.address)
 
         network.runNetwork(rounds = 1)
 
@@ -78,7 +79,7 @@ class InMemoryMessagingTests {
 
         var counter = 0
         listOf(node1, node2, node3).forEach { it.net.addMessageHandler { msg, registration -> counter++ } }
-        node1.net.send(node2.net.createMessage("test.topic", bits), network.messagingNetwork.everyoneOnline)
+        node1.net.send(node2.net.createMessage("test.topic", DEFAULT_SESSION_ID, bits), network.messagingNetwork.everyoneOnline)
         network.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
@@ -97,8 +98,8 @@ class InMemoryMessagingTests {
             received++
         }
 
-        val invalidMessage = node2.net.createMessage("invalid_message", ByteArray(0))
-        val validMessage = node2.net.createMessage("valid_message", ByteArray(0))
+        val invalidMessage = node2.net.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        val validMessage = node2.net.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
         node2.net.send(invalidMessage, node1.net.myAddress)
         network.runNetwork()
         assertEquals(0, received)

@@ -10,10 +10,10 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkCacheError
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.node.services.TOPIC_DEFAULT_POSTFIX
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
@@ -57,11 +57,11 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
-            net.addMessageHandler(NetworkMapService.PUSH_PROTOCOL_TOPIC + ".0", null) { message, r ->
+            net.addMessageHandler(NetworkMapService.PUSH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
                     val hash = SecureHash.sha256(req.wireReg.serialize().bits)
-                    val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC + TOPIC_DEFAULT_POSTFIX,
+                    val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID,
                             NetworkMapService.UpdateAcknowledge(hash, net.myAddress).serialize().bits)
                     net.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
@@ -81,13 +81,13 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
         val future = SettableFuture.create<Unit>()
-        net.runOnNextMessage("${NetworkMapService.FETCH_PROTOCOL_TOPIC}.$sessionID", MoreExecutors.directExecutor()) { message ->
+        net.runOnNextMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC, sessionID, MoreExecutors.directExecutor()) { message ->
             val resp = message.data.deserialize<NetworkMapService.FetchMapResponse>()
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             resp.nodes?.forEach { processRegistration(it) }
             future.set(Unit)
         }
-        net.send("${NetworkMapService.FETCH_PROTOCOL_TOPIC}.0", req, service.address)
+        net.send(NetworkMapService.FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, service.address)
 
         return future
     }
@@ -114,7 +114,7 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
         val future = SettableFuture.create<Unit>()
-        net.runOnNextMessage("${NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC}.$sessionID", MoreExecutors.directExecutor()) { message ->
+        net.runOnNextMessage(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC, sessionID, MoreExecutors.directExecutor()) { message ->
             val resp = message.data.deserialize<NetworkMapService.SubscribeResponse>()
             if (resp.confirmed) {
                 future.set(Unit)
@@ -122,7 +122,7 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
                 future.setException(NetworkCacheError.DeregistrationFailed())
             }
         }
-        net.send("${NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC}.0", req, service.address)
+        net.send(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, service.address)
 
         return future
     }
