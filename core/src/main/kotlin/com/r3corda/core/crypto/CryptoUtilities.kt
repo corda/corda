@@ -146,6 +146,11 @@ fun PrivateKey.signWithECDSA(bitsToSign: ByteArray, publicKey: PublicKey): Digit
     return DigitalSignature.WithKey(publicKey, signWithECDSA(bitsToSign).bits)
 }
 
+val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+
+fun String.toPublicKey(): PublicKey = EdDSAPublicKey(EdDSAPublicKeySpec(Base58.decode(this), ed25519Curve))
+fun PublicKey.toBase58String() = Base58.encode((this as EdDSAPublicKey).abyte)
+
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToSign, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
 fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA(bitsToSign.bits, party)
