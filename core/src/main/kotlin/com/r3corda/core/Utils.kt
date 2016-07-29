@@ -31,6 +31,11 @@ val Long.bd: BigDecimal get() = BigDecimal(this)
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
+/** Like the + operator but throws an exception in case of integer overflow. */
+infix fun Int.checkedAdd(b: Int) = Math.addExact(this, b)
+/** Like the + operator but throws an exception in case of integer overflow. */
+infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
+
 /**
  * Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to
  * avoid potential bugs where the value is used in a context where negative numbers are not expected.
