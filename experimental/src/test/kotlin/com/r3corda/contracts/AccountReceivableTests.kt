@@ -3,15 +3,14 @@ package com.r3corda.contracts
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.LedgerTransaction
 import com.r3corda.core.contracts.`issued by`
-import com.r3corda.core.contracts.verifyToLedgerTransaction
-import com.r3corda.core.node.services.testing.MockStorageService
+import com.r3corda.core.contracts.toLedgerTransaction
+import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
+import org.junit.Before
 import java.time.Instant
 import java.time.ZoneOffset
-//import java.util.*
-//import kotlin.test.fail
 
 /**
  * unit test cases that confirms the correct behavior of the AccountReceivable smart contract
@@ -28,6 +27,8 @@ class AccountReceivableTests {
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
 
     val notary = DUMMY_NOTARY
+
+    lateinit var services: MockServices
 
     val invoiceProperties = Invoice.InvoiceProperties(
             invoiceID = "123",
@@ -67,6 +68,11 @@ class AccountReceivableTests {
         PAST, FUTURE
     }
 
+    @Before
+    fun setup() {
+        services = MockServices()
+    }
+
     fun generateInvoiceIssueTxn(kind: WhatKind = WhatKind.FUTURE): LedgerTransaction {
         val genTX: LedgerTransaction = run {
             val pastProp = initialInvoiceState.props.copy(invoiceDate =
@@ -83,8 +89,9 @@ class AccountReceivableTests {
                 signWith(MINI_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }
-            gtx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)
+            gtx.toSignedTransaction().toLedgerTransaction(services)
         }
+        genTX.verify()
         return genTX
     }
 

@@ -257,11 +257,10 @@ class TwoPartyTradeProtocolTests {
             }
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
-            val issuer = MEGA_CORP.ref(1)
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public, issuer).second
+            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` issuer, notaryNode.info.identity, attachmentID).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, attachmentID).second
             val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -326,9 +325,11 @@ class TwoPartyTradeProtocolTests {
                         TxRecord.Get(bobsFakeCash[0].id),
                         // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
                         // Bob's transactions are valid, so she commits to the database
-                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!),
-                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!),
                         TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!),
+                        TxRecord.Get(bobsFakeCash[0].id),   // Verify
+                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!),
+                        TxRecord.Get(bobsFakeCash[0].id),   // Verify
+                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!),
                         // Now she verifies the transaction is contract-valid (not signature valid) which means
                         // looking up the states again.
                         TxRecord.Get(bobsFakeCash[1].id),
@@ -413,7 +414,7 @@ class TwoPartyTradeProtocolTests {
             wtxToSign: List<WireTransaction>,
             services: ServiceHub,
             vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList())
+        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList() + DUMMY_CASH_ISSUER_KEY)
         services.recordTransactions(signed)
         val validatedTransactions = services.storageService.validatedTransactions
         if (validatedTransactions is RecordingTransactionStorage) {
@@ -425,16 +426,15 @@ class TwoPartyTradeProtocolTests {
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
             owner: PublicKey = BOB_PUBKEY,
-            issuer: PartyAndReference = MEGA_CORP.ref(1)): Pair<Wallet, List<WireTransaction>> {
+            issuer: PartyAndReference = DUMMY_CASH_ISSUER): Pair<Wallet, List<WireTransaction>> {
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
-
         val eb1 = transaction {
             // Issued money to itself.
             output("elbonian money 1") { 800.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             output("elbonian money 2") { 1000.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             if (!withError)
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
+                command(DUMMY_CASH_ISSUER_KEY.public) { Cash.Commands.Issue() }
             timestamp(TEST_TX_TIME)
             if (withError) {
                 this.fails()

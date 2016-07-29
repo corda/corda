@@ -4,9 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.*
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -121,17 +119,17 @@ object TwoPartyTradeProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
-                    throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
+                val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
+                val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
+                if (missingSigs != expected)
+                    throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs [${myKeyPair.public.toStringShort()}, ${notaryNode.identity.owningKey.toStringShort()}]")
 
                 val wtx: WireTransaction = it.tx
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
-                checkDependencies(it)
-
-                // This verifies that the transaction is contract-valid, even though it is missing signatures.
-                serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments))
+                // Download and check all the things that this transaction depends on and verify it is contract-valid,
+                // even though it is missing signatures.
+                subProtocol(ResolveTransactionsProtocol(wtx, otherSide))
 
                 if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
                     throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
@@ -148,14 +146,6 @@ object TwoPartyTradeProtocol {
 
                 return it
             }
-        }
-
-        @Suspendable
-        private fun checkDependencies(stx: SignedTransaction) {
-            // Download and check all the transactions that this transaction depends on, but do not check this
-            // transaction itself.
-            val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
-            subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
         }
 
         open fun signWithOurKey(partialTX: SignedTransaction): DigitalSignature.WithKey {
@@ -206,7 +196,7 @@ object TwoPartyTradeProtocol {
             logger.trace { "Got signatures from seller, verifying ... " }
 
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
-            fullySigned.verify()
+            fullySigned.verifySignatures()
 
             logger.trace { "Signatures received are valid. Trade complete! :-)" }
             return fullySigned

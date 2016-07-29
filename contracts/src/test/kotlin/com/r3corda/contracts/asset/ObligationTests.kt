@@ -289,7 +289,7 @@ class ObligationTests {
         }.toSignedTransaction()
         assertEquals(1, tx.tx.outputs.size)
         assertEquals(stateAndRef.state.data.copy(lifecycle = Lifecycle.DEFAULTED), tx.tx.outputs[0].data)
-        assertTrue(tx.verify().isEmpty())
+        tx.verifySignatures()
 
         // And set it back
         stateAndRef = tx.tx.outRef<Obligation.State<Currency>>(0)
@@ -300,7 +300,7 @@ class ObligationTests {
         }.toSignedTransaction()
         assertEquals(1, tx.tx.outputs.size)
         assertEquals(stateAndRef.state.data.copy(lifecycle = Lifecycle.NORMAL), tx.tx.outputs[0].data)
-        assertTrue(tx.verify().isEmpty())
+        tx.verifySignatures()
     }
 
     /** Test generating a transaction to settle an obligation. */

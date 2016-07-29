@@ -7,7 +7,6 @@ import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.WalletService
-import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
@@ -70,7 +69,7 @@ class WalletWithCashTest {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction()
-        val myOutput = usefulTX.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments).outRef<Cash.State>(0)
+        val myOutput = usefulTX.toLedgerTransaction(services).outRef<Cash.State>(0)
 
         // A tx that spends our money.
         val spendTX = TransactionType.General.Builder().apply {
