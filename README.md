@@ -85,7 +85,7 @@ Install Intel(R) SGX SDK
 ------------------------
 ###Prerequisites
 - Ensure that you have the following required operating systems:  
-  Ubuntu\*-14.04-LTS
+  Ubuntu\* Desktop-14.04-LTS 64bits
 - Use the following command to install the required tool to use Intel(R) SGX SDK:
 ```  
   $ sudo apt-get install build-essential
@@ -130,7 +130,7 @@ Install Intel(R) SGX PSW
 ------------------------
 ###Prerequisites
 - Ensure that you have the following required operating systems:  
-  Ubuntu\*-14.04-LTS 64bits
+  Ubuntu\* Desktop-14.04-LTS 64bits
 - Ensure that you have the following required hardware:  
   6th Generation Intel(R) Core(TM) Processor (code named Skylake)
 - Configure the system with the **SGX hardware enabled** option and install SGX driver in advance.  
