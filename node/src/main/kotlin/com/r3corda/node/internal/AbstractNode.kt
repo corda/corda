@@ -273,11 +273,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val reg = NodeRegistration(info, networkMapSeq++, type, expires)
         val sessionID = random63BitValue()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
-        val message = net.createMessage("$REGISTER_PROTOCOL_TOPIC.0", request.serialize().bits)
+        val message = net.createMessage(REGISTER_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, request.serialize().bits)
         val future = SettableFuture.create<NetworkMapService.RegistrationResponse>()
-        val topic = "$REGISTER_PROTOCOL_TOPIC.$sessionID"
 
-        net.runOnNextMessage(topic, RunOnCallerThread) { message ->
+        net.runOnNextMessage(REGISTER_PROTOCOL_TOPIC, sessionID, RunOnCallerThread) { message ->
             future.set(message.data.deserialize())
         }
         net.send(message, serviceInfo.address)

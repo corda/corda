@@ -2,8 +2,9 @@ package com.r3corda.node.services.api
 
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.TopicSession
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.TOPIC_DEFAULT_POSTFIX
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
@@ -29,13 +30,13 @@ abstract class AbstractNodeService(val net: MessagingService, val networkMapCach
             addMessageHandler(topic: String,
                               crossinline handler: (Q) -> R,
                               crossinline exceptionConsumer: (Message, Exception) -> Unit) {
-        net.addMessageHandler(topic + TOPIC_DEFAULT_POSTFIX, null) { message, r ->
+        net.addMessageHandler(topic, DEFAULT_SESSION_ID, null) { message, r ->
             try {
                 val request = message.data.deserialize<Q>()
                 val response = handler(request)
                 // If the return type R is Unit, then do not send a response
                 if (response.javaClass != Unit.javaClass) {
-                    val msg = net.createMessage("$topic.${request.sessionID}", response.serialize().bits)
+                    val msg = net.createMessage(topic, request.sessionID, response.serialize().bits)
                     net.send(msg, request.getReplyTo(networkMapCache))
                 }
             } catch(e: Exception) {

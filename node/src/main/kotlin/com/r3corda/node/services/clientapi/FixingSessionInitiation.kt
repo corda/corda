@@ -1,6 +1,7 @@
 package com.r3corda.node.services.clientapi
 
 import com.r3corda.core.node.CordaPluginRegistry
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.api.ServiceHubInternal
@@ -19,7 +20,7 @@ object FixingSessionInitiation {
 
     class Service(services: ServiceHubInternal) {
         init {
-            services.networkService.addMessageHandler("${TwoPartyDealProtocol.FIX_INITIATE_TOPIC}.0") { msg, registration ->
+            services.networkService.addMessageHandler(TwoPartyDealProtocol.FIX_INITIATE_TOPIC, DEFAULT_SESSION_ID) { msg, registration ->
                 val initiation = msg.data.deserialize<TwoPartyDealProtocol.FixingSessionInitiation>()
                 val protocol = TwoPartyDealProtocol.Fixer(initiation)
                 services.startProtocol("fixings", protocol)

@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.DealState
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.CordaPluginRegistry
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
@@ -53,7 +54,7 @@ object AutoOfferProtocol {
         }
 
         init {
-            services.networkService.addMessageHandler("$TOPIC.0") { msg, registration ->
+            services.networkService.addMessageHandler(TOPIC, DEFAULT_SESSION_ID) { msg, registration ->
                 val progressTracker = tracker()
                 progressTracker.currentStep = RECEIVED
                 val autoOfferMessage = msg.data.deserialize<AutoOfferMessage>()

@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.testing.DUMMY_NOTARY
@@ -39,7 +40,7 @@ class DataVendingServiceTests {
         override fun call(): Boolean {
             val sessionID = random63BitValue()
             val req = DataVending.Service.NotifyTxRequestMessage(tx, serviceHub.storageService.myLegalIdentity, sessionID)
-            return sendAndReceive<DataVending.Service.NotifyTxResponseMessage>(server.identity, 0, sessionID, req).validate { it.accepted }
+            return sendAndReceive<DataVending.Service.NotifyTxResponseMessage>(server.identity, DEFAULT_SESSION_ID, sessionID, req).validate { it.accepted }
         }
     }
 

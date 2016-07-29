@@ -7,6 +7,7 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
@@ -157,7 +158,7 @@ object TwoPartyDealProtocol {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
                 for (regulator in regulators) {
-                    send(regulator.identity, 0, fullySigned)
+                    send(regulator.identity, DEFAULT_SESSION_ID, fullySigned)
                 }
             }
 
@@ -461,7 +462,7 @@ object TwoPartyDealProtocol {
                 val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.storageService.myLegalIdentity, timeout)
 
                 // Send initiation to other side to launch one side of the fixing protocol (the Fixer).
-                send(sortedParties[1], 0, initation)
+                send(sortedParties[1], DEFAULT_SESSION_ID, initation)
 
                 // Then start the other side of the fixing protocol.
                 val protocol = Floater(ref, sessionID)

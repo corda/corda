@@ -13,6 +13,7 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.days
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -217,7 +218,7 @@ private fun runBuyer(node: Node, amount: Amount<Issued<Currency>>) {
     // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
     //
     // As the seller initiates the two-party trade protocol, here, we will be the buyer.
-    node.services.networkService.addMessageHandler("$DEMO_TOPIC.0") { message, registration ->
+    node.services.networkService.addMessageHandler(DEMO_TOPIC, DEFAULT_SESSION_ID) { message, registration ->
         // We use a simple scenario-specific wrapper protocol to make things happen.
         val otherSide = message.data.deserialize<Party>()
         val buyer = TraderDemoProtocolBuyer(otherSide, attachmentsPath, amount)

@@ -1,6 +1,7 @@
 package com.r3corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.serialization.DeserializeAsKotlinObjectDef
 import com.r3corda.core.serialization.serialize
 import java.time.Instant
@@ -22,7 +23,7 @@ import javax.annotation.concurrent.ThreadSafe
 interface MessagingService {
     /**
      * The provided function will be invoked for each received message whose topic matches the given string, on the given
-     * executor. The topic can be the empty string to match all messages.
+     * executor.
      *
      * If no executor is received then the callback will run on threads provided by the messaging service, and the
      * callback is expected to be thread safe as a result.
@@ -30,8 +31,28 @@ interface MessagingService {
      * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
      * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
      * itself and yet addMessageHandler hasn't returned the handle yet.
+     *
+     * @param topic identifier for the general subject of the message, for example "platform.network_map.fetch".
+     * The topic can be the empty string to match all messages (session ID must be [DEFAULT_SESSION_ID]).
+     * @param sessionID identifier for the session the message is part of. For services listening before
+     * a session is established, use [DEFAULT_SESSION_ID].
      */
-    fun addMessageHandler(topic: String = "", executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+    fun addMessageHandler(topic: String = "", sessionID: Long = DEFAULT_SESSION_ID, executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+
+    /**
+     * The provided function will be invoked for each received message whose topic and session matches, on the
+     * given executor.
+     *
+     * If no executor is received then the callback will run on threads provided by the messaging service, and the
+     * callback is expected to be thread safe as a result.
+     *
+     * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
+     * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
+     * itself and yet addMessageHandler hasn't returned the handle yet.
+     *
+     * @param topicSession identifier for the topic and session to listen for messages arriving on.
+     */
+    fun addMessageHandler(topicSession: TopicSession, executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
 
     /**
      * Removes a handler given the object returned from [addMessageHandler]. The callback will no longer be invoked once
@@ -55,33 +76,80 @@ interface MessagingService {
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
+     *
+     * @param topic identifier for the general subject of the message, for example "platform.network_map.fetch".
+     * Must not be blank.
+     * @param sessionID identifier for the session the message is part of. For messages sent to services before the
+     * construction of a session, use [DEFAULT_SESSION_ID].
      */
-    fun createMessage(topic: String, data: ByteArray): Message
+    fun createMessage(topic: String, sessionID: Long = DEFAULT_SESSION_ID, data: ByteArray): Message
+
+    /**
+     * Returns an initialised [Message] with the current time, etc, already filled in.
+     *
+     * @param topicSession identifier for the topic and session the message is sent to.
+     */
+    fun createMessage(topicSession: TopicSession, data: ByteArray): Message
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
 }
 
 /**
- * Registers a handler for the given topic that runs the given callback with the message and then removes itself. This
- * is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback doesn't
- * take the registration object, unlike the callback to [MessagingService.addMessageHandler].
+ * Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
+ * itself. This is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback
+ * doesn't take the registration object, unlike the callback to [MessagingService.addMessageHandler], as the handler is
+ * automatically deregistered before the callback runs.
+ *
+ * @param topic identifier for the general subject of the message, for example "platform.network_map.fetch".
+ * The topic can be the empty string to match all messages (session ID must be [DEFAULT_SESSION_ID]).
+ * @param sessionID identifier for the session the message is part of. For services listening before
+ * a session is established, use [DEFAULT_SESSION_ID].
  */
-fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = null, callback: (Message) -> Unit) {
+fun MessagingService.runOnNextMessage(topic: String, sessionID: Long, executor: Executor? = null, callback: (Message) -> Unit)
+    = runOnNextMessage(TopicSession(topic, sessionID), executor, callback)
+
+/**
+ * Registers a handler for the given topic and session that runs the given callback with the message and then removes
+ * itself. This is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback
+ * doesn't take the registration object, unlike the callback to [MessagingService.addMessageHandler].
+ *
+ * @param topicSession identifier for the topic and session to listen for messages arriving on.
+ */
+fun MessagingService.runOnNextMessage(topicSession: TopicSession, executor: Executor? = null, callback: (Message) -> Unit) {
     val consumed = AtomicBoolean()
-    addMessageHandler(topic, executor) { msg, reg ->
+    addMessageHandler(topicSession, executor) { msg, reg ->
         removeMessageHandler(reg)
         check(!consumed.getAndSet(true)) { "Called more than once" }
-        check(msg.topic == topic) { "Topic mismatch: ${msg.topic} vs $topic" }
+        check(msg.topicSession == topicSession) { "Topic/session mismatch: ${msg.topicSession} vs $topicSession" }
         callback(msg)
     }
 }
 
-fun MessagingService.send(topic: String, payload: Any, to: MessageRecipients) {
-    send(createMessage(topic, payload.serialize().bits), to)
-}
+fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients)
+    = send(TopicSession(topic, sessionID), payload, to)
+
+fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients)
+    = send(createMessage(topicSession, payload.serialize().bits), to)
 
 interface MessageHandlerRegistration
+
+/**
+ * An identifier for the endpoint [MessagingService] message handlers listen at.
+ *
+ * @param topic identifier for the general subject of the message, for example "platform.network_map.fetch".
+ * The topic can be the empty string to match all messages (session ID must be [DEFAULT_SESSION_ID]).
+ * @param sessionID identifier for the session the message is part of. For services listening before
+ * a session is established, use [DEFAULT_SESSION_ID].
+ */
+data class TopicSession(val topic: String, val sessionID: Long = DEFAULT_SESSION_ID) {
+    companion object {
+        val Blank = TopicSession("", DEFAULT_SESSION_ID)
+    }
+    fun isBlank() = topic.isBlank() && sessionID == DEFAULT_SESSION_ID
+
+    override fun toString(): String = "${topic}.${sessionID}"
+}
 
 /**
  * A message is defined, at this level, to be a (topic, timestamp, byte arrays) triple, where the topic is a string in
@@ -94,7 +162,7 @@ interface MessageHandlerRegistration
  * the timestamp field they probably will be, even if an implementation just uses a hash prefix as the message id.
  */
 interface Message {
-    val topic: String
+    val topicSession: TopicSession
     val data: ByteArray
     val debugTimestamp: Instant
     val debugMessageID: String

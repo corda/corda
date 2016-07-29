@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.abbreviate
+import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
@@ -124,7 +125,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
         when (checkpoint.request) {
             is FiberRequest.ExpectingResponse<*> -> {
-                val topic = checkpoint.request.receiveTopic
+                val topic = checkpoint.request.receiveTopicSession
                 val awaitingPayloadType = checkpoint.request.responseType
                 fiber.logger.info("Restored ${fiber.logic} - it was previously waiting for message of type ${awaitingPayloadType.name} on topic $topic")
                 iterateOnResponse(fiber, awaitingPayloadType, checkpoint.serialisedFiber, checkpoint.request) {
@@ -179,9 +180,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         return createKryo(serializer.kryo)
     }
 
-    private fun logError(e: Throwable, payload: Any?, topic: String?, psm: ProtocolStateMachineImpl<*>) {
+    private fun logError(e: Throwable, payload: Any?, topicSession: TopicSession?, psm: ProtocolStateMachineImpl<*>) {
         psm.logger.error("Protocol state machine ${psm.javaClass.name} threw '${Throwables.getRootCause(e)}' " +
-                "when handling a message of type ${payload?.javaClass?.name} on topic $topic")
+                "when handling a message of type ${payload?.javaClass?.name} on queue $topicSession")
         if (psm.logger.isTraceEnabled) {
             val s = StringWriter()
             Throwables.getRootCause(e).printStackTrace(PrintWriter(s))
@@ -265,12 +266,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
             }
         }
         // If a non-null payload to send was provided, send it now.
+        val queueID = TopicSession(request.topic, request.sessionIDForSend)
         request.payload?.let {
-            val topic = "${request.topic}.${request.sessionIDForSend}"
-            psm.logger.trace { "Sending message of type ${it.javaClass.name} using topic $topic to ${request.destination} (${it.toString().abbreviate(50)})" }
+            psm.logger.trace { "Sending message of type ${it.javaClass.name} using queue $queueID to ${request.destination} (${it.toString().abbreviate(50)})" }
             val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination!!.name)
             requireNotNull(node) { "Don't know about ${request.destination}" }
-            serviceHub.networkService.send(topic, it, node!!.address)
+            serviceHub.networkService.send(queueID, it, node!!.address)
         }
         if (request is FiberRequest.NotExpectingResponse) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
@@ -278,7 +279,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                 try {
                     Fiber.unpark(psm, QUASAR_UNBLOCKER)
                 } catch(e: Throwable) {
-                    logError(e, request.payload, request.topic, psm)
+                    logError(e, request.payload, queueID, psm)
                 }
             }
         }
@@ -286,15 +287,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     private fun checkpointOnExpectingResponse(psm: ProtocolStateMachineImpl<*>, request: FiberRequest.ExpectingResponse<*>) {
         executor.checkOnThread()
-        val topic = "${request.topic}.${request.sessionIDForReceive}"
+        val queueID = request.receiveTopicSession
         val serialisedFiber = serializeFiber(psm)
         updateCheckpoint(psm, serialisedFiber, request)
-        psm.logger.trace { "Preparing to receive message of type ${request.responseType.name} on topic $topic" }
+        psm.logger.trace { "Preparing to receive message of type ${request.responseType.name} on queue $queueID" }
         iterateOnResponse(psm, request.responseType, serialisedFiber, request) {
             try {
                 Fiber.unpark(psm, QUASAR_UNBLOCKER)
             } catch(e: Throwable) {
-                logError(e, it, topic, psm)
+                logError(e, it, queueID, psm)
             }
         }
     }
@@ -308,7 +309,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                                   serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
                                   request: FiberRequest.ExpectingResponse<*>,
                                   resumeAction: (Any?) -> Unit) {
-        val topic = request.receiveTopic
+        val topic = request.receiveTopicSession
         serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
             // Assertion to ensure we don't execute on the wrong thread.
             executor.checkOnThread()
@@ -322,7 +323,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
             check(responseType.isInstance(payload)) { "Expected message of type ${responseType.name} but got ${payload.javaClass.name}" }
             // Update the fiber's checkpoint so that it's no longer waiting on a response, but rather has the received payload
             updateCheckpoint(psm, serialisedFiber, request)
-            psm.logger.trace { "Received message of type ${payload.javaClass.name} on topic $topic (${payload.toString().abbreviate(50)})" }
+            psm.logger.trace { "Received message of type ${payload.javaClass.name} on topic ${request.topic}.${request.sessionIDForReceive} (${payload.toString().abbreviate(50)})" }
             iterateStateMachine(psm, payload, resumeAction)
         }
     }

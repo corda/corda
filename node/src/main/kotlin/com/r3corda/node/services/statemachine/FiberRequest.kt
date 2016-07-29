@@ -1,6 +1,7 @@
 package com.r3corda.node.services.statemachine
 
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.messaging.TopicSession
 
 // TODO: Clean this up
 sealed class FiberRequest(val topic: String,
@@ -13,8 +14,8 @@ sealed class FiberRequest(val topic: String,
     @Transient
     val stackTraceInCaseOfProblems: StackSnapshot? = StackSnapshot()
 
-    val receiveTopic: String
-        get() = topic + "." + sessionIDForReceive
+    val receiveTopicSession: TopicSession
+        get() = TopicSession(topic, sessionIDForReceive)
 
 
     override fun equals(other: Any?): Boolean
@@ -66,7 +67,7 @@ sealed class FiberRequest(val topic: String,
             false
 
         override fun toString(): String {
-            return "Expecting response via topic ${receiveTopic} of type ${responseTypeName}"
+            return "Expecting response via topic ${receiveTopicSession} of type ${responseTypeName}"
         }
 
         // We have to do an unchecked cast, but unless the serialized form is damaged, this was

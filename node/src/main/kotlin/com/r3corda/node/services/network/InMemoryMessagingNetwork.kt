@@ -42,7 +42,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     private val handleEndpointMap = HashMap<Handle, InMemoryMessaging>()
 
     data class MessageTransfer(val sender: InMemoryMessaging, val message: Message, val recipients: MessageRecipients) {
-        override fun toString() = "${message.topic} from '${sender.myAddress}' to '$recipients'"
+        override fun toString() = "${message.topicSession} from '${sender.myAddress}' to '$recipients'"
     }
 
     // All sent messages are kept here until pumpSend is called, or manuallyPumped is set to false
@@ -197,8 +197,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      */
     @ThreadSafe
     inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), MessagingServiceInternal {
-
-        inner class Handler(val executor: Executor?, val topic: String,
+        inner class Handler(val executor: Executor?, val topicSession: TopicSession,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
         @Volatile
@@ -226,10 +225,13 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
         override fun registerTrustedAddress(address: SingleMessageRecipient) {}
 
-        override fun addMessageHandler(topic: String, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
+        override fun addMessageHandler(topic: String, sessionID: Long, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+            = addMessageHandler(TopicSession(topic, sessionID), executor, callback)
+
+        override fun addMessageHandler(topicSession: TopicSession, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
             check(running)
             val (handler, items) = state.locked {
-                val handler = Handler(executor, topic, callback).apply { handlers.add(this) }
+                val handler = Handler(executor, topicSession, callback).apply { handlers.add(this) }
                 val items = ArrayList(pendingRedelivery)
                 pendingRedelivery.clear()
                 Pair(handler, items)
@@ -262,16 +264,20 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
             netNodeHasShutdown(handle)
         }
 
-        /** Returns the given (topic, data) pair as a newly created message object.*/
-        override fun createMessage(topic: String, data: ByteArray): Message {
+        /** Returns the given (topic & session, data) pair as a newly created message object. */
+        override fun createMessage(topic: String, sessionID: Long, data: ByteArray): Message
+                = createMessage(TopicSession(topic, sessionID), data)
+
+        /** Returns the given (topic & session, data) pair as a newly created message object. */
+        override fun createMessage(topicSession: TopicSession, data: ByteArray): Message {
             return object : Message {
-                override val topic: String get() = topic
+                override val topicSession: TopicSession get() = topicSession
                 override val data: ByteArray get() = data
                 override val debugTimestamp: Instant = Instant.now()
                 override fun serialise(): ByteArray = this.serialise()
                 override val debugMessageID: String get() = serialise().sha256().prefixChars()
 
-                override fun toString() = topic + "#" + String(data)
+                override fun toString() = topicSession.toString() + "#" + String(data)
             }
         }
 
@@ -300,7 +306,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
             while (deliverTo == null) {
                 val transfer = (if (block) q.take() else q.poll()) ?: return null
                 deliverTo = state.locked {
-                    val h = handlers.filter { if (it.topic.isBlank()) true else transfer.message.topic == it.topic }
+                    val h = handlers.filter { if (it.topicSession.isBlank()) true else transfer.message.topicSession == it.topicSession }
 
                     if (h.isEmpty()) {
                         // Got no handlers for this message yet. Keep the message around and attempt redelivery after a new
@@ -308,6 +314,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                         // reliable, as a sender may attempt to send a message to a receiver that hasn't finished setting
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
+                        log.warn("Message to ${transfer.message.topicSession} could not be delivered")
                         pendingRedelivery.add(transfer)
                         null
                     } else {
@@ -335,7 +342,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                     try {
                         handler.callback(transfer.message, handler)
                     } catch(e: Exception) {
-                        loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topic}", e)
+                        loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topicSession}", e)
                     }
                 }
             }

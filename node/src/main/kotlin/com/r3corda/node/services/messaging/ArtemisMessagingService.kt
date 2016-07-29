@@ -81,6 +81,8 @@ class ArtemisMessagingService(val directory: Path,
         // confusion.
         val TOPIC_PROPERTY = "platform-topic"
 
+        val SESSION_ID_PROPERTY = "session-id"
+
         /** Temp helper until network map is established. */
         fun makeRecipient(hostAndPort: HostAndPort): SingleMessageRecipient = Address(hostAndPort)
         fun makeRecipient(hostname: String) = makeRecipient(toHostAndPort(hostname))
@@ -101,7 +103,7 @@ class ArtemisMessagingService(val directory: Path,
 
     /** A registration to handle messages of different types */
     inner class Handler(val executor: Executor?,
-                        val topic: String,
+                        val topicSession: TopicSession,
                         val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -180,12 +182,17 @@ class ArtemisMessagingService(val directory: Path,
                     log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
                     return@setMessageHandler
                 }
+                if (!message.containsProperty(SESSION_ID_PROPERTY)) {
+                    log.warn("Received message without a $SESSION_ID_PROPERTY property, ignoring")
+                    return@setMessageHandler
+                }
                 val topic = message.getStringProperty(TOPIC_PROPERTY)
+                val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
 
                 val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
                 val msg = object : Message {
-                    override val topic = topic
+                    override val topicSession = TopicSession(topic, sessionID)
                     override val data: ByteArray = body
                     override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
                     override val debugMessageID: String = message.messageID.toString()
@@ -208,12 +215,12 @@ class ArtemisMessagingService(val directory: Path,
     private fun deliverMessage(msg: Message): Boolean {
         // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
         // or removed whilst the filter is executing will not affect anything.
-        val deliverTo = handlers.filter { it.topic.isBlank() || it.topic == msg.topic }
+        val deliverTo = handlers.filter { it.topicSession.isBlank() || it.topicSession == msg.topicSession }
 
         if (deliverTo.isEmpty()) {
             // This should probably be downgraded to a trace in future, so the protocol can evolve with new topics
             // without causing log spam.
-            log.warn("Received message for ${msg.topic} that doesn't have any registered handlers yet")
+            log.warn("Received message for ${msg.topicSession} that doesn't have any registered handlers yet")
 
             // This is a hack; transient messages held in memory isn't crash resistant.
             // TODO: Use Artemis API more effectively so we don't pop messages off a queue that we aren't ready to use.
@@ -227,7 +234,7 @@ class ArtemisMessagingService(val directory: Path,
                 try {
                     handler.callback(msg, handler)
                 } catch(e: Exception) {
-                    log.error("Caught exception whilst executing message handler for ${msg.topic}", e)
+                    log.error("Caught exception whilst executing message handler for ${msg.topicSession}", e)
                 }
             }
         }
@@ -259,13 +266,24 @@ class ArtemisMessagingService(val directory: Path,
     override fun send(message: Message, target: MessageRecipients) {
         if (target !is Address)
             TODO("Only simple sends to single recipients are currently implemented")
-        val artemisMessage = session!!.createMessage(true).putStringProperty("platform-topic", message.topic).writeBodyBufferBytes(message.data)
+        val artemisMessage = session!!.createMessage(true).apply {
+            val sessionID = message.topicSession.sessionID
+            putStringProperty(TOPIC_PROPERTY, message.topicSession.topic)
+            putLongProperty(SESSION_ID_PROPERTY, sessionID)
+            writeBodyBufferBytes(message.data)
+        }
         getSendClient(target).send(artemisMessage)
     }
 
-    override fun addMessageHandler(topic: String, executor: Executor?,
+    override fun addMessageHandler(topic: String, sessionID: Long, executor: Executor?,
+                                   callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+        = addMessageHandler(TopicSession(topic, sessionID), executor, callback)
+
+    override fun addMessageHandler(topicSession: TopicSession,
+                                   executor: Executor?,
                                    callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
-        val handler = Handler(executor, topic, callback)
+        require(!topicSession.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
+        val handler = Handler(executor, topicSession, callback)
         handlers.add(handler)
         undeliveredMessages.removeIf { deliverMessage(it) }
         return handler
@@ -275,17 +293,20 @@ class ArtemisMessagingService(val directory: Path,
         handlers.remove(registration)
     }
 
-    override fun createMessage(topic: String, data: ByteArray): Message {
+    override fun createMessage(topicSession: TopicSession, data: ByteArray): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
         return object : Message {
-            override val topic: String get() = topic
+            override val topicSession: TopicSession get() = topicSession
             override val data: ByteArray get() = data
             override val debugTimestamp: Instant = Instant.now()
             override fun serialise(): ByteArray = this.serialise()
             override val debugMessageID: String get() = Instant.now().toEpochMilli().toString()
-            override fun toString() = topic + "#" + String(data)
+            override fun toString() = topicSession.toString() + "#" + String(data)
         }
     }
+
+    override fun createMessage(topic: String, sessionID: Long, data: ByteArray): Message
+            = createMessage(TopicSession(topic, sessionID), data)
 
     override val myAddress: SingleMessageRecipient = Address(myHostPort)
 

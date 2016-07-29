@@ -7,9 +7,9 @@ import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.node.services.TOPIC_DEFAULT_POSTFIX
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
@@ -114,7 +114,7 @@ class InMemoryNetworkMapService(net: MessagingService, home: NodeRegistration, v
         addMessageHandler(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
                 { req: NetworkMapService.SubscribeRequest -> processSubscriptionRequest(req) }
         )
-        net.addMessageHandler(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC + TOPIC_DEFAULT_POSTFIX, null) { message, r ->
+        net.addMessageHandler(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
             val req = message.data.deserialize<NetworkMapService.UpdateAcknowledge>()
             processAcknowledge(req)
         }
@@ -144,8 +144,7 @@ class InMemoryNetworkMapService(net: MessagingService, home: NodeRegistration, v
         // to a MessageRecipientGroup that nodes join/leave, rather than the network map
         // service itself managing the group
         val update = NetworkMapService.Update(wireReg, net.myAddress).serialize().bits
-        val topic = NetworkMapService.PUSH_PROTOCOL_TOPIC + TOPIC_DEFAULT_POSTFIX
-        val message = net.createMessage(topic, update)
+        val message = net.createMessage(NetworkMapService.PUSH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, update)
 
         subscribers.locked {
             val toRemove = mutableListOf<SingleMessageRecipient>()
