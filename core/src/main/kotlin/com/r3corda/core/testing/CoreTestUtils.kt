@@ -66,6 +66,10 @@ val BOB_KEY: KeyPair by lazy { generateKeyPair() }
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
+val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
+val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
+val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
+
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
