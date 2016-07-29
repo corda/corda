@@ -462,9 +462,9 @@ class ObligationTests {
             transaction("Settlement") {
                 input(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY))
                 input(500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` ALICE_PUBKEY)
-                output("Alice's $5,000,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY) }
+                output("Alice's $500,000 obligation to Bob") { halfAMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY) }
                 output("Bob's $500,000") { 500000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
-                command(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Amount(oneMillionDollars.quantity, inState.issuanceDef)) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Amount(oneMillionDollars.quantity / 2, inState.issuanceDef)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this.verifies()
             }
@@ -480,6 +480,19 @@ class ObligationTests {
                 command(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Amount(oneMillionDollars.quantity, inState.issuanceDef)) }
                 command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
                 this `fails with` "all inputs are in the normal state"
+            }
+        }
+
+        // Make sure settlement amount must match the amount leaving the ledger
+        ledger {
+            obligationTestRoots(this)
+            transaction("Settlement") {
+                input("Alice's $1,000,000 obligation to Bob")
+                input("Alice's $1,000,000")
+                output("Bob's $1,000,000") { 1000000.DOLLARS.CASH `issued by` defaultIssuer `owned by` BOB_PUBKEY }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle<Currency>(Amount(oneMillionDollars.quantity / 2, inState.issuanceDef)) }
+                command(ALICE_PUBKEY) { Cash.Commands.Move(Obligation<Currency>().legalContractReference) }
+                this `fails with` "amount in settle command"
             }
         }
     }

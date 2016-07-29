@@ -182,14 +182,16 @@ class Obligation<P> : ClauseVerifier() {
                     }
                 }
 
-                // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
-                // settled as well
+                val totalAmountSettled = Amount(totalPenniesSettled, command.value.amount.token)
                 requireThat {
+                    // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
+                    // settled as well
                     "all move commands relate to this contract" by (moveCommands.map { it.value.contractHash }
                             .all { it == null || it == Obligation<P>().legalContractReference })
                     // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
                     // time.
                     "amounts paid must match recipients to settle" by inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
+                    "amount in settle command ${command.value.amount} matches settled total ${totalAmountSettled}" by (command.value.amount == totalAmountSettled)
                     "signatures are present from all obligors" by command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
                     "at obligor ${obligor.name} the obligations after settlement balance" by
