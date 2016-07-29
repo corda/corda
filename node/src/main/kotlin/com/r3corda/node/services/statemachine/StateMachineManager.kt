@@ -270,8 +270,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         request.payload?.let {
             psm.logger.trace { "Sending message of type ${it.javaClass.name} using queue $queueID to ${request.destination} (${it.toString().abbreviate(50)})" }
             val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination!!.name)
-            requireNotNull(node) { "Don't know about ${request.destination}" }
-            serviceHub.networkService.send(queueID, it, node!!.address)
+            if (node == null) {
+                throw IllegalArgumentException("Don't know about ${request.destination} but trying to send a message of type ${it.javaClass.name} on $queueID (${it.toString().abbreviate(50)})", request.stackTraceInCaseOfProblems)
+            }
+            serviceHub.networkService.send(queueID, it, node.address)
         }
         if (request is FiberRequest.NotExpectingResponse) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
