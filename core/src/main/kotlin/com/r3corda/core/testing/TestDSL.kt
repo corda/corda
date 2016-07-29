@@ -5,8 +5,7 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.node.services.IdentityService
-import com.r3corda.core.node.services.StorageService
+import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.serialize
 import java.io.InputStream
 import java.security.KeyPair
@@ -95,6 +94,10 @@ data class TestTransactionDSLInterpreter private constructor(
             transactionBuilder: TransactionBuilder
     ) : this(ledgerInterpreter, transactionBuilder, HashMap())
 
+    val services = object : ServiceHub by ledgerInterpreter.services {
+        override fun loadState(stateRef: StateRef) = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+    }
+
     private fun copy(): TestTransactionDSLInterpreter =
             TestTransactionDSLInterpreter(
                     ledgerInterpreter = ledgerInterpreter,
@@ -141,18 +144,15 @@ data class TestTransactionDSLInterpreter private constructor(
 }
 
 data class TestLedgerDSLInterpreter private constructor (
-        private val identityService: IdentityService,
-        private val storageService: StorageService,
+        val services: ServiceHub,
         internal val labelToOutputStateAndRefs: HashMap<String, StateAndRef<ContractState>> = HashMap(),
-        private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap(),
+        private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = LinkedHashMap(),
         private val nonVerifiedTransactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = HashMap()
 ) : LedgerDSLInterpreter<TestTransactionDSLInterpreter> {
     val wireTransactions: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
 
     // We specify [labelToOutputStateAndRefs] just so that Kotlin picks the primary constructor instead of cycling
-    constructor(identityService: IdentityService, storageService: StorageService) : this(
-            identityService, storageService, labelToOutputStateAndRefs = HashMap()
-    )
+    constructor(services: ServiceHub) : this(services, labelToOutputStateAndRefs = HashMap())
 
     companion object {
         private fun getCallerLocation(): String? {
@@ -179,8 +179,7 @@ data class TestLedgerDSLInterpreter private constructor (
 
     internal fun copy(): TestLedgerDSLInterpreter =
             TestLedgerDSLInterpreter(
-                    identityService,
-                    storageService,
+                    services,
                     labelToOutputStateAndRefs = HashMap(labelToOutputStateAndRefs),
                     transactionWithLocations = HashMap(transactionWithLocations),
                     nonVerifiedTransactionWithLocations = HashMap(nonVerifiedTransactionWithLocations)
@@ -189,7 +188,7 @@ data class TestLedgerDSLInterpreter private constructor (
     internal fun resolveWireTransaction(wireTransaction: WireTransaction): TransactionForVerification {
         return wireTransaction.run {
             val authenticatedCommands = commands.map {
-                AuthenticatedObject(it.signers, it.signers.mapNotNull { identityService.partyFromKey(it) }, it.value)
+                AuthenticatedObject(it.signers, it.signers.mapNotNull { services.identityService.partyFromKey(it) }, it.value)
             }
             val resolvedInputStates = inputs.map { resolveStateRef<ContractState>(it) }
             val resolvedAttachments = attachments.map { resolveAttachment(it) }
@@ -220,7 +219,7 @@ data class TestLedgerDSLInterpreter private constructor (
     }
 
     internal fun resolveAttachment(attachmentId: SecureHash): Attachment =
-            storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
+            services.storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
 
     private fun <R> interpretTransactionDsl(
             transactionBuilder: TransactionBuilder,
@@ -233,10 +232,10 @@ data class TestLedgerDSLInterpreter private constructor (
 
     fun toTransactionGroup(): TransactionGroup {
         val ledgerTransactions = transactionWithLocations.map {
-            it.value.transaction.toLedgerTransaction(identityService, storageService.attachments)
+            it.value.transaction.toLedgerTransaction(services.identityService, services.storageService.attachments)
         }
         val nonVerifiedLedgerTransactions = nonVerifiedTransactionWithLocations.map {
-            it.value.transaction.toLedgerTransaction(identityService, storageService.attachments)
+            it.value.transaction.toLedgerTransaction(services.identityService, services.storageService.attachments)
         }
         return TransactionGroup(ledgerTransactions.toSet(), nonVerifiedLedgerTransactions.toSet())
     }
@@ -295,7 +294,7 @@ data class TestLedgerDSLInterpreter private constructor (
             dsl(LedgerDSL(copy()))
 
     override fun attachment(attachment: InputStream): SecureHash {
-        return storageService.attachments.importAttachment(attachment)
+        return services.storageService.attachments.importAttachment(attachment)
     }
 
     override fun verifies(): EnforceVerifyOrFail {
@@ -322,6 +321,9 @@ data class TestLedgerDSLInterpreter private constructor (
             return stateAndRef as StateAndRef<S>
         }
     }
+
+    val transactionsToVerify: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
+    val transactionsUnverified: List<WireTransaction> get() = nonVerifiedTransactionWithLocations.values.map { it.transaction }
 }
 
 /**
@@ -330,7 +332,7 @@ data class TestLedgerDSLInterpreter private constructor (
  * @param extraKeys extra keys to sign transactions with.
  * @return List of [SignedTransaction]s.
  */
-fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyPair>) = transactionsToSign.map { wtx ->
+fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
     val allPubKeys = wtx.signers.toMutableSet()
     val bits = wtx.serialize()
     require(bits == wtx.serialized)
@@ -350,4 +352,4 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: Array<out KeyP
  * @return List of [SignedTransaction]s.
  */
 fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.signAll(
-        vararg extraKeys: KeyPair) = signAll(this.interpreter.wireTransactions, extraKeys)
+        vararg extraKeys: KeyPair) = signAll(this.interpreter.wireTransactions, extraKeys.toList())

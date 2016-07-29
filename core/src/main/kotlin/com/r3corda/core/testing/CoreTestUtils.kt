@@ -4,14 +4,12 @@ package com.r3corda.core.testing
 
 import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
-import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.crypto.*
-import com.r3corda.core.node.services.IdentityService
-import com.r3corda.core.node.services.StorageService
+import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.testing.MockIdentityService
-import com.r3corda.core.node.services.testing.MockStorageService
+import com.r3corda.core.node.services.testing.UnitTestServices
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.security.KeyPair
@@ -95,17 +93,14 @@ fun freeLocalHostAndPort(): HostAndPort {
 }
 
 /**
- * Creates and tests a ledger built by the passed in dsl.
- * @param identityService: The [IdentityService] to be used while building the ledger.
- * @param storageService: The [StorageService] to be used for storing e.g. [Attachment]s.
- * @param dsl: The dsl building the ledger.
+ * Creates and tests a ledger built by the passed in dsl. The provided services can be customised, otherwise a default
+ * of a freshly built [UnitTestServices] is used.
  */
 @JvmOverloads fun ledger(
-        identityService: IdentityService = MOCK_IDENTITY_SERVICE,
-        storageService: StorageService = MockStorageService(),
+        services: ServiceHub = UnitTestServices(),
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(identityService, storageService))
+    val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
     dsl(ledgerDsl)
     return ledgerDsl
 }

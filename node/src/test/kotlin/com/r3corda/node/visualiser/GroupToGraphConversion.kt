@@ -17,13 +17,13 @@ class GraphVisualiser(val dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedg
     }
 
     fun convert(): SingleGraph {
-        val tg = dsl.interpreter.toTransactionGroup()
+        val testLedger: TestLedgerDSLInterpreter = dsl.interpreter
         val graph = createGraph("Transaction group", css)
 
         // Map all the transactions, including the bogus non-verified ones (with no inputs) to graph nodes.
-        for ((txIndex, tx) in (tg.transactions + tg.nonVerifiedRoots).withIndex()) {
+        for ((txIndex, tx) in (testLedger.transactionsToVerify + testLedger.transactionsUnverified).withIndex()) {
             val txNode = graph.addNode<Node>("tx$txIndex")
-            if (tx !in tg.nonVerifiedRoots)
+            if (tx !in testLedger.transactionsUnverified)
                 txNode.label = dsl.interpreter.transactionName(tx.id).let { it ?: "TX[${tx.id.prefixChars()}]" }
             txNode.styleClass = "tx"
 
@@ -48,7 +48,7 @@ class GraphVisualiser(val dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedg
             }
         }
         // And now all states and transactions were mapped to graph nodes, hook up the input edges.
-        for ((txIndex, tx) in tg.transactions.withIndex()) {
+        for ((txIndex, tx) in testLedger.transactionsToVerify.withIndex()) {
             for ((inputIndex, ref) in tx.inputs.withIndex()) {
                 val edge = graph.addEdge<Edge>("tx$txIndex-in$inputIndex", ref.toString(), "tx$txIndex", true)
                 edge.weight = 1.2

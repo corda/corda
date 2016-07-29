@@ -246,7 +246,7 @@ class TwoPartyTradeProtocolTests {
         val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
         val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
 
-        ledger(storageService = aliceNode.storage) {
+        ledger(aliceNode.services) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -413,7 +413,7 @@ class TwoPartyTradeProtocolTests {
             wtxToSign: List<WireTransaction>,
             services: ServiceHub,
             vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys)
+        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList())
         services.recordTransactions(signed)
         val validatedTransactions = services.storageService.validatedTransactions
         if (validatedTransactions is RecordingTransactionStorage) {
