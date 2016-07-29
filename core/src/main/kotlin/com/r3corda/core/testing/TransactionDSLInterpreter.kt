@@ -53,9 +53,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun tweak(dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail): EnforceVerifyOrFail
 }
 
-class TransactionDSL<out T : TransactionDSLInterpreter> (val interpreter: T) :
-        TransactionDSLInterpreter by interpreter {
-
+class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : TransactionDSLInterpreter by interpreter {
     /**
      * Looks up the output label and adds the found state as an input.
      * @param stateLabel The label of the output state specified when calling [TransactionDSLInterpreter._output] and friends.

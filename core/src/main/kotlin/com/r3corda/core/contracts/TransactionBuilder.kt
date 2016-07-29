@@ -120,9 +120,9 @@ open class TransactionBuilder(
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing = signers - gotKeys
+            val missing: Set<PublicKey> = signers - gotKeys
             if (missing.isNotEmpty())
-                throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.map { it.toStringShort() }}")
+                throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.toStringsShort()}")
         }
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
@@ -131,7 +131,6 @@ open class TransactionBuilder(
 
     fun addInputState(stateRef: StateRef, notary: Party) {
         check(currentSigs.isEmpty())
-
         signers.add(notary.owningKey)
         inputs.add(stateRef)
     }
