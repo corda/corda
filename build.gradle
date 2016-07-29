@@ -1,6 +1,5 @@
 group 'com.r3corda'
 
-apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
 apply plugin: 'project-report'
@@ -8,11 +7,31 @@ apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
 
 allprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+
+    // Our version: bump this on release.
+    group 'com.r3corda'
+    version '0.2-SNAPSHOT'
+}
+
+subprojects {
+    jacocoTestReport {
+        additionalSourceDirs = files(sourceSets.main.allSource.srcDirs)
+        sourceDirectories = files(sourceSets.main.allSource.srcDirs)
+        classDirectories =  files(sourceSets.main.output)
+        reports {
+            html.enabled = true
+            xml.enabled = true
+            csv.enabled = false
+        }
     }
 }
 
@@ -39,12 +58,6 @@ buildscript {
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
     }
-}
-
-allprojects {
-    // Our version: bump this on release.
-    group 'com.r3corda'
-    version '0.2-SNAPSHOT'
 }
 
 repositories {
@@ -153,6 +166,28 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 test.finalizedBy(integrationTest)
+
+
+task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+    dependsOn = subprojects.test
+    additionalSourceDirs = files(subprojects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories = files(subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories = files(subprojects.sourceSets.main.output)
+    executionData = files(subprojects.jacocoTestReport.executionData)
+    reports {
+        html.enabled = true
+        xml.enabled = true
+        csv.enabled = false
+    }
+    onlyIf = {
+        true
+    }
+    doFirst {
+        executionData = files(executionData.findAll {
+            it.exists()
+        })
+    }
+}
 
 tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
