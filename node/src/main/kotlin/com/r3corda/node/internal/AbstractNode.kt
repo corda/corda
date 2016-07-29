@@ -27,6 +27,7 @@ import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
+import com.r3corda.node.services.monitor.WalletMonitorService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
@@ -125,6 +126,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var keyManagement: E2ETestKeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeNotaryService: NotaryService? = null
+    var inNodeWalletMonitorService: WalletMonitorService? = null
     lateinit var identity: IdentityService
     lateinit var net: MessagingServiceInternal
     lateinit var netMapCache: NetworkMapCache
@@ -167,6 +169,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         wallet = makeWalletService()
 
         identity = makeIdentityService()
+
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
@@ -186,6 +189,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 checkpointStorage,
                 serverThread)
 
+        inNodeWalletMonitorService = makeWalletMonitorService() // Note this HAS to be after smm is set
         buildAdvertisedServices()
 
         // TODO: this model might change but for now it provides some de-coupling
@@ -337,6 +341,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
     protected open fun makeWalletService(): WalletService = NodeWalletService(services)
+
+    protected open fun makeWalletMonitorService(): WalletMonitorService = WalletMonitorService(net, smm, services)
 
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
