@@ -77,6 +77,31 @@ in place of the attachments themselves (see also :doc:`data-model`). Once signed
 resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
 ``AuthenticatedObject`` type.
 
+When constructing a new transaction from scratch, you use ``TransactionBuilder``, which is a mutable transaction that
+can be signed once modification of the internals is complete. It is typical for contract classes to expose helper
+methods that can contribute to a ``TransactionBuilder``.
+
+Here's an example of building a transaction that creates an issuance of bananas (note that bananas are not a real
+contract type in the library):
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      val notaryToUse: Party = ...
+      val txb = TransactionBuilder(notary = notaryToUse).withItems(BananaState(Amount(20, Bananas), fromCountry = "Elbonia"))
+      txb.signWith(myKey)
+      txb.setTime(Instant.now(), notaryToUse, 30.seconds)
+      // We must disable the check for sufficient signatures, because this transaction is not yet notarised.
+      val stx = txb.toSignedTransaction(checkSufficientSignatures = false)
+      // Alternatively, let's just check it verifies pretending it was fully signed. To do this, we get
+      // a WireTransaction, which is what the SignedTransaction wraps. Thus by verifying that directly we
+      // skip signature checking.
+      txb.toWireTransaction().toLedgerTransaction(services).verify()
+
+In a unit test, you would typically use a freshly created ``UnitTestServices`` object, or more realistically, you would
+write your tests using the :doc:`domain specific language for writing tests <tutorial-test-dsl>`.
+
 Party and PublicKey
 -------------------
 
