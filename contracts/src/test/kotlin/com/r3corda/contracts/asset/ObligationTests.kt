@@ -486,7 +486,7 @@ class ObligationTests {
 
         // Make sure settlement amount must match the amount leaving the ledger
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
