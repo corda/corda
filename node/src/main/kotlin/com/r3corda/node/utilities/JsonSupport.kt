@@ -10,9 +10,7 @@ import com.fasterxml.jackson.databind.deser.std.StringArrayDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.r3corda.core.contracts.BusinessCalendar
-import com.r3corda.core.crypto.Base58
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.IdentityService
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -136,20 +134,17 @@ object JsonSupport {
         }
     }
 
-    private val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-
     object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
        override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
            check(obj.params == ed25519Curve)
-           generator.writeString(Base58.encode(obj.abyte))
+           generator.writeString(obj.toBase58String())
        }
     }
 
     object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
             return try {
-                val A = Base58.decode(parser.text)
-                EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+                parser.text.toPublicKey()
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
             }
