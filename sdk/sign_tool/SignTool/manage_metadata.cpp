@@ -58,7 +58,7 @@
 static bool traverser_parameter(const char *temp_name, const char *temp_text, xml_parameter_t *parameter, int parameter_count)
 {
     assert(temp_name != NULL && parameter != NULL);
-    uint32_t temp_value=0;
+    uint64_t temp_value=0;
     if(temp_text == NULL)
     {
         se_trace(SE_TRACE_ERROR, LACK_VALUE_FOR_ELEMENT_ERROR, temp_name);
@@ -74,7 +74,7 @@ static bool traverser_parameter(const char *temp_name, const char *temp_text, xm
 
         errno = 0;
         char* endptr = NULL;
-        temp_value = (uint32_t)strtoul(temp_text, &endptr, 0);
+        temp_value = (uint64_t)strtoull(temp_text, &endptr, 0);
         if(*endptr!='\0'||errno!=0)   //Invalid value or valid value but out of the representable range
         {
             se_trace(SE_TRACE_ERROR, INVALID_VALUE_FOR_ELEMENT_ERROR, temp_name);
@@ -212,7 +212,7 @@ bool CMetadata::modify_metadata(const xml_parameter_t *parameter)
     assert(parameter != NULL);
     m_metadata->version = META_DATA_MAKE_VERSION(MAJOR_VERSION,MINOR_VERSION );
     m_metadata->size = offsetof(metadata_t, data);
-    m_metadata->tcs_policy = parameter[TCSPOLICY].value;
+    m_metadata->tcs_policy = (uint32_t)parameter[TCSPOLICY].value;
     m_metadata->ssa_frame_size = SSA_FRAME_SIZE;
     //stack/heap must be page-align
     if(parameter[STACKMAXSIZE].value % ALIGN_SIZE)
@@ -237,13 +237,13 @@ bool CMetadata::modify_metadata(const xml_parameter_t *parameter)
     m_metadata->max_save_buffer_size = MAX_SAVE_BUF_SIZE;
     m_metadata->magic_num = METADATA_MAGIC;
     m_metadata->desired_misc_select = 0;
-    m_metadata->enclave_css.body.misc_select = parameter[MISCSELECT].value;
-    m_metadata->enclave_css.body.misc_mask =  parameter[MISCMASK].value;
+    m_metadata->enclave_css.body.misc_select = (uint32_t)parameter[MISCSELECT].value;
+    m_metadata->enclave_css.body.misc_mask =  (uint32_t)parameter[MISCMASK].value;
 
     m_create_param.heap_max_size = parameter[HEAPMAXSIZE].value;
     m_create_param.ssa_frame_size = SSA_FRAME_SIZE;
     m_create_param.stack_max_size = parameter[STACKMAXSIZE].value;
-    m_create_param.tcs_max_num = parameter[TCSNUM].value;
+    m_create_param.tcs_max_num = (uint32_t)parameter[TCSNUM].value;
     m_create_param.tcs_policy = m_metadata->tcs_policy;
     return true;
 }
