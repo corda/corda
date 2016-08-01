@@ -1,5 +1,5 @@
-Contracts
-=========
+Platform contracts
+==================
 
 There are a number of contracts supplied with Corda, which cover both core functionality (such as cash on ledger) and
 provide examples of how to model complex contracts (such as interest rate swaps). There is also a ``Dummy`` contract.
