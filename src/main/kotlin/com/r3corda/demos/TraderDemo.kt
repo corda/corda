@@ -263,7 +263,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
         // TODO: This should be moved into the protocol itself.
         serviceHub.recordTransactions(listOf(tradeTX))
 
-        logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
+        println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
 
         logIssuanceAttachment(tradeTX)
@@ -283,7 +283,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
 
         cpIssuance.attachments.first().let {
             val p = attachmentsPath.toAbsolutePath().resolve("$it.jar")
-            logger.info("""
+            println("""
 
 The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:
 $p
