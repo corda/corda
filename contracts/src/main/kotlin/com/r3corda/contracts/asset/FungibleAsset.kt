@@ -4,7 +4,7 @@ import com.r3corda.core.contracts.*
 import java.security.PublicKey
 import java.util.*
 
-class InsufficientBalanceException(val amountMissing: Amount<Currency>) : Exception()
+class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception()
 
 /**
  * Interface for contract states representing assets which are fungible, countable and issued by a

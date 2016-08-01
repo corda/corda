@@ -2,6 +2,7 @@ package com.r3corda.contracts.asset
 
 import com.r3corda.contracts.asset.Obligation.Lifecycle
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
@@ -36,7 +37,7 @@ class ObligationTests {
     )
     val outState = inState.copy(beneficiary = DUMMY_PUBKEY_2)
 
-    private fun obligationTestRoots(
+    private fun cashObligationTestRoots(
             group: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     ) = group.apply {
         unverifiedTransaction {
@@ -331,7 +332,7 @@ class ObligationTests {
     fun `close-out netting`() {
         // Try netting out two obligations
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
@@ -346,7 +347,7 @@ class ObligationTests {
         // Try netting out two obligations, with the third uninvolved obligation left
         // as-is
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
@@ -361,7 +362,7 @@ class ObligationTests {
 
         // Try having outputs mis-match the inputs
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
@@ -374,7 +375,7 @@ class ObligationTests {
 
         // Have the wrong signature on the transaction
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
@@ -389,7 +390,7 @@ class ObligationTests {
     fun `payment netting`() {
         // Try netting out two obligations
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
@@ -403,7 +404,7 @@ class ObligationTests {
         // Try netting out two obligations, but only provide one signature. Unlike close-out netting, we need both
         // signatures for payment netting
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
@@ -415,7 +416,7 @@ class ObligationTests {
 
         // Multilateral netting, A -> B -> C which can net down to A -> C
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Bob's $1,000,000 obligation to Alice")
                 input("MegaCorp's $1,000,000 obligation to Bob")
@@ -429,7 +430,7 @@ class ObligationTests {
 
         // Multilateral netting without the key of the receiving party
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Issuance") {
                 input("Bob's $1,000,000 obligation to Alice")
                 input("MegaCorp's $1,000,000 obligation to Bob")
@@ -442,10 +443,10 @@ class ObligationTests {
     }
 
     @Test
-    fun `settlement`() {
+    fun `cash settlement`() {
         // Try settling an obligation
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Alice's $1,000,000")
@@ -498,10 +499,34 @@ class ObligationTests {
     }
 
     @Test
+    fun `commodity settlement`() {
+        val defaultFcoj = FCOJ `issued by` defaultIssuer
+        val oneUnitFcoj = Amount(1, defaultFcoj)
+        val obligationDef = Obligation.Terms<Commodity>(nonEmptySetOf(CommodityContract().legalContractReference), nonEmptySetOf(defaultFcoj), TEST_TX_TIME)
+        val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
+                obligationDef, oneUnitFcoj.quantity, NullPublicKey)
+        // Try settling a simple commodity obligation
+        ledger {
+            unverifiedTransaction {
+                output("Alice's 1 FCOJ obligation to Bob", oneUnitFcojObligation between Pair(ALICE, BOB_PUBKEY))
+                output("Alice's 1 FCOJ", CommodityContract.State(oneUnitFcoj, ALICE_PUBKEY))
+            }
+            transaction("Settlement") {
+                input("Alice's 1 FCOJ obligation to Bob")
+                input("Alice's 1 FCOJ")
+                output("Bob's 1 FCOJ") { CommodityContract.State(oneUnitFcoj, BOB_PUBKEY) }
+                command(ALICE_PUBKEY) { Obligation.Commands.Settle<Commodity>(Amount(oneUnitFcoj.quantity, oneUnitFcojObligation.issuanceDef)) }
+                command(ALICE_PUBKEY) { CommodityContract.Commands.Move(Obligation<Commodity>().legalContractReference) }
+                verifies()
+            }
+        }
+    }
+
+    @Test
     fun `payment default`() {
         // Try defaulting an obligation without a timestamp
         ledger {
-            obligationTestRoots(this)
+            cashObligationTestRoots(this)
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
                 output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY)).copy(lifecycle = Lifecycle.DEFAULTED) }

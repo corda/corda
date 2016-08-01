@@ -420,3 +420,16 @@ enum class NetType {
      */
     PAYMENT
 }
+
+data class Commodity(val symbol: String,
+                     val displayName: String,
+                     val commodityCode: String = symbol,
+                     val defaultFractionDigits: Int = 0) {
+    companion object {
+        private val registry = mapOf<String, Commodity>(
+                Pair("FCOJ", Commodity("FCOJ", "Frozen concentrated orange juice"))
+        )
+        fun getInstance(symbol: String): Commodity?
+                = registry[symbol]
+    }
+}
