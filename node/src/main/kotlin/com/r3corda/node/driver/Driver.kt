@@ -68,6 +68,7 @@ private fun getTimestampAsDirectoryName(): String {
 
 class DriverHandle(private val driverDsl: DriverDSL, private val shutdownHook: Thread) {
     val messagingService = driverDsl.messagingService
+    val networkMapCache = driverDsl.networkMapCache
 
     fun waitForAllNodesToFinish() {
         driverDsl.waitForAllNodesToFinish()
@@ -79,7 +80,7 @@ class DriverHandle(private val driverDsl: DriverDSL, private val shutdownHook: T
     }
 }
 
-private fun <A> poll(f: () -> A?): A {
+fun <A> poll(f: () -> A?): A {
     var counter = 0
     var result = f()
     while (result == null && counter < 30) {
