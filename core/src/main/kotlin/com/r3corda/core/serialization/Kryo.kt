@@ -10,10 +10,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.generateKeyPair
-import com.r3corda.core.crypto.sha256
+import com.r3corda.core.crypto.*
 import com.r3corda.core.node.AttachmentsClassLoader
 import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.utilities.NonEmptySet
@@ -275,8 +272,6 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
 /** For serialising an ed25519 private key */
 @ThreadSafe
 object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
-    val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
         check(obj.params == ed25519Curve)
         output.writeBytesWithLength(obj.seed)
@@ -291,8 +286,6 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
 /** For serialising an ed25519 public key */
 @ThreadSafe
 object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
-    val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
         check(obj.params == ed25519Curve)
         output.writeBytesWithLength(obj.abyte)
