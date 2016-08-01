@@ -188,14 +188,16 @@ private fun runSeller(node: Node, amount: Amount<Issued<Currency>>, otherSide: P
         }
     }
 
+    var tradeTX: SignedTransaction? = null
     if (node.isPreviousCheckpointsPresent) {
         node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).forEach {
-            it.second.get()
+            tradeTX = it.second.get()
         }
     } else {
         val seller = TraderDemoProtocolSeller(otherSide, amount)
-        node.smm.add("demo.seller", seller).get()
+        tradeTX = node.smm.add("demo.seller", seller).get()
     }
+    println("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(tradeTX!!.tx)}")
 
     node.stop()
 }
@@ -261,7 +263,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
         // TODO: This should be moved into the protocol itself.
         serviceHub.recordTransactions(listOf(tradeTX))
 
-        logger.info("Purchase complete - we are a happy customer! Final transaction is: " +
+        println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
 
         logIssuanceAttachment(tradeTX)
@@ -281,7 +283,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
 
         cpIssuance.attachments.first().let {
             val p = attachmentsPath.toAbsolutePath().resolve("$it.jar")
-            logger.info("""
+            println("""
 
 The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:
 $p
@@ -293,7 +295,7 @@ ${Emoji.renderIfSupported(cpIssuance)}""")
 
 private class TraderDemoProtocolSeller(val otherSide: Party,
                                        val amount: Amount<Issued<Currency>>,
-                                       override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<Unit>() {
+                                       override val progressTracker: ProgressTracker = TraderDemoProtocolSeller.tracker()) : ProtocolLogic<SignedTransaction>() {
     companion object {
         val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
 
@@ -314,7 +316,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
     override val topic: String get() = DEMO_TOPIC
 
     @Suspendable
-    override fun call() {
+    override fun call(): SignedTransaction {
         progressTracker.currentStep = ANNOUNCING
 
         val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).validate { it }
@@ -332,7 +334,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
         val tradeTX: SignedTransaction = subProtocol(seller)
         serviceHub.recordTransactions(listOf(tradeTX))
 
-        logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
+        return tradeTX
     }
 
     @Suspendable
