@@ -43,8 +43,7 @@ class Obligation<P> : ClauseVerifier() {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-    override val clauses: List<SingleClause>
-        get() = listOf(InterceptorClause(Clauses.VerifyLifecycle<P>(), Clauses.Net<P>()),
+    override val clauses = listOf(InterceptorClause(Clauses.VerifyLifecycle<P>(), Clauses.Net<P>()),
                     Clauses.Group<P>())
 
     interface Clauses {
@@ -52,18 +51,16 @@ class Obligation<P> : ClauseVerifier() {
          * Parent clause for clauses that operate on grouped states (those which are fungible).
          */
         class Group<P> : GroupClauseVerifier<State<P>, Issued<Terms<P>>>() {
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
-            override val clauses: List<GroupClause<State<P>, Issued<Terms<P>>>>
-                get() = listOf(
-                        NoZeroSizedOutputs<State<P>, Terms<P>>(),
-                        SetLifecycle<P>(),
-                        VerifyLifecycle<P>(),
-                        Settle<P>(),
-                        Issue(),
-                        ConserveAmount())
+            override val ifMatched: MatchBehaviour = MatchBehaviour.END
+            override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
+            override val clauses = listOf(
+                    NoZeroSizedOutputs<State<P>, Terms<P>>(),
+                    SetLifecycle<P>(),
+                    VerifyLifecycle<P>(),
+                    Settle<P>(),
+                    Issue(),
+                    ConserveAmount()
+            )
 
             override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
                     = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.issuanceDef }
@@ -73,8 +70,7 @@ class Obligation<P> : ClauseVerifier() {
          * Generic issuance clause
          */
         class Issue<P> : AbstractIssue<State<P>, Terms<P>>({ -> sumObligations() }, { token: Issued<Terms<P>> -> sumObligationsOrZero(token) }) {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Obligation.Commands.Issue::class.java)
+            override val requiredCommands = setOf(Obligation.Commands.Issue::class.java)
         }
 
         /**
@@ -91,12 +87,9 @@ class Obligation<P> : ClauseVerifier() {
          * Obligation-specific clause for changing the lifecycle of one or more states.
          */
         class SetLifecycle<P> : GroupClause<State<P>, Issued<Terms<P>>> {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.SetLifecycle::class.java)
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
+            override val requiredCommands = setOf(Commands.SetLifecycle::class.java)
+            override val ifMatched: MatchBehaviour = MatchBehaviour.END
+            override val ifNotMatched: MatchBehaviour = MatchBehaviour.CONTINUE
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State<P>>,
@@ -114,12 +107,9 @@ class Obligation<P> : ClauseVerifier() {
          * change of ownership of other states to fulfil
          */
         class Settle<P> : GroupClause<State<P>, Issued<Terms<P>>> {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Settle::class.java)
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
+            override val requiredCommands = setOf(Commands.Settle::class.java)
+            override val ifMatched: MatchBehaviour = MatchBehaviour.END
+            override val ifNotMatched: MatchBehaviour = MatchBehaviour.CONTINUE
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State<P>>,
@@ -208,12 +198,9 @@ class Obligation<P> : ClauseVerifier() {
          * non-standard lifecycle states on input/output.
          */
         class VerifyLifecycle<P> : SingleClause, GroupClause<State<P>, Issued<Terms<P>>> {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = emptySet()
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
+            override val requiredCommands: Set<Class<out CommandData>> = emptySet()
+            override val ifMatched: MatchBehaviour = MatchBehaviour.CONTINUE
+            override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
 
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData>
                 = verify(
@@ -407,8 +394,8 @@ class Obligation<P> : ClauseVerifier() {
 
         // If we have an default command, perform special processing: issued contracts can only be defaulted
         // after the due date, and default/reset can only be done by the beneficiary
-        val expectedInputLifecycle: Lifecycle = setLifecycleCommand.value.inverse
-        val expectedOutputLifecycle: Lifecycle = setLifecycleCommand.value.lifecycle
+        val expectedInputLifecycle = setLifecycleCommand.value.inverse
+        val expectedOutputLifecycle = setLifecycleCommand.value.lifecycle
 
         // Check that we're past the deadline for ALL involved inputs, and that the output states correspond 1:1
         for ((stateIdx, input) in inputs.withIndex()) {
@@ -416,7 +403,7 @@ class Obligation<P> : ClauseVerifier() {
                 val actualOutput = outputs[stateIdx]
                 val deadline = input.dueBefore
                 val timestamp: TimestampCommand? = tx.timestamp
-                val expectedOutput: State<P> = input.copy(lifecycle = expectedOutputLifecycle)
+                val expectedOutput = input.copy(lifecycle = expectedOutputLifecycle)
 
                 requireThat {
                     "there is a timestamp from the authority" by (timestamp != null)
@@ -457,6 +444,24 @@ class Obligation<P> : ClauseVerifier() {
             tx.addOutputState(out)
         tx.addCommand(Commands.Net(NetType.PAYMENT), signer)
     }
+
+    /**
+     * Generate an transaction exiting an obligation from the ledger.
+     *
+     * @param tx transaction builder to add states and commands to.
+     * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
+     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
+     * necessarily owned by us.
+     * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
+     * the responsibility of the caller to check that they do not exit funds held by others.
+     * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
+     */
+    fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
+                     changeKey: PublicKey, assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
+            = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, changeKey, assetStates,
+            deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
+            generateExitCommand = { amount -> Commands.Exit<P>(amount) }
+    )
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
@@ -515,7 +520,7 @@ class Obligation<P> : ClauseVerifier() {
                              lifecycle: Lifecycle,
                              notary: Party) {
         val states = statesAndRefs.map { it.state.data }
-        val issuanceDef = getTemplateOrThrow(states)
+        val issuanceDef = getTermsOrThrow(states)
         val existingLifecycle = when (lifecycle) {
             Lifecycle.DEFAULTED -> Lifecycle.NORMAL
             Lifecycle.NORMAL -> Lifecycle.DEFAULTED
@@ -580,7 +585,7 @@ class Obligation<P> : ClauseVerifier() {
                 tx.addInputState(ref)
 
                 val assetState = ref.state.data
-                val amount: Amount<P> = Amount(assetState.amount.quantity, assetState.amount.token.product)
+                val amount = Amount(assetState.amount.quantity, assetState.amount.token.product)
                 if (obligationRemaining >= amount) {
                     tx.addOutputState(assetState.move(assetState.amount, obligationOwner), notary)
                     obligationRemaining -= amount
@@ -612,7 +617,7 @@ class Obligation<P> : ClauseVerifier() {
             states.map { it.issuanceDef }.distinct().single()
 
     /** Get the common issuance definition for one or more states, or throw an IllegalArgumentException. */
-    private fun getTemplateOrThrow(states: Iterable<State<P>>): Terms<P> =
+    private fun getTermsOrThrow(states: Iterable<State<P>>) =
             states.map { it.template }.distinct().single()
 }
 

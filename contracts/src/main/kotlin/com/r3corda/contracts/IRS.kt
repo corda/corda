@@ -184,7 +184,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
  * This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.
  */
 class InterestRateSwap() : ClauseVerifier() {
-    override val legalContractReference: SecureHash = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
+    override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
 
     /**
      * This Common area contains all the information that is not leg specific.
@@ -457,10 +457,8 @@ class InterestRateSwap() : ClauseVerifier() {
          * helper functions for the clauses.
          */
         abstract class AbstractIRSClause : GroupClause<State, String> {
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
+            override val ifMatched = MatchBehaviour.END
+            override val ifNotMatched = MatchBehaviour.CONTINUE
 
             // These functions may make more sense to use for basket types, but for now let's leave them here
             fun checkLegDates(legs: Array<CommonLeg>) {
@@ -504,27 +502,20 @@ class InterestRateSwap() : ClauseVerifier() {
         }
 
         class Group : GroupClauseVerifier<State, String>() {
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
+            override val ifMatched = MatchBehaviour.END
+            override val ifNotMatched = MatchBehaviour.ERROR
 
-            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, String>> {
+            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, String>>
                 // Group by Trade ID for in / out states
-                return tx.groupStates() { state: InterestRateSwap.State -> state.common.tradeID }
-            }
+                = tx.groupStates() { state -> state.common.tradeID }
 
-            override val clauses: List<GroupClause<State, String>>
-                get() = listOf(Agree(), Fix(), Pay(), Mature())
+            override val clauses = listOf(Agree(), Fix(), Pay(), Mature())
         }
 
         class Timestamped : SingleClause {
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = emptySet()
+            override val ifMatched = MatchBehaviour.CONTINUE
+            override val ifNotMatched = MatchBehaviour.ERROR
+            override val requiredCommands = emptySet<Class<out CommandData>>()
 
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
                 // TODO: This needs to either be the notary used for the inputs, or otherwise
@@ -537,8 +528,7 @@ class InterestRateSwap() : ClauseVerifier() {
         }
 
         class Agree : AbstractIRSClause() {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Agree::class.java)
+            override val requiredCommands = setOf(Commands.Agree::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
@@ -574,8 +564,7 @@ class InterestRateSwap() : ClauseVerifier() {
         }
 
         class Fix : AbstractIRSClause() {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Refix::class.java)
+            override val requiredCommands = setOf(Commands.Refix::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
@@ -620,8 +609,7 @@ class InterestRateSwap() : ClauseVerifier() {
         }
 
         class Pay : AbstractIRSClause() {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Pay::class.java)
+            override val requiredCommands = setOf(Commands.Pay::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
@@ -637,8 +625,7 @@ class InterestRateSwap() : ClauseVerifier() {
         }
 
         class Mature : AbstractIRSClause() {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Mature::class.java)
+            override val requiredCommands = setOf(Commands.Mature::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
@@ -748,7 +735,7 @@ class InterestRateSwap() : ClauseVerifier() {
         /**
          * Just makes printing it out a bit better for those who don't have 80000 column wide monitors.
          */
-        fun prettyPrint(): String = toString().replace(",", "\n")
+        fun prettyPrint() = toString().replace(",", "\n")
 
     }
 

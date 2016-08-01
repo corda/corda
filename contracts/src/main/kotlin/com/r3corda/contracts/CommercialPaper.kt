@@ -6,7 +6,6 @@ import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.*
-import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -50,8 +49,7 @@ class CommercialPaper : ClauseVerifier() {
         val maturityDate: Instant
     )
 
-    override val clauses: List<SingleClause>
-        get() = listOf(Clauses.Group())
+    override val clauses = listOf(Clauses.Group())
 
     override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
         = tx.commands.select<Commands>()
@@ -82,32 +80,27 @@ class CommercialPaper : ClauseVerifier() {
 
     interface Clauses {
         class Group : GroupClauseVerifier<State, Issued<Terms>>() {
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val clauses: List<GroupClause<State, Issued<Terms>>>
-                get() = listOf(
-                        Redeem(),
-                        Move(),
-                        Issue())
+            override val ifNotMatched = MatchBehaviour.ERROR
+            override val ifMatched = MatchBehaviour.END
+            override val clauses = listOf(
+                    Redeem(),
+                    Move(),
+                    Issue()
+            )
 
             override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
         abstract class AbstractGroupClause: GroupClause<State, Issued<Terms>> {
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
+            override val ifNotMatched = MatchBehaviour.CONTINUE
+            override val ifMatched = MatchBehaviour.END
         }
 
         class Issue : AbstractIssue<State, Terms>(
                 { map { Amount(it.faceValue.quantity, it.token) }.sumOrThrow() },
                 { token -> map { Amount(it.faceValue.quantity, it.token) }.sumOrZero(token) }) {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Issue::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
@@ -127,8 +120,7 @@ class CommercialPaper : ClauseVerifier() {
         }
 
         class Move: AbstractGroupClause() {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Move::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Move::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
