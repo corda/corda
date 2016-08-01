@@ -279,13 +279,13 @@ bool CMetadata::build_layout_entries(vector<layout_t> &layouts)
         if(!IS_GROUP_ID(layouts[i].entry.id))
         {
             layout_table->entry.rva = rva;
-            rva += (uint64_t)(layouts[i].entry.page_count << SE_PAGE_SHIFT);
+            rva += (uint64_t)layouts[i].entry.page_count << SE_PAGE_SHIFT;
         }
         else
         {
             for (uint32_t j = 0; j < layouts[i].group.entry_count; j++)
             {
-                layout_table->group.load_step += layouts[i-j-1].entry.page_count << SE_PAGE_SHIFT;
+                layout_table->group.load_step += (uint64_t)layouts[i-j-1].entry.page_count << SE_PAGE_SHIFT;
             }
             rva += layouts[i].group.load_times * layout_table->group.load_step;
         }
@@ -546,14 +546,14 @@ layout_entry_t *CMetadata::get_entry_by_id(uint16_t id)
 bool CMetadata::build_gd_template(uint8_t *data, uint32_t *data_size)
 {
     m_create_param.stack_limit_addr = get_entry_by_id(LAYOUT_ID_STACK)->rva - get_entry_by_id(LAYOUT_ID_TCS)->rva;
-    m_create_param.stack_base_addr = (get_entry_by_id(LAYOUT_ID_STACK)->page_count << SE_PAGE_SHIFT) + m_create_param.stack_limit_addr;
+    m_create_param.stack_base_addr = ((uint64_t)get_entry_by_id(LAYOUT_ID_STACK)->page_count << SE_PAGE_SHIFT) + m_create_param.stack_limit_addr;
     m_create_param.first_ssa_gpr = get_entry_by_id(LAYOUT_ID_SSA)->rva - get_entry_by_id(LAYOUT_ID_TCS)->rva
                                     + SSA_FRAME_SIZE * SE_PAGE_SIZE - (uint64_t)sizeof(ssa_gpr_t);
     m_create_param.enclave_size = m_metadata->enclave_size;
     m_create_param.heap_offset = get_entry_by_id(LAYOUT_ID_HEAP)->rva;
 
     uint64_t tmp_tls_addr = get_entry_by_id(LAYOUT_ID_TD)->rva - get_entry_by_id(LAYOUT_ID_TCS)->rva;
-    m_create_param.td_addr = tmp_tls_addr + ((get_entry_by_id(LAYOUT_ID_TD)->page_count - 1) << SE_PAGE_SHIFT);
+    m_create_param.td_addr = tmp_tls_addr + (((uint64_t)get_entry_by_id(LAYOUT_ID_TD)->page_count - 1) << SE_PAGE_SHIFT);
 
     const Section *section = m_parser->get_tls_section();
     if(section)
@@ -584,7 +584,7 @@ bool CMetadata::build_tcs_template(tcs_t *tcs)
     tcs->cssa = 0;
     tcs->ossa = get_entry_by_id(LAYOUT_ID_SSA)->rva - get_entry_by_id(LAYOUT_ID_TCS)->rva;
     //fs/gs pointer at TLS/TD
-    tcs->ofs_base = tcs->ogs_base = get_entry_by_id(LAYOUT_ID_TD)->rva - get_entry_by_id(LAYOUT_ID_TCS)->rva + (uint64_t)((get_entry_by_id(LAYOUT_ID_TD)->page_count - 1) << SE_PAGE_SHIFT);
+    tcs->ofs_base = tcs->ogs_base = get_entry_by_id(LAYOUT_ID_TD)->rva - get_entry_by_id(LAYOUT_ID_TCS)->rva + (((uint64_t)get_entry_by_id(LAYOUT_ID_TD)->page_count - 1) << SE_PAGE_SHIFT);
     tcs->ofs_limit = tcs->ogs_limit = (uint32_t)-1;
     return true;
 }
