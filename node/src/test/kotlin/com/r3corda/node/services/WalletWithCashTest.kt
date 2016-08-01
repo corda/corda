@@ -76,7 +76,7 @@ class WalletWithCashTest {
 
         // A tx that spends our money.
         val spendTX = TransactionType.General.Builder().apply {
-            Cash().generateSpend(this, 80.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_PUBKEY, listOf(myOutput))
+            Cash().generateSpend(this, 80.DOLLARS, BOB_PUBKEY, listOf(myOutput))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()

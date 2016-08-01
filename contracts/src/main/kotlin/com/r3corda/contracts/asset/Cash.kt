@@ -8,6 +8,7 @@ import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
+import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
 
@@ -214,16 +215,6 @@ class Cash : ClauseVerifier() {
     /**
      * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
      * Note that the wallet list is not updated: it's up to you to do that.
-     */
-    @Throws(InsufficientBalanceException::class)
-    fun generateSpend(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, to: PublicKey,
-                      cashStates: List<StateAndRef<State>>): List<PublicKey> =
-            generateSpend(tx, Amount(amount.quantity, amount.token.product), to, cashStates,
-                    setOf(amount.token.issuer.party))
-
-    /**
-     * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
-     * Note that the wallet list is not updated: it's up to you to do that.
      *
      * @param onlyFromParties if non-null, the wallet will be filtered to only include cash states issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
@@ -301,21 +292,23 @@ class Cash : ClauseVerifier() {
 /**
  * Sums the cash states in the list belonging to a single owner, throwing an exception
  * if there are none, or if any of the cash states cannot be added together (i.e. are
- * different currencies).
+ * different currencies or issuers).
  */
-fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
+fun Iterable<ContractState>.sumCashBy(owner: PublicKey): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
 
 /**
  * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
  * states cannot be added together (i.e. are different currencies).
  */
-fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
+fun Iterable<ContractState>.sumCash(): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
 
 /** Sums the cash states in the list, returning null if there are none. */
-fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
+fun Iterable<ContractState>.sumCashOrNull(): Amount<Issued<Currency>>? = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
 
-/** Sums the cash states in the list, returning zero of the given currency if there are none. */
-fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero<Issued<Currency>>(currency)
+/** Sums the cash states in the list, returning zero of the given currency+issuer if there are none. */
+fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Issued<Currency>> {
+    return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero<Issued<Currency>>(currency)
+}
 
 /**
  * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
@@ -342,7 +335,7 @@ infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = wi
 // Unit testing helpers. These could go in a separate file but it's hardly worth it for just a few functions.
 
 /** A randomly generated key. */
-val DUMMY_CASH_ISSUER_KEY by lazy { generateKeyPair() }
+val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
 val DUMMY_CASH_ISSUER by lazy { Party("Snake Oil Issuer", DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */

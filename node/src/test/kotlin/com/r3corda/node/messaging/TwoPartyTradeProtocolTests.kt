@@ -54,14 +54,14 @@ class TwoPartyTradeProtocolTests {
     lateinit var net: MockNetwork
 
     private fun runSeller(smm: StateMachineManager, notary: NodeInfo,
-                          otherSide: Party, assetToSell: StateAndRef<OwnableState>, price: Amount<Issued<Currency>>,
+                          otherSide: Party, assetToSell: StateAndRef<OwnableState>, price: Amount<Currency>,
                           myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
         return smm.add("${TwoPartyTradeProtocol.TOPIC}.seller", seller)
     }
 
     private fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
-                         otherSide: Party, acceptablePrice: Amount<Issued<Currency>>, typeToBuy: Class<out OwnableState>,
+                         otherSide: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>,
                          sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = TwoPartyTradeProtocol.Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
         return smm.add("${TwoPartyTradeProtocol.TOPIC}.buyer", buyer)
@@ -106,7 +106,7 @@ class TwoPartyTradeProtocolTests {
                     bobNode.smm,
                     notaryNode.info,
                     aliceNode.info.identity,
-                    1000.DOLLARS `issued by` issuer,
+                    1000.DOLLARS,
                     CommercialPaper.State::class.java,
                     buyerSessionID
             )
@@ -115,7 +115,7 @@ class TwoPartyTradeProtocolTests {
                     notaryNode.info,
                     bobNode.info.identity,
                     "alice's paper".outputStateAndRef(),
-                    1000.DOLLARS `issued by` issuer,
+                    1000.DOLLARS,
                     ALICE_KEY,
                     buyerSessionID
             )
@@ -158,7 +158,7 @@ class TwoPartyTradeProtocolTests {
                     notaryNode.info,
                     bobNode.info.identity,
                     "alice's paper".outputStateAndRef(),
-                    1000.DOLLARS `issued by` issuer,
+                    1000.DOLLARS,
                     ALICE_KEY,
                     buyerSessionID
             )
@@ -166,7 +166,7 @@ class TwoPartyTradeProtocolTests {
                     bobNode.smm,
                     notaryNode.info,
                     aliceNode.info.identity,
-                    1000.DOLLARS `issued by` issuer,
+                    1000.DOLLARS,
                     CommercialPaper.State::class.java,
                     buyerSessionID
             )
@@ -279,7 +279,7 @@ class TwoPartyTradeProtocolTests {
                     notaryNode.info,
                     bobNode.info.identity,
                     "alice's paper".outputStateAndRef(),
-                    1000.DOLLARS `issued by` issuer,
+                    1000.DOLLARS,
                     ALICE_KEY,
                     buyerSessionID
             )
@@ -287,7 +287,7 @@ class TwoPartyTradeProtocolTests {
                     bobNode.smm,
                     notaryNode.info,
                     aliceNode.info.identity,
-                    1000.DOLLARS `issued by` issuer,
+                    1000.DOLLARS,
                     CommercialPaper.State::class.java,
                     buyerSessionID
             )
@@ -390,7 +390,7 @@ class TwoPartyTradeProtocolTests {
                 notaryNode.info,
                 bobNode.info.identity,
                 "alice's paper".outputStateAndRef(),
-                1000.DOLLARS `issued by` issuer,
+                1000.DOLLARS,
                 ALICE_KEY,
                 buyerSessionID
         )
@@ -398,7 +398,7 @@ class TwoPartyTradeProtocolTests {
                 bobNode.smm,
                 notaryNode.info,
                 aliceNode.info.identity,
-                1000.DOLLARS `issued by` issuer,
+                1000.DOLLARS,
                 CommercialPaper.State::class.java,
                 buyerSessionID
         )

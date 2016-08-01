@@ -7,14 +7,12 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.TransactionBuilder
-import com.r3corda.core.crypto.DummyPublicKey
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.IdentityService
 import com.r3corda.core.node.services.StorageService
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.node.services.testing.MockStorageService
+import java.math.BigInteger
 import java.net.ServerSocket
 import java.security.KeyPair
 import java.security.PublicKey
@@ -73,7 +71,7 @@ val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-val DUMMY_NOTARY_KEY: KeyPair by lazy { generateKeyPair() }
+val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
 val DUMMY_NOTARY: Party get() = Party("Notary Service", DUMMY_NOTARY_KEY.public)
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)

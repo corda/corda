@@ -47,7 +47,7 @@ object TwoPartyTradeProtocol {
 
     val TOPIC = "platform.trade"
 
-    class UnacceptablePriceException(val givenPrice: Amount<Issued<Currency>>) : Exception()
+    class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception()
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
@@ -55,7 +55,7 @@ object TwoPartyTradeProtocol {
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
-            val price: Amount<Issued<Currency>>,
+            val price: Amount<Currency>,
             val sellerOwnerKey: PublicKey,
             val sessionID: Long
     )
@@ -66,7 +66,7 @@ object TwoPartyTradeProtocol {
     open class Seller(val otherSide: Party,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
-                      val price: Amount<Issued<Currency>>,
+                      val price: Amount<Currency>,
                       val myKeyPair: KeyPair,
                       val buyerSessionID: Long,
                       override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
@@ -133,7 +133,7 @@ object TwoPartyTradeProtocol {
                 // This verifies that the transaction is contract-valid, even though it is missing signatures.
                 serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments))
 
-                if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public) != price)
+                if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
                     throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
 
                 // There are all sorts of funny games a malicious secondary might play here, we should fix them:
@@ -178,7 +178,7 @@ object TwoPartyTradeProtocol {
 
     open class Buyer(val otherSide: Party,
                      val notary: Party,
-                     val acceptablePrice: Amount<Issued<Currency>>,
+                     val acceptablePrice: Amount<Currency>,
                      val typeToBuy: Class<out OwnableState>,
                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
 
