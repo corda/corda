@@ -44,8 +44,12 @@ interface DriverDSLInterface {
     fun startNode(advertisedServices: Set<ServiceType>, providedName: String? = null): NodeInfo
 }
 
-fun <A> driver(baseDirectory: String? = null, dsl: DriverDSL.() -> A): Pair<DriverHandle, A> {
-    val driverDsl = DriverDSL(10000, baseDirectory ?: "build/${getTimestampAsDirectoryName()}")
+fun <A> driver(baseDirectory: String? = null, quasarPath: String? = null, dsl: DriverDSL.() -> A): Pair<DriverHandle, A> {
+    val driverDsl = DriverDSL(
+            portCounter = 10000,
+            baseDirectory = baseDirectory ?: "build/${getTimestampAsDirectoryName()}",
+            quasarPath = quasarPath ?: "lib/quasar.jar"
+    )
     driverDsl.start()
     val returnValue = dsl(driverDsl)
     val shutdownHook = Thread({
@@ -89,7 +93,7 @@ private fun <A> poll(f: () -> A?): A {
     return result
 }
 
-class DriverDSL(private var portCounter: Int, val baseDirectory: String) : DriverDSLInterface {
+class DriverDSL(private var portCounter: Int, val baseDirectory: String, val quasarPath: String) : DriverDSLInterface {
 
     fun nextLocalHostAndPort() = HostAndPort.fromParts("localhost", nextPort())
 
@@ -159,7 +163,7 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String) : Drive
                 nearestCity = nearestCity,
                 legalName = name
         )
-        registerProcess(startNode(driverCliParams))
+        registerProcess(startNode(driverCliParams, quasarPath))
 
         return poll {
             networkMapCache.partyNodes.forEach {
@@ -190,7 +194,7 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String) : Drive
                 legalName = networkMapName
         )
         println("Starting network-map-service")
-        registerProcess(startNode(driverCliParams))
+        registerProcess(startNode(driverCliParams, quasarPath))
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
         // the network map service itself
         val nodeInfo = NodeInfo(
@@ -228,13 +232,13 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String) : Drive
         )
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
-        private fun startNode(cliParams: NodeRunner.CliParams): Process {
+        private fun startNode(cliParams: NodeRunner.CliParams, quasarPath: String): Process {
             val className = NodeRunner::class.java.canonicalName
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
             val javaArgs = listOf(path) +
-                    listOf("-Dname=${cliParams.legalName}", "-javaagent:lib/quasar.jar", "-cp", classpath, className) +
+                    listOf("-Dname=${cliParams.legalName}", "-javaagent:$quasarPath", "-cp", classpath, className) +
                     cliParams.toCliArguments()
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
