@@ -14,7 +14,7 @@
 <td>
 <a href="-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code><p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
 with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
 as well for interop.</p>

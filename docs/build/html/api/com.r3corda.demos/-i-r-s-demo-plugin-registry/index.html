@@ -37,11 +37,35 @@ This is used to extend the white listed protocols that can be initiated from the
 </tr>
 <tr>
 <td>
+<a href="static-serve-dirs.html">staticServeDirs</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">staticServeDirs</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><span class="identifier">String</span><span class="symbol">,</span>&nbsp;<span class="identifier">String</span><span class="symbol">&gt;</span></code><p>Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
+Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
+be specified with: javaClass.getResource("&lt;folder-in-jar&gt;").toExternalForm()</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="web-apis.html">webApis</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">webApis</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>List of JAX-RS classes inside the contract jar. They are expected to have a single parameter constructor that takes a ServiceHub as input.
-These are listed as Class&lt;*&gt;, because they will be instantiated inside an AttachmentClassLoader so that subsequent protocols, contracts, etc
-will be running in the appropriate isolated context.</p>
+These are listed as Class&lt;*&gt;, because in the future they will be instantiated inside a ClassLoader so that
+Cordapp code can be loaded dynamically.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.node/-corda-plugin-registry/service-plugins.html">servicePlugins</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">servicePlugins</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>List of additional long lived services to be hosted within the node.
+They are expected to have a single parameter constructor that takes a ServiceHubInternal as input.
+The ServiceHubInternal will be fully constructed before the plugin service is created and will
+allow access to the protocol factory and protocol initiation entry points there.</p>
 </td>
 </tr>
 </tbody>

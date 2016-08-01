@@ -73,25 +73,9 @@ acknowledgement response with no content, use <a href="#">com.r3corda.core.messa
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.persistence/-data-vending-service/index.html">DataVendingService</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">DataVendingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
-glue that sits between the network layer and the database layer.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.node.services.network/-in-memory-network-map-service/index.html">InMemoryNetworkMapService</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.network/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.node.services/-notary-change-service/index.html">NotaryChangeService</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">NotaryChangeService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>A service that monitors the network for requests for changing the notary of a state,
-and immediately runs the <a href="../../com.r3corda.protocols/-notary-change-protocol/index.html">NotaryChangeProtocol</a> if the auto-accept criteria are met.</p>
-</td>
 </tr>
 <tr>
 <td>
@@ -105,6 +89,22 @@ and immediately runs the <a href="../../com.r3corda.protocols/-notary-change-pro
 <a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-service/index.html">Service</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code><p>The Service that wraps <a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services/-notary-change/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>A service that monitors the network for requests for changing the notary of a state,
+and immediately runs the <a href="../../com.r3corda.protocols/-notary-change-protocol/index.html">NotaryChangeProtocol</a> if the auto-accept criteria are met.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.persistence/-data-vending/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>This class sets up network message handlers for requests from peers for data keyed by hash. It is a piece of simple
+glue that sits between the network layer and the database layer.</p>
 </td>
 </tr>
 </tbody>

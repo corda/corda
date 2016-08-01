@@ -41,6 +41,14 @@ to indicate which instance the token is a serialized form of.</p>
 <tbody>
 <tr>
 <td>
+<a href="../../com.r3corda.node.internal/-abstract-node/index.html">AbstractNode</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNode</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>A base node implementation that can be customised either for production (with real implementations that do real
+I/O), or a mock implementation suitable for unit test environments.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.node.services.api/-abstract-node-service/index.html">AbstractNodeService</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNodeService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span></code><p>Abstract superclass for services that a node can host, which provides helper functions.</p>
@@ -50,7 +58,7 @@ to indicate which instance the token is a serialized form of.</p>
 <td>
 <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
 Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
 with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
 as well for interop.</p>
@@ -74,7 +82,7 @@ as well for interop.</p>
 <td>
 <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a></td>
 <td>
-<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InMemoryMessaging</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code><p>An <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> provides a <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> that isnt backed by any kind of network or disk storage
+<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InMemoryMessaging</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SingletonSerializeAsToken</span><span class="symbol">, </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>An <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> provides a <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> that isnt backed by any kind of network or disk storage
 system, but just uses regular queues on the heap instead. It is intended for unit testing and developer convenience
 when all entities on the network are being simulated in-process.</p>
 </td>

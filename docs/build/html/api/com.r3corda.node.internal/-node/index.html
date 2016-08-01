@@ -116,6 +116,12 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
+<a href="../-abstract-node/custom-services.html">customServices</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">customServices</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../-abstract-node/dir.html">dir</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">dir</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
@@ -146,12 +152,6 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
-<a href="../-abstract-node/interest-rates-service.html">interestRatesService</a></td>
-<td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">interestRatesService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-service/index.html"><span class="identifier">Service</span></a></code></td>
-</tr>
-<tr>
-<td>
 <a href="../-abstract-node/is-previous-checkpoints-present.html">isPreviousCheckpointsPresent</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">isPreviousCheckpointsPresent</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
@@ -166,7 +166,13 @@ loads important data off disk and starts listening for connections.</p>
 <td>
 <a href="../-abstract-node/net.html">net</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-node/net-map-cache.html">netMapCache</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">netMapCache</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -258,7 +264,7 @@ loads important data off disk and starts listening for connections.</p>
 <td>
 <a href="make-messaging-service.html">makeMessagingService</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+<code><span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -310,6 +316,13 @@ loads important data off disk and starts listening for connections.</p>
 </tr>
 <tr>
 <td>
+<a href="../-abstract-node/find-service.html">findService</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">findService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Locates and returns a service of the given type if loaded, or throws an exception if not found.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../-abstract-node/generate-key-pair.html">generateKeyPair</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
@@ -331,12 +344,6 @@ loads important data off disk and starts listening for connections.</p>
 <a href="../-abstract-node/make-identity-service.html">makeIdentityService</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeIdentityService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-abstract-node/make-interest-rates-oracle-service.html">makeInterestRatesOracleService</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeInterestRatesOracleService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>

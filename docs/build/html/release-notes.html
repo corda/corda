@@ -95,7 +95,11 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -112,7 +116,7 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-2">Milestone 2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-1">Milestone 1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-0">Milestone 0</a></li>
 </ul>
@@ -167,11 +171,80 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
-<div class="section" id="unreleased">
-<h2>Unreleased<a class="headerlink" href="#unreleased" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="milestone-2">
+<h2>Milestone 2<a class="headerlink" href="#milestone-2" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Big improvements to the interest rate swap app:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
+the Corda API from the web.</li>
+<li>Simplifications to the way the demo is used from the command line.</li>
+<li><a class="reference internal" href="contract-irs.html"><span class="doc">Detailed documentation on how the contract works and can be used</span></a> has been written.</li>
+<li>Better integration testing of the app.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Smart contracts have been redesigned around reusable components, referred to as &#8220;clauses&#8221;. The cash, commercial paper
+and obligation contracts now share a common issue clause.</p>
+</li>
+<li><p class="first">New code in the experimental module (note that this module is a place for work-in-progress code which has not yet gone
+through code review and which may, in general, not even function correctly):</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Thanks to the prolific Sofus Mortensen &#64; Nordea Bank, an experimental generic contract DSL that is based on the famous
+2001 &#8220;Composing contracts&#8221; paper has been added. We thank Sofus for this great and promising research, which is so
+relevant in the wake of TheDAO hack.</p>
+</li>
+<li><p class="first">The contract code from the recent trade finance demos is now in experimental. This code comes thanks to a
+collaboration of the members; all credit to:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Mustafa Ozturk &#64; Natixis</li>
+<li>David Nee &#64; US Bank</li>
+<li>Johannes Albertsen &#64; Dankse Bank</li>
+<li>Rui Hu &#64; Nordea</li>
+<li>Daniele Barreca &#64; Unicredit</li>
+<li>Sukrit Handa &#64; Scotiabank</li>
+<li>Giuseppe Cardone &#64; Banco Intesa</li>
+<li>Robert Santiago &#64; BBVA</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The usability of the command line demo programs has been improved.</p>
+</li>
+<li><p class="first">All example code and existing contracts have been ported to use the new Java/Kotlin unit testing domain-specific
+languages (DSLs) which make it easy to construct chains of transactions and verify them together. This cleans up
+and unifies the previous ad-hoc set of similar DSLs. A tutorial on how to use it has been added to the documentation.
+We believe this largely completes our testing story for now around smart contracts. Feedback from bank developers
+during the Trade Finance project has indicated that the next thing to tackle is docs and usability improvements in
+the protocols API.</p>
+</li>
+<li><p class="first">Significant work done towards defining the &#8220;CorDapp&#8221; concept in code, with dynamic loading of API services and more to
+come.</p>
+</li>
+<li><p class="first">Inter-node communication now uses SSL/TLS and AMQP/1.0, albeit without all nodes self-signing at the moment. A real
+PKI for the p2p network will come later.</p>
+</li>
+<li><p class="first">Logging is now saved to files with log rotation provided by Log4J.</p>
+</li>
+</ul>
+<p>API changes:</p>
 <ul class="simple">
-<li>Smart contracts have been redesigned around reusable components, referred to as &#8220;clauses&#8221;. The cash, commercial paper
-and obligation contracts now share a common issue clause.</li>
+<li>Some utility methods and extension functions that are specific to certain contract types have moved packages: just
+delete the import lines that no longer work and let IntelliJ replace them with the correct package paths.</li>
+<li>The <code class="docutils literal"><span class="pre">arg</span></code> method in the test DSL is now called <code class="docutils literal"><span class="pre">command</span></code> to be consistent with the rest of the data model.</li>
+<li>The messaging APIs have changed somewhat to now use a new <code class="docutils literal"><span class="pre">TopicSession</span></code> object. These APIs will continue to change
+in the upcoming releases.</li>
+</ul>
+<p>New documentation:</p>
+<ul class="simple">
+<li><a class="reference internal" href="contract-catalogue.html"><span class="doc">Platform contracts</span></a></li>
+<li><a class="reference internal" href="contract-irs.html"><span class="doc">Interest Rate Swaps</span></a></li>
+<li><a class="reference internal" href="tutorial-test-dsl.html"><span class="doc">Writing a contract test</span></a></li>
 </ul>
 </div>
 <div class="section" id="milestone-1">

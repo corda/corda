@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>The Interest Rate Swap Contract &mdash; R3 Corda latest documentation</title>
+  <title>Interest Rate Swaps &mdash; R3 Corda latest documentation</title>
   
 
   
@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Where to start" href="where-to-start.html"/>
-        <link rel="prev" title="Node administration" href="node-administration.html"/> 
+        <link rel="prev" title="Platform contracts" href="contract-catalogue.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -86,7 +86,7 @@
             
             
                 <p class="caption"><span class="caption-text">Overview</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
@@ -95,7 +95,11 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">The Interest Rate Swap Contract</a><ul>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interest Rate Swaps</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#creating-an-instance-and-lifecycle">Creating an instance and lifecycle</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#technical-details">Technical Details</a></li>
 </ul>
@@ -149,11 +153,11 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>The Interest Rate Swap Contract</li>
+    <li>Interest Rate Swaps</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/irs.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/contract-irs.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -163,8 +167,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="the-interest-rate-swap-contract">
-<h1>The Interest Rate Swap Contract<a class="headerlink" href="#the-interest-rate-swap-contract" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="interest-rate-swaps">
+<h1>Interest Rate Swaps<a class="headerlink" href="#interest-rate-swaps" title="Permalink to this headline">¶</a></h1>
 <p>The Interest Rate Swap (IRS) Contract (source: IRS.kt, IRSUtils.kt, IRSExport.kt) is a bilateral contract to implement a
 vanilla fixed / floating same currency IRS.</p>
 <p>In general, an IRS allows two counterparties to modify their exposure from changes in the underlying interest rate. They
@@ -175,7 +179,7 @@ time, there is an exchange of cash flows which are calculated by looking at the 
 upon an amount that is not actually exchanged but notionally used for the calculation (and is hence known as the notional
 amount), and a rate that is either fixed at the creation of the swap (for the fixed leg), or based upon a reference rate
 that is retrieved during the swap (for the floating leg). An example reference rate might be something such as &#8216;LIBOR 3M&#8217;.</p>
-<p>The fixed leg has its rate computed and set in advance, where as the floating leg has a fixing process whereas the rate
+<p>The fixed leg has its rate computed and set in advance, whereas the floating leg has a fixing process whereas the rate
 for the next period is fixed with relation to a reference rate. Then, a calculation is performed such that the interest
 due over that period multiplied by the notional is paid (normally at the end of the period). If these two legs have the
 same payment date, then these flows can be offset against each other (in reality there are normally a number of these
@@ -188,7 +192,7 @@ it merely represents that the payment needs to be made.</p>
 the view of the floating leg receiver / fixed leg payer. The enumerated documents represent the versions of the IRS as
 it progresses (note that, the first version exists before the value date), the dots on the &#8220;y=0&#8221; represent an interest
 rate value becoming available and then the curved arrow indicates to which period the fixing applies.</p>
-<img alt="_images/irs.png" src="_images/irs.png" />
+<img alt="_images/contract-irs.png" src="_images/contract-irs.png" />
 <p>Two days (by convention, although this can be modified), before the value date (ie the start of the swap) in the red
 period the reference rate is observed from an oracle and fixed in the instance at 1.1%. At the end of the accrual period,
 there is an obligation from the floating leg payer of 1.1% * notional amount * days in the accrual period / 360.
@@ -257,7 +261,7 @@ equivalent <code class="docutils literal"><span class="pre">FixedRatePaymentEven
         <a href="where-to-start.html" class="btn btn-neutral float-right" title="Where to start" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="node-administration.html" class="btn btn-neutral" title="Node administration" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="contract-catalogue.html" class="btn btn-neutral" title="Platform contracts" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

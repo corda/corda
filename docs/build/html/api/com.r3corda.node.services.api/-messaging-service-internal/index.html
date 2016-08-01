@@ -1,0 +1,133 @@
+<HTML>
+<HEAD>
+<title>MessagingServiceInternal - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.node.services.api</a>&nbsp;/&nbsp;<a href=".">MessagingServiceInternal</a><br/>
+<br/>
+<h1>MessagingServiceInternal</h1>
+<code><span class="keyword">interface </span><span class="identifier">MessagingServiceInternal</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code><br/>
+<br/>
+<br/>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/-messaging-service/my-address.html">myAddress</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">myAddress</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code><p>Returns an address that refers to this node.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="register-trusted-address.html">registerTrustedAddress</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">registerTrustedAddress</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.MessagingServiceInternal$registerTrustedAddress(com.r3corda.core.messaging.SingleMessageRecipient)/address">address</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="stop.html">stop</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/-messaging-service/add-message-handler.html">addMessageHandler</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span>&nbsp;<span class="symbol">=</span>&nbsp;""<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span>&nbsp;<span class="symbol">=</span>&nbsp;DEFAULT_SESSION_ID<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic matches the given string, on the given
+executor.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(com.r3corda.core.messaging.TopicSession, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(com.r3corda.core.messaging.TopicSession, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$addMessageHandler(com.r3corda.core.messaging.TopicSession, java.util.concurrent.Executor, kotlin.Function2((com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageHandlerRegistration, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>The provided function will be invoked for each received message whose topic and session matches, on the
+given executor.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/-messaging-service/create-message.html">createMessage</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">createMessage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$createMessage(kotlin.String, kotlin.Long, kotlin.ByteArray)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$createMessage(kotlin.String, kotlin.Long, kotlin.ByteArray)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span>&nbsp;<span class="symbol">=</span>&nbsp;DEFAULT_SESSION_ID<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$createMessage(kotlin.String, kotlin.Long, kotlin.ByteArray)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">createMessage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$createMessage(com.r3corda.core.messaging.TopicSession, kotlin.ByteArray)/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$createMessage(com.r3corda.core.messaging.TopicSession, kotlin.ByteArray)/data">data</span><span class="symbol">:</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a></code><p>Returns an initialised <a href="../../com.r3corda.core.messaging/-message/index.html">Message</a> with the current time, etc, already filled in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/-messaging-service/remove-message-handler.html">removeMessageHandler</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">removeMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$removeMessageHandler(com.r3corda.core.messaging.MessageHandlerRegistration)/registration">registration</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Removes a handler given the object returned from <a href="../../com.r3corda.core.messaging/-messaging-service/add-message-handler.html">addMessageHandler</a>. The callback will no longer be invoked once
+this method has returned, although executions that are currently in flight will not be interrupted.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/-messaging-service/send.html">send</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$send(com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageRecipients)/message">message</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging.MessagingService$send(com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Sends a message to the given receiver. The details of how receivers are identified is up to the messaging
+implementation: the type system provides an opaque high level view, with more fine grained control being
+available via type casting. Once this function returns the message is queued for delivery but not necessarily
+delivered: if the recipients are offline then the message could be queued hours or days later.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extension Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/run-on-next-message.html">runOnNextMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
+itself. This is useful for one-shot handlers that arent supposed to stick around permanently. Note that this callback
+doesnt take the registration object, unlike the callback to <a href="../../com.r3corda.core.messaging/-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>, as the handler is
+automatically deregistered before the callback runs.</p>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">runOnNextMessage</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.TopicSession, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.TopicSession, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$runOnNextMessage(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.TopicSession, java.util.concurrent.Executor, kotlin.Function1((com.r3corda.core.messaging.Message, kotlin.Unit)))/callback">callback</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Registers a handler for the given topic and session that runs the given callback with the message and then removes
+itself. This is useful for one-shot handlers that arent supposed to stick around permanently. Note that this callback
+doesnt take the registration object, unlike the callback to <a href="../../com.r3corda.core.messaging/-messaging-service/add-message-handler.html">MessagingService.addMessageHandler</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.messaging/send.html">send</a></td>
+<td>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, kotlin.String, kotlin.Long, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<code><span class="keyword">fun </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">.</span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.TopicSession, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/topicSession">topicSession</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-topic-session/index.html"><span class="identifier">TopicSession</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.TopicSession, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/payload">payload</span><span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.messaging$send(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.TopicSession, kotlin.Any, com.r3corda.core.messaging.MessageRecipients)/to">to</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">MessagingServiceInternal</span></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
+with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
+as well for interop.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a></td>
+<td>
+<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InMemoryMessaging</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">MessagingServiceInternal</span></code><p>An <a href="../../com.r3corda.node.services.network/-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> provides a <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> that isnt backed by any kind of network or disk storage
+system, but just uses regular queues on the heap instead. It is intended for unit testing and developer convenience
+when all entities on the network are being simulated in-process.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

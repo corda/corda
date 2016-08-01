@@ -8,10 +8,10 @@
 <br/>
 <h1>webApis</h1>
 <a name="com.r3corda.core.node.CordaPluginRegistry$webApis"></a>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">webApis</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">webApis</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
 <p>List of JAX-RS classes inside the contract jar. They are expected to have a single parameter constructor that takes a ServiceHub as input.
-These are listed as Class&lt;*&gt;, because they will be instantiated inside an AttachmentClassLoader so that subsequent protocols, contracts, etc
-will be running in the appropriate isolated context.</p>
+These are listed as Class&lt;*&gt;, because in the future they will be instantiated inside a ClassLoader so that
+Cordapp code can be loaded dynamically.</p>
 <br/>
 <br/>
 </BODY>

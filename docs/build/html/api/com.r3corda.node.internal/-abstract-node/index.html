@@ -7,9 +7,13 @@
 <a href="../index.html">com.r3corda.node.internal</a>&nbsp;/&nbsp;<a href=".">AbstractNode</a><br/>
 <br/>
 <h1>AbstractNode</h1>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNode</span></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNode</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><br/>
 <p>A base node implementation that can be customised either for production (with real implementations that do real
 I/O), or a mock implementation suitable for unit test environments.</p>
+<p>Marked as SingletonSerializeAsToken to prevent the invisible reference to AbstractNode in the ServiceHub accidentally
+sweeping up the Node into the Kryo checkpoint serialization via any protocols holding a reference to ServiceHub.</p>
+<br/>
+<br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -60,6 +64,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="custom-services.html">customServices</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">customServices</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="dir.html">dir</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">dir</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
@@ -90,12 +100,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="interest-rates-service.html">interestRatesService</a></td>
-<td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">interestRatesService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-service/index.html"><span class="identifier">Service</span></a></code></td>
-</tr>
-<tr>
-<td>
 <a href="is-previous-checkpoints-present.html">isPreviousCheckpointsPresent</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">isPreviousCheckpointsPresent</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
@@ -116,7 +120,13 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="net.html">net</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="net-map-cache.html">netMapCache</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">netMapCache</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -230,6 +240,13 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="find-service.html">findService</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">findService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Locates and returns a service of the given type if loaded, or throws an exception if not found.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="generate-key-pair.html">generateKeyPair</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">generateKeyPair</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code></td>
@@ -254,15 +271,9 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="make-interest-rates-oracle-service.html">makeInterestRatesOracleService</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeInterestRatesOracleService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="make-messaging-service.html">makeMessagingService</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -307,6 +318,17 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="stop.html">stop</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
 </tr>
 </tbody>
 </table>
