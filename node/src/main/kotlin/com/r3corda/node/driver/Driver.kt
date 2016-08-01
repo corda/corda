@@ -6,7 +6,8 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import java.net.Socket
@@ -98,23 +99,24 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String, val qua
 
     fun nextLocalHostAndPort() = HostAndPort.fromParts("localhost", nextPort())
 
-    val messagingService = ArtemisMessagingService(
+    val networkMapCache = InMemoryNetworkMapCache(null)
+    private val networkMapName = "NetworkMapService"
+    private val networkMapAddress = nextLocalHostAndPort()
+    private lateinit var networkMapNodeInfo: NodeInfo
+    private val registeredProcesses = LinkedList<Process>()
+
+    val messagingService = ArtemisMessagingClient(
             Paths.get(baseDirectory, "driver-artemis"),
-            nextLocalHostAndPort(),
             object : NodeConfiguration {
                 override val myLegalName = "driver-artemis"
                 override val exportJMXto = ""
                 override val nearestCity = "Zion"
                 override val keyStorePassword = "keypass"
                 override val trustStorePassword = "trustpass"
-            }
+            },
+            serverHostPort = networkMapAddress,
+            myHostPort =  nextLocalHostAndPort()
     )
-
-    val networkMapCache = InMemoryNetworkMapCache(null)
-    private val networkMapName = "NetworkMapService"
-    private val networkMapAddress = nextLocalHostAndPort()
-    private lateinit var networkMapNodeInfo: NodeInfo
-    private val registeredProcesses = LinkedList<Process>()
 
     private fun nextPort(): Int {
         val nextPort = portCounter
@@ -177,9 +179,28 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String, val qua
     }
 
     internal fun start() {
+        startNetworkMapService()
         messagingService.configureWithDevSSLCertificate()
         messagingService.start()
-        startNetworkMapService()
+        // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
+        // the network map service itself
+        val nodeInfo = NodeInfo(
+                address = ArtemisMessagingClient.makeRecipient(networkMapAddress),
+                identity = Party(
+                        name = networkMapName,
+                        owningKey = generateKeyPair().public
+                ),
+                advertisedServices = setOf(NetworkMapService.Type)
+        )
+        networkMapCache.addMapService(messagingService, nodeInfo, true)
+        networkMapNodeInfo = poll {
+            networkMapCache.partyNodes.forEach {
+                if (it.identity.name == networkMapName) {
+                    return@poll it
+                }
+            }
+            null
+        }
     }
 
     private fun startNetworkMapService() {
@@ -196,25 +217,6 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String, val qua
         )
         println("Starting network-map-service")
         registerProcess(startNode(driverCliParams, quasarPath))
-        // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
-        // the network map service itself
-        val nodeInfo = NodeInfo(
-                address = ArtemisMessagingService.makeRecipient(networkMapAddress),
-                identity = Party(
-                        name = networkMapName,
-                        owningKey = generateKeyPair().public
-                ),
-                advertisedServices = setOf(NetworkMapService.Type)
-        )
-        networkMapCache.addMapService(messagingService, nodeInfo, true)
-        networkMapNodeInfo = poll {
-            networkMapCache.partyNodes.forEach {
-                if (it.identity.name == networkMapName) {
-                    return@poll it
-                }
-            }
-            null
-        }
     }
 
     companion object {

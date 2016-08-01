@@ -2,13 +2,13 @@ package com.r3corda.node.driver
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.parsePublicKeyBase58
 import com.r3corda.core.crypto.toBase58String
-import com.r3corda.core.crypto.toPublicKey
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
@@ -31,7 +31,7 @@ class NodeRunner {
                 val networkMapNodeInfo =
                         if (networkMapName != null && networkMapPublicKey != null && networkMapAddress != null) {
                             NodeInfo(
-                                    address = ArtemisMessagingService.makeRecipient(networkMapAddress),
+                                    address = ArtemisMessagingClient.makeRecipient(networkMapAddress),
                                     identity = Party(
                                             name = networkMapName,
                                             owningKey = networkMapPublicKey
@@ -106,7 +106,7 @@ class NodeRunner {
                     throw IllegalArgumentException("Must provide at least one --services")
                 }
                 val networkMapName = optionSet.valueOf(networkMapName)
-                val networkMapPublicKey = optionSet.valueOf(networkMapPublicKey)?.toPublicKey()
+                val networkMapPublicKey = optionSet.valueOf(networkMapPublicKey)?.let { parsePublicKeyBase58(it) }
                 val networkMapAddress = optionSet.valueOf(networkMapAddress)
                 val messagingAddress = requiredArgument(optionSet, messagingAddress)
                 val apiAddress = requiredArgument(optionSet, apiAddress)

@@ -1,6 +1,6 @@
 package com.r3corda.node.driver
 
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.transactions.NotaryService
 import org.junit.Test
 import java.net.Socket
@@ -23,7 +23,7 @@ class DriverTests {
             }
         }
         // Check that the port is bound
-        val address = notaryNodeInfo.address as ArtemisMessagingService.Address
+        val address = notaryNodeInfo.address as ArtemisMessagingComponent.Address
         poll {
             try {
                 Socket(address.hostAndPort.hostText, address.hostAndPort.port).close()
