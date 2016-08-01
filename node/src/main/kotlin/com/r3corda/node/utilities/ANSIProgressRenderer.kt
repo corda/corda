@@ -1,48 +1,35 @@
 package com.r3corda.node.utilities
 
-import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.node.utilities.ANSIProgressRenderer.progressTracker
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.LogEvent
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender
+import org.apache.logging.log4j.core.appender.ConsoleAppender
+import org.apache.logging.log4j.core.appender.OutputStreamManager
+import org.apache.logging.log4j.core.config.LoggerConfig
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
 import rx.Subscription
-import java.util.logging.ConsoleHandler
-import java.util.logging.Formatter
-import java.util.logging.LogRecord
-import java.util.logging.Logger
 
 /**
  * Knows how to render a [ProgressTracker] to the terminal using coloured, emoji-fied output. Useful when writing small
  * command line tools, demos, tests etc. Just set the [progressTracker] field and it will go ahead and start drawing
  * if the terminal supports it. Otherwise it just prints out the name of the step whenever it changes.
  *
- * TODO: Thread safety
+ * When a progress tracker is on the screen, it takes over the bottom part and reconfigures logging so that, assuming
+ * 1 log event == 1 line, the progress tracker is always glued to the bottom and logging scrolls above it.
+ *
+ * TODO: More thread safety
  */
 object ANSIProgressRenderer {
     private var installedYet = false
     private var subscription: Subscription? = null
 
-    private class LineBumpingConsoleHandler : ConsoleHandler() {
-        override fun getFormatter(): Formatter = BriefLogFormatter()
-
-        override fun publish(r: LogRecord?) {
-            if (progressTracker != null) {
-                val ansi = Ansi.ansi()
-                repeat(prevLinesDrawn) { ansi.eraseLine().cursorUp(1).eraseLine() }
-                System.out.print(ansi)
-                System.out.flush()
-            }
-
-            super.publish(r)
-
-            if (progressTracker != null)
-                draw(false)
-        }
-    }
-
     private var usingANSI = false
-    private var loggerRef: Logger? = null
 
     var progressTracker: ProgressTracker? = null
         set(value) {
@@ -50,24 +37,7 @@ object ANSIProgressRenderer {
 
             field = value
             if (!installedYet) {
-                AnsiConsole.systemInstall()
-
-                // This line looks weird as hell because the magic code to decide if we really have a TTY or not isn't
-                // actually exposed anywhere as a function (weak sauce). So we have to rely on our knowledge of jansi
-                // implementation details.
-                usingANSI = AnsiConsole.wrapOutputStream(System.out) !is AnsiOutputStream
-
-                if (usingANSI) {
-                    loggerRef = Logger.getLogger("").apply {
-                        val current = handlers[0]
-                        removeHandler(current)
-                        val new = LineBumpingConsoleHandler()
-                        new.level = current.level
-                        addHandler(new)
-                    }
-                }
-
-                installedYet = true
+                setup()
             }
 
             // Reset the state when a new tracker is wired up.
@@ -77,12 +47,60 @@ object ANSIProgressRenderer {
             subscription = value?.changes?.subscribe { draw(true) }
         }
 
+    private fun setup() {
+        AnsiConsole.systemInstall()
+
+        // This line looks weird as hell because the magic code to decide if we really have a TTY or not isn't
+        // actually exposed anywhere as a function (weak sauce). So we have to rely on our knowledge of jansi
+        // implementation details.
+        usingANSI = AnsiConsole.wrapOutputStream(System.out) !is AnsiOutputStream
+
+        if (usingANSI) {
+            // This super ugly code hacks into log4j and swaps out its console appender for our own. It's a bit simpler
+            // than doing things the official way with a dedicated plugin, etc, as it avoids mucking around with all
+            // the config XML and lifecycle goop.
+            val manager = LogManager.getContext(false) as LoggerContext
+            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single()
+            val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
+                    consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
+                    consoleAppender.ignoreExceptions(), true, consoleAppender.manager) {
+                override fun append(event: LogEvent) {
+                    // We lock on the renderer to avoid threads that are logging to the screen simultaneously messing
+                    // things up. Of course this slows stuff down a bit, but only whilst this little utility is in use.
+                    // Eventually it will be replaced with a real GUI and we can delete all this.
+                    synchronized(ANSIProgressRenderer) {
+                        if (progressTracker != null) {
+                            val ansi = Ansi.ansi()
+                            repeat(prevLinesDrawn) { ansi.eraseLine().cursorUp(1).eraseLine() }
+                            System.out.print(ansi)
+                            System.out.flush()
+                        }
+
+                        super.append(event)
+
+                        if (progressTracker != null)
+                            draw(false)
+                    }
+                }
+            }
+            scrollingAppender.start()
+            manager.configuration.appenders[consoleAppender.name] = scrollingAppender
+            val loggerConfig: LoggerConfig = manager.configuration.loggers.values.single()
+            val appenderRefs = loggerConfig.appenderRefs
+            loggerConfig.appenders.keys.forEach { loggerConfig.removeAppender(it) }
+            appenderRefs.forEach { loggerConfig.addAppender(manager.configuration.appenders[it.ref], it.level, it.filter) }
+            manager.updateLoggers()
+        }
+
+        installedYet = true
+    }
+
     // prevMessagePrinted is just for non-ANSI mode.
     private var prevMessagePrinted: String? = null
     // prevLinesDraw is just for ANSI mode.
     private var prevLinesDrawn = 0
 
-    private fun draw(moveUp: Boolean) {
+    @Synchronized private fun draw(moveUp: Boolean) {
         val pt = progressTracker!!
 
         if (!usingANSI) {
