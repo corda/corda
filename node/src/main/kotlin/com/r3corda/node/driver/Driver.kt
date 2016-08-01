@@ -5,7 +5,6 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.node.driver.NodeRunner
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
@@ -15,7 +14,9 @@ import java.net.SocketException
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes.
@@ -27,7 +28,6 @@ import java.util.concurrent.TimeUnit
  *   driver {
  *     startNode(setOf(NotaryService.Type), "Notary")
  *     val aliceMonitor = startNode(setOf(WalletMonitorService.Type), "Alice")
- *     startExplorer(aliceMonitor)
  *   }
  *
  * The base directory node directories go into may be specified in [driver] and defaults to "build/<timestamp>/".
@@ -39,6 +39,10 @@ import java.util.concurrent.TimeUnit
  * TODO The driver now polls the network map cache for info about newly started up nodes, this could be done asynchronously(?).
  * TODO The network map service bootstrap is hacky (needs to fake the service's public key in order to retrieve the true one), needs some thought.
  */
+
+interface DriverDSLInterface {
+    fun startNode(advertisedServices: Set<ServiceType>, providedName: String? = null): NodeInfo
+}
 
 fun <A> driver(baseDirectory: String? = null, dsl: DriverDSL.() -> A): Pair<DriverHandle, A> {
     val driverDsl = DriverDSL(10000, baseDirectory ?: "build/${getTimestampAsDirectoryName()}")
@@ -85,9 +89,9 @@ private fun <A> poll(f: () -> A?): A {
     return result
 }
 
-class DriverDSL(private var portCounter: Int, val baseDirectory: String) {
+class DriverDSL(private var portCounter: Int, val baseDirectory: String) : DriverDSLInterface {
 
-    private fun nextLocalHostAndPort() = HostAndPort.fromParts("localhost", nextPort())
+    fun nextLocalHostAndPort() = HostAndPort.fromParts("localhost", nextPort())
 
     val messagingService = ArtemisMessagingService(
             Paths.get(baseDirectory, "driver-artemis"),
@@ -125,14 +129,21 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String) {
         registeredProcesses.forEach {
             it.destroy()
         }
-        registeredProcesses.forEach {
-            if (!it.waitFor(5, TimeUnit.SECONDS)) {
+        /** Wait 5 seconds, then [Process.destroyForcibly] */
+        val finishedFuture = Executors.newSingleThreadExecutor().submit {
+            waitForAllNodesToFinish()
+        }
+        try {
+            finishedFuture.get(5, TimeUnit.SECONDS)
+        } catch (exception: TimeoutException) {
+            finishedFuture.cancel(true)
+            registeredProcesses.forEach {
                 it.destroyForcibly()
             }
         }
     }
 
-    fun startNode(advertisedServices: Set<ServiceType>, providedName: String? = null): NodeInfo {
+    override fun startNode(advertisedServices: Set<ServiceType>, providedName: String?): NodeInfo {
         val messagingAddress = nextLocalHostAndPort()
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
         val nearestCity = pickA(city)
@@ -203,19 +214,19 @@ class DriverDSL(private var portCounter: Int, val baseDirectory: String) {
 
     companion object {
 
-        private val city = arrayOf(
+        val city = arrayOf(
                 "London",
                 "Paris",
                 "New York",
                 "Tokyo"
         )
-        private val name = arrayOf(
+        val name = arrayOf(
                 "Alice",
                 "Bob",
                 "EvilBank",
                 "NotSoEvilBank"
         )
-        private fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
+        fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
         private fun startNode(cliParams: NodeRunner.CliParams): Process {
             val className = NodeRunner::class.java.canonicalName
