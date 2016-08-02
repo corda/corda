@@ -21,19 +21,20 @@ import javax.annotation.concurrent.ThreadSafe
  * states relevant to us into a database and once such a wallet is implemented, this scaffolding can be removed.
  */
 @ThreadSafe
-open class InMemoryWalletService(private val services: ServiceHub) : SingletonSerializeAsToken(), WalletService {
+open class InMemoryWalletService(protected val services: ServiceHub) : SingletonSerializeAsToken(), WalletService {
     class ClashingThreads(threads: Set<SecureHash>, transactions: Iterable<WireTransaction>) :
             Exception("There are multiple linear head states after processing transactions $transactions. The clashing thread(s): $threads")
-    private val log = loggerFor<InMemoryWalletService>()
+
+    open protected val log = loggerFor<InMemoryWalletService>()
 
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
     // inside mutex.locked {} code block. So we can't forget to take the lock unless we accidentally leak a reference
     // to wallet somewhere.
-    private class InnerState {
-        var wallet = Wallet(emptyList<StateAndRef<OwnableState>>())
+    protected class InnerState {
+        var wallet = Wallet(emptyList<StateAndRef<ContractState>>())
     }
 
-    private val mutex = ThreadBox(InnerState())
+    protected val mutex = ThreadBox(InnerState())
 
     override val currentWallet: Wallet get() = mutex.locked { wallet }
 
@@ -77,6 +78,9 @@ open class InMemoryWalletService(private val services: ServiceHub) : SingletonSe
                 Pair(wallet, combinedDelta)
             }
 
+            // TODO: we need to remove the clashing threads concepts and support potential duplicate threads
+            //       because two different nodes can have two different sets of threads and so currently it's possible
+            //       for only one party to have a clash which interferes with determinism of the transactions.
             val clashingThreads = walletAndNetDelta.first.clashingThreads
             if (!clashingThreads.isEmpty()) {
                 throw ClashingThreads(clashingThreads, txns)

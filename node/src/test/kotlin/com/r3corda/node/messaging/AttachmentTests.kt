@@ -102,7 +102,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, true, null, null, NetworkMapService.Type, SimpleNotaryService.Type)
+        }, true, null, null, false, NetworkMapService.Type, SimpleNotaryService.Type)
         val n1 = network.createNode(n0.info)
 
         // Insert an attachment into node zero's store directly.

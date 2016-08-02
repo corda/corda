@@ -19,7 +19,8 @@ import java.util.concurrent.Callable
 class TransactionGraphSearch(val transactions: ReadOnlyTransactionStorage,
                              val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
     class Query(
-            val withCommandOfType: Class<out CommandData>? = null
+            val withCommandOfType: Class<out CommandData>? = null,
+            val followInputsOfType: Class<out ContractState>? = null
     )
 
     var query: Query = Query()
@@ -27,19 +28,22 @@ class TransactionGraphSearch(val transactions: ReadOnlyTransactionStorage,
     override fun call(): List<WireTransaction> {
         val q = query
 
-        val next = ArrayList<SecureHash>()
-        next += startPoints.flatMap { it.inputs.map { it.txhash } }
+        val alreadyVisited = HashSet<SecureHash>()
+        val next = ArrayList<WireTransaction>(startPoints)
 
         val results = ArrayList<WireTransaction>()
 
         while (next.isNotEmpty()) {
-            val hash = next.removeAt(next.lastIndex)
-            val tx = transactions.getTransaction(hash)?.tx ?: continue
+            val tx = next.removeAt(next.lastIndex)
 
             if (q.matches(tx))
                 results += tx
 
-            next += tx.inputs.map { it.txhash }
+            val inputsLeadingToUnvisitedTx: Iterable<StateRef> = tx.inputs.filter { it.txhash !in alreadyVisited }
+            val unvisitedInputTxs: Map<SecureHash, SignedTransaction> = inputsLeadingToUnvisitedTx.map { it.txhash }.toHashSet().map { transactions.getTransaction(it) }.filterNotNull().associateBy { it.txBits.hash }
+            val unvisitedInputTxsWithInputIndex: Iterable<Pair<SignedTransaction, Int>> = inputsLeadingToUnvisitedTx.filter { it.txhash in unvisitedInputTxs.keys }.map { Pair(unvisitedInputTxs[it.txhash]!!, it.index) }
+            next += (unvisitedInputTxsWithInputIndex.filter { q.followInputsOfType == null || it.first.tx.outputs[it.second].data.javaClass == q.followInputsOfType }
+                    .map { it.first }.filter { alreadyVisited.add(it.txBits.hash) }.map { it.tx })
         }
 
         return results

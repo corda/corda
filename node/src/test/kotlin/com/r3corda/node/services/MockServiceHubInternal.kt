@@ -7,6 +7,7 @@ import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.testing.MOCK_IDENTITY_SERVICE
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -16,7 +17,6 @@ import com.r3corda.node.services.network.MockNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.wallet.NodeWalletService
 import java.time.Clock
 
 @Suppress("LeakingThis")
@@ -32,7 +32,7 @@ open class MockServiceHubInternal(
         val overrideClock: Clock? = NodeClock(),
         val protocolFactory: ProtocolLogicRefFactory? = ProtocolLogicRefFactory()
 ) : ServiceHubInternal() {
-    override val walletService: WalletService = customWallet ?: NodeWalletService(this)
+    override val walletService: WalletService = customWallet ?: InMemoryWalletService(this)
     override val keyManagementService: KeyManagementService
         get() = keyManagement ?: throw UnsupportedOperationException()
     override val identityService: IdentityService

@@ -1,16 +1,13 @@
 package com.r3corda.node
 
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigRenderOptions
+import com.r3corda.node.services.config.NodeConfiguration
 import joptsimple.OptionParser
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 
 val log = LoggerFactory.getLogger("Main")
 
@@ -38,26 +35,8 @@ fun main(args: Array<String>) {
     }
 
     val baseDirectoryPath = if (cmdlineOptions.has(ParamsSpec.baseDirectoryArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg)) else Paths.get(".").normalize()
-
-    val defaultConfig = ConfigFactory.parseResources("reference.conf")
-
-    val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) {
-        File(cmdlineOptions.valueOf(ParamsSpec.configFileArg))
-    } else {
-        baseDirectoryPath.resolve("node.conf").normalize().toFile()
-    }
-    val appConfig = ConfigFactory.parseFile(configFile)
-
-    val cmdlineOverrideMap = HashMap<String, Any?>() // If we do require a few other command line overrides eg for a nicer development experience they would go inside this map.
-    if (cmdlineOptions.has(ParamsSpec.baseDirectoryArg)) {
-        cmdlineOverrideMap.put("basedir", baseDirectoryPath.toString())
-    }
-    val overrideConfig = ConfigFactory.parseMap(cmdlineOverrideMap)
-
-    val mergedAndResolvedConfig = overrideConfig.withFallback(appConfig).withFallback(defaultConfig).resolve()
-
-    log.info("config:\n ${mergedAndResolvedConfig.root().render(ConfigRenderOptions.defaults())}")
-    val conf = FullNodeConfiguration(mergedAndResolvedConfig)
+    val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
+    val conf = FullNodeConfiguration(NodeConfiguration.loadConfig(baseDirectoryPath, configFile))
     val dir = conf.basedir.toAbsolutePath().normalize()
     logInfo(args, dir)
 

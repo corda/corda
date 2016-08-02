@@ -32,7 +32,7 @@ val DEFAULT_SESSION_ID = 0L
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-class Wallet(val states: List<StateAndRef<ContractState>>) {
+class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 

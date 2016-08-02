@@ -8,7 +8,10 @@ import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockIdentityService
+import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
+import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -84,6 +87,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
+        override fun makeWalletService(): WalletService = InMemoryWalletService(services)
+
         override fun startMessagingService() {
             // Nothing to do
         }
@@ -109,7 +114,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /** Returns a node, optionally created by the passed factory method. */
     fun createNode(networkMapAddress: NodeInfo? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
-                   start: Boolean = true, legalName: String? = null, keyPair: KeyPair? = null, vararg advertisedServices: ServiceType): MockNode {
+                   start: Boolean = true, legalName: String? = null, keyPair: KeyPair? = null,
+                   databasePersistence: Boolean = false, vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -122,6 +128,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             override val nearestCity: String = "Atlantis"
             override val keyStorePassword: String = "dummy"
             override val trustStorePassword: String = "trustpass"
+            override val dataSourceProperties: Properties get() = if (databasePersistence) makeTestDataSourceProperties("node_$id") else Properties()
         }
         val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
         if (start) {
@@ -160,12 +167,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, NetworkMapService.Type, SimpleNotaryService.Type),
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, false, NetworkMapService.Type, SimpleNotaryService.Type),
                 createNode(nodes[0].info, -1, nodeFactory, true, null)
         )
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, NetworkMapService.Type, SimpleNotaryService.Type)
+    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, false, NetworkMapService.Type, SimpleNotaryService.Type)
     fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
 
     @Suppress("unused")  // This is used from the network visualiser tool.
