@@ -19,7 +19,7 @@ import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.wallet.NodeWalletService
 import java.time.Clock
 
-open class MockServices(
+open class MockServiceHubInternal(
         customWallet: WalletService? = null,
         val keyManagement: KeyManagementService? = null,
         val net: MessagingServiceInternal? = null,

@@ -34,7 +34,7 @@ import javax.annotation.concurrent.ThreadSafe
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing protocols however.
  */
-open class UnitTestServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
+open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T> {
         throw UnsupportedOperationException("not implemented")
     }

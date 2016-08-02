@@ -9,7 +9,7 @@ import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.testing.MockIdentityService
-import com.r3corda.core.node.services.testing.UnitTestServices
+import com.r3corda.core.node.services.testing.MockServices
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.security.KeyPair
@@ -94,10 +94,10 @@ fun freeLocalHostAndPort(): HostAndPort {
 
 /**
  * Creates and tests a ledger built by the passed in dsl. The provided services can be customised, otherwise a default
- * of a freshly built [UnitTestServices] is used.
+ * of a freshly built [MockServices] is used.
  */
 @JvmOverloads fun ledger(
-        services: ServiceHub = UnitTestServices(),
+        services: ServiceHub = MockServices(),
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
     val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))

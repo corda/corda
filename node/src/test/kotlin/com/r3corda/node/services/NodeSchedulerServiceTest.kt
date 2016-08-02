@@ -60,7 +60,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     init {
         val kms = MockKeyManagementService(ALICE_KEY)
         val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"))
-        val mockServices = object : MockServices(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+        val mockServices = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
             override val testReference = this@NodeSchedulerServiceTest
         }
         services = mockServices

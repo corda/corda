@@ -8,7 +8,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockStorageService
-import com.r3corda.core.node.services.testing.UnitTestServices
+import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.services.wallet.NodeWalletService
@@ -23,13 +23,13 @@ import kotlin.test.assertNull
 // TODO: Move this to the cash contract tests once mock services are further split up.
 
 class WalletWithCashTest {
-    lateinit var services: UnitTestServices
+    lateinit var services: MockServices
     val wallet: WalletService get() = services.walletService
 
     @Before
     fun setUp() {
         BriefLogFormatter.loggingOn(NodeWalletService::class)
-        services = object : UnitTestServices() {
+        services = object : MockServices() {
             override val walletService: WalletService = NodeWalletService(this)
 
             override fun recordTransactions(txs: Iterable<SignedTransaction>) {
