@@ -10,7 +10,6 @@ package com.r3cev.corda.netmap
 
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.then
-import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.testing.IRSSimulation
 import com.r3corda.node.internal.testing.MockNetwork
@@ -81,10 +80,6 @@ class NetworkMapVisualiser : Application() {
 
     val timer = Timer()
     val uiThread: Scheduler = Schedulers.from { Platform.runLater(it) }
-
-    init {
-        BriefLogFormatter.initVerbose(InMemoryMessagingNetwork.MESSAGES_LOG_NAME)
-    }
 
     override fun start(stage: Stage) {
         viewModel.view = view
@@ -359,13 +354,12 @@ class NetworkMapVisualiser : Application() {
         // Loopback messages are boring.
         if (transfer.sender.myAddress == transfer.recipients) return false
         // Network map push acknowledgements are boring.
-        if (NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC in transfer.message.topic) return false
+        if (NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC in transfer.message.topicSession.topic) return false
 
         return true
     }
 }
 
 fun main(args: Array<String>) {
-    BriefLogFormatter.init()
     Application.launch(NetworkMapVisualiser::class.java, *args)
 }
