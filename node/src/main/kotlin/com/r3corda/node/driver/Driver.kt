@@ -9,6 +9,8 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
@@ -56,6 +58,8 @@ sealed class PortAllocation {
         override fun nextPort() = ServerSocket(0).use { it.localPort }
     }
 }
+
+private val log: Logger = LoggerFactory.getLogger("Driver")
 
 /**
  * TODO: remove quasarJarPath once we have a proper way of bundling quasar
@@ -238,7 +242,7 @@ class DriverDSL(
                 nearestCity = pickA(city),
                 legalName = networkMapName
         )
-        println("Starting network-map-service")
+        log.info("Starting network-map-service")
         registerProcess(startNode(driverCliParams, quasarJarPath, debugPort))
     }
 

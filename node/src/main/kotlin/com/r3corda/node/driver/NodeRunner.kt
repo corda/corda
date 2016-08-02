@@ -13,10 +13,14 @@ import com.r3corda.node.services.network.NetworkMapService
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import joptsimple.OptionSet
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.util.*
+
+private val log: Logger = LoggerFactory.getLogger("NodeRunner")
 
 class NodeRunner {
     companion object {
@@ -57,8 +61,7 @@ class NodeRunner {
                         advertisedServices = services.toSet()
                 )
 
-
-                println("Starting $legalName with services $services on addresses $messagingAddress and $apiAddress")
+                log.info("Starting $legalName with services $services on addresses $messagingAddress and $apiAddress")
                 node.start()
             }
         }
