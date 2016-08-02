@@ -23,6 +23,8 @@ import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -43,7 +45,14 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
         get() = get(NodeInterestRates.Type)
     override val partyNodes: List<NodeInfo>
         get() = registeredNodes.map { it.value }
+    private val _added = PublishSubject.create<NodeInfo>()
+    private val _removed = PublishSubject.create<NodeInfo>()
+    override val added: Observable<NodeInfo>
+        get() = _added
+    override val removed: Observable<NodeInfo>
+        get() = _removed
 
+    private var listener: (node: NodeInfo, added: Boolean) -> Unit? = { a, b -> Unit}
     private var registeredForPush = false
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
 
@@ -95,10 +104,12 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
     override fun addNode(node: NodeInfo) {
         registeredNodes[node.identity] = node
         netInternal?.registerTrustedAddress(node.address)
+        _added.onNext(node)
     }
 
     override fun removeNode(node: NodeInfo) {
         registeredNodes.remove(node.identity)
+        _removed.onNext(node)
     }
 
     /**

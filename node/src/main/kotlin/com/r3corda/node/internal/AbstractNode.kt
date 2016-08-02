@@ -309,7 +309,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }
 
-        // TODO: Subscribe to updates to the network map cache
+        netMapCache.added.subscribe { node ->
+            service.registerIdentity(node.identity)
+        }
 
         return service
     }

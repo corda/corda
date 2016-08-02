@@ -7,6 +7,7 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
 import org.slf4j.LoggerFactory
 import java.security.PublicKey
+import rx.Observable
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -27,6 +28,10 @@ interface NetworkMapCache {
     val ratesOracleNodes: List<NodeInfo>
     /** A list of all nodes the cache is aware of */
     val partyNodes: List<NodeInfo>
+    /* Observer for changes to the cache */
+    val added: Observable<NodeInfo>
+    val removed: Observable<NodeInfo>
+
     /**
      * A list of nodes that advertise a regulatory service. Identifying the correct regulator for a trade is outside
      * the scope of the network map service, and this is intended solely as a sanity check on configuration stored
