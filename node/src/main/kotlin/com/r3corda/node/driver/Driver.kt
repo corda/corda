@@ -3,7 +3,9 @@ package com.r3corda.node.driver
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
@@ -15,7 +17,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
@@ -48,8 +49,19 @@ import java.util.concurrent.TimeoutException
  * TODO The network map service bootstrap is hacky (needs to fake the service's public key in order to retrieve the true one), needs some thought.
  */
 
-interface DriverDSLInterface {
+/**
+ * This is the interface that's exposed to
+ */
+interface DriverDSLExposedInterface {
     fun startNode(advertisedServices: Set<ServiceType>, providedName: String? = null): NodeInfo
+}
+
+interface DriverDSLInternalInterface : DriverDSLExposedInterface {
+    val messagingService: MessagingService
+    val networkMapCache: NetworkMapCache
+    fun start()
+    fun shutdown()
+    fun waitForAllNodesToFinish()
 }
 
 sealed class PortAllocation {
@@ -75,17 +87,35 @@ fun <A> driver(
         quasarJarPath: String = "lib/quasar.jar",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        dsl: DriverDSL.() -> A
-): Pair<DriverHandle, A> {
-    val driverDsl = DriverDSL(
+        dsl: DriverDSLExposedInterface.() -> A
+) = genericDriver(
+        driverDsl = DriverDSL(
             portAllocation = portAllocation,
             debugPortAllocation = debugPortAllocation,
             baseDirectory = baseDirectory,
             nodeConfigurationPath = nodeConfigurationPath,
             quasarJarPath = quasarJarPath
-    )
+        ),
+        coerce = { it },
+        dsl = dsl
+)
+
+
+/**
+ * This is a helper method to allow extending of the DSL, along the lines of
+ *   interface SomeOtherExposedDSLInterface : DriverDSLExposedInterface
+ *   interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
+ *   class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface
+ *
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause
+ */
+fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
+        driverDsl: D,
+        coerce: (D) -> DI,
+        dsl: DI.() -> A
+): Pair<DriverHandle, A> {
     driverDsl.start()
-    val returnValue = dsl(driverDsl)
+    val returnValue = dsl(coerce(driverDsl))
     val shutdownHook = Thread({
         driverDsl.shutdown()
     })
@@ -100,7 +130,7 @@ private fun getTimestampAsDirectoryName(): String {
     return df.format(Date())
 }
 
-class DriverHandle(private val driverDsl: DriverDSL, private val shutdownHook: Thread) {
+class DriverHandle(private val driverDsl: DriverDSLInternalInterface, private val shutdownHook: Thread) {
     val messagingService = driverDsl.messagingService
     val networkMapCache = driverDsl.networkMapCache
 
@@ -134,9 +164,9 @@ class DriverDSL(
         val baseDirectory: String,
         val nodeConfigurationPath: String,
         val quasarJarPath: String
-) : DriverDSLInterface {
+) : DriverDSLInternalInterface {
 
-    val networkMapCache = InMemoryNetworkMapCache(null)
+    override val networkMapCache = InMemoryNetworkMapCache(null)
     private val networkMapName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
     private lateinit var networkMapNodeInfo: NodeInfo
@@ -152,7 +182,7 @@ class DriverDSL(
                     myLegalName = "driver-artemis"
             )
 
-    val messagingService = ArtemisMessagingClient(
+    override val messagingService = ArtemisMessagingClient(
             Paths.get(baseDirectory, "driver-artemis"),
             nodeConfiguration,
             serverHostPort = networkMapAddress,
@@ -161,13 +191,13 @@ class DriverDSL(
 
     fun registerProcess(process: Process) = registeredProcesses.push(process)
 
-    internal fun waitForAllNodesToFinish() {
+    override fun waitForAllNodesToFinish() {
         registeredProcesses.forEach {
             it.waitFor()
         }
     }
 
-    internal fun shutdown() {
+    override fun shutdown() {
         registeredProcesses.forEach {
             it.destroy()
         }
@@ -214,8 +244,7 @@ class DriverDSL(
         }
     }
 
-    internal fun start() {
-        startNetworkMapService()
+    override fun start() {
         messagingService.configureWithDevSSLCertificate()
         messagingService.start()
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
