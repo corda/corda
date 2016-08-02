@@ -7,9 +7,12 @@ import com.r3corda.core.crypto.toBase58String
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.config.copy
 import com.r3corda.node.services.network.NetworkMapService
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import joptsimple.OptionSet
@@ -45,18 +48,21 @@ class NodeRunner {
                         } else {
                             null
                         }
+                val nodeConfiguration =
+                        NodeConfigurationFromConfig(
+                                ConfigFactory.parseResources(
+                                        nodeConfigurationPath,
+                                        ConfigParseOptions.defaults().setAllowMissing(false)
+                                )
+                        ).copy(
+                                myLegalName = legalName
+                        )
 
                 val node = Node(
                         dir = nodeDirectory,
                         p2pAddr = messagingAddress,
                         webServerAddr = apiAddress,
-                        configuration = object : NodeConfiguration {
-                            override val myLegalName = legalName
-                            override val exportJMXto = ""
-                            override val nearestCity = cliParams.nearestCity
-                            override val keyStorePassword = "keypass"
-                            override val trustStorePassword = "trustpass"
-                        },
+                        configuration = nodeConfiguration,
                         networkMapAddress = networkMapNodeInfo,
                         advertisedServices = services.toSet()
                 )
@@ -75,8 +81,8 @@ class NodeRunner {
             val messagingAddress: HostAndPort,
             val apiAddress: HostAndPort,
             val baseDirectory: String,
-            val legalName: String,
-            val nearestCity: String
+            val nodeConfigurationPath: String,
+            val legalName: String
     ) {
 
         companion object {
@@ -95,8 +101,8 @@ class NodeRunner {
                     parser.accepts("api-address").withRequiredArg().ofType(String::class.java)
             val baseDirectory =
                     parser.accepts("base-directory").withRequiredArg().ofType(String::class.java)
-            val nearestCity =
-                    parser.accepts("nearest-city").withRequiredArg().ofType(String::class.java)
+            val nodeConfigurationPath =
+                    parser.accepts("node-configuration-path").withRequiredArg().ofType(String::class.java)
             val legalName =
                     parser.accepts("legal-name").withRequiredArg().ofType(String::class.java)
 
@@ -114,7 +120,7 @@ class NodeRunner {
                 val messagingAddress = requiredArgument(optionSet, messagingAddress)
                 val apiAddress = requiredArgument(optionSet, apiAddress)
                 val baseDirectory = requiredArgument(optionSet, baseDirectory)
-                val nearestCity = requiredArgument(optionSet, nearestCity)
+                val nodeConfigurationPath = requiredArgument(optionSet, nodeConfigurationPath)
                 val legalName = requiredArgument(optionSet, legalName)
 
                 return CliParams(
@@ -125,8 +131,8 @@ class NodeRunner {
                         networkMapName = networkMapName,
                         networkMapPublicKey = networkMapPublicKey,
                         networkMapAddress = networkMapAddress?.let { HostAndPort.fromString(it) },
-                        legalName = legalName,
-                        nearestCity = nearestCity
+                        nodeConfigurationPath = nodeConfigurationPath,
+                        legalName = legalName
                 )
             }
         }
@@ -153,8 +159,8 @@ class NodeRunner {
             cliArguments.add(apiAddress.toString())
             cliArguments.add("--base-directory")
             cliArguments.add(baseDirectory.toString())
-            cliArguments.add("--nearest-city")
-            cliArguments.add(nearestCity)
+            cliArguments.add("--node-configuration-path")
+            cliArguments.add(nodeConfigurationPath)
             cliArguments.add("--legal-name")
             cliArguments.add(legalName)
             return cliArguments
@@ -162,7 +168,5 @@ class NodeRunner {
     }
 }
 
-fun createNodeRunDirectory(directory: Path) {
-    directory.toFile().mkdirs()
-}
+fun createNodeRunDirectory(directory: Path) = directory.toFile().mkdirs()
 

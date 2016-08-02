@@ -7,10 +7,15 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.config.copy
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
@@ -66,6 +71,7 @@ private val log: Logger = LoggerFactory.getLogger("Driver")
  */
 fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
+        nodeConfigurationPath: String = "reference.conf",
         quasarJarPath: String = "lib/quasar.jar",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
@@ -75,6 +81,7 @@ fun <A> driver(
             portAllocation = portAllocation,
             debugPortAllocation = debugPortAllocation,
             baseDirectory = baseDirectory,
+            nodeConfigurationPath = nodeConfigurationPath,
             quasarJarPath = quasarJarPath
     )
     driverDsl.start()
@@ -125,6 +132,7 @@ class DriverDSL(
         private val portAllocation: PortAllocation,
         private val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
+        val nodeConfigurationPath: String,
         val quasarJarPath: String
 ) : DriverDSLInterface {
 
@@ -134,15 +142,19 @@ class DriverDSL(
     private lateinit var networkMapNodeInfo: NodeInfo
     private val registeredProcesses = LinkedList<Process>()
 
+    val nodeConfiguration =
+            NodeConfigurationFromConfig(
+                    ConfigFactory.parseResources(
+                            nodeConfigurationPath,
+                            ConfigParseOptions.defaults().setAllowMissing(false)
+                    )
+            ).copy(
+                    myLegalName = "driver-artemis"
+            )
+
     val messagingService = ArtemisMessagingClient(
             Paths.get(baseDirectory, "driver-artemis"),
-            object : NodeConfiguration {
-                override val myLegalName = "driver-artemis"
-                override val exportJMXto = ""
-                override val nearestCity = "Zion"
-                override val keyStorePassword = "keypass"
-                override val trustStorePassword = "trustpass"
-            },
+            nodeConfiguration,
             serverHostPort = networkMapAddress,
             myHostPort = portAllocation.nextHostAndPort()
     )
@@ -178,7 +190,6 @@ class DriverDSL(
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = debugPortAllocation.nextPort()
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
-        val nearestCity = pickA(city)
 
         val driverCliParams = NodeRunner.CliParams(
                 services = advertisedServices,
@@ -188,7 +199,7 @@ class DriverDSL(
                 messagingAddress = messagingAddress,
                 apiAddress = apiAddress,
                 baseDirectory = baseDirectory,
-                nearestCity = nearestCity,
+                nodeConfigurationPath = nodeConfigurationPath,
                 legalName = name
         )
         registerProcess(startNode(driverCliParams, quasarJarPath, debugPort))
@@ -228,6 +239,8 @@ class DriverDSL(
         }
     }
 
+
+
     private fun startNetworkMapService() {
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = debugPortAllocation.nextPort()
@@ -239,7 +252,7 @@ class DriverDSL(
                 messagingAddress = networkMapAddress,
                 apiAddress = apiAddress,
                 baseDirectory = baseDirectory,
-                nearestCity = pickA(city),
+                nodeConfigurationPath = nodeConfigurationPath,
                 legalName = networkMapName
         )
         log.info("Starting network-map-service")
@@ -248,12 +261,6 @@ class DriverDSL(
 
     companion object {
 
-        val city = arrayOf(
-                "London",
-                "Paris",
-                "New York",
-                "Tokyo"
-        )
         val name = arrayOf(
                 "Alice",
                 "Bob",

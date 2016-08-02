@@ -13,7 +13,7 @@ class DriverTests {
     fun simpleNodeStartupShutdownWorks() {
 
         // Start a notary
-        val (handle, notaryNodeInfo) = driver(quasarPath = "../lib/quasar.jar") {
+        val (handle, notaryNodeInfo) = driver(quasarJarPath = "../lib/quasar.jar") {
             startNode(setOf(NotaryService.Type), "TestNotary")
         }
         // Check that the node is registered in the network map
