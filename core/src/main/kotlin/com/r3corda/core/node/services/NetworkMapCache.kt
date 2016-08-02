@@ -28,8 +28,9 @@ interface NetworkMapCache {
     val ratesOracleNodes: List<NodeInfo>
     /** A list of all nodes the cache is aware of */
     val partyNodes: List<NodeInfo>
-    /* Observer for changes to the cache */
+    /** Observer for additions to the cache */
     val added: Observable<NodeInfo>
+    /** Observer for removal from the cache */
     val removed: Observable<NodeInfo>
 
     /**
