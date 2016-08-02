@@ -159,8 +159,8 @@ fun <A> poll(f: () -> A?): A {
 }
 
 class DriverDSL(
-        private val portAllocation: PortAllocation,
-        private val debugPortAllocation: PortAllocation,
+        val portAllocation: PortAllocation,
+        val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
         val nodeConfigurationPath: String,
         val quasarJarPath: String
