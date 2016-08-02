@@ -1,12 +1,10 @@
 package com.r3corda.node.services.persistence
 
-import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.core.contracts.*
-import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
+import com.r3corda.core.contracts.Amount
+import com.r3corda.core.contracts.Issued
+import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.contracts.USD
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
 import com.r3corda.core.utilities.BriefLogFormatter
@@ -15,7 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -33,17 +31,6 @@ class DataVendingServiceTests {
         network = MockNetwork()
     }
 
-    class NotifyPSM(val server: NodeInfo, val tx: SignedTransaction)
-    : ProtocolLogic<Boolean>() {
-        override val topic: String get() = DataVending.Service.NOTIFY_TX_PROTOCOL_TOPIC
-        @Suspendable
-        override fun call(): Boolean {
-            val sessionID = random63BitValue()
-            val req = DataVending.Service.NotifyTxRequestMessage(tx, serviceHub.storageService.myLegalIdentity, sessionID)
-            return sendAndReceive<DataVending.Service.NotifyTxResponseMessage>(server.identity, DEFAULT_SESSION_ID, sessionID, req).validate { it.accepted }
-        }
-    }
-
     @Test
     fun `notify of transaction`() {
         val (walletServiceNode, registerNode) = network.createTwoNodes()
@@ -59,14 +46,15 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction()
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
-        val notifyPsm = registerNode.smm.add(DataVending.Service.NOTIFY_TX_PROTOCOL_TOPIC, NotifyPSM(walletServiceNode.info, tx))
+        val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
+                walletServiceNode.info, tx)
 
         // Check it was accepted
         network.runNetwork()
-        assertTrue(notifyPsm.get(1, TimeUnit.SECONDS))
+        notifyPsm.get(1, TimeUnit.SECONDS)
 
         // Check the transaction is in the receiving node
-        val actual = walletServiceNode.services.walletService.currentWallet.states.single()
+        val actual = walletServiceNode.services.walletService.currentWallet.states.singleOrNull()
         val expected = tx.tx.outRef<Cash.State>(0)
 
         assertEquals(expected, actual)
@@ -90,11 +78,13 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction(false)
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
-        val notifyPsm = registerNode.smm.add(DataVending.Service.NOTIFY_TX_PROTOCOL_TOPIC, NotifyPSM(walletServiceNode.info, tx))
+        val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
+                walletServiceNode.info, tx)
 
         // Check it was accepted
         network.runNetwork()
-        assertFalse(notifyPsm.get(1, TimeUnit.SECONDS))
+        val ex = assertFailsWith<java.util.concurrent.ExecutionException> { notifyPsm.get(1, TimeUnit.SECONDS) }
+        assertTrue(ex.cause is DataVending.Service.TransactionRejectedError)
 
         // Check the transaction is not in the receiving node
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
