@@ -20,6 +20,9 @@ interface NetworkMapCache {
         val logger = LoggerFactory.getLogger(NetworkMapCache::class.java)
     }
 
+    enum class MapChangeType { Added, Removed }
+    data class MapChange(val node: NodeInfo, val type: MapChangeType )
+
     /** A list of nodes that advertise a network map service */
     val networkMapNodes: List<NodeInfo>
     /** A list of nodes that advertise a notary service */
@@ -28,10 +31,8 @@ interface NetworkMapCache {
     val ratesOracleNodes: List<NodeInfo>
     /** A list of all nodes the cache is aware of */
     val partyNodes: List<NodeInfo>
-    /** Observer for additions to the cache */
-    val added: Observable<NodeInfo>
-    /** Observer for removal from the cache */
-    val removed: Observable<NodeInfo>
+    /** Tracks changes to the network map cache */
+    val changed: Observable<MapChange>
 
     /**
      * A list of nodes that advertise a regulatory service. Identifying the correct regulator for a trade is outside

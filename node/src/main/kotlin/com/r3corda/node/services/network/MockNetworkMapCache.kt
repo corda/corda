@@ -5,6 +5,7 @@ import com.r3corda.core.crypto.DummyPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -12,12 +13,7 @@ import rx.subjects.PublishSubject
  * Network map cache with no backing map service.
  */
 class MockNetworkMapCache() : InMemoryNetworkMapCache(null) {
-    private val _added = PublishSubject.create<NodeInfo>()
-    private val _removed = PublishSubject.create<NodeInfo>()
-    override val added: Observable<NodeInfo>
-        get() = _added
-    override val removed: Observable<NodeInfo>
-        get() = _removed
+    override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     data class MockAddress(val id: String): SingleMessageRecipient
 
