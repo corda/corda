@@ -33,7 +33,7 @@ val CASH_PROGRAM_ID = Cash()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class Cash : ClauseVerifier() {
+class Cash : OnLedgerAsset<Currency, Cash.State>() {
     /**
      * TODO:
      * 1) hash should be of the contents, not the URI
@@ -45,19 +45,16 @@ class Cash : ClauseVerifier() {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
-    override val clauses: List<SingleClause>
-        get() = listOf(Clauses.Group())
+    override val conserveClause: AbstractConserveAmount<State, Currency> = Clauses.ConserveAmount()
+    override val clauses = listOf(Clauses.Group())
     override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
             = tx.commands.select<Cash.Commands>()
 
     interface Clauses {
         class Group : GroupClauseVerifier<State, Issued<Currency>>() {
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
-            override val clauses: List<GroupClause<State, Issued<Currency>>>
-                get() = listOf(
+            override val ifMatched: MatchBehaviour = MatchBehaviour.END
+            override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
+            override val clauses = listOf(
                         NoZeroSizedOutputs<State, Currency>(),
                         Issue(),
                         ConserveAmount())
@@ -66,9 +63,11 @@ class Cash : ClauseVerifier() {
                     = tx.groupStates<State, Issued<Currency>> { it.issuanceDef }
         }
 
-        class Issue : AbstractIssue<State, Currency>({ sumCash() }, { token -> sumCashOrZero(token) }) {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Issue::class.java)
+        class Issue : AbstractIssue<State, Currency>(
+                sum = { sumCash() },
+                sumOrZero = { sumCashOrZero(it) }
+        ) {
+            override val requiredCommands = setOf(Commands.Issue::class.java)
         }
 
         class ConserveAmount : AbstractConserveAmount<State, Currency>()
@@ -84,15 +83,11 @@ class Cash : ClauseVerifier() {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
         : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
 
-        override val deposit: PartyAndReference
-            get() = amount.token.issuer
-        override val exitKeys: Collection<PublicKey>
-            get() = setOf(deposit.party.owningKey)
+        override val deposit = amount.token.issuer
+        override val exitKeys = setOf(deposit.party.owningKey)
         override val contract = CASH_PROGRAM_ID
-        override val issuanceDef: Issued<Currency>
-            get() = amount.token
-        override val participants: List<PublicKey>
-            get() = listOf(owner)
+        override val issuanceDef = amount.token
+        override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
@@ -127,75 +122,6 @@ class Cash : ClauseVerifier() {
     }
 
     /**
-     * Generate an transaction exiting cash from the ledger.
-     *
-     * @param tx transaction builder to add states and commands to.
-     * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
-     * necessarily owned by us.
-     * @param cashStates the cash states to take funds from. No checks are done about ownership of these states, it is
-     * the responsibility of the caller to check that they do not exit funds held by others.
-     * @return the public key of the cash issuer, who must sign the transaction for it to be valid.
-     */
-    // TODO: I'm not at all sure we should support exiting funds others hold, but that's a bigger discussion around the
-    // contract logic, not just this function.
-    fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Currency>>,
-                     changeKey: PublicKey, cashStates: List<StateAndRef<State>>): PublicKey {
-        val currency = amountIssued.token.product
-        val issuer = amountIssued.token.issuer.party
-        val amount = Amount(amountIssued.quantity, currency)
-        var acceptableCoins = cashStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
-        val notary = acceptableCoins.firstOrNull()?.state?.notary
-        // TODO: We should be prepared to produce multiple transactions exiting inputs from
-        // different notaries, or at least group states by notary and take the set with the
-        // highest total value
-        acceptableCoins = acceptableCoins.filter { it.state.notary == notary }
-
-        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, Amount(amount.quantity, currency))
-        val takeChangeFrom = gathered.lastOrNull()
-        val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
-        } else {
-            null
-        }
-
-        val outputs: List<TransactionState<Cash.State>> = if (change != null) {
-            // Add a change output and adjust the last output downwards.
-            listOf(TransactionState(State(amountIssued.token.issuer, Amount(change.quantity, currency), changeKey),
-                    notary!!))
-        } else emptyList()
-
-        for (state in gathered) tx.addInputState(state)
-        for (state in outputs) tx.addOutputState(state)
-        tx.addCommand(Commands.Exit(amountIssued), amountIssued.token.issuer.party.owningKey)
-        return amountIssued.token.issuer.party.owningKey
-    }
-
-    /**
-     * Gather coins from the given list of states, sufficient to match or exceed the given amount.
-     *
-     * @param acceptableCoins list of states to use as inputs.
-     * @param amount the amount to gather states up to.
-     * @throws InsufficientBalanceException if there isn't enough value in the states to cover the requested amount.
-     */
-    @Throws(InsufficientBalanceException::class)
-    private fun gatherCoins(acceptableCoins: List<StateAndRef<State>>,
-                            amount: Amount<Currency>): Pair<ArrayList<StateAndRef<State>>, Amount<Currency>> {
-        val gathered = arrayListOf<StateAndRef<State>>()
-        var gatheredAmount = Amount(0, amount.token)
-        for (c in acceptableCoins) {
-            if (gatheredAmount >= amount) break
-            gathered.add(c)
-            gatheredAmount += Amount(c.state.data.amount.quantity, amount.token)
-        }
-
-        if (gatheredAmount < amount)
-            throw InsufficientBalanceException(amount - gatheredAmount)
-
-        return Pair(gathered, gatheredAmount)
-    }
-
-    /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
     fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: PublicKey, notary: Party)
@@ -208,83 +134,15 @@ class Cash : ClauseVerifier() {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
         val at = amount.token.issuer
-        tx.addOutputState(TransactionState(Cash.State(amount, owner), notary))
-        tx.addCommand(Cash.Commands.Issue(), at.party.owningKey)
+        tx.addOutputState(TransactionState(State(amount, owner), notary))
+        tx.addCommand(generateIssueCommand(), at.party.owningKey)
     }
 
-    /**
-     * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
-     * Note that the wallet list is not updated: it's up to you to do that.
-     *
-     * @param onlyFromParties if non-null, the wallet will be filtered to only include cash states issued by the set
-     *                        of given parties. This can be useful if the party you're trying to pay has expectations
-     *                        about which type of cash claims they are willing to accept.
-     */
-    @Throws(InsufficientBalanceException::class)
-    fun generateSpend(tx: TransactionBuilder, amount: Amount<Currency>, to: PublicKey,
-                      cashStates: List<StateAndRef<State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
-        // Discussion
-        //
-        // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
-        //
-        // First we must select a set of cash states (which for convenience we will call 'coins' here, as in bitcoinj).
-        // The input states can be considered our "wallet", and may consist of coins of different currencies, and from
-        // different institutions and deposits.
-        //
-        // Coin selection is a complex problem all by itself and many different approaches can be used. It is easily
-        // possible for different actors to use different algorithms and approaches that, for example, compete on
-        // privacy vs efficiency (number of states created). Some spends may be artificial just for the purposes of
-        // obfuscation and so on.
-        //
-        // Having selected coins of the right currency, we must craft output states for the amount we're sending and
-        // the "change", which goes back to us. The change is required to make the amounts balance. We may need more
-        // than one change output in order to avoid merging coins from different deposits. The point of this design
-        // is to ensure that ledger entries are immutable and globally identifiable.
-        //
-        // Finally, we add the states to the provided partial transaction.
-
-        val currency = amount.token
-        val acceptableCoins = run {
-            val ofCurrency = cashStates.filter { it.state.data.amount.token.product == currency }
-            if (onlyFromParties != null)
-                ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
-            else
-                ofCurrency
-        }
-
-        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
-        val takeChangeFrom = gathered.firstOrNull()
-        val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount<Issued<Currency>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
-        } else {
-            null
-        }
-        val keysUsed = gathered.map { it.state.data.owner }.toSet()
-
-        val states = gathered.groupBy { it.state.data.deposit }.map {
-            val coins = it.value
-            val totalAmount = coins.map { it.state.data.amount }.sumOrThrow()
-            TransactionState(State(totalAmount, to), coins.first().state.notary)
-        }
-
-        val outputs = if (change != null) {
-            // Just copy a key across as the change key. In real life of course, this works but leaks private data.
-            // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
-            // value flows through the transaction graph.
-            val changeKey = gathered.first().state.data.owner
-            // Add a change output and adjust the last output downwards.
-            states.subList(0, states.lastIndex) +
-                    states.last().let { TransactionState(it.data.copy(amount = it.data.amount - change), it.notary) } +
-                    TransactionState(State(change, changeKey), gathered.last().state.notary)
-        } else states
-
-        for (state in gathered) tx.addInputState(state)
-        for (state in outputs) tx.addOutputState(state)
-        // What if we already have a move command with the right keys? Filter it out here or in platform code?
-        val keysList = keysUsed.toList()
-        tx.addCommand(Commands.Move(), keysList)
-        return keysList
-    }
+    override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
+        = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
+    override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
+    override fun generateIssueCommand() = Commands.Issue()
+    override fun generateMoveCommand() = Commands.Move()
 }
 
 // Small DSL extensions.
@@ -298,7 +156,7 @@ fun Iterable<ContractState>.sumCashBy(owner: PublicKey): Amount<Issued<Currency>
 
 /**
  * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
- * states cannot be added together (i.e. are different currencies).
+ * states cannot be added together (i.e. are different currencies or issuers).
  */
 fun Iterable<ContractState>.sumCash(): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
 
