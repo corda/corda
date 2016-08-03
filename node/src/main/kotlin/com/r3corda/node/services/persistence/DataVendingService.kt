@@ -1,10 +1,17 @@
 package com.r3corda.node.services.persistence
 
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.failure
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.TopicSession
+import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CordaPluginRegistry
+import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.random63BitValue
+import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.success
 import com.r3corda.core.utilities.loggerFor
@@ -42,12 +49,33 @@ object DataVending {
 
             /** Topic for messages notifying a node of a new transaction */
             val NOTIFY_TX_PROTOCOL_TOPIC = "platform.wallet.notify_tx"
+
+            fun notify(net: MessagingService,
+                       myIdentity: Party,
+                       recipient: NodeInfo,
+                       transaction: SignedTransaction): ListenableFuture<Unit> {
+                val future = SettableFuture.create<Unit>()
+                val sessionID = random63BitValue()
+                net.runOnNextMessage(NOTIFY_TX_PROTOCOL_TOPIC, sessionID) { msg ->
+                    // TODO: Can we improve/simplify the response from the remote node?
+                    val data = msg.data.deserialize<NotifyTxResponseMessage>()
+                    if (data.accepted) {
+                        future.set(Unit)
+                    } else {
+                        future.setException(TransactionRejectedError("Transaction ${transaction} rejected by remote party ${recipient.identity}"))
+                    }
+                }
+                val msg = NotifyTxRequestMessage(transaction, myIdentity, sessionID)
+                net.send(net.createMessage(TopicSession(NOTIFY_TX_PROTOCOL_TOPIC, 0), msg.serialize().bits), recipient.address)
+                return future
+            }
         }
 
         val storage = services.storageService
 
         data class NotifyTxRequestMessage(val tx: SignedTransaction, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
         data class NotifyTxResponseMessage(val accepted: Boolean)
+        class TransactionRejectedError(msg: String) : Exception(msg)
 
         init {
             addMessageHandler(FetchTransactionsProtocol.TOPIC,
@@ -71,16 +99,20 @@ object DataVending {
             // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
             //       cash without from unknown parties?
 
-            services.startProtocol(NOTIFY_TX_PROTOCOL_TOPIC, ResolveTransactionsProtocol(req.tx, req.replyToParty))
+            try {
+                services.startProtocol(NOTIFY_TX_PROTOCOL_TOPIC, ResolveTransactionsProtocol(req.tx, req.replyToParty))
                     .success {
                         services.recordTransactions(req.tx)
                         val resp = NotifyTxResponseMessage(true)
                         val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
                         net.send(msg, req.getReplyTo(services.networkMapCache))
-                    }.failure {
-                val resp = NotifyTxResponseMessage(false)
-                val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
-                net.send(msg, req.getReplyTo(services.networkMapCache))
+                    }.failure { throwable ->
+                        val resp = NotifyTxResponseMessage(false)
+                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
+                        net.send(msg, req.getReplyTo(services.networkMapCache))
+                    }
+            } catch(t: Exception) {
+                // Already handled by the hooks on the future, ignore
             }
         }
 
