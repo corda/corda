@@ -68,6 +68,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
     val hostNotaryServiceLocally: Boolean by conf
+    val extraAdvertisedServiceIds: String by conf
     val mapService: AdvertisedServiceConfigImpl = AdvertisedServiceConfigImpl(conf.getConfig("mapService"))
     val clock: Clock = NodeClock()
 
@@ -76,6 +77,11 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
         val advertisedServices = mutableSetOf<ServiceType>()
         if (mapService.hostServiceLocally) advertisedServices.add(NetworkMapService.Type)
         if (hostNotaryServiceLocally) advertisedServices.add(SimpleNotaryService.Type)
+        if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
+            for (serviceId in extraAdvertisedServiceIds.split(",")) {
+                advertisedServices.add(object : ServiceType(serviceId) {})
+            }
+        }
         val networkMapBootstrapIdentity = Party(mapService.identity, generateKeyPair().public)
         val networkMapAddress: NodeInfo? = if (mapService.hostServiceLocally) null else NodeInfo(networkMapTarget, networkMapBootstrapIdentity, setOf(NetworkMapService.Type))
         return Node(basedir.toAbsolutePath().normalize(),
