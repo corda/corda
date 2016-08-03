@@ -122,7 +122,9 @@ fun main(args: Array<String>) {
     val appConfig = ConfigFactory.parseFile(configFile)
 
     val cmdlineOverrideMap = HashMap<String, Any?>()
-    cmdlineOverrideMap.put("basedir", baseDirectoryPath.toString())
+    if (cmdlineOptions.has(ParamsSpec.baseDirectoryArg)) {
+        cmdlineOverrideMap.put("basedir", baseDirectoryPath.toString())
+    }
     val overrideConfig = ConfigFactory.parseMap(cmdlineOverrideMap)
 
     val mergedAndResolvedConfig = overrideConfig.withFallback(appConfig).withFallback(defaultConfig).resolve()
