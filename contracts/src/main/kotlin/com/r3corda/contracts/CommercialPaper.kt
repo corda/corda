@@ -40,7 +40,7 @@ import java.util.*
 val CP_PROGRAM_ID = CommercialPaper()
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
-class CommercialPaper : ClauseVerifier() {
+class CommercialPaper : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
@@ -49,10 +49,10 @@ class CommercialPaper : ClauseVerifier() {
         val maturityDate: Instant
     )
 
-    override val clauses = listOf(Clauses.Group())
-
-    override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
+    private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
         = tx.commands.select<Commands>()
+
+    override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clauses.Group()), extractCommands(tx))
 
     data class State(
             val issuance: PartyAndReference,
@@ -88,7 +88,7 @@ class CommercialPaper : ClauseVerifier() {
                     Issue()
             )
 
-            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 

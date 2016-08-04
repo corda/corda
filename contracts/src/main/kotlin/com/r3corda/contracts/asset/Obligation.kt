@@ -30,7 +30,7 @@ val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
  *
  * @param P the product the obligation is for payment of.
  */
-class Obligation<P> : ClauseVerifier() {
+class Obligation<P> : Contract {
 
     /**
      * TODO:
@@ -43,7 +43,7 @@ class Obligation<P> : ClauseVerifier() {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-    override val clauses = listOf(InterceptorClause(Clauses.VerifyLifecycle<P>(), Clauses.Net<P>()),
+    private val clauses = listOf(InterceptorClause(Clauses.VerifyLifecycle<P>(), Clauses.Net<P>()),
                     Clauses.Group<P>())
 
     interface Clauses {
@@ -62,7 +62,7 @@ class Obligation<P> : ClauseVerifier() {
                     ConserveAmount()
             )
 
-            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
                     = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.issuanceDef }
         }
 
@@ -377,8 +377,9 @@ class Obligation<P> : ClauseVerifier() {
         data class Exit<P>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
+    private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
             = tx.commands.select<Obligation.Commands>()
+    override fun verify(tx: TransactionForContract) = verifyClauses(tx, clauses, extractCommands(tx))
 
     /**
      * A default command mutates inputs and produces identical outputs, except that the lifecycle changes.

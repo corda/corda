@@ -80,7 +80,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
             /**
              * Group commodity states by issuance definition (issuer and underlying commodity).
              */
-            override fun extractGroups(tx: TransactionForContract)
+            override fun groupStates(tx: TransactionForContract)
                     = tx.groupStates<State, Issued<Commodity>> { it.issuanceDef }
         }
 

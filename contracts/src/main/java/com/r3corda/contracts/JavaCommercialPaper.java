@@ -22,7 +22,7 @@ import static kotlin.collections.CollectionsKt.*;
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  */
-public class JavaCommercialPaper extends ClauseVerifier {
+public class JavaCommercialPaper implements Contract {
     //public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
@@ -161,7 +161,7 @@ public class JavaCommercialPaper extends ClauseVerifier {
 
             @NotNull
             @Override
-            public List<InOutGroup<State, State>> extractGroups(@NotNull TransactionForContract tx) {
+            public List<InOutGroup<State, State>> groupStates(@NotNull TransactionForContract tx) {
                 return tx.groupStates(State.class, State::withoutOwner);
             }
         }
@@ -316,18 +316,16 @@ public class JavaCommercialPaper extends ClauseVerifier {
     }
 
     @NotNull
-    @Override
-    public List<SingleClause> getClauses() {
-        return Collections.singletonList(new Clause.Group());
-    }
-
-    @NotNull
-    @Override
-    public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
+    private Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
         return tx.getCommands()
                 .stream()
                 .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
+        ClauseVerifier.verifyClauses(tx, Collections.singletonList(new Clause.Group()), extractCommands(tx));
     }
 
     @NotNull

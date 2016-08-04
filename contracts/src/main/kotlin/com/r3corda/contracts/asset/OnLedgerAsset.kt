@@ -2,7 +2,8 @@ package com.r3corda.contracts.asset
 
 import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.ClauseVerifier
+import com.r3corda.core.contracts.clauses.SingleClause
+import com.r3corda.core.contracts.clauses.verifyClauses
 import com.r3corda.core.crypto.Party
 import java.security.PublicKey
 
@@ -24,8 +25,12 @@ import java.security.PublicKey
  * At the same time, other contracts that just want assets and don't care much who is currently holding it can ignore
  * the issuer/depositRefs and just examine the amount fields.
  */
-abstract class OnLedgerAsset<T : Any, S : FungibleAsset<T>> : ClauseVerifier() {
+abstract class OnLedgerAsset<T : Any, S : FungibleAsset<T>> : Contract {
+    abstract val clauses: List<SingleClause>
+    abstract fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
     abstract val conserveClause: AbstractConserveAmount<S, T>
+
+    override fun verify(tx: TransactionForContract) = verifyClauses(tx, clauses, extractCommands(tx))
 
     /**
      * Generate an transaction exiting assets from the ledger.

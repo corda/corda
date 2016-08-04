@@ -183,7 +183,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
  * Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
  * This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.
  */
-class InterestRateSwap() : ClauseVerifier() {
+class InterestRateSwap() : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
 
     /**
@@ -447,9 +447,10 @@ class InterestRateSwap() : ClauseVerifier() {
                 fixingCalendar, index, indexSource, indexTenor)
     }
 
-    override val clauses: List<SingleClause> = listOf(Clause.Timestamped(), Clause.Group())
-    override fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
+    private fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
             = tx.commands.select<Commands>() + tx.commands.select<TimestampCommand>()
+
+    override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clause.Timestamped(), Clause.Group()), extractCommands(tx))
 
     interface Clause {
         /**
@@ -505,7 +506,7 @@ class InterestRateSwap() : ClauseVerifier() {
             override val ifMatched = MatchBehaviour.END
             override val ifNotMatched = MatchBehaviour.ERROR
 
-            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, String>>
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, String>>
                 // Group by Trade ID for in / out states
                 = tx.groupStates() { state -> state.common.tradeID }
 

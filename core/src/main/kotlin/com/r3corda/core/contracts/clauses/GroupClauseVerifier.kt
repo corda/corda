@@ -26,10 +26,10 @@ abstract class GroupClauseVerifier<S : ContractState, T : Any> : SingleClause {
     override val requiredCommands: Set<Class<out CommandData>>
         get() = emptySet()
 
-    abstract fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<S, T>>
+    abstract fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<S, T>>
 
     override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
-        val groups = extractGroups(tx)
+        val groups = groupStates(tx)
         val matchedCommands = HashSet<CommandData>()
         val unmatchedCommands = ArrayList(commands.map { it.value })
 
