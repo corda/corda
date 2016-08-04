@@ -7,10 +7,10 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.config.copy
+import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.typesafe.config.ConfigFactory
@@ -208,7 +208,7 @@ class DriverDSL(
     override val networkMapCache = InMemoryNetworkMapCache(null)
     private val networkMapName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
-    private lateinit var networkMapNodeInfo: NodeInfo
+    private var networkMapNodeInfo: NodeInfo? = null
     private val registeredProcesses = LinkedList<Process>()
 
     val nodeConfiguration =
@@ -256,7 +256,10 @@ class DriverDSL(
 
         // Check that we shut down properly
         addressMustNotBeBound(messagingService.myHostPort)
-        addressMustNotBeBound((networkMapNodeInfo.address as ArtemisMessagingService.Address).hostAndPort)
+        val nodeInfo = networkMapNodeInfo
+        if (nodeInfo != null) {
+            addressMustNotBeBound((nodeInfo.address as ArtemisMessagingComponent.Address).hostAndPort)
+        }
     }
 
     /**
@@ -275,8 +278,8 @@ class DriverDSL(
 
         val driverCliParams = NodeRunner.CliParams(
                 services = advertisedServices,
-                networkMapName = networkMapNodeInfo.identity.name,
-                networkMapPublicKey = networkMapNodeInfo.identity.owningKey,
+                networkMapName = networkMapNodeInfo!!.identity.name,
+                networkMapPublicKey = networkMapNodeInfo!!.identity.owningKey,
                 networkMapAddress = networkMapAddress,
                 messagingAddress = messagingAddress,
                 apiAddress = apiAddress,
@@ -297,6 +300,7 @@ class DriverDSL(
     }
 
     override fun start() {
+        startNetworkMapService()
         messagingService.configureWithDevSSLCertificate()
         messagingService.start()
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
@@ -319,8 +323,6 @@ class DriverDSL(
             null
         }
     }
-
-
 
     private fun startNetworkMapService() {
         val apiAddress = portAllocation.nextHostAndPort()
