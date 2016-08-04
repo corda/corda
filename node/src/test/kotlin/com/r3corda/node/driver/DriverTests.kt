@@ -14,28 +14,6 @@ import java.net.SocketException
 class DriverTests {
 
     companion object {
-        fun addressMustBeBound(hostAndPort: HostAndPort) {
-            poll {
-                try {
-                    Socket(hostAndPort.hostText, hostAndPort.port).close()
-                    Unit
-                } catch (_exception: SocketException) {
-                    null
-                }
-            }
-        }
-
-        fun addressMustNotBeBound(hostAndPort: HostAndPort) {
-            poll {
-                try {
-                    Socket(hostAndPort.hostText, hostAndPort.port).close()
-                    null
-                } catch (_exception: SocketException) {
-                    Unit
-                }
-            }
-        }
-
         fun nodeMustBeUp(networkMapCache: NetworkMapCache, nodeInfo: NodeInfo, nodeName: String) {
             val address = nodeInfo.address as ArtemisMessagingComponent.Address
             // Check that the node is registered in the network map

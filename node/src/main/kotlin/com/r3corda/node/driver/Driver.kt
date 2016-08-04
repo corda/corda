@@ -39,6 +39,8 @@ import java.util.concurrent.TimeoutException
  * TODO The network map service bootstrap is hacky (needs to fake the service's public key in order to retrieve the true one), needs some thought.
  */
 
+private val log: Logger = LoggerFactory.getLogger(DriverDSL::class.java)
+
 /**
  * This is the interface that's exposed to
  */
@@ -65,8 +67,6 @@ sealed class PortAllocation {
         override fun nextPort() = ServerSocket(0).use { it.localPort }
     }
 }
-
-private val log: Logger = LoggerFactory.getLogger("Driver")
 
 /**
  * [driver] allows one to start up nodes like this:
@@ -127,19 +127,22 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         dsl: DI.() -> A,
         with: (DriverHandle, A) -> Unit
 ): A {
-    driverDsl.start()
-    val returnValue = dsl(coerce(driverDsl))
-    val shutdownHook = Thread({
-        driverDsl.shutdown()
-    })
-    Runtime.getRuntime().addShutdownHook(shutdownHook)
+    var shutdownHook: Thread? = null
     try {
+        driverDsl.start()
+        val returnValue = dsl(coerce(driverDsl))
+        shutdownHook = Thread({
+            driverDsl.shutdown()
+        })
+        Runtime.getRuntime().addShutdownHook(shutdownHook)
         with(DriverHandle(driverDsl), returnValue)
+        return returnValue
     } finally {
         driverDsl.shutdown()
-        Runtime.getRuntime().removeShutdownHook(shutdownHook)
+        if (shutdownHook != null) {
+            Runtime.getRuntime().removeShutdownHook(shutdownHook)
+        }
     }
-    return returnValue
 }
 
 private fun getTimestampAsDirectoryName(): String {
@@ -147,6 +150,28 @@ private fun getTimestampAsDirectoryName(): String {
     val df = SimpleDateFormat("yyyyMMddHHmmss")
     df.timeZone = tz
     return df.format(Date())
+}
+
+fun addressMustBeBound(hostAndPort: HostAndPort) {
+    poll {
+        try {
+            Socket(hostAndPort.hostText, hostAndPort.port).close()
+            Unit
+        } catch (_exception: SocketException) {
+            null
+        }
+    }
+}
+
+fun addressMustNotBeBound(hostAndPort: HostAndPort) {
+    poll {
+        try {
+            Socket(hostAndPort.hostText, hostAndPort.port).close()
+            null
+        } catch (_exception: SocketException) {
+            Unit
+        }
+    }
 }
 
 class DriverHandle(private val driverDsl: DriverDSLInternalInterface) {
@@ -228,6 +253,10 @@ class DriverDSL(
             }
         }
         messagingService.stop()
+
+        // Check that we shut down properly
+        addressMustNotBeBound(messagingService.myHostPort)
+        addressMustNotBeBound((networkMapNodeInfo.address as ArtemisMessagingService.Address).hostAndPort)
     }
 
     /**

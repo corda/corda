@@ -23,7 +23,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.util.*
 
-private val log: Logger = LoggerFactory.getLogger("NodeRunner")
+private val log: Logger = LoggerFactory.getLogger(NodeRunner::class.java)
 
 class NodeRunner {
     companion object {
