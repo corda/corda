@@ -144,7 +144,7 @@ object JsonSupport {
     object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
             return try {
-                parser.text.toPublicKey()
+                parsePublicKeyBase58(parser.text)
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
             }
