@@ -27,6 +27,8 @@ import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
+import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
@@ -309,7 +311,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }
 
-        // TODO: Subscribe to updates to the network map cache
+        netMapCache.changed.subscribe { mapChange ->
+            if(mapChange.type == MapChangeType.Added) {
+                service.registerIdentity(mapChange.node.identity)
+            }
+        }
 
         return service
     }

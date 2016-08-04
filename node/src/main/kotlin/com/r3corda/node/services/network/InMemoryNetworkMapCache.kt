@@ -13,6 +13,8 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkCacheError
 import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
+import com.r3corda.core.node.services.NetworkMapCache.MapChange
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SingletonSerializeAsToken
@@ -23,6 +25,8 @@ import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -43,6 +47,8 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
         get() = get(NodeInterestRates.Type)
     override val partyNodes: List<NodeInfo>
         get() = registeredNodes.map { it.value }
+    private val _changed = PublishSubject.create<MapChange>()
+    override val changed: Observable<MapChange> = _changed
 
     private var registeredForPush = false
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
@@ -95,10 +101,12 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
     override fun addNode(node: NodeInfo) {
         registeredNodes[node.identity] = node
         netInternal?.registerTrustedAddress(node.address)
+        _changed.onNext(MapChange(node, MapChangeType.Added))
     }
 
     override fun removeNode(node: NodeInfo) {
         registeredNodes.remove(node.identity)
+        _changed.onNext(MapChange(node, MapChangeType.Removed))
     }
 
     /**

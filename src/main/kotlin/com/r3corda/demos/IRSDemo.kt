@@ -399,11 +399,6 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
     val node = logElapsedTime("Node startup", log) {
         Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).start()
     }
-    // TODO: This should all be replaced by the identity service being updated
-    // as the network map changes.
-    for (identityFile in params.tradeWithIdentities) {
-        node.services.identityService.registerIdentity(parsePartyFromFile(identityFile))
-    }
 
     return node
 }
