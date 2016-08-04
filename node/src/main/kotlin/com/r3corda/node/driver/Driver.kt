@@ -161,7 +161,7 @@ class DriverHandle(private val driverDsl: DriverDSLInternalInterface) {
 fun <A> poll(f: () -> A?): A {
     var counter = 0
     var result = f()
-    while (result == null && counter < 30) {
+    while (result == null && counter < 120) {
         counter++
         Thread.sleep(500)
         result = f()
