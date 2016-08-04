@@ -112,7 +112,7 @@ class NodeRunner {
             fun parse(optionSet: OptionSet): CliParams {
                 val services = optionSet.valuesOf(services)
                 val networkMapName = optionSet.valueOf(networkMapName)
-                val networkMapPublicKey = optionSet.valueOf(networkMapPublicKey)?.let { parsePublicKeyBase58(it) }
+                val networkMapPublicKey = optionSet.valueOf(networkMapPublicKey)?.run { parsePublicKeyBase58(this) }
                 val networkMapAddress = optionSet.valueOf(networkMapAddress)
                 val messagingAddress = requiredArgument(optionSet, messagingAddress)
                 val apiAddress = requiredArgument(optionSet, apiAddress)
