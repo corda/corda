@@ -78,6 +78,12 @@ operator fun Perceivable<BigDecimal>.div(n: BigDecimal) = PerceivableOperation(t
 operator fun Perceivable<BigDecimal>.times(n: Double) = PerceivableOperation(this, Operation.TIMES, const(BigDecimal(n)))
 operator fun Perceivable<BigDecimal>.div(n: Double) = PerceivableOperation(this, Operation.DIV, const(BigDecimal(n)))
 
+operator fun Perceivable<Int>.plus(n: Int) = PerceivableOperation(this, Operation.PLUS, const(n))
+operator fun Perceivable<Int>.minus(n: Int) = PerceivableOperation(this, Operation.MINUS, const(n))
+
+operator fun<T> Perceivable<Amount<T>>.plus(n: Perceivable<Amount<T>>) = PerceivableOperation(this, Operation.PLUS, n)
+operator fun<T> Perceivable<Amount<T>>.minus(n: Perceivable<Amount<T>>) = PerceivableOperation(this, Operation.MINUS, n)
+
 data class ScaleAmount<T>(val left: Perceivable<BigDecimal>, val right: Perceivable<Amount<T>>) : Perceivable<Amount<T>>
 
 operator fun Perceivable<BigDecimal>.times(n: Amount<Currency>) = ScaleAmount(this, const(n))
