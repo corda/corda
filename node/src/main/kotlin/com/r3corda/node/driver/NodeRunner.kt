@@ -111,9 +111,6 @@ class NodeRunner {
 
             fun parse(optionSet: OptionSet): CliParams {
                 val services = optionSet.valuesOf(services)
-                if (services.isEmpty()) {
-                    throw IllegalArgumentException("Must provide at least one --services")
-                }
                 val networkMapName = optionSet.valueOf(networkMapName)
                 val networkMapPublicKey = optionSet.valueOf(networkMapPublicKey)?.let { parsePublicKeyBase58(it) }
                 val networkMapAddress = optionSet.valueOf(networkMapAddress)
@@ -139,8 +136,10 @@ class NodeRunner {
 
         fun toCliArguments(): List<String> {
             val cliArguments = LinkedList<String>()
-            cliArguments.add("--services")
-            cliArguments.addAll(services.map { it.toString() })
+            if (services.isNotEmpty()) {
+                cliArguments.add("--services")
+                cliArguments.addAll(services.map { it.toString() })
+            }
             if (networkMapName != null) {
                 cliArguments.add("--network-map-name")
                 cliArguments.add(networkMapName)

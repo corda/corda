@@ -30,18 +30,8 @@ import java.util.concurrent.TimeoutException
 /**
  * This file defines a small "Driver" DSL for starting up nodes.
  *
- * The process the driver is run behaves as an Artemis client and starts up other processes. Namely it first
- * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes/explorers.
- *
- * Usage:
- *   driver {
- *     startNode(setOf(NotaryService.Type), "Notary")
- *     val aliceMonitor = startNode(setOf(WalletMonitorService.Type), "Alice")
- *   }
- *
- * The base directory node directories go into may be specified in [driver] and defaults to "build/<timestamp>/".
- * The node directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to
- * "<randomName>-<messagingPort>" and may be specified in [DriverDSL.startNode].
+ * The process the driver is run in behaves as an Artemis client and starts up other processes. Namely it first
+ * bootstraps a network map service to allow the specified nodes to connect to, then starts up the actual nodes.
  *
  * TODO The driver actually starts up as an Artemis server now that may route traffic. Fix this once the client MessagingService is done.
  * TODO The nodes are started up sequentially which is quite slow. Either speed up node startup or make startup parallel somehow.
@@ -53,12 +43,12 @@ import java.util.concurrent.TimeoutException
  * This is the interface that's exposed to
  */
 interface DriverDSLExposedInterface {
-    fun startNode(advertisedServices: Set<ServiceType>, providedName: String? = null): NodeInfo
+    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceType> = setOf()): NodeInfo
+    val messagingService: MessagingService
+    val networkMapCache: NetworkMapCache
 }
 
 interface DriverDSLInternalInterface : DriverDSLExposedInterface {
-    val messagingService: MessagingService
-    val networkMapCache: NetworkMapCache
     fun start()
     fun shutdown()
     fun waitForAllNodesToFinish()
@@ -66,7 +56,7 @@ interface DriverDSLInternalInterface : DriverDSLExposedInterface {
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
-    fun nextHostAndPort() = HostAndPort.fromParts("localhost", nextPort())
+    fun nextHostAndPort(): HostAndPort = HostAndPort.fromParts("localhost", nextPort())
 
     class Incremental(private var portCounter: Int) : PortAllocation() {
         override fun nextPort() = portCounter++
@@ -79,14 +69,35 @@ sealed class PortAllocation {
 private val log: Logger = LoggerFactory.getLogger("Driver")
 
 /**
- * TODO: remove quasarJarPath once we have a proper way of bundling quasar
- */
+ * [driver] allows one to start up nodes like this:
+ *   driver {
+ *     val noService = startNode("NoService")
+ *     val notary = startNode("Notary")
+ *
+ *     (...)
+ *   }
+ *
+ * The driver implicitly bootstraps a [NetworkMapService] that may be accessed through a local cache [DriverDSL.networkMapCache]
+ * The driver is an artemis node itself, the messaging service may be accessed by [DriverDSL.messagingService]
+ *
+ * @param baseDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
+ *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
+ *   and may be specified in [DriverDSL.startNode].
+ * @param nodeConfigurationPath The path to the node's .conf, defaults to "reference.conf".
+ * @param quasarJarPath The path to quasar.jar, relative to cwd. Defaults to "lib/quasar.jar". TODO remove this once we can bundle quasar properly.
+ * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
+ * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @param with A closure to be run once the nodes have started up. Defaults to empty closure.
+ * @param dsl The dsl itself
+ * @return The value returned in the [dsl] closure
+  */
 fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
         nodeConfigurationPath: String = "reference.conf",
         quasarJarPath: String = "lib/quasar.jar",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        with: (DriverHandle, A) -> Unit = {_driverHandle, _result -> },
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -97,7 +108,8 @@ fun <A> driver(
             quasarJarPath = quasarJarPath
         ),
         coerce = { it },
-        dsl = dsl
+        dsl = dsl,
+        with = with
 )
 
 
@@ -112,15 +124,22 @@ fun <A> driver(
 fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
         driverDsl: D,
         coerce: (D) -> DI,
-        dsl: DI.() -> A
-): Pair<DriverHandle, A> {
+        dsl: DI.() -> A,
+        with: (DriverHandle, A) -> Unit
+): A {
     driverDsl.start()
     val returnValue = dsl(coerce(driverDsl))
     val shutdownHook = Thread({
         driverDsl.shutdown()
     })
     Runtime.getRuntime().addShutdownHook(shutdownHook)
-    return Pair(DriverHandle(driverDsl, shutdownHook), returnValue)
+    try {
+        with(DriverHandle(driverDsl), returnValue)
+    } finally {
+        driverDsl.shutdown()
+        Runtime.getRuntime().removeShutdownHook(shutdownHook)
+    }
+    return returnValue
 }
 
 private fun getTimestampAsDirectoryName(): String {
@@ -130,17 +149,12 @@ private fun getTimestampAsDirectoryName(): String {
     return df.format(Date())
 }
 
-class DriverHandle(private val driverDsl: DriverDSLInternalInterface, private val shutdownHook: Thread) {
+class DriverHandle(private val driverDsl: DriverDSLInternalInterface) {
     val messagingService = driverDsl.messagingService
     val networkMapCache = driverDsl.networkMapCache
 
     fun waitForAllNodesToFinish() {
         driverDsl.waitForAllNodesToFinish()
-    }
-
-    fun shutdown() {
-        driverDsl.shutdown()
-        Runtime.getRuntime().removeShutdownHook(shutdownHook)
     }
 }
 
@@ -213,9 +227,18 @@ class DriverDSL(
                 it.destroyForcibly()
             }
         }
+        messagingService.stop()
     }
 
-    override fun startNode(advertisedServices: Set<ServiceType>, providedName: String?): NodeInfo {
+    /**
+     * Starts a [Node] in a separate process.
+     *
+     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
+     *   random. Note that this must be unique as the driver uses it as a primary key!
+     * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
+     * @return The [NodeInfo] of the started up node retrieved from the network map service.
+     */
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceType>): NodeInfo {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = debugPortAllocation.nextPort()
