@@ -97,4 +97,7 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
         override fun toString() = "Signers missing: ${missing.map { it.toStringShort() }}"
     }
     class InvalidNotaryChange(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
+    class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {
+        override fun toString(): String = "Found unexpected notary change in transaction. Tx notary: ${tx.notary}, found: ${outputNotary}"
+    }
 }

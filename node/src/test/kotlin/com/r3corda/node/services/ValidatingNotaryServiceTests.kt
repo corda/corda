@@ -39,7 +39,7 @@ class ValidatingNotaryServiceTests {
     @Test fun `should report error for invalid transaction dependency`() {
         val stx = run {
             val inputState = issueInvalidState(clientNode)
-            val tx = TransactionType.General.Builder().withItems(inputState)
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
         }
@@ -59,7 +59,7 @@ class ValidatingNotaryServiceTests {
             val inputState = issueState(clientNode)
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
-            val tx = TransactionType.General.Builder().withItems(inputState, command)
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState, command)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
         }

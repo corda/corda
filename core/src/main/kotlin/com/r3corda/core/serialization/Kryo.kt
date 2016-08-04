@@ -230,6 +230,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.attachments)
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
+        kryo.writeClassAndObject(output, obj.notary)
         kryo.writeClassAndObject(output, obj.signers)
         kryo.writeClassAndObject(output, obj.type)
         kryo.writeClassAndObject(output, obj.timestamp)
@@ -261,11 +262,12 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.useClassLoader(classLoader) {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
+            val notary = kryo.readClassAndObject(input) as Party?
             val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
 
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, signers, transactionType, timestamp)
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, signers, transactionType, timestamp)
         }
     }
 }

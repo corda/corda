@@ -49,7 +49,7 @@ class TransactionSerializationTests {
 
     @Before
     fun setup() {
-        tx = TransactionType.General.Builder().withItems(
+        tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
                 inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(DUMMY_KEY_1.public))
         )
     }
@@ -88,7 +88,7 @@ class TransactionSerializationTests {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = TransactionType.General.Builder().withItems(inputState, outputState, changeState,
+            val tx2 = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
                     Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
             tx2.signWith(DUMMY_NOTARY_KEY)
             tx2.signWith(DUMMY_KEY_2)

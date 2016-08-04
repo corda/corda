@@ -164,7 +164,7 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun initatePayment(req: ClientToServiceCommand.PayCash): TransactionBuildResult {
-        val builder: TransactionBuilder = TransactionType.General.Builder()
+        val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
             Cash().generateSpend(builder, Amount(req.pennies, req.tokenDef.product), req.owner,
@@ -185,7 +185,7 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun exitCash(req: ClientToServiceCommand.ExitCash): TransactionBuildResult {
-        val builder: TransactionBuilder = TransactionType.General.Builder()
+        val builder: TransactionBuilder = TransactionType.General.Builder(null)
         val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
         Cash().generateExit(builder, Amount(req.pennies, Issued(issuer, req.currency)),
                 issuer.party.owningKey, services.walletService.currentWallet.statesOfType<Cash.State>())

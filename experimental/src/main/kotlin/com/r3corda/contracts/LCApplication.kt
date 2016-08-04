@@ -135,7 +135,7 @@ class LCApplication : Contract {
 
     fun generateApply(props: LCApplicationProperties, notary: Party, purchaseOrder: Attachment): TransactionBuilder {
         val state = State(props.issuer.owningKey, Status.PENDING_ISSUER_REVIEW, props)
-        val txBuilder = TransactionType.General.Builder().withItems(state, Command(Commands.ApplyForLC(), props.applicant.owningKey))
+        val txBuilder = TransactionType.General.Builder(notary).withItems(state, Command(Commands.ApplyForLC(), props.applicant.owningKey))
         txBuilder.addAttachment(purchaseOrder.id)
         return txBuilder
     }

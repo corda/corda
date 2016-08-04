@@ -340,7 +340,7 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary);
-        return new TransactionType.General.Builder().withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
+        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {

@@ -101,11 +101,9 @@ object TwoPartyDealProtocol {
             untrustedPartialTX.validate { stx ->
                 progressTracker.nextStep()
 
-                // TODO: Verify the notary on the transaction is set correctly
-
                 // Check that the tx proposed by the buyer is valid.
                 val missingSigs = stx.verifySignatures(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public))
+                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
                     throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
 
                 val wtx: WireTransaction = stx.tx

@@ -2,8 +2,9 @@ package com.r3corda.core.contracts
 
 import com.esotericsoftware.kryo.Kryo
 import com.r3corda.core.crypto.DigitalSignature
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.crypto.toStringsShort
 import com.r3corda.core.indexOfOrThrow
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.THREAD_LOCAL_KRYO
@@ -49,6 +50,7 @@ data class WireTransaction(val inputs: List<StateRef>,
                            val attachments: List<SecureHash>,
                            val outputs: List<TransactionState<ContractState>>,
                            val commands: List<Command>,
+                           val notary: Party?,
                            val signers: List<PublicKey>,
                            val type: TransactionType,
                            val timestamp: Timestamp?) : NamedByHash {
@@ -117,21 +119,29 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         // Now examine the contents and ensure the sigs we have line up with the advertised list of signers.
         val missing = getMissingSignatures()
         if (missing.isNotEmpty() && throwIfSignaturesAreMissing) {
-            // Take a best guess at where the signatures are required from, for debugging
-            // TODO: We need a much better way of structuring this data
-            val missingElements = ArrayList<String>()
-            this.tx.commands.forEach { command ->
-                if (command.signers.any { signer -> missing.contains(signer) })
-                    missingElements.add(command.toString())
-            }
-            this.tx.notary?.owningKey.apply {
-                if (missing.contains(this))
-                    missingElements.add("notary")
-            }
-            throw SignatureException("Missing signatures for ${missingElements} on transaction ${id.prefixChars()} for ${missing.map { it.toStringShort() }}")
+            val missingElements = getMissingKeyDescriptions(missing)
+            throw SignatureException("Missing signatures for ${missingElements} on transaction ${id.prefixChars()} for ${missing.toStringsShort()}")
         }
 
         return missing
+    }
+
+    /**
+     * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
+     * the underlying cause.
+     */
+    private fun getMissingKeyDescriptions(missing: Set<PublicKey>): ArrayList<String> {
+        // TODO: We need a much better way of structuring this data
+        val missingElements = ArrayList<String>()
+        this.tx.commands.forEach { command ->
+            if (command.signers.any { signer -> missing.contains(signer) })
+                missingElements.add(command.toString())
+        }
+        this.tx.notary?.owningKey.apply {
+            if (missing.contains(this))
+                missingElements.add("notary")
+        }
+        return missingElements
     }
 
     /** Returns the same transaction but with an additional (unchecked) signature */
@@ -153,6 +163,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * Returns the set of missing signatures - a signature must be present for each signer public key.
      */
     private fun getMissingSignatures(): Set<PublicKey> {
+        val notaryKey = tx.notary?.owningKey
         val requiredKeys = tx.signers.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
 
@@ -175,8 +186,10 @@ data class LedgerTransaction(
         val commands: List<AuthenticatedObject<CommandData>>,
         /** A list of [Attachment] objects identified by the transaction that are needed for this transaction to verify. */
         val attachments: List<Attachment>,
-        /** The hash of the original serialised WireTransaction */
+        /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
+        /** The notary for this party, may be null for transactions with no notary. */
+        val notary: Party?,
         /** The notary key and the command keys together: a signed transaction must provide signatures for all of these. */
         val signers: List<PublicKey>,
         val timestamp: Timestamp?,

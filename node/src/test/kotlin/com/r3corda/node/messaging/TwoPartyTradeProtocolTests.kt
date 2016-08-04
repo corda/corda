@@ -39,6 +39,7 @@ import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -407,7 +408,14 @@ class TwoPartyTradeProtocolTests {
                 bobResult.get()
         }
         assertTrue(e.cause is TransactionVerificationException)
-        assertTrue(e.cause!!.cause!!.message!!.contains(expectedMessageSubstring))
+        assertNotNull(e.cause!!.cause)
+        assertNotNull(e.cause!!.cause!!.message)
+        val underlyingMessage = e.cause!!.cause!!.message!!
+        if (underlyingMessage.contains(expectedMessageSubstring)) {
+            assertTrue(underlyingMessage.contains(expectedMessageSubstring))
+        } else {
+            assertEquals(expectedMessageSubstring, underlyingMessage)
+        }
     }
 
     private fun insertFakeTransactions(
@@ -425,8 +433,8 @@ class TwoPartyTradeProtocolTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
-            owner: PublicKey = BOB_PUBKEY,
-            issuer: PartyAndReference = DUMMY_CASH_ISSUER): Pair<Wallet, List<WireTransaction>> {
+            owner: PublicKey = BOB_PUBKEY): Pair<Wallet, List<WireTransaction>> {
+        val issuer = DUMMY_CASH_ISSUER
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
         val eb1 = transaction {
@@ -435,6 +443,9 @@ class TwoPartyTradeProtocolTests {
             output("elbonian money 2") { 1000.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
             if (!withError)
                 command(DUMMY_CASH_ISSUER_KEY.public) { Cash.Commands.Issue() }
+            else
+                // Put a broken command on so at least a signature is created
+                command(DUMMY_CASH_ISSUER_KEY.public) { Cash.Commands.Move() }
             timestamp(TEST_TX_TIME)
             if (withError) {
                 this.fails()

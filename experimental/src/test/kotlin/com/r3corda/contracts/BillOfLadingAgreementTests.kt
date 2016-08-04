@@ -93,7 +93,7 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun transferAndEndorseGenerationMethod_MissingBeneficiarySignature() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder()
+        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -105,7 +105,7 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun transferAndEndorseGenerationMethod_MissingOwnerSignature() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder()
+        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -129,7 +129,7 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun transferPossessionGenerationMethod_Unsigned() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder()
+        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))

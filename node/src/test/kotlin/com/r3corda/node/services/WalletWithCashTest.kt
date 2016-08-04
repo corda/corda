@@ -71,21 +71,21 @@ class WalletWithCashTest {
     fun basics() {
         // A tx that sends us money.
         val freshKey = services.keyManagementService.freshKey()
-        val usefulTX = TransactionType.General.Builder().apply {
+        val usefulTX = TransactionType.General.Builder(null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction()
         val myOutput = usefulTX.toLedgerTransaction(services).outRef<Cash.State>(0)
 
         // A tx that spends our money.
-        val spendTX = TransactionType.General.Builder().apply {
+        val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             Cash().generateSpend(this, 80.DOLLARS, BOB_PUBKEY, listOf(myOutput))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         // A tx that doesn't send us anything.
-        val irrelevantTX = TransactionType.General.Builder().apply {
+        val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
             signWith(DUMMY_NOTARY_KEY)
@@ -112,6 +112,7 @@ class WalletWithCashTest {
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
             signWith(freshKey)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         wallet.notify(dummyIssue.tx)
@@ -121,6 +122,7 @@ class WalletWithCashTest {
         val dummyIssue2 = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
             signWith(freshKey)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         assertThatThrownBy {
@@ -139,6 +141,7 @@ class WalletWithCashTest {
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
             signWith(freshKey)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         wallet.notify(dummyIssue.tx)

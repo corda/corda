@@ -184,7 +184,7 @@ class CommercialPaperTestsGeneric {
     }
 
     fun cashOutputsToWallet(vararg outputs: TransactionState<Cash.State>): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), emptyList(), null, TransactionType.General())
+        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), null, emptyList(), null, TransactionType.General())
         return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 
@@ -212,7 +212,7 @@ class CommercialPaperTestsGeneric {
 
         // Alice pays $9000 to BigCorp to own some of their debt.
         val moveTX: SignedTransaction = run {
-            val ptx = TransactionType.General.Builder()
+            val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
             Cash().generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public, alicesWallet.statesOfType<Cash.State>())
             CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
             ptx.signWith(bigCorpServices.key)
@@ -222,7 +222,7 @@ class CommercialPaperTestsGeneric {
         }
 
         fun makeRedeemTX(time: Instant): SignedTransaction {
-            val ptx = TransactionType.General.Builder()
+            val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
             ptx.setTime(time, 30.seconds)
             CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpWallet.statesOfType<Cash.State>())
             ptx.signWith(aliceServices.key)

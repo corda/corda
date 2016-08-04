@@ -232,8 +232,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         apply {
             val freshKey = services.keyManagementService.freshKey()
             val state = TestState(factory.create(TestProtocolLogic::class.java, increment), instant)
-            val usefulTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                addOutputState(state)
+            val usefulTX = TransactionType.General.Builder(null).apply {
+                addOutputState(state, DUMMY_NOTARY)
                 addCommand(Command(), freshKey.public)
                 signWith(freshKey)
             }.toSignedTransaction()

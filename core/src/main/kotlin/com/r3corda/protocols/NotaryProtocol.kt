@@ -52,7 +52,9 @@ object NotaryProtocol {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             progressTracker.currentStep = REQUESTING
-            notaryParty = findNotaryParty()
+            val wtx = stx.tx
+            notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
+            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) { "Input states must have the same Notary" }
 
             val sendSessionID = random63BitValue()
             val receiveSessionID = random63BitValue()
@@ -82,19 +84,6 @@ object NotaryProtocol {
         private fun validateSignature(sig: DigitalSignature.LegallyIdentifiable, data: SerializedBytes<WireTransaction>) {
             check(sig.signer == notaryParty) { "Notary result not signed by the correct service" }
             sig.verifyWithECDSA(data)
-        }
-
-        private fun findNotaryParty(): Party {
-            val wtx = stx.tx
-            val firstStateRef = wtx.inputs.firstOrNull()
-            var maybeNotaryParty: Party? = if (firstStateRef == null)
-                null
-            else
-                serviceHub.loadState(firstStateRef).notary
-
-            val notaryParty = maybeNotaryParty ?: throw IllegalStateException("Transaction does not specify a Notary")
-            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) { "Input states must have the same Notary" }
-            return notaryParty
         }
     }
 
@@ -133,12 +122,11 @@ object NotaryProtocol {
             send(otherSide, sendSessionID, result)
         }
 
-        private fun validateTimestamp(tx: WireTransaction) =
+        private fun validateTimestamp(tx: WireTransaction) {
             if (tx.timestamp != null
-                && !timestampChecker.isValid(tx.timestamp))
+                    && !timestampChecker.isValid(tx.timestamp))
                 throw NotaryException(NotaryError.TimestampInvalid())
-            else
-                Unit
+        }
 
         /**
          * No pre-commit processing is done. Transaction is not checked for contract-validity, as that would require fully
@@ -211,11 +199,6 @@ sealed class NotaryError {
     class Conflict(val tx: WireTransaction, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
         override fun toString() = "One or more input states for transaction ${tx.id} have been used in another transaction"
     }
-
-    class MoreThanOneTimestamp : NotaryError()
-
-    /** Thrown if the timestamp command in the transaction doesn't list this Notary as a signer */
-    class NotForMe : NotaryError()
 
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
     class TimestampInvalid : NotaryError()

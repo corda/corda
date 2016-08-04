@@ -130,7 +130,12 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun verifies(): EnforceVerifyOrFail {
-        toWireTransaction().toLedgerTransaction(services).verify()
+        // Verify on a copy of the transaction builder, so if it's then further modified it doesn't error due to
+        // the existing signature
+        transactionBuilder.copy().apply {
+            signWith(DUMMY_NOTARY_KEY)
+            toWireTransaction().toLedgerTransaction(services).verify()
+        }
         return EnforceVerifyOrFail.Token
     }
 
@@ -305,15 +310,18 @@ data class TestLedgerDSLInterpreter private constructor (
  * @return List of [SignedTransaction]s.
  */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
-    val allPubKeys = wtx.signers.toMutableSet()
+    check(wtx.signers.isNotEmpty())
     val bits = wtx.serialize()
     require(bits == wtx.serialized)
     val signatures = ArrayList<DigitalSignature.WithKey>()
-    for (key in ALL_TEST_KEYS + extraKeys) {
-        if (key.public in allPubKeys) {
-            signatures += key.signWithECDSA(bits)
-            allPubKeys -= key.public
-        }
+    val keyLookup = HashMap<PublicKey, KeyPair>()
+
+    (ALL_TEST_KEYS + extraKeys).forEach {
+        keyLookup[it.public] = it
+    }
+    wtx.signers.forEach {
+        val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
+        signatures += key.signWithECDSA(bits)
     }
     SignedTransaction(bits, signatures)
 }

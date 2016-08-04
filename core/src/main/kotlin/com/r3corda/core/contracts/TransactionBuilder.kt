@@ -16,13 +16,13 @@ import java.util.*
  * The builder can be customised for specific transaction types, e.g. where additional processing is needed
  * before adding a state/command.
  *
- * @param notary The default notary that will be used for outputs that don't have a notary specified. When this is set,
- *               an output state can be added by just passing in a [ContractState] – a [TransactionState] with the
- *               default notary will be generated automatically.
+ * @param notary Notary used for the transaction. If null, this indicates the transaction DOES NOT have a notary.
+ * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
+ * [TransactionState] with this notary specified will be generated automatically.
  */
 open class TransactionBuilder(
         protected val type: TransactionType = TransactionType.General(),
-        protected val notary: Party? = null,
+        var notary: Party? = null,
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
@@ -32,6 +32,10 @@ open class TransactionBuilder(
 
     @Deprecated("use timestamp instead")
     val time: Timestamp? get() = timestamp
+
+    init {
+        notary?.let { signers.add(it.owningKey) }
+    }
 
     /**
      * Creates a copy of the builder.
@@ -64,6 +68,7 @@ open class TransactionBuilder(
         = setTime(Timestamp(time, timeTolerance))
 
     fun setTime(newTimestamp: Timestamp) {
+        check(notary != null) { "Only notarised transactions can have a timestamp" }
         check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
         this.timestamp = newTimestamp
     }
@@ -120,7 +125,7 @@ open class TransactionBuilder(
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), signers.toList(), type, timestamp)
+            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timestamp)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
@@ -136,6 +141,7 @@ open class TransactionBuilder(
 
     fun addInputState(stateRef: StateRef, notary: Party) {
         check(currentSigs.isEmpty())
+        require(notary == this.notary) { "Input state requires notary \"${notary}\" which does not match the transaction notary \"${this.notary}\"." }
         signers.add(notary.owningKey)
         inputs.add(stateRef)
     }

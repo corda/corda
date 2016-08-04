@@ -52,7 +52,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      */
     fun timestamp(data: Timestamp)
 
-            /**
+    /**
      * Creates a local scoped copy of the transaction.
      * @param dsl The transaction DSL to be interpreted using the copy.
      */

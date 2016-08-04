@@ -84,7 +84,7 @@ class AccountReceivable : Contract {
                 throw IllegalArgumentException("Cannot build AR with an already assigned invoice")
             }
             val ar = createARFromInvoice(invoice.state.data, discountRate, notary)
-            val tx = TransactionType.General.Builder()
+            val tx = TransactionType.General.Builder(notary)
             tx.addInputState(invoice)
             tx.addOutputState(invoice.state.data.copy(assigned = true))
             tx.addCommand(Invoice.Commands.Assign(), invoice.state.data.owner.owningKey)

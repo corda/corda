@@ -39,7 +39,7 @@ class NotaryServiceTests {
     @Test fun `should sign a unique transaction with a valid timestamp`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionType.General.Builder().withItems(inputState)
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState)
             tx.setTime(Instant.now(), 30.seconds)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
@@ -56,7 +56,7 @@ class NotaryServiceTests {
     @Test fun `should sign a unique transaction without a timestamp`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionType.General.Builder().withItems(inputState)
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
         }
@@ -72,7 +72,7 @@ class NotaryServiceTests {
     @Test fun `should report error for transaction with an invalid timestamp`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionType.General.Builder().withItems(inputState)
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState)
             tx.setTime(Instant.now().plusSeconds(3600), 30.seconds)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
@@ -91,7 +91,7 @@ class NotaryServiceTests {
     @Test fun `should report conflict for a duplicate transaction`() {
         val stx = run {
             val inputState = issueState(clientNode)
-            val tx = TransactionType.General.Builder().withItems(inputState)
+            val tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState)
             tx.signWith(clientNode.keyPair!!)
             tx.toSignedTransaction(false)
         }
