@@ -1,5 +1,11 @@
 package com.r3corda.core.utilities
 
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoSerializable
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
+import com.r3corda.core.serialization.createKryo
+import com.r3corda.core.serialization.serialize
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -24,10 +30,12 @@ class ProgressTrackerTest {
     }
 
     lateinit var pt: ProgressTracker
+    lateinit var pt2: ProgressTracker
 
     @Before
     fun before() {
         pt = SimpleSteps.tracker()
+        pt2 = ChildSteps.tracker()
     }
 
     @Test
@@ -56,8 +64,6 @@ class ProgressTrackerTest {
 
     @Test
     fun `nested children are stepped correctly`() {
-        val pt2 = ChildSteps.tracker()
-
         val stepNotification = LinkedList<ProgressTracker.Change>()
         pt.changes.subscribe {
             stepNotification += it
@@ -82,10 +88,32 @@ class ProgressTrackerTest {
 
     @Test
     fun `can be rewound`() {
-        val pt2 = ChildSteps.tracker()
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
         repeat(4) { pt.nextStep() }
         pt.currentStep = SimpleSteps.ONE
         assertEquals(SimpleSteps.TWO, pt.nextStep())
+    }
+
+    @Test
+    fun rxSubscriptionsAreNotSerialized() {
+        class Unserializable : KryoSerializable {
+            override fun write(kryo: Kryo?, output: Output?) = throw AssertionError("not called")
+            override fun read(kryo: Kryo?, input: Input?) = throw AssertionError("not called")
+
+            fun foo() {
+                println("bar")
+            }
+        }
+        val kryo = createKryo().apply {
+            // This is required to make sure Kryo walks through the auto-generated members for the lambda below.
+            fieldSerializerConfig.isIgnoreSyntheticFields = false
+        }
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
+        class Tmp {
+            val unserializable = Unserializable()
+            val subscription = pt2.changes.subscribe { unserializable.foo() }
+        }
+        Tmp()
+        pt.serialize(kryo)
     }
 }

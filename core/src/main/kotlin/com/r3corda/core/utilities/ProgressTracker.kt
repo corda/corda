@@ -80,8 +80,8 @@ class ProgressTracker(vararg steps: Step) {
 
     // This field won't be serialized.
     private val _changes by TransientProperty { PublishSubject.create<Change>() }
-
-    private val childProgressTrackers = HashMap<Step, Pair<ProgressTracker, Subscription>>()
+    private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
+    private val childProgressTrackers = HashMap<Step, Child>()
 
     init {
         steps.forEach {
@@ -130,19 +130,19 @@ class ProgressTracker(vararg steps: Step) {
     val currentStepRecursive: Step
         get() = getChildProgressTracker(currentStep)?.currentStepRecursive ?: currentStep
 
-    fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.first
+    fun getChildProgressTracker(step: Step): ProgressTracker? = childProgressTrackers[step]?.tracker
 
     fun setChildProgressTracker(step: ProgressTracker.Step, childProgressTracker: ProgressTracker) {
         val subscription = childProgressTracker.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
-        childProgressTrackers[step] = Pair(childProgressTracker, subscription)
+        childProgressTrackers[step] = Child(childProgressTracker, subscription)
         childProgressTracker.parent = this
         _changes.onNext(Change.Structural(this, step))
     }
 
     private fun removeChildProgressTracker(step: ProgressTracker.Step) {
         childProgressTrackers.remove(step)?.let {
-            it.first.parent = null
-            it.second.unsubscribe()
+            it.tracker.parent = null
+            it.subscription?.unsubscribe()
         }
         _changes.onNext(Change.Structural(this, step))
     }
@@ -192,7 +192,6 @@ class ProgressTracker(vararg steps: Step) {
      * if a step changed its label or rendering).
      */
     val changes: Observable<Change> get() = _changes
-
 }
 
 
