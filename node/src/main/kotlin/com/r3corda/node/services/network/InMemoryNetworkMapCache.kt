@@ -100,7 +100,6 @@ open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) :
 
     override fun addNode(node: NodeInfo) {
         registeredNodes[node.identity] = node
-        netInternal?.registerTrustedAddress(node.address)
         _changed.onNext(MapChange(node, MapChangeType.Added))
     }
 

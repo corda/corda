@@ -2,7 +2,6 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -10,18 +9,15 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.servlets.AttachmentDownloadServlet
 import com.r3corda.node.servlets.Config
 import com.r3corda.node.servlets.DataUploadServlet
 import com.r3corda.node.servlets.ResponseFilter
 import com.r3corda.node.utilities.AffinityExecutor
-import org.eclipse.jetty.server.Handler
 import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.server.handler.DefaultHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.server.handler.HandlerList
-import org.eclipse.jetty.server.handler.ResourceHandler
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
@@ -55,9 +51,10 @@ class ConfigurationException(message: String) : Exception(message)
  * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all protocols etc.
  */
-class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, configuration: NodeConfiguration,
-           networkMapAddress: NodeInfo?, advertisedServices: Set<ServiceType>,
-           clock: Clock = NodeClock()) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
+class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
+           configuration: NodeConfiguration, networkMapAddress: NodeInfo?,
+           advertisedServices: Set<ServiceType>, clock: Clock = NodeClock(),
+           val messagingServerAddr: HostAndPort? = null) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         val DEFAULT_PORT = 31337
@@ -68,17 +65,31 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
     lateinit var webServer: Server
+    var messageBroker: ArtemisMessagingServer? = null
 
     // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
-    override fun makeMessagingService(): MessagingServiceInternal = ArtemisMessagingService(dir, p2pAddr, configuration, serverThread)
+    override fun makeMessagingService(): MessagingServiceInternal {
+        val serverAddr = messagingServerAddr ?: {
+            messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr)
+            p2pAddr
+        }()
+
+        return ArtemisMessagingClient(dir, configuration, serverAddr, p2pAddr, serverThread)
+    }
 
     override fun startMessagingService() {
-        // Start up the MQ service.
-        (net as ArtemisMessagingService).apply {
-            configureWithDevSSLCertificate() // TODO Create proper certificate provisioning process
+        // Start up the embedded MQ server
+        messageBroker?.apply {
+            configureWithDevSSLCertificate() // TODO: Create proper certificate provisioning process
+            start()
+        }
+
+        // Start up the MQ client.
+        (net as ArtemisMessagingClient).apply {
+            configureWithDevSSLCertificate() // TODO: Client might need a separate certificate
             start()
         }
     }
@@ -179,6 +190,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort, 
     override fun stop() {
         webServer.stop()
         super.stop()
+        messageBroker?.stop()
         nodeFileLock!!.release()
         serverThread.shutdownNow()
     }
