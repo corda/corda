@@ -21,8 +21,15 @@ import javax.net.ssl.*
  */
 fun registerWhitelistTrustManager() {
     if (Security.getProvider("WhitelistTrustManager") == null) {
-        Security.addProvider(WhitelistTrustManagerProvider)
+        WhitelistTrustManagerProvider.register()
     }
+
+    // Forcibly change the TrustManagerFactory defaultAlgorithm to be us
+    // This will apply to all code using TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+    // Which includes the standard HTTPS implementation and most other SSL code
+    // TrustManagerFactory.getInstance(WhitelistTrustManagerProvider.originalTrustProviderAlgorithm)) will
+    // allow access to the original implementation which is normally "PKIX"
+    Security.setProperty("ssl.TrustManagerFactory.algorithm", "whitelistTrustManager")
 }
 
 /**
@@ -46,16 +53,16 @@ object WhitelistTrustManagerProvider : Provider("WhitelistTrustManager",
         // Add ourselves to whitelist as currently we have to connect to a local ArtemisMQ broker
         val host = InetAddress.getLocalHost()
         addWhitelistEntry(host.hostName)
+    }
+
+    /**
+     * Security provider registration function for WhitelistTrustManagerProvider
+     */
+    fun register() {
+        Security.addProvider(WhitelistTrustManagerProvider)
 
         // Register our custom TrustManagerFactorySpi
         put("TrustManagerFactory.whitelistTrustManager", "com.r3corda.core.crypto.WhitelistTrustManagerSpi")
-
-        // Forcibly change the TrustManagerFactory defaultAlgorithm to be us
-        // This will apply to all code using TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        // Which includes the standard HTTPS implementation and most other SSL code
-        // TrustManagerFactory.getInstance(WhitelistTrustManagerProvider.originalTrustProviderAlgorithm)) will
-        // allow access to the original implementation which is normally "PKIX"
-        Security.setProperty("ssl.TrustManagerFactory.algorithm", "whitelistTrustManager")
     }
 
     /**
