@@ -2,10 +2,7 @@ package com.r3corda.node.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
-import com.r3corda.contracts.asset.CASH
-import com.r3corda.contracts.asset.Cash
-import com.r3corda.contracts.asset.`issued by`
-import com.r3corda.contracts.asset.`owned by`
+import com.r3corda.contracts.asset.*
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
@@ -93,9 +90,8 @@ class TwoPartyTradeProtocolTests {
             val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
-            val issuer = bobNode.services.storageService.myLegalIdentity.ref(0)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` issuer, notaryNode.info.identity, null).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey, notaryNode.storage.myLegalIdentityKey)
 
@@ -134,7 +130,6 @@ class TwoPartyTradeProtocolTests {
 
     @Test
     fun `shutdown and restore`() {
-
         ledger {
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
             val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
@@ -142,13 +137,12 @@ class TwoPartyTradeProtocolTests {
 
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
             val networkMapAddr = notaryNode.info
-            val issuer = bobNode.services.storageService.myLegalIdentity.ref(0)
 
             net.runNetwork() // Clear network map registration messages
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` issuer, notaryNode.info.identity, null).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -252,7 +246,7 @@ class TwoPartyTradeProtocolTests {
         val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
         val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
 
-        ledger(storageService = aliceNode.storage) {
+        ledger(aliceNode.services) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -419,7 +413,7 @@ class TwoPartyTradeProtocolTests {
             wtxToSign: List<WireTransaction>,
             services: ServiceHub,
             vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys)
+        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList())
         services.recordTransactions(signed)
         val validatedTransactions = services.storageService.validatedTransactions
         if (validatedTransactions is RecordingTransactionStorage) {

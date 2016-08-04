@@ -6,9 +6,6 @@ import com.r3corda.core.testing.utilities.TestTimestamp
 import com.r3corda.core.testing.utilities.assertExitOrKill
 import com.r3corda.core.testing.utilities.spawn
 import org.junit.Test
-import java.nio.file.Paths
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.test.assertEquals
 
 class TraderDemoTest {

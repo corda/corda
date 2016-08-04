@@ -1,13 +1,20 @@
 package com.r3corda.core.node.services.testing
 
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.crypto.sha256
+import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.*
+import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.testing.MEGA_CORP
+import com.r3corda.core.testing.MINI_CORP
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -15,9 +22,39 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.time.Clock
 import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
+
+// TODO: We need a single, rationalised unit testing environment that is usable for everything. Fix this!
+// That means it probably shouldn't be in the 'core' module, which lacks enough code to create a realistic test env.
+
+/**
+ * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
+ * building chains of transactions and verifying them. It isn't sufficient for testing protocols however.
+ */
+open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
+    override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T> {
+        throw UnsupportedOperationException("not implemented")
+    }
+
+    override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+        for (stx in txs) {
+            storageService.validatedTransactions.addTransaction(stx)
+        }
+    }
+
+    override val storageService: TxWritableStorageService = MockStorageService(myLegalIdentityKey = key)
+    override val identityService: MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+    override val keyManagementService: MockKeyManagementService = MockKeyManagementService(key)
+
+    override val walletService: WalletService get() = throw UnsupportedOperationException()
+    override val networkService: MessagingService get() = throw UnsupportedOperationException()
+    override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
+    override val clock: Clock get() = throw UnsupportedOperationException()
+    override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
+}
 
 @ThreadSafe
 class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {

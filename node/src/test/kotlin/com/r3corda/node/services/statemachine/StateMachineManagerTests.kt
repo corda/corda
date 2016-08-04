@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.node.services.MockServices
+import com.r3corda.node.services.MockServiceHubInternal
 import com.r3corda.node.services.api.Checkpoint
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -45,7 +45,7 @@ class StateMachineManagerTests {
         assertThat(protocol.lazyTime).isNotNull()
     }
 
-    private fun createManager() = StateMachineManager(object : MockServices() {
+    private fun createManager() = StateMachineManager(object : MockServiceHubInternal() {
         override val networkService: MessagingServiceInternal get() = network
     }, emptyList(), checkpointStorage, AffinityExecutor.SAME_THREAD)
 

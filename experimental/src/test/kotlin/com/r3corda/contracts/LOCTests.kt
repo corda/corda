@@ -120,6 +120,7 @@ class LOCTests {
     fun issueSignedByBank() {
         val ptx = LOC().generateIssue(LOCstate.beneficiaryPaid, LOCstate.issued, LOCstate.terminated, LOCstate.props, DUMMY_NOTARY).apply {
             signWith(MEGA_CORP_KEY)
+            signWith(DUMMY_NOTARY_KEY)
         }
         val stx = ptx.toSignedTransaction()
         stx.verify()

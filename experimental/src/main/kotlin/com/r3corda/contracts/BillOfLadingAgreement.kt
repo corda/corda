@@ -3,7 +3,9 @@ package com.r3corda.contracts
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.days
 import java.security.PublicKey
+import java.time.Instant
 import java.time.LocalDate
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -109,9 +111,11 @@ class BillOfLadingAgreement : Contract {
     /**
      * Returns a transaction that issues a Bill of Lading Agreement
      */
-    fun generateIssue(owner: PublicKey, beneficiary: Party, props: BillOfLadingProperties, notary: Party? = null): TransactionBuilder {
+    fun generateIssue(owner: PublicKey, beneficiary: Party, props: BillOfLadingProperties, notary: Party): TransactionBuilder {
         val state = State(owner, beneficiary, props)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.IssueBL(), props.carrierOwner.owningKey))
+        val builder = TransactionType.General.Builder(notary = notary)
+        builder.setTime(Instant.now(), notary, 1.days)
+        return builder.withItems(state, Command(Commands.IssueBL(), props.carrierOwner.owningKey))
     }
 
     /**

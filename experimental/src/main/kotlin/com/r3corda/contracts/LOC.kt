@@ -4,7 +4,10 @@ import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.days
+import com.r3corda.core.testing.DUMMY_NOTARY
 import java.security.PublicKey
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Period
 import java.time.ZoneOffset
@@ -142,7 +145,9 @@ class LOC : Contract {
 
     fun generateIssue(beneficiaryPaid: Boolean, issued: Boolean, terminated: Boolean, props: LOCProperties, notary: Party): TransactionBuilder {
         val state = State(beneficiaryPaid, issued, terminated, props)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issuance(), props.issuingbank.owningKey))
+        val builder = TransactionType.General.Builder(notary = notary)
+        builder.setTime(Instant.now(), notary, 1.days)
+        return builder.withItems(state, Command(Commands.Issuance(), props.issuingbank.owningKey))
     }
 
 

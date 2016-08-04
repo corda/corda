@@ -48,8 +48,9 @@ class BillOfLadingAgreementTests {
 
     @Test
     fun issueGenerationMethod() {
-        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary,Bill.props, notary = DUMMY_NOTARY).apply {
+        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props, DUMMY_NOTARY).apply {
             signWith(ALICE_KEY)
+            signWith(DUMMY_NOTARY_KEY)
         }
         val stx = ptx.toSignedTransaction()
         stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
@@ -57,14 +58,14 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun issueGenerationMethod_Unsigned() {
-        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props)
+        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props, DUMMY_NOTARY)
         val stx = ptx.toSignedTransaction()
         stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
     }
 
     @Test(expected = IllegalStateException::class)
     fun issueGenerationMethod_KeyMismatch() {
-        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props).apply {
+        val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props, DUMMY_NOTARY).apply {
             signWith(BOB_KEY)
         }
         val stx = ptx.toSignedTransaction()

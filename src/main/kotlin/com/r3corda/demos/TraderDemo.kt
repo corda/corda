@@ -136,7 +136,6 @@ fun runTraderDemo(args: Array<String>): Int {
     // One of the two servers needs to run the network map and notary services. In such a trivial two-node network
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
-    var cashIssuer: Party? = null
     val networkMapId = if (role == Role.BUYER) {
         advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
@@ -148,7 +147,6 @@ fun runTraderDemo(args: Array<String>): Int {
         val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        cashIssuer = party
         NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
 
@@ -157,18 +155,15 @@ fun runTraderDemo(args: Array<String>): Int {
         Node(directory, myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
     }
 
-    // TODO: Replace with a separate trusted cash issuer
-    if (cashIssuer == null) {
-        cashIssuer = node.services.storageService.myLegalIdentity
-    }
-
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role
     // will contact the buyer and actually make something happen.
     val amount = 1000.DOLLARS
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
-        runSeller(node, amount, cashIssuer)
+        node.networkMapRegistrationFuture.get()
+        val party = node.netMapCache.getNodeByLegalName("Bank A")?.identity ?: throw IllegalStateException("Cannot find other node?!")
+        runSeller(node, amount, party)
     }
 
     return 0
@@ -213,7 +208,9 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // Self issue some cash.
     //
     // TODO: At some point this demo should be extended to have a central bank node.
-    node.services.fillWithSomeTestCash(3000.DOLLARS, node.info.identity)
+    node.services.fillWithSomeTestCash(3000.DOLLARS,
+                                       notary = node.info.identity, // In this demo, the buyer and notary are the same.
+                                       ownedBy = node.services.keyManagementService.freshKey().public)
 
     // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
     // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the
@@ -250,7 +247,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
         progressTracker.currentStep = STARTING_BUY
         send(otherSide, 0, sessionID)
 
-        val notary = serviceHub.networkMapCache.notaryNodes[0]
+        val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val buyer = TwoPartyTradeProtocol.Buyer(
                 otherSide,
                 notary.identity,
@@ -323,7 +320,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
 
         progressTracker.currentStep = SELF_ISSUING
 
-        val notary = serviceHub.networkMapCache.notaryNodes[0]
+        val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val cpOwnerKey = serviceHub.keyManagementService.freshKey()
         val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, notary)
 

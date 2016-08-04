@@ -40,11 +40,13 @@ interface Verifies {
                 val exceptionMessage = exception.message
                 if (exceptionMessage == null) {
                     throw AssertionError(
-                            "Expected exception containing '$expectedMessage' but raised exception had no message"
+                            "Expected exception containing '$expectedMessage' but raised exception had no message",
+                            exception
                     )
                 } else if (!exceptionMessage.toLowerCase().contains(expectedMessage.toLowerCase())) {
                     throw AssertionError(
-                            "Expected exception containing '$expectedMessage' but raised exception was '$exception'"
+                            "Expected exception containing '$expectedMessage' but raised exception was '$exception'",
+                            exception
                     )
                 }
             }
