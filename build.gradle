@@ -201,3 +201,44 @@ task createCapsule(type:FatCapsule, dependsOn: 'quasarScan') {
         minJavaVersion = '1.8.0'
     }
 }
+
+task createStandalone(dependsOn: 'createCapsule') << {
+    copy {
+        from createCapsule.outputs.getFiles()
+        from 'config/dev/nameservernode.conf'
+        into "${buildDir}/standalone/nameserver"
+        rename 'nameservernode.conf', 'node.conf'
+    }
+
+    copy {
+        from createCapsule.outputs.getFiles()
+        from 'config/dev/generalnodea.conf'
+        into "${buildDir}/standalone/nodea"
+        rename 'generalnodea.conf', 'node.conf'
+    }
+
+    copy {
+        from createCapsule.outputs.getFiles()
+        from 'config/dev/generalnodeb.conf'
+        into "${buildDir}/standalone/nodeb"
+        rename 'generalnodeb.conf', 'node.conf'
+    }
+    delete("${buildDir}/standalone/runstandalone")
+    def myFile = file("${buildDir}/standalone/runstandalone")
+    def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
+    myFile << "#!/usr/bin/env bash\n"
+    myFile << "set -euo pipefail\n"
+    myFile << "trap 'kill \$(jobs -p)' SIGINT SIGTERM EXIT\n"
+    myFile << "export CAPSULE_CACHE_DIR=cache\n"
+    myFile << "pushd nameserver\n"
+    myFile << "( java -jar "+ jarName+" )& \n"
+    myFile << "popd\n"
+    myFile << "pushd nodea\n"
+    myFile << "( java -jar "+ jarName+" )& \n"
+    myFile << "popd\n"
+    myFile << "pushd nodeb\n"
+    myFile << "( java -jar "+ jarName+" )& \n"
+    myFile << "popd\n"
+    myFile << "read -p 'Any key to exit'\n"
+    myFile << "kill \$(jobs -p)\n"
+}
