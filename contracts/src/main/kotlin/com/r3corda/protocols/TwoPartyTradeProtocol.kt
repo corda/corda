@@ -4,7 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.*
+import com.r3corda.core.crypto.DigitalSignature
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.toStringsShort
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -122,7 +125,7 @@ object TwoPartyTradeProtocol {
                 val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
                 val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
                 if (missingSigs != expected)
-                    throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs [${myKeyPair.public.toStringShort()}, ${notaryNode.identity.owningKey.toStringShort()}]")
+                    throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs ${expected.toStringsShort()}")
 
                 val wtx: WireTransaction = it.tx
                 logger.trace { "Received partially signed transaction: ${it.id}" }

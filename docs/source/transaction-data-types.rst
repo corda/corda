@@ -99,7 +99,7 @@ contract type in the library):
       // skip signature checking.
       txb.toWireTransaction().toLedgerTransaction(services).verify()
 
-In a unit test, you would typically use a freshly created ``UnitTestServices`` object, or more realistically, you would
+In a unit test, you would typically use a freshly created ``MockServices`` object, or more realistically, you would
 write your tests using the :doc:`domain specific language for writing tests <tutorial-test-dsl>`.
 
 Party and PublicKey

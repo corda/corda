@@ -8,18 +8,6 @@ import java.util.*
 
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
 
-/** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
-data class TransactionForVerification(val inputs: List<TransactionState<ContractState>>,
-                                      val outputs: List<TransactionState<ContractState>>,
-                                      val attachments: List<Attachment>,
-                                      val commands: List<AuthenticatedObject<CommandData>>,
-                                      val origHash: SecureHash,
-                                      val signers: List<PublicKey>,
-                                      val type: TransactionType) {
-    override fun hashCode() = origHash.hashCode()
-    override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
-}
-
 /**
  * A transaction to be passed as input to a contract verification function. Defines helper methods to
  * simplify verification logic in contracts.

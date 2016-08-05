@@ -20,30 +20,27 @@ import java.security.SignatureException
  * SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
  * a public key that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
  * and the type most frequently passed around the network and stored. The identity of a transaction is the hash
- * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different SWTs may
+ * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
  * map to the same key (and they could be different in important ways, like validity!). The signatures on a
  * SignedTransaction might be invalid or missing: the type does not imply validity.
  *
  * WireTransaction is a transaction in a form ready to be serialised/unserialised. A WireTransaction can be hashed
  * in various ways to calculate a *signature hash* (or sighash), this is the hash that is signed by the various involved
- * keypairs. A WireTransaction can be safely deserialised from inside a SignedTransaction outside of the sandbox,
- * because it consists of only platform defined types. Any user defined object graphs are kept as byte arrays. A
- * WireTransaction may be invalid and missing its dependencies (other transactions + attachments).
+ * keypairs.
  *
  * LedgerTransaction is derived from WireTransaction. It is the result of doing the following operations:
  *
  * - Downloading and locally storing all the dependencies of the transaction.
+ * - Resolving the input states and loading them into memory.
  * - Doing some basic key lookups on WireCommand to see if any keys are from a recognised party, thus converting the
  *   WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->party map.
  *   In future it'd make more sense to use a certificate scheme and so that logic would get more complex.
- * - Deserialising the included states, sandboxing the contract classes, and generally ensuring the embedded code is
- *   safe for interaction.
+ * - Deserialising the output states.
  *
  * All the above refer to inputs using a (txhash, output index) pair.
  *
- * TransactionForVerification is the same as LedgerTransaction but with the input states looked up from a local
- * database and replaced with the real objects. Likewise, attachments are fully resolved at this point.
- * TFV is the form that is finally fed into the contracts.
+ * There is also TransactionForContract, which is a lightly red-acted form of LedgerTransaction that's fed into the
+ * contract's verify function. It may be removed in future.
  */
 
 /** Transaction ready for serialisation, without any signatures attached. */
