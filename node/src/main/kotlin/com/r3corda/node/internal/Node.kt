@@ -50,6 +50,7 @@ class ConfigurationException(message: String) : Exception(message)
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all protocols etc.
+ * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
            configuration: NodeConfiguration, networkMapAddress: NodeInfo?,
