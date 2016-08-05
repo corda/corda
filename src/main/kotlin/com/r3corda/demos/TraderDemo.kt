@@ -24,7 +24,7 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -147,7 +147,7 @@ fun runTraderDemo(args: Array<String>): Int {
         val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        NodeInfo(ArtemisMessagingService.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
+        NodeInfo(ArtemisMessagingClient.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
 
     // And now construct then start the node object. It takes a little while.

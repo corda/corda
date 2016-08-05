@@ -14,19 +14,24 @@ import com.r3corda.demos.api.InterestRateSwapAPI
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
+import com.r3corda.demos.utilities.postJson
+import com.r3corda.demos.utilities.putJson
+import com.r3corda.demos.utilities.uploadFile
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import org.apache.commons.io.IOUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
@@ -35,9 +40,6 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.concurrent.fixedRateTimer
 import kotlin.system.exitProcess
-import com.r3corda.demos.utilities.*
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 // IRS DEMO
 //
@@ -378,7 +380,7 @@ private fun runTrade(cliParams: CliParams.Trade): Int {
 
 private fun createRecipient(addr: String) : SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
-    return ArtemisMessagingService.makeRecipient(hostAndPort)
+    return ArtemisMessagingClient.makeRecipient(hostAndPort)
 }
 
 private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient) : Node {

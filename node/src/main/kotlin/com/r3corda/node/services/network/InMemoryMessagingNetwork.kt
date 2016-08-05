@@ -12,6 +12,7 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.MessagingServiceBuilder
 import com.r3corda.node.services.api.MessagingServiceInternal
+import com.r3corda.node.services.network.InMemoryMessagingNetwork.InMemoryMessaging
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -222,8 +223,6 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                     }
                 }
             }
-
-        override fun registerTrustedAddress(address: SingleMessageRecipient) {}
 
         override fun addMessageHandler(topic: String, sessionID: Long, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
             = addMessageHandler(TopicSession(topic, sessionID), executor, callback)

@@ -14,7 +14,7 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.protocols.RatesFixProtocol
@@ -56,12 +56,12 @@ fun main(args: Array<String>) {
     BriefLogFormatter.initVerbose("+demo.ratefix", "-org.apache.activemq")
 
     val dir = Paths.get(options.valueOf(dirArg))
-    val networkMapAddr = ArtemisMessagingService.makeRecipient(options.valueOf(networkMapAddrArg))
+    val networkMapAddr = ArtemisMessagingClient.makeRecipient(options.valueOf(networkMapAddrArg))
     val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
     val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity, setOf(NetworkMapService.Type, NotaryService.Type))
 
     // Load oracle stuff (in lieu of having a network map service)
-    val oracleAddr = ArtemisMessagingService.makeRecipient(options.valueOf(oracleAddrArg))
+    val oracleAddr = ArtemisMessagingClient.makeRecipient(options.valueOf(oracleAddrArg))
     val oracleIdentity = Files.readAllBytes(Paths.get(options.valueOf(oracleIdentityArg))).deserialize<Party>()
     val oracleNode = NodeInfo(oracleAddr, oracleIdentity)
 
@@ -71,7 +71,7 @@ fun main(args: Array<String>) {
 
     // Bring up node.
     val advertisedServices: Set<ServiceType> = emptySet()
-    val myNetAddr = ArtemisMessagingService.toHostAndPort(options.valueOf(networkAddressArg))
+    val myNetAddr = ArtemisMessagingClient.toHostAndPort(options.valueOf(networkAddressArg))
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
         override val exportJMXto: String = "http"
