@@ -138,7 +138,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     /**
      * Returns the set of missing signatures - a signature must be present for each signer public key.
      */
-    fun getMissingSignatures(): Set<PublicKey> {
+    private fun getMissingSignatures(): Set<PublicKey> {
         val requiredKeys = tx.signers.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
 
