@@ -70,6 +70,7 @@ enum class Operation {
 data class PerceivableOperation<T>(val left: Perceivable<T>, val op: Operation, val right: Perceivable<T>) : Perceivable<T>
 
 operator fun Perceivable<BigDecimal>.plus(n: BigDecimal) = PerceivableOperation(this, Operation.PLUS, const(n))
+fun Perceivable<BigDecimal>.plus() = PerceivableOperation(this, Operation.PLUS, const(BigDecimal(0))) // todo
 operator fun Perceivable<BigDecimal>.minus(n: BigDecimal) = PerceivableOperation(this, Operation.MINUS, const(n))
 operator fun Perceivable<BigDecimal>.plus(n: Double) = PerceivableOperation(this, Operation.PLUS, const(BigDecimal(n)))
 operator fun Perceivable<BigDecimal>.minus(n: Double) = PerceivableOperation(this, Operation.MINUS, const(BigDecimal(n)))

@@ -2,6 +2,7 @@ package com.r3corda.contracts.universal
 
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
+import com.r3corda.core.contracts.USD
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
 import java.util.*
@@ -106,53 +107,39 @@ fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
     return b.final()
 }
 
-interface Parameter {}
-class ParameterDeclaration<T> : Parameter {}
+data class Parameter<T>(val initialValue: T) : Perceivable<T>
 
-class Foo
-{
-    companion object {
-        val Counter = ParameterDeclaration<Int>()
-        val CurrencyAmount = ParameterDeclaration<Amount<Currency>>()
-    }
-}
+fun<T> variable(v: T) = Parameter<T>(v)
 
-
-class RolloutBuilder<T>(val startDate: String, val endDate: String, val frequency: Frequency, val vars: T) {
+class RollOutBuilder<T>(val startDate: String, val endDate: String, val frequency: Frequency, val vars: T) {
 
     val start = StartDate()
     val end = EndDate()
 
-//    fun next(vararg pairs: kotlin.Pair<Parameter, Any>) = Continuation()
     fun next() = Continuation()
 
-    fun<T1> next( @Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<ParameterDeclaration<T1>, Perceivable<T1>>) = Continuation()
-    fun<T1, T2> next( @Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<ParameterDeclaration<T1>, Perceivable<T1>>,
-                      @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<ParameterDeclaration<T2>, Perceivable<T2>>) = Continuation()
-    fun<T1, T2, T3> next( @Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<ParameterDeclaration<T1>, Perceivable<T1>>,
-                          @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<ParameterDeclaration<T2>, Perceivable<T2>>,
-                          @Suppress("UNUSED_PARAMETER") p3: kotlin.Pair<ParameterDeclaration<T3>, Perceivable<T3>>) = Continuation()
-
-    fun tmp_hack() : Any? = null
-
-    fun<U> get(@Suppress("UNUSED_PARAMETER") par: ParameterDeclaration<U>) : Perceivable<U> {
-        @Suppress("UNCHECKED_CAST") return tmp_hack() as Perceivable<U>
-    }
+    fun<T1> next( @Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>) = Continuation()
+    fun<T1, T2> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>,
+                     @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>) = Continuation()
+    fun<T1, T2, T3> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>,
+                         @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>,
+                         @Suppress("UNUSED_PARAMETER") p3: kotlin.Pair<Parameter<T3>, Perceivable<T3>>) = Continuation()
 
     fun final() =
             RollOut(startDate, endDate, frequency, zero)
 }
 
+
 class Dummy {}
 
-fun rollout(startDate: String, endDate: String, frequency: Frequency, init: RolloutBuilder<Dummy>.() -> Unit) : Arrangement {
-    val b = RolloutBuilder<Dummy>(startDate, endDate, frequency, Dummy())
+fun rollOut(startDate: String, endDate: String, frequency: Frequency, init: RollOutBuilder<Dummy>.() -> Unit) : Arrangement {
+    val b = RollOutBuilder(startDate, endDate, frequency, Dummy())
     b.init()
     return b.final()
 }
 
-fun<T> rollout(startDate: String, endDate: String, frequency: Frequency, vars: T, init: RolloutBuilder<T>.() -> Unit) : Arrangement {
-    val b = RolloutBuilder<T>(startDate, endDate, frequency, vars)
+fun<T> rollOut(startDate: String, endDate: String, frequency: Frequency, vars: T, init: RollOutBuilder<T>.() -> Unit) : Arrangement {
+    val b = RollOutBuilder(startDate, endDate, frequency, vars)
     b.init()
 
     return b.final()

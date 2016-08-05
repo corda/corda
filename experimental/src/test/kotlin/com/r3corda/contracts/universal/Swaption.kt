@@ -43,7 +43,7 @@ class Swaption {
             }
 
 
-    val elegant_contract = rollout( "01/04/2015", "01/04/2025", Frequency.Quarterly ) {
+    val elegant_contract = rollOut( "01/04/2015", "01/04/2025", Frequency.Quarterly ) {
         (wileECoyote or roadRunner).may {
             "proceed".givenThat(after(start)) {
                 wileECoyote.gives(roadRunner, libor( notional, start, end ) )
@@ -59,28 +59,47 @@ class Swaption {
 
 
     val strike = 1.2
-    val tarf = rollout( "01/04/2015", "01/04/2016", Frequency.Quarterly, object {
-        val cap = Foo.CurrencyAmount
+
+    val tarf = rollOut( "01/04/2015", "01/04/2016", Frequency.Quarterly, object {
+        val cap = variable( 150.K*USD )
     }) {
         roadRunner.may {
-            "exercise".givenThat(before(start)) {
-                val payout = (EUR / USD - strike) * notional
+            "exercise".givenThat(before(end)) {
+                val payout = (EUR / USD - strike).plus() * notional
 
-                wileECoyote.gives(roadRunner, payout)
-
-                next(vars.cap to get(vars.cap) - payout)
+                (roadRunner or wileECoyote).may {
+                    "proceed".givenThat(after(end)) {
+                        wileECoyote.gives(roadRunner, payout)
+                        next(vars.cap to vars.cap - payout)
+                    }
+                }
             }
         } or (roadRunner or wileECoyote).may {
-            "proceed".givenThat(after(start)) {
+            "proceedWithoutExercise".givenThat(after(end)) {
                 next()
             }
         }
     }
 
-    val tarf2 = rollout( "01/04/2015", "01/04/2016", Frequency.Quarterly, object { val uses = Foo.Counter } ) {
-        val z = get(vars.uses)
+    val tarf2 = rollOut( "01/04/2015", "01/04/2016", Frequency.Quarterly, object {
+        val uses = variable( 4 )
+    }) {
+        roadRunner.may {
+            "exercise".givenThat(before(end)) {
+                val payout = (EUR / USD - strike).plus() * notional
 
-        next( vars.uses to z - 1)
+                (roadRunner or wileECoyote).may {
+                    "proceed".givenThat(after(end)) {
+                        wileECoyote.gives(roadRunner, payout)
+                        next(vars.uses to vars.uses - 1)
+                    }
+                }
+            }
+        } or (roadRunner or wileECoyote).may {
+            "proceedWithoutExercise".givenThat(after(end)) {
+                next()
+            }
+        }
     }
 
 }
