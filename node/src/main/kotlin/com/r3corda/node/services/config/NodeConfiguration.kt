@@ -67,6 +67,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val trustStorePassword: String by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
+    val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
     val hostNotaryServiceLocally: Boolean by conf
     val extraAdvertisedServiceIds: String by conf
     val mapService: NameServiceConfig = NameServiceConfig(conf.getConfig("mapService"))
@@ -91,7 +92,8 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
                 this,
                 networkMapAddress,
                 advertisedServices,
-                clock
+                clock,
+                messagingServerAddress
         )
     }
 }
