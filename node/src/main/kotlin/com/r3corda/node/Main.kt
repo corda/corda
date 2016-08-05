@@ -1,4 +1,4 @@
-package com.r3corda.standalone
+package com.r3corda.node
 
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.typesafe.config.ConfigFactory
@@ -68,6 +68,7 @@ fun main(args: Array<String>) {
         val node = conf.createNode()
         node.start()
         try {
+            // TODO create a proper daemon and/or provide some console handler to give interactive commands
             while (true) Thread.sleep(Long.MAX_VALUE)
         } catch(e: InterruptedException) {
             node.stop()

@@ -46,7 +46,7 @@ allprojects {
 
     // Our version: bump this on release.
     group 'com.r3corda'
-    version '0.2-SNAPSHOT'
+    version '0.3-SNAPSHOT'
 }
 
 repositories {
@@ -192,7 +192,7 @@ applicationDistribution.into("bin") {
 }
 
 task createCapsule(type:FatCapsule, dependsOn: 'quasarScan') {
-    applicationClass 'com.r3corda.standalone.MainKt'
+    applicationClass 'com.r3corda.node.MainKt'
 
     capsuleManifest {
         appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
