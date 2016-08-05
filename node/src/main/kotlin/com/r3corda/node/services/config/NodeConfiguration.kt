@@ -7,7 +7,7 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
 import com.r3corda.node.serialization.NodeClock
-import com.r3corda.node.services.messaging.ArtemisMessagingService
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.typesafe.config.Config
@@ -73,7 +73,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val clock: Clock = NodeClock()
 
     fun createNode(): Node {
-        val networkMapTarget = ArtemisMessagingService.makeRecipient(mapService.address)
+        val networkMapTarget = ArtemisMessagingClient.makeRecipient(mapService.address)
         val advertisedServices = mutableSetOf<ServiceType>()
         if (mapService.hostServiceLocally) advertisedServices.add(NetworkMapService.Type)
         if (hostNotaryServiceLocally) advertisedServices.add(SimpleNotaryService.Type)
