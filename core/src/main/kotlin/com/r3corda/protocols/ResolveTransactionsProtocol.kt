@@ -77,12 +77,9 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // it as well, but don't insert to the database. Note that when we were given a SignedTransaction (stx != null)
         // we *could* insert, because successful verification implies we have everything we need here, and it might
         // be a clearer API if we do that. But for consistency with the other c'tor we currently do not.
-        stx?.let {
-            fetchMissingAttachments(listOf(it.tx))
-            val ltx = it.toLedgerTransaction(serviceHub)
-            ltx.verify()
-            result += ltx
-        }
+        //
+        // If 'stx' is set, then 'wtx' is the contents (from the c'tor).
+        stx?.verifySignatures()
         wtx?.let {
             fetchMissingAttachments(listOf(it))
             val ltx = it.toLedgerTransaction(serviceHub)
@@ -156,8 +153,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     @Suspendable
     private fun fetchMissingAttachments(downloads: List<WireTransaction>) {
         // TODO: This could be done in parallel with other fetches for extra speed.
-        val missingAttachments = downloads.flatMap { stx ->
-            stx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
+        val missingAttachments = downloads.flatMap { wtx ->
+            wtx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
         }
         subProtocol(FetchAttachmentsProtocol(missingAttachments.toSet(), otherSide))
     }
