@@ -19,7 +19,7 @@ interface Arrangement
 // A base arrangement with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
 class Zero() : Arrangement {
     override fun hashCode(): Int {
-        return 0;
+        return 0
     }
     override fun equals(other: Any?): Boolean {
         return other is Zero

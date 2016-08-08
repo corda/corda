@@ -67,10 +67,10 @@ open class NetClause<P> : SingleClause {
      * Verify a netting command. This handles both close-out and payment netting.
      */
     @VisibleForTesting
-    public fun verifyNetCommand(inputs: List<Obligation.State<P>>,
-                                outputs: List<Obligation.State<P>>,
-                                command: AuthenticatedObject<Obligation.Commands.Net>,
-                                netState: NetState<P>) {
+    fun verifyNetCommand(inputs: List<Obligation.State<P>>,
+                         outputs: List<Obligation.State<P>>,
+                         command: AuthenticatedObject<Obligation.Commands.Net>,
+                         netState: NetState<P>) {
         val template = netState.template
         // Create two maps of balances from obligors to beneficiaries, one for input states, the other for output states.
         val inputBalances = extractAmountsDue(template, inputs)

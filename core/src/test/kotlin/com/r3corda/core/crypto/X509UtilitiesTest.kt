@@ -196,7 +196,7 @@ class X509UtilitiesTest {
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         keyManagerFactory.init(keyStore, "serverstorepass".toCharArray())
-        val keyManagers = keyManagerFactory.getKeyManagers()
+        val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
         val trustManagers = trustMgrFactory.trustManagers

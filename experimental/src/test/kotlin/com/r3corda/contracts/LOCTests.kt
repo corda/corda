@@ -154,19 +154,19 @@ class LOCTests {
             output { LOCstate.copy(issued = false) }
             command(MEGA_CORP_PUBKEY) { LOC.Commands.Issuance() }
             timestamp(Instant.now())
-            this.`fails with`("the LOC must be Issued");
+            this `fails with` "the LOC must be Issued"
         }
         transaction {
             output { LOCstate.copy(beneficiaryPaid = true, issued = true) }
             command(MEGA_CORP_PUBKEY) { LOC.Commands.Issuance() }
             timestamp(Instant.now())
-            this.`fails with`("Demand Presentation must not be preformed successfully");
+            this `fails with` "Demand Presentation must not be preformed successfully"
         }
         transaction {
             output { LOCstate.copy(terminated = true, issued = true) }
             command(MEGA_CORP_PUBKEY) { LOC.Commands.Issuance() }
             timestamp(Instant.now())
-            this.`fails with`("LOC must not be terminated");
+            this `fails with` "LOC must not be terminated"
         }
         transaction {
             output { LOCstate.copy(issued = true) }
@@ -179,7 +179,7 @@ class LOCTests {
            // output { LOCstate.copy() }
             command(MEGA_CORP_PUBKEY) { LOC.Commands.Issuance() }
             timestamp(Instant.now())
-            this.`fails with`("the period of presentation must be a positive number");
+            this `fails with` "the period of presentation must be a positive number"
         }
 
     }
@@ -199,7 +199,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.verifies();
+            this.verifies()
         }
 
         transaction {
@@ -215,7 +215,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { Invoice.Commands.Extinguish()}
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the transaction is signed by the issuing bank");
+            this `fails with` "the transaction is signed by the issuing bank"
         }
 
         transaction {
@@ -231,7 +231,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the transaction is signed by the Beneficiary");
+            this `fails with` "the transaction is signed by the Beneficiary"
         }
 
         transaction {
@@ -247,7 +247,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the LOC properties do not remain the same");
+            this `fails with` "the LOC properties do not remain the same"
         }
 
         transaction {
@@ -263,7 +263,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the shipment is late");
+            this `fails with` "the shipment is late"
         }
 
         transaction {
@@ -279,7 +279,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the cash state has not been transferred");
+            this `fails with` "the cash state has not been transferred"
         }
 
         transaction {
@@ -295,7 +295,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { BillOfLadingAgreement.Commands.TransferAndEndorseBL() }
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the bill of lading has not been transferred");
+            this `fails with` "the bill of lading has not been transferred"
         }
 
        /* transaction {
@@ -327,7 +327,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { Invoice.Commands.Extinguish()}
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the beneficiary has not been paid, status not changed");
+            this `fails with` "the beneficiary has not been paid, status not changed"
         }
 
         transaction {
@@ -343,7 +343,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { Invoice.Commands.Extinguish()}
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the LOC must be Issued");
+            this `fails with` "the LOC must be Issued"
         }
 
         transaction {
@@ -359,7 +359,7 @@ class LOCTests {
             command(ALICE_PUBKEY) { Invoice.Commands.Extinguish()}
             command(MEGA_CORP_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("LOC must not be terminated");
+            this `fails with` "LOC must not be terminated"
         }
 
     }
@@ -375,7 +375,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.verifies();
+            this.verifies()
         }
         transaction {
             input { LOCstate.copy(issued = true, beneficiaryPaid = true) }
@@ -385,7 +385,7 @@ class LOCTests {
             command(ALICE_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the transaction is signed by the issuing bank");
+            this `fails with` "the transaction is signed by the issuing bank"
         }
 
         /*transaction {
@@ -407,7 +407,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the cash state has not been transferred");
+            this `fails with` "the cash state has not been transferred"
         }
 
         transaction {
@@ -418,7 +418,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("Empty collection can't be reduced");
+            this `fails with` "Empty collection can't be reduced"
         }
 
         transaction {
@@ -429,7 +429,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the beneficiary has not been paid, status not changed");
+            this `fails with` "the beneficiary has not been paid, status not changed"
         }
 
         transaction {
@@ -440,7 +440,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the LOC must be Issued");
+            this `fails with` "the LOC must be Issued"
         }
         transaction {
             input { LOCstate.copy(issued = true, beneficiaryPaid = true) }
@@ -450,7 +450,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("LOC should be terminated");
+            this `fails with` "LOC should be terminated"
         }
 
         transaction {
@@ -461,7 +461,7 @@ class LOCTests {
             command(MEGA_CORP_PUBKEY, CHARLIE_PUBKEY) { LOC.Commands.Termination() }
             command(CHARLIE_PUBKEY) {Cash.Commands.Move()}
             timestamp(Instant.now())
-            this.`fails with`("the LOC properties do not remain the same");
+            this `fails with` "the LOC properties do not remain the same"
         }
     }
 
