@@ -193,7 +193,7 @@ applicationDistribution.into("bin") {
     fileMode = 0755
 }
 
-task createCapsule(type:FatCapsule, dependsOn: 'quasarScan') {
+task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
     applicationClass 'com.r3corda.node.MainKt'
 
     capsuleManifest {
@@ -225,15 +225,14 @@ task createStandalone(dependsOn: 'createCapsule') << {
         into "${buildDir}/standalone/nodeb"
         rename 'generalnodeb.conf', 'node.conf'
     }
-	
-	delete("${buildDir}/standalone/runstandalone")
-	def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
-	copy {
-		from "buildSrc/scripts/runstandalone"
-		filter { String line -> line.replace("JAR_NAME",jarName) }
-        filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol:org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
-		into "${buildDir}/standalone"
-	}
 
+    delete("${buildDir}/standalone/runstandalone")
+    def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
+    copy {
+        from "buildSrc/scripts/runstandalone"
+        filter { String line -> line.replace("JAR_NAME", jarName) }
+        filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
+        into "${buildDir}/standalone"
+    }
 
 }
