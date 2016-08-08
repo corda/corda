@@ -46,6 +46,7 @@ private val log: Logger = LoggerFactory.getLogger(DriverDSL::class.java)
  */
 interface DriverDSLExposedInterface {
     fun startNode(providedName: String? = null, advertisedServices: Set<ServiceType> = setOf()): NodeInfo
+    fun waitForAllNodesToFinish()
     val messagingService: MessagingService
     val networkMapCache: NetworkMapCache
 }
@@ -53,7 +54,6 @@ interface DriverDSLExposedInterface {
 interface DriverDSLInternalInterface : DriverDSLExposedInterface {
     fun start()
     fun shutdown()
-    fun waitForAllNodesToFinish()
 }
 
 sealed class PortAllocation {
@@ -87,7 +87,6 @@ sealed class PortAllocation {
  * @param quasarJarPath The path to quasar.jar, relative to cwd. Defaults to "lib/quasar.jar". TODO remove this once we can bundle quasar properly.
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
- * @param with A closure to be run once the nodes have started up. Defaults to empty closure.
  * @param dsl The dsl itself
  * @return The value returned in the [dsl] closure
   */
@@ -97,7 +96,6 @@ fun <A> driver(
         quasarJarPath: String = "lib/quasar.jar",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
-        with: (DriverHandle, A) -> Unit = {_driverHandle, _result -> },
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -108,8 +106,7 @@ fun <A> driver(
             quasarJarPath = quasarJarPath
         ),
         coerce = { it },
-        dsl = dsl,
-        with = with
+        dsl = dsl
 )
 
 
@@ -124,8 +121,7 @@ fun <A> driver(
 fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
         driverDsl: D,
         coerce: (D) -> DI,
-        dsl: DI.() -> A,
-        with: (DriverHandle, A) -> Unit
+        dsl: DI.() -> A
 ): A {
     var shutdownHook: Thread? = null
     try {
@@ -135,7 +131,6 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
             driverDsl.shutdown()
         })
         Runtime.getRuntime().addShutdownHook(shutdownHook)
-        with(DriverHandle(driverDsl), returnValue)
         return returnValue
     } finally {
         driverDsl.shutdown()
@@ -171,15 +166,6 @@ fun addressMustNotBeBound(hostAndPort: HostAndPort) {
         } catch (_exception: SocketException) {
             Unit
         }
-    }
-}
-
-class DriverHandle(private val driverDsl: DriverDSLInternalInterface) {
-    val messagingService = driverDsl.messagingService
-    val networkMapCache = driverDsl.networkMapCache
-
-    fun waitForAllNodesToFinish() {
-        driverDsl.waitForAllNodesToFinish()
     }
 }
 
