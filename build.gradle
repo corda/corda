@@ -1,40 +1,3 @@
-group 'com.r3corda'
-
-apply plugin: 'kotlin'
-apply plugin: 'application'
-apply plugin: 'project-report'
-apply plugin: QuasarPlugin
-apply plugin: 'com.github.ben-manes.versions'
-
-allprojects {
-    apply plugin: 'java'
-    apply plugin: 'jacoco'
-
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-
-    tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
-    }
-
-    // Our version: bump this on release.
-    group 'com.r3corda'
-    version '0.3-SNAPSHOT'
-}
-
-subprojects {
-    jacocoTestReport {
-        additionalSourceDirs = files(sourceSets.main.allSource.srcDirs)
-        sourceDirectories = files(sourceSets.main.allSource.srcDirs)
-        classDirectories =  files(sourceSets.main.output)
-        reports {
-            html.enabled = true
-            xml.enabled = true
-            csv.enabled = false
-        }
-    }
-}
-
 buildscript {
     ext.kotlin_version = '1.0.3'
     ext.quasar_version = '0.7.5'
@@ -58,6 +21,34 @@ buildscript {
         // Can run 'gradle dependencyUpdates' to find new versions of things.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
     }
+}
+
+plugins {
+    // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
+    // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
+    id "us.kirchmeier.capsule" version "1.0.2"
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'application'
+apply plugin: 'project-report'
+apply plugin: QuasarPlugin
+apply plugin: 'com.github.ben-manes.versions'
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+
+    // Our version: bump this on release.
+    group 'com.r3corda'
+    version '0.3-SNAPSHOT'
 }
 
 repositories {
@@ -200,4 +191,48 @@ applicationDistribution.into("bin") {
     from(getIRSDemo)
     from(getTraderDemo)
     fileMode = 0755
+}
+
+task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
+    applicationClass 'com.r3corda.node.MainKt'
+
+    capsuleManifest {
+        appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
+        systemProperties['log4j.configuration'] = 'log4j2.xml'
+        javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
+        minJavaVersion = '1.8.0'
+    }
+}
+
+task createStandalone(dependsOn: 'createCapsule') << {
+    copy {
+        from createCapsule.outputs.getFiles()
+        from 'config/dev/nameservernode.conf'
+        into "${buildDir}/standalone/nameserver"
+        rename 'nameservernode.conf', 'node.conf'
+    }
+
+    copy {
+        from createCapsule.outputs.getFiles()
+        from 'config/dev/generalnodea.conf'
+        into "${buildDir}/standalone/nodea"
+        rename 'generalnodea.conf', 'node.conf'
+    }
+
+    copy {
+        from createCapsule.outputs.getFiles()
+        from 'config/dev/generalnodeb.conf'
+        into "${buildDir}/standalone/nodeb"
+        rename 'generalnodeb.conf', 'node.conf'
+    }
+
+    delete("${buildDir}/standalone/runstandalone")
+    def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
+    copy {
+        from "buildSrc/scripts/runstandalone"
+        filter { String line -> line.replace("JAR_NAME", jarName) }
+        filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
+        into "${buildDir}/standalone"
+    }
+
 }
