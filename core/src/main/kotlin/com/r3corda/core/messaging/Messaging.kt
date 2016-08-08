@@ -1,6 +1,5 @@
 package com.r3corda.core.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.serialization.DeserializeAsKotlinObjectDef
 import com.r3corda.core.serialization.serialize
@@ -148,7 +147,7 @@ data class TopicSession(val topic: String, val sessionID: Long = DEFAULT_SESSION
     }
     fun isBlank() = topic.isBlank() && sessionID == DEFAULT_SESSION_ID
 
-    override fun toString(): String = "${topic}.${sessionID}"
+    override fun toString(): String = "$topic.$sessionID"
 }
 
 /**

@@ -18,7 +18,6 @@ import com.r3corda.core.utilities.NonEmptySetSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.objenesis.strategy.StdInstantiatorStrategy
@@ -414,9 +413,7 @@ object ReferencesAwareJavaSerializer : JavaSerializer() {
             super.read(kryo, input, type)
         }
         else {
-            ObjectInputStream(input).use {
-                it.readObject()
-            }
+            ObjectInputStream(input).use(ObjectInputStream::readObject)
         }
     }
 }

@@ -13,14 +13,13 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkCacheError
 import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.node.services.NetworkMapCache.MapChange
+import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
-import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.transactions.NotaryService
@@ -36,7 +35,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache(val netInternal: MessagingServiceInternal?) : SingletonSerializeAsToken(), NetworkMapCache {
+open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCache {
     override val networkMapNodes: List<NodeInfo>
         get() = get(NetworkMapService.Type)
     override val regulators: List<NodeInfo>

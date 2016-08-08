@@ -59,15 +59,15 @@ sealed class FiberRequest(val topic: String,
     ) : FiberRequest(topic, destination, sessionIDForSend, sessionIDForReceive, obj) {
         private val responseTypeName: String = type.name
 
-        override fun equals(other: Any?): Boolean
-                = if (other is ExpectingResponse<*>) {
-            super.equals(other)
-                    && responseTypeName == other.responseTypeName
-        } else
-            false
+        override fun equals(other: Any?): Boolean {
+            return if (other is ExpectingResponse<*>) {
+                super.equals(other) && responseTypeName == other.responseTypeName
+            } else
+                false
+        }
 
         override fun toString(): String {
-            return "Expecting response via topic ${receiveTopicSession} of type ${responseTypeName}"
+            return "Expecting response via topic $receiveTopicSession of type $responseTypeName"
         }
 
         // We have to do an unchecked cast, but unless the serialized form is damaged, this was

@@ -2,10 +2,9 @@ package com.r3corda.contracts.asset
 
 import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.*
-import com.r3corda.core.crypto.*
+import com.r3corda.core.contracts.clauses.ClauseVerifier
+import com.r3corda.core.crypto.Party
 import java.security.PublicKey
-import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

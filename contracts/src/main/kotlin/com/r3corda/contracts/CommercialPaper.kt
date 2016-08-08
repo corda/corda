@@ -205,7 +205,7 @@ class CommercialPaper : ClauseVerifier() {
     @Throws(InsufficientBalanceException::class)
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         // Add the cash movement using the states in our wallet.
-        val amount = paper.state.data.faceValue.let { amount -> Amount<Currency>(amount.quantity, amount.token.product) }
+        val amount = paper.state.data.faceValue.let { amount -> Amount(amount.quantity, amount.token.product) }
         Cash().generateSpend(tx, amount, paper.state.data.owner, wallet)
         tx.addInputState(paper)
         tx.addCommand(CommercialPaper.Commands.Redeem(paper.state.notary), paper.state.data.owner)

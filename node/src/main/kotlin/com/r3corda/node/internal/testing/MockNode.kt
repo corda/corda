@@ -4,7 +4,6 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
@@ -104,7 +103,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
-        val place: PhysicalLocation get() = findMyLocation()!!
+        // It is used from the network visualiser tool.
+        @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
     }
 
     /** Returns a node, optionally created by the passed factory method. */
@@ -168,6 +168,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, NetworkMapService.Type, SimpleNotaryService.Type)
     fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
 
+    @Suppress("unused")  // This is used from the network visualiser tool.
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
 
     fun startNodes() {

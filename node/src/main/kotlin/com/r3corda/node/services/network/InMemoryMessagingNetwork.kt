@@ -50,6 +50,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     // The corresponding sentMessages stream reflects when a message was pumpSend'd
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
+    @Suppress("unused")  // Used by the visualiser tool.
     /** A stream of (sender, message, recipients) triples */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
@@ -61,6 +62,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     // The corresponding stream reflects when a message was pumpReceive'd
     private val messageReceiveQueues = HashMap<Handle, LinkedBlockingQueue<MessageTransfer>>()
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
+
+    @Suppress("unused")  // Used by the visualiser tool.
     /** A stream of (sender, message, recipients) triples */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
@@ -202,18 +205,18 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
         @Volatile
-        protected var running = true
+        private var running = true
 
-        protected inner class InnerState {
+        private inner class InnerState {
             val handlers: MutableList<Handler> = ArrayList()
             val pendingRedelivery = LinkedList<MessageTransfer>()
         }
 
-        protected val state = ThreadBox(InnerState())
+        private val state = ThreadBox(InnerState())
 
         override val myAddress: SingleMessageRecipient = handle
 
-        protected val backgroundThread = if (manuallyPumped) null else
+        private val backgroundThread = if (manuallyPumped) null else
             thread(isDaemon = true, name = "In-memory message dispatcher") {
                 while (!Thread.currentThread().isInterrupted) {
                     try {
@@ -235,8 +238,8 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                 pendingRedelivery.clear()
                 Pair(handler, items)
             }
-            for (it in items) {
-                send(it.message, handle)
+            for ((sender, message) in items) {
+                send(message, handle)
             }
             return handler
         }
@@ -329,10 +332,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
 
         private fun pumpReceiveInternal(block: Boolean): MessageTransfer? {
             val q = getQueueForHandle(handle)
-            val next = getNextQueue(q, block)
-            if (next == null) {
-                return null
-            }
+            val next = getNextQueue(q, block) ?: return null
             val (transfer, deliverTo) = next
 
             for (handler in deliverTo) {

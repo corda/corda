@@ -4,7 +4,8 @@ import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.*
+import com.r3corda.core.contracts.clauses.GroupClauseVerifier
+import com.r3corda.core.contracts.clauses.MatchBehaviour
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.utilities.Emoji
@@ -81,7 +82,7 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
             override val owner: PublicKey
     ) : FungibleAsset<Currency> {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
-        : this(Amount(amount.quantity, Issued<Currency>(deposit, amount.token)), owner)
+        : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val deposit = amount.token.issuer
         override val exitKeys = setOf(deposit.party.owningKey)
@@ -165,7 +166,7 @@ fun Iterable<ContractState>.sumCashOrNull(): Amount<Issued<Currency>>? = filterI
 
 /** Sums the cash states in the list, returning zero of the given currency+issuer if there are none. */
 fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Issued<Currency>> {
-    return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero<Issued<Currency>>(currency)
+    return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
 }
 
 /**

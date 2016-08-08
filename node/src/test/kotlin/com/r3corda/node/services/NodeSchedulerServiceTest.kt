@@ -196,7 +196,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @Test
     fun `test activity due in the future and schedule another for same time then unschedule original`() {
         val time = stoppedClock.instant() + 1.days
-        var scheduledRef1 = scheduleTX(time)
+        val scheduledRef1 = scheduleTX(time)
 
         val backgroundExecutor = Executors.newSingleThreadExecutor()
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
@@ -214,7 +214,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     @Test
     fun `test activity due in the future then unschedule`() {
-        var scheduledRef1 = scheduleTX(stoppedClock.instant() + 1.days)
+        val scheduledRef1 = scheduleTX(stoppedClock.instant() + 1.days)
 
         val backgroundExecutor = Executors.newSingleThreadExecutor()
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }

@@ -11,6 +11,7 @@ import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
 import kotlin.reflect.memberProperties
 
+@Suppress("unused")    // TODO: Re-evaluate by EOY2016 if this code is still useful and if not, delete.
 class GraphVisualiser(val dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>) {
     companion object {
         val css = GraphVisualiser::class.java.getResourceAsStream("graph.css").bufferedReader().readText()

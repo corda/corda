@@ -40,7 +40,7 @@ import java.util.*
         message = "ledger doesn't nest, use tweak",
         replaceWith = ReplaceWith("tweak"),
         level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER")
+@Suppress("UNUSED_PARAMETER", "unused")
 fun TransactionDSLInterpreter.ledger(
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
 }
@@ -49,7 +49,7 @@ fun TransactionDSLInterpreter.ledger(
         message = "transaction doesn't nest, use tweak",
         replaceWith = ReplaceWith("tweak"),
         level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER")
+@Suppress("UNUSED_PARAMETER", "unused")
 fun TransactionDSLInterpreter.transaction(
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) {
 }
@@ -58,7 +58,7 @@ fun TransactionDSLInterpreter.transaction(
         message = "ledger doesn't nest, use tweak",
         replaceWith = ReplaceWith("tweak"),
         level = DeprecationLevel.ERROR)
-@Suppress("UNUSED_PARAMETER")
+@Suppress("UNUSED_PARAMETER", "unused")
 fun LedgerDSLInterpreter<TransactionDSLInterpreter>.ledger(
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit) {
 }

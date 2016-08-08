@@ -12,10 +12,10 @@ import static com.r3corda.core.testing.CoreTestUtils.*;
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL
  */
 public class CashTestsJava {
-    private OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
-    private PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
-    private Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1());
-    private Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2());
+    private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
+    private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
+    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1());
+    private final Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2());
 
     @Test
     public void trivial() {

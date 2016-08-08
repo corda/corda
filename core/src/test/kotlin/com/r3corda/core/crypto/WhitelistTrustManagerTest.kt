@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-// We cast null to things in order to select overloads here but Kotlin doesn't know that it's OK.
+// TODO: This suppress is needed due to KT-260, fixed in Kotlin 1.0.4 so remove after upgrading.
 @Suppress("CAST_NEVER_SUCCEEDS")
 class WhitelistTrustManagerTest {
     companion object {

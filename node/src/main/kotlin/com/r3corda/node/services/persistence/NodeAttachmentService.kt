@@ -22,7 +22,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in the specified local directory, which must exist. Doesn't allow new attachments to be uploaded.
  */
 @ThreadSafe
-class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
+class NodeAttachmentService(val storePath: Path, metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
     private val log = loggerFor<NodeAttachmentService>()
 
     @VisibleForTesting
@@ -122,7 +122,7 @@ class NodeAttachmentService(val storePath: Path, val metrics: MetricRegistry) : 
             Files.deleteIfExists(tmp)
         }
         if (automaticallyExtractAttachments) {
-            val extractTo = storePath.resolve("${id}.jar")
+            val extractTo = storePath.resolve("$id.jar")
             try {
                 Files.createDirectory(extractTo)
                 extractZipFile(finalPath, extractTo)

@@ -6,13 +6,13 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.*
+import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.random63BitValue
@@ -27,14 +27,15 @@ import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
-import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
-import com.r3corda.node.services.persistence.*
+import com.r3corda.node.services.persistence.NodeAttachmentService
+import com.r3corda.node.services.persistence.PerFileCheckpointStorage
+import com.r3corda.node.services.persistence.PerFileTransactionStorage
+import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.NotaryService
@@ -158,7 +159,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         storage = storageServices.first
         checkpointStorage = storageServices.second
         net = makeMessagingService()
-        netMapCache = InMemoryNetworkMapCache(net)
+        netMapCache = InMemoryNetworkMapCache()
         wallet = NodeWalletService(services)
 
         identity = makeIdentityService()
@@ -201,8 +202,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     private fun initialiseProtocolLogicFactory(): ProtocolLogicRefFactory {
         val protocolWhitelist = HashMap<String, Set<String>>()
         for (plugin in pluginRegistries) {
-            for (protocol in plugin.requiredProtocols) {
-                protocolWhitelist.merge(protocol.key, protocol.value, { x, y -> x + y })
+            for ((className, classWhitelist) in plugin.requiredProtocols) {
+                protocolWhitelist.merge(className, classWhitelist, { x, y -> x + y })
             }
         }
 

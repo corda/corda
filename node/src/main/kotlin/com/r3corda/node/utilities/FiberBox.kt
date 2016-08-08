@@ -36,7 +36,7 @@ import kotlin.concurrent.withLock
  * TODO: We should consider using a [Semaphore] or [CountDownLatch] here to make it a little easier to understand, but it seems
  *       as though the current version of Qasar does not support suspending on either of their implementations.
  */
-class FiberBox<T>(private val content: T, private val lock: Lock = ReentrantLock()) {
+class FiberBox<out T>(private val content: T, private val lock: Lock = ReentrantLock()) {
     private var mutated: SettableFuture<Boolean>? = null
 
     @Suppress("UNUSED_VALUE")  // This is here due to the compiler thinking ourMutated is not used

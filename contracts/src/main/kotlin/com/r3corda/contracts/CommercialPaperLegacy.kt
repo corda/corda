@@ -55,7 +55,7 @@ class CommercialPaperLegacy : Contract {
 
     override fun verify(tx: TransactionForContract) {
         // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
-        val groups = tx.groupStates() { it: State -> it.withoutOwner() }
+        val groups = tx.groupStates(State::withoutOwner)
 
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.

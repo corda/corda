@@ -51,6 +51,7 @@ open class NetClause<P> : SingleClause {
     override val requiredCommands: Set<Class<out CommandData>>
         get() = setOf(Obligation.Commands.Net::class.java)
 
+    @Suppress("ConvertLambdaToReference")
     override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
         val command = commands.requireSingleCommand<Obligation.Commands.Net>()
         val groups = when (command.value.type) {

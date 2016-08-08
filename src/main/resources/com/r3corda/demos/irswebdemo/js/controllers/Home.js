@@ -6,7 +6,7 @@ define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, no
 
         let handleHttpFail = (resp) => {
             $scope.httpError = resp.data
-        }
+        };
 
         $scope.infoMsg = "";
         $scope.errorText = "";
@@ -20,4 +20,4 @@ define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, no
         nodeService.getDate().then((date) => $scope.date = date);
         nodeService.getDeals().then((deals) => $scope.deals = deals);
     });
-})
+});

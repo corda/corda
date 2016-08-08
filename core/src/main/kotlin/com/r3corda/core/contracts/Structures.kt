@@ -40,7 +40,7 @@ interface BilateralNettableState<N: BilateralNettableState<N>> {
 /**
  * Interface for state objects that support being netted with other state objects.
  */
-interface MultilateralNettableState<T: Any> {
+interface MultilateralNettableState<out T: Any> {
     /**
      * Returns an object used to determine if two states can be subject to close-out netting. If two states return
      * equal objects, they can be close out netted together.

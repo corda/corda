@@ -31,8 +31,8 @@ import java.util.*
  * in a few cities around the world.
  */
 abstract class Simulation(val networkSendManuallyPumped: Boolean,
-                          val runAsync: Boolean,
-                          val latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
+                          runAsync: Boolean,
+                          latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) {
     init {
         if (!runAsync && latencyInjector != null)
             throw IllegalArgumentException("The latency injector is only useful when using manual pumping.")
@@ -160,10 +160,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     val clocks = (serviceProviders + regulators + banks).map { it.services.clock as TestClock }
 
+    // These are used from the network visualiser tool.
     private val _allProtocolSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()
     private val _doneSteps = PublishSubject.create<Collection<SimulatedNode>>()
-    val allProtocolSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allProtocolSteps
-    val doneSteps: Observable<Collection<SimulatedNode>> = _doneSteps
+    @Suppress("unused") val allProtocolSteps: Observable<Pair<SimulatedNode, ProgressTracker.Change>> = _allProtocolSteps
+    @Suppress("unused") val doneSteps: Observable<Collection<SimulatedNode>> = _doneSteps
 
     private var pumpCursor = 0
 
@@ -258,6 +259,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
+    @Suppress("unused")   // Used from the network visualiser tool.
     val networkInitialisationFinished: ListenableFuture<*> =
             Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
 

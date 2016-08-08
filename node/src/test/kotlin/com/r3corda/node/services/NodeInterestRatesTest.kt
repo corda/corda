@@ -22,7 +22,6 @@ import com.r3corda.protocols.RatesFixProtocol
 import org.junit.Assert
 import org.junit.Test
 import java.time.Clock
-import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -109,7 +108,7 @@ class NodeInterestRatesTest {
 
         val tx = TransactionType.General.Builder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.info.identity, fixOf, "0.675".bd, "0.1".bd, Duration.ofNanos(1))
+        val protocol = RatesFixProtocol(tx, n2.info.identity, fixOf, "0.675".bd, "0.1".bd)
         BriefLogFormatter.initVerbose("rates")
         net.runNetwork()
         val future = n1.smm.add("rates", protocol)

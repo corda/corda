@@ -66,10 +66,9 @@ fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bits)
  * signature. It isn't used currently, but experience from Bitcoin suggests such a feature is useful, especially when
  * building partially signed transactions.
  */
-open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueBytes(bits) {
-
+open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by. */
-    open class WithKey(val by: PublicKey, bits: ByteArray, covering: Int = 0) : DigitalSignature(bits, covering) {
+    open class WithKey(val by: PublicKey, bits: ByteArray, covering: Int = 0) : DigitalSignature(bits) {
         fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
         fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bits, this)
     }

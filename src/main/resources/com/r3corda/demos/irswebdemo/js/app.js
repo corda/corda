@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 function formatDateForNode(date) {
     // Produces yyyy-dd-mm. JS is missing proper date formatting libs

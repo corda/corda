@@ -4,7 +4,8 @@ import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.*
+import com.r3corda.core.contracts.clauses.GroupClauseVerifier
+import com.r3corda.core.contracts.clauses.MatchBehaviour
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
@@ -107,7 +108,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
             override val owner: PublicKey
     ) : FungibleAsset<Commodity> {
         constructor(deposit: PartyAndReference, amount: Amount<Commodity>, owner: PublicKey)
-            : this(Amount(amount.quantity, Issued<Commodity>(deposit, amount.token)), owner)
+            : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val deposit = amount.token.issuer
         override val contract = COMMODITY_PROGRAM_ID
@@ -182,7 +183,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
 fun Iterable<ContractState>.sumCommodities() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrThrow()
 
 /** Sums the cash states in the list, returning null if there are none. */
-fun Iterable<ContractState>.sumCommoditiesOrNull() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrNull()
+@Suppress("unused") fun Iterable<ContractState>.sumCommoditiesOrNull() = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrNull()
 
 /** Sums the cash states in the list, returning zero of the given currency if there are none. */
-fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrZero<Issued<Commodity>>(currency)
+fun Iterable<ContractState>.sumCommoditiesOrZero(currency: Issued<Commodity>) = filterIsInstance<CommodityContract.State>().map { it.amount }.sumOrZero(currency)

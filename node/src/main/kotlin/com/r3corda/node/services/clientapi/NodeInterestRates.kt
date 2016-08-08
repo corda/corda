@@ -197,7 +197,7 @@ object NodeInterestRates {
     class UnknownFix(val fix: FixOf) : RetryableException("Unknown fix: $fix")
 
     /** Fix container, for every fix name & date pair stores a tenor to interest rate map - [InterpolatingRateMap] */
-    class FixContainer(val fixes: List<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator) {
+    class FixContainer(fixes: List<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator) {
         private val container = buildContainer(fixes)
         val size = fixes.size
 
@@ -227,7 +227,7 @@ object NodeInterestRates {
      * Interpolates missing values using the provided interpolation mechanism.
      */
     class InterpolatingRateMap(val date: LocalDate,
-                               val inputRates: Map<Tenor, BigDecimal>,
+                               inputRates: Map<Tenor, BigDecimal>,
                                val calendar: BusinessCalendar,
                                val factory: InterpolatorFactory) {
 
@@ -274,7 +274,7 @@ object NodeInterestRates {
     /** Parses lines containing fixes */
     fun parseFile(s: String): FixContainer {
         val fixes = s.lines().
-                map { it.trim() }.
+                map(String::trim).
                 // Filter out comment and empty lines.
                 filterNot { it.startsWith("#") || it.isBlank() }.
                 map { parseFix(it) }
@@ -283,7 +283,7 @@ object NodeInterestRates {
 
     /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [Fix] */
     fun parseFix(s: String): Fix {
-        val (key, value) = s.split('=').map { it.trim() }
+        val (key, value) = s.split('=').map(String::trim)
         val of = parseFixOf(key)
         val rate = BigDecimal(value)
         return Fix(of, rate)

@@ -11,7 +11,6 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.nio.file.Paths
 import java.security.PrivateKey
 import java.security.SecureRandom
 import java.security.Signature

@@ -268,8 +268,8 @@ class IRSTests {
                 LocalDate.of(2015, 12, 8) to "0.55",
                 LocalDate.of(2016, 3, 8) to "0.644")
 
-        for (it in fixings) {
-            newCalculation = newCalculation.applyFixing(it.key, FixedRate(PercentageRatioUnit(it.value)))
+        for ((key, value) in fixings) {
+            newCalculation = newCalculation.applyFixing(key, FixedRate(PercentageRatioUnit(value)))
         }
 
         val newIRS = InterestRateSwap.State(irs.fixedLeg, irs.floatingLeg, newCalculation, irs.common)

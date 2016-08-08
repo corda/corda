@@ -37,7 +37,7 @@ public class StateViewer {
         frame.setVisible(true);
     }
 
-    public StateViewer(List<Pair<String, Object>> props) {
+    private StateViewer(List<Pair<String, Object>> props) {
         propsTable.setModel(new AbstractTableModel() {
             @Override
             public int getRowCount() {

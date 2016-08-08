@@ -3,7 +3,6 @@ package com.r3corda.node.services.clientapi
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.TwoPartyDealProtocol
 

@@ -4,7 +4,6 @@ import com.r3corda.core.ThreadBox
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.protocols.TwoPartyDealProtocol
 import java.util.*
 
 /**

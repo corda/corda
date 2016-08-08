@@ -111,7 +111,9 @@ class ProgressTrackerTest {
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
         class Tmp {
             val unserializable = Unserializable()
-            val subscription = pt2.changes.subscribe { unserializable.foo() }
+            init {
+                pt2.changes.subscribe { unserializable.foo() }
+            }
         }
         Tmp()
         pt.serialize(kryo)

@@ -40,7 +40,7 @@ class PerFileCheckpointStorage(val storeDir: Path) : CheckpointStorage {
 
     override fun addCheckpoint(checkpoint: Checkpoint) {
         val serialisedCheckpoint = checkpoint.serialize()
-        val fileName = "${serialisedCheckpoint.hash.toString().toLowerCase()}${fileExtension}"
+        val fileName = "${serialisedCheckpoint.hash.toString().toLowerCase()}$fileExtension"
         val checkpointFile = storeDir.resolve(fileName)
         atomicWrite(checkpointFile, serialisedCheckpoint)
         logger.trace { "Stored $checkpoint to $checkpointFile" }
