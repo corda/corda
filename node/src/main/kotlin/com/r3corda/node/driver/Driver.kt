@@ -227,6 +227,7 @@ class DriverDSL(
             serverHostPort = networkMapAddress,
             myHostPort = portAllocation.nextHostAndPort()
     )
+    var messagingServiceStarted = false
 
     fun registerProcess(process: Process) = registeredProcesses.push(process)
 
@@ -252,7 +253,9 @@ class DriverDSL(
                 it.destroyForcibly()
             }
         }
-        messagingService.stop()
+        if (messagingServiceStarted){
+            messagingService.stop()
+        }
 
         // Check that we shut down properly
         addressMustNotBeBound(messagingService.myHostPort)
@@ -303,6 +306,7 @@ class DriverDSL(
         startNetworkMapService()
         messagingService.configureWithDevSSLCertificate()
         messagingService.start()
+        messagingServiceStarted = true
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
         // the network map service itself
         val nodeInfo = NodeInfo(
