@@ -12,6 +12,7 @@ import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
 import java.security.SignatureException
+import java.util.*
 
 /**
  * Views of a transaction as it progresses through the pipeline, from bytes loaded from disk/network to the object
@@ -115,8 +116,20 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
         // Now examine the contents and ensure the sigs we have line up with the advertised list of signers.
         val missing = getMissingSignatures()
-        if (missing.isNotEmpty() && throwIfSignaturesAreMissing)
-            throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${missing.map { it.toStringShort() }}")
+        if (missing.isNotEmpty() && throwIfSignaturesAreMissing) {
+            // Take a best guess at where the signatures are required from, for debugging
+            // TODO: We need a much better way of structuring this data
+            val missingElements = ArrayList<String>()
+            this.tx.commands.forEach { command ->
+                if (command.signers.any { signer -> missing.contains(signer) })
+                    missingElements.add(command.toString())
+            }
+            this.tx.notary?.owningKey.apply {
+                if (missing.contains(this))
+                    missingElements.add("notary")
+            }
+            throw SignatureException("Missing signatures for ${missingElements} on transaction ${id.prefixChars()} for ${missing.map { it.toStringShort() }}")
+        }
 
         return missing
     }
