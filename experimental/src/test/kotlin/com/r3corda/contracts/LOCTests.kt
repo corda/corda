@@ -3,8 +3,10 @@ package com.r3corda.contracts
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -114,23 +116,26 @@ class LOCTests {
             )
     )
 
+    lateinit var services: MockServices
 
+    @Before
+    fun setup() {
+        services = MockServices()
+    }
 
     @Test
     fun issueSignedByBank() {
-        val ptx = LOC().generateIssue(LOCstate.beneficiaryPaid, LOCstate.issued, LOCstate.terminated, LOCstate.props, DUMMY_NOTARY).apply {
+        val ptx = LOC().generateIssue(LOCstate.beneficiaryPaid, true, LOCstate.terminated, LOCstate.props, DUMMY_NOTARY).apply {
             signWith(MEGA_CORP_KEY)
             signWith(DUMMY_NOTARY_KEY)
         }
-        val stx = ptx.toSignedTransaction()
-        stx.verify()
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
     fun issueUnsigned() {
         val ptx = LOC().generateIssue(LOCstate.beneficiaryPaid, LOCstate.issued, LOCstate.terminated, LOCstate.props, DUMMY_NOTARY)
-        val stx = ptx.toSignedTransaction()
-        stx.verify()
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
@@ -138,9 +143,7 @@ class LOCTests {
         val ptx = LOC().generateIssue(LOCstate.beneficiaryPaid, LOCstate.issued, LOCstate.terminated, LOCstate.props, DUMMY_NOTARY).apply {
             signWith(BOB_KEY)
         }
-        val stx = ptx.toSignedTransaction()
-        stx.verify()
-
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
 

@@ -98,21 +98,21 @@ object TwoPartyDealProtocol {
         fun verifyPartialTransaction(untrustedPartialTX: UntrustworthyData<SignedTransaction>): SignedTransaction {
             progressTracker.currentStep = VERIFYING
 
-            untrustedPartialTX.validate {
+            untrustedPartialTX.validate { stx ->
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
+                val missingSigs = stx.verifySignatures(throwIfSignaturesAreMissing = false)
                 if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
                     throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
 
-                val wtx: WireTransaction = it.tx
-                logger.trace { "Received partially signed transaction: ${it.id}" }
+                val wtx: WireTransaction = stx.tx
+                logger.trace { "Received partially signed transaction: ${stx.id}" }
 
-                checkDependencies(it)
+                checkDependencies(stx)
 
                 // This verifies that the transaction is contract-valid, even though it is missing signatures.
-                serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments))
+                wtx.toLedgerTransaction(serviceHub).verify()
 
                 // There are all sorts of funny games a malicious secondary might play here, we should fix them:
                 //
@@ -124,7 +124,7 @@ object TwoPartyDealProtocol {
                 // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
                 // express protocol state machines on top of the messaging layer.
 
-                return it
+                return stx
             }
         }
 
@@ -226,7 +226,7 @@ object TwoPartyDealProtocol {
             logger.trace { "Got signatures from other party, verifying ... " }
 
             val fullySigned = stx + signatures.sellerSig + signatures.notarySig
-            fullySigned.verify()
+            fullySigned.verifySignatures()
 
             logger.trace { "Signatures received are valid. Deal transaction complete! :-)" }
 

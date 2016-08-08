@@ -1,7 +1,7 @@
 package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.node.services.testing.MockStorageService
+import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import org.junit.Test
@@ -195,9 +195,6 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 }
 
 class IRSTests {
-
-    val attachments = MockStorageService().attachments
-
     @Test
     fun ok() {
         trade().verifies()
@@ -211,9 +208,9 @@ class IRSTests {
     /**
      * Generate an IRS txn - we'll need it for a few things.
      */
-    fun generateIRSTxn(irsSelect: Int): LedgerTransaction {
+    fun generateIRSTxn(irsSelect: Int): SignedTransaction {
         val dummyIRS = createDummyIRS(irsSelect)
-        val genTX: LedgerTransaction = run {
+        val genTX: SignedTransaction = run {
             val gtx = InterestRateSwap().generateAgreement(
                     fixedLeg = dummyIRS.fixedLeg,
                     floatingLeg = dummyIRS.floatingLeg,
@@ -225,7 +222,7 @@ class IRSTests {
                 signWith(MINI_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }
-            gtx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
+            gtx.toSignedTransaction()
         }
         return genTX
     }
@@ -243,7 +240,7 @@ class IRSTests {
      * Utility so I don't have to keep typing this.
      */
     fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
-        return generateIRSTxn(irsSelector).outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
+        return generateIRSTxn(irsSelector).tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
     }
 
     /**
@@ -293,30 +290,30 @@ class IRSTests {
      */
     @Test
     fun generateIRSandFixSome() {
+        val services = MockServices()
         var previousTXN = generateIRSTxn(1)
-        fun currentIRS() = previousTXN.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
-
-        val txns = HashSet<LedgerTransaction>()
-        txns += previousTXN
+        previousTXN.toLedgerTransaction(services).verify()
+        services.recordTransactions(previousTXN)
+        fun currentIRS() = previousTXN.tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
 
         while (true) {
             val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
-            val fixTX: LedgerTransaction = run {
+            val fixTX: SignedTransaction = run {
                 val tx = TransactionType.General.Builder()
                 val fixing = Fix(nextFix, "0.052".percent.value)
-                InterestRateSwap().generateFix(tx, previousTXN.outRef(0), fixing)
+                InterestRateSwap().generateFix(tx, previousTXN.tx.outRef(0), fixing)
                 with(tx) {
                     setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
                     signWith(MEGA_CORP_KEY)
                     signWith(MINI_CORP_KEY)
                     signWith(DUMMY_NOTARY_KEY)
                 }
-                tx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
+                tx.toSignedTransaction()
             }
+            fixTX.toLedgerTransaction(services).verify()
+            services.recordTransactions(fixTX)
             previousTXN = fixTX
-            txns += fixTX
         }
-        TransactionGroup(txns, emptySet()).verify()
     }
 
     // Move these later as they aren't IRS specific.

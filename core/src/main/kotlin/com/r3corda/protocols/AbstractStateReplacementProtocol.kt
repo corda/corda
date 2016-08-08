@@ -10,9 +10,8 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.protocols.NotaryProtocol
-import com.r3corda.protocols.PartyRequestMessage
-import com.r3corda.protocols.ResolveTransactionsProtocol
+import com.r3corda.protocols.AbstractStateReplacementProtocol.Acceptor
+import com.r3corda.protocols.AbstractStateReplacementProtocol.Instigator
 import java.security.PublicKey
 
 /**
@@ -164,13 +163,14 @@ abstract class AbstractStateReplacementProtocol<T> {
             val response = Result.noError(mySignature)
             val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, sessionIdForSend, sessionIdForReceive, response)
 
+            // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
             val allSignatures = swapSignatures.validate { signatures ->
                 signatures.forEach { it.verifyWithECDSA(stx.txBits) }
                 signatures
             }
 
             val finalTx = stx + allSignatures
-            finalTx.verify()
+            finalTx.verifySignatures()
             serviceHub.recordTransactions(listOf(finalTx))
         }
 
@@ -191,7 +191,9 @@ abstract class AbstractStateReplacementProtocol<T> {
         private fun verifyTx(stx: SignedTransaction) {
             checkMySignatureRequired(stx.tx)
             checkDependenciesValid(stx)
-            checkValid(stx)
+            // We expect stx to have insufficient signatures, so we convert the WireTransaction to the LedgerTransaction
+            // here, thus bypassing the sufficient-signatures check.
+            stx.tx.toLedgerTransaction(serviceHub).verify()
         }
 
         private fun checkMySignatureRequired(tx: WireTransaction) {
@@ -202,19 +204,10 @@ abstract class AbstractStateReplacementProtocol<T> {
 
         @Suspendable
         private fun checkDependenciesValid(stx: SignedTransaction) {
-            val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
-            subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
+            subProtocol(ResolveTransactionsProtocol(stx.tx, otherSide))
         }
 
-        private fun checkValid(stx: SignedTransaction) {
-            val ltx = stx.tx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
-            serviceHub.verifyTransaction(ltx)
-        }
-
-        private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
-            val myKeyPair = serviceHub.storageService.myLegalIdentityKey
-            return myKeyPair.signWithECDSA(stx.txBits)
-        }
+        private fun sign(stx: SignedTransaction) = serviceHub.storageService.myLegalIdentityKey.signWithECDSA(stx.txBits)
     }
 
     // TODO: similar classes occur in other places (NotaryProtocol), need to consolidate

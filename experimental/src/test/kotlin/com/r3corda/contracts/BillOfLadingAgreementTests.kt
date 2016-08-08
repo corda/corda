@@ -2,8 +2,9 @@ package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.testing.MockStorageService
+import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.testing.*
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -42,7 +43,12 @@ class BillOfLadingAgreementTests {
             props =pros
     )
 
-    val attachments = MockStorageService().attachments
+    lateinit var services: MockServices
+
+    @Before
+    fun setup() {
+        services = MockServices()
+    }
 
     //Generation method tests
 
@@ -52,15 +58,14 @@ class BillOfLadingAgreementTests {
             signWith(ALICE_KEY)
             signWith(DUMMY_NOTARY_KEY)
         }
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
     fun issueGenerationMethod_Unsigned() {
         val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props, DUMMY_NOTARY)
         val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
@@ -68,9 +73,7 @@ class BillOfLadingAgreementTests {
         val ptx = BillOfLadingAgreement().generateIssue(Bill.owner, Bill.beneficiary, Bill.props, DUMMY_NOTARY).apply {
             signWith(BOB_KEY)
         }
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
-
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
      // @Test // TODO: Fix Test
@@ -85,8 +88,7 @@ class BillOfLadingAgreementTests {
         ptx.signWith(MEGA_CORP_KEY) //Signed by owner
         ptx.signWith(BOB_KEY)       //and beneficiary
        // ptx.signWith(CHARLIE_KEY) // ??????
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
@@ -98,8 +100,7 @@ class BillOfLadingAgreementTests {
         )
         BillOfLadingAgreement().generateTransferAndEndorse(ptx,sr,CHARLIE_PUBKEY, CHARLIE)
         ptx.signWith(MEGA_CORP_KEY) //Signed by owner
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
@@ -111,8 +112,7 @@ class BillOfLadingAgreementTests {
         )
         BillOfLadingAgreement().generateTransferAndEndorse(ptx,sr,CHARLIE_PUBKEY, CHARLIE)
         ptx.signWith(BOB_KEY) //Signed by beneficiary
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
    // @Test // TODO Fix Test
@@ -124,8 +124,7 @@ class BillOfLadingAgreementTests {
         )
         BillOfLadingAgreement().generateTransferPossession(ptx,sr,CHARLIE_PUBKEY)
         ptx.signWith(MEGA_CORP_KEY) //Signed by owner
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     @Test(expected = IllegalStateException::class)
@@ -136,8 +135,7 @@ class BillOfLadingAgreementTests {
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
         )
         BillOfLadingAgreement().generateTransferPossession(ptx,sr,CHARLIE_PUBKEY)
-        val stx = ptx.toSignedTransaction()
-        stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE,attachments)
+        ptx.toSignedTransaction().toLedgerTransaction(services).verify()
     }
 
     //Custom transaction tests

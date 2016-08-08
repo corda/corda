@@ -20,24 +20,27 @@ import java.security.SignatureException
  * SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
  * a public key that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
  * and the type most frequently passed around the network and stored. The identity of a transaction is the hash
- * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different SWTs may
- * map to the same key (and they could be different in important ways!).
+ * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
+ * map to the same key (and they could be different in important ways, like validity!). The signatures on a
+ * SignedTransaction might be invalid or missing: the type does not imply validity.
  *
  * WireTransaction is a transaction in a form ready to be serialised/unserialised. A WireTransaction can be hashed
  * in various ways to calculate a *signature hash* (or sighash), this is the hash that is signed by the various involved
- * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of the entire
- * WireTransaction i.e. the outermost serialised form with everything included.
+ * keypairs.
  *
- * LedgerTransaction is derived from WireTransaction. It is the result of doing some basic key lookups on WireCommand
- * to see if any keys are from a recognised party, thus converting the WireCommand objects into
- * AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->party map. In future it'd make more
- * sense to use a certificate scheme and so that logic would get more complex.
+ * LedgerTransaction is derived from WireTransaction. It is the result of doing the following operations:
+ *
+ * - Downloading and locally storing all the dependencies of the transaction.
+ * - Resolving the input states and loading them into memory.
+ * - Doing some basic key lookups on WireCommand to see if any keys are from a recognised party, thus converting the
+ *   WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->party map.
+ *   In future it'd make more sense to use a certificate scheme and so that logic would get more complex.
+ * - Deserialising the output states.
  *
  * All the above refer to inputs using a (txhash, output index) pair.
  *
- * TransactionForVerification is the same as LedgerTransaction but with the input states looked up from a local
- * database and replaced with the real objects. Likewise, attachments are fully resolved at this point.
- * TFV is the form that is finally fed into the contracts.
+ * There is also TransactionForContract, which is a lightly red-acted form of LedgerTransaction that's fed into the
+ * contract's verify function. It may be removed in future.
  */
 
 /** Transaction ready for serialisation, without any signatures attached. */
@@ -73,7 +76,7 @@ data class WireTransaction(val inputs: List<StateRef>,
 
     override fun toString(): String {
         val buf = StringBuilder()
-        buf.appendln("Transaction:")
+        buf.appendln("Transaction $id:")
         for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
         for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $output")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
@@ -98,27 +101,18 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     override val id: SecureHash get() = txBits.hash
 
     /**
-     * Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
-     * to ensure there are no missing signatures: use verify() to do that. This weaker version can be useful for
-     * checking a partially signed transaction being prepared by multiple co-operating parties.
-     *
-     * @throws SignatureException if the signature is invalid or does not match.
-     */
-    fun verifySignatures() {
-        for (sig in sigs)
-            sig.verifyWithECDSA(txBits.bits)
-    }
-
-    /**
      * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
      * the set of pubkeys in the signers list. If any signatures are missing, either throws an exception (by default) or
      * returns the list of keys that have missing signatures, depending on the parameter.
      *
      * @throws SignatureException if a signature is invalid, does not match or if any signature is missing.
      */
-    fun verify(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
-        verifySignatures()
+    fun verifySignatures(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
+        // Embedded WireTransaction is not deserialised until after we check the signatures.
+        for (sig in sigs)
+            sig.verifyWithECDSA(txBits.bits)
 
+        // Now examine the contents and ensure the sigs we have line up with the advertised list of signers.
         val missing = getMissingSignatures()
         if (missing.isNotEmpty() && throwIfSignaturesAreMissing)
             throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${missing.map { it.toStringShort() }}")
@@ -144,7 +138,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     /**
      * Returns the set of missing signatures - a signature must be present for each signer public key.
      */
-    fun getMissingSignatures(): Set<PublicKey> {
+    private fun getMissingSignatures(): Set<PublicKey> {
         val requiredKeys = tx.signers.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
 
@@ -157,12 +151,10 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
  * A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
  * It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
  * with the commands from the wire, and verified/looked up.
- *
- * TODO: This class needs a bit more thought. Should inputs be fully resolved by this point too?
  */
 data class LedgerTransaction(
         /** The input states which will be consumed/invalidated by the execution of this transaction. */
-        val inputs: List<StateRef>,
+        val inputs: List<StateAndRef<*>>,
         /** The states that will be generated by the execution of this transaction. */
         val outputs: List<TransactionState<*>>,
         /** Arbitrary data passed to the program of each input state. */
@@ -171,9 +163,28 @@ data class LedgerTransaction(
         val attachments: List<Attachment>,
         /** The hash of the original serialised WireTransaction */
         override val id: SecureHash,
+        /** The notary key and the command keys together: a signed transaction must provide signatures for all of these. */
         val signers: List<PublicKey>,
         val type: TransactionType
 ) : NamedByHash {
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as TransactionState<T>, StateRef(id, index))
+
+    // TODO: Remove this concept.
+    // There isn't really a good justification for hiding this data from the contract, it's just a backwards compat hack.
+    /** Strips the transaction down to a form that is usable by the contract verify functions */
+    fun toTransactionForContract(): TransactionForContract {
+        return TransactionForContract(inputs.map { it.state.data }, outputs.map { it.data }, attachments, commands, id,
+                inputs.map { it.state.notary }.singleOrNull())
+    }
+
+    /**
+     * Verifies this transaction and throws an exception if not valid, depending on the type. For general transactions:
+     *
+     * - The contracts are run with the transaction as the input.
+     * - The list of keys mentioned in commands is compared against the signers list.
+     *
+     * @throws TransactionVerificationException if anything goes wrong.
+     */
+    fun verify() = type.verify(this)
 }

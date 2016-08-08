@@ -1,27 +1,35 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.contracts.*
+import com.r3corda.core.checkedAdd
+import com.r3corda.core.contracts.LedgerTransaction
+import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.contracts.WireTransaction
+import com.r3corda.core.contracts.toLedgerTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic
 import java.util.*
 
-// NB: This code is unit tested by TwoPartyTradeProtocolTests
+// TODO: This code is currently unit tested by TwoPartyTradeProtocolTests, it should have its own tests.
+
+// TODO: It may be a clearer API if we make the primary c'tor private here, and only allow a single tx to be "resolved".
 
 /**
- * This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
- * their dependencies, and verifies them together using a single [TransactionGroup]. If no exception is thrown, then
- * all the transactions have been successfully verified and inserted into the local database.
+ * This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
+ * dependencies. Once a transaction is checked it's inserted into local storage so it can be relayed and won't be
+ * checked again.
  *
  * A couple of constructors are provided that accept a single transaction. When these are used, the dependencies of that
  * transaction are resolved and then the transaction itself is verified. Again, if successful, the results are inserted
  * into the database as long as a [SignedTransaction] was provided. If only the [WireTransaction] form was provided
- * then this isn't enough to put into the local database, so only the dependencies are inserted. This way to use the
- * protocol is helpful when resolving and verifying a finished but partially signed transaction.
+ * then this isn't enough to put into the local database, so only the dependencies are checked and inserted. This way
+ * to use the protocol is helpful when resolving and verifying a finished but partially signed transaction.
+ *
+ * The protocol returns a list of verified [LedgerTransaction] objects, in a depth-first order.
  */
 class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
-                                  private val otherSide: Party) : ProtocolLogic<Unit>() {
+                                  private val otherSide: Party) : ProtocolLogic<List<LedgerTransaction>>() {
 
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
@@ -48,45 +56,46 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     }
 
     @Suspendable
-    override fun call(): Unit {
-        val toVerify = HashSet<LedgerTransaction>()
-        val alreadyVerified = HashSet<LedgerTransaction>()
-        val downloadedSignedTxns = ArrayList<SignedTransaction>()
+    override fun call(): List<LedgerTransaction> {
+        val newTxns: Iterable<SignedTransaction> = downloadDependencies(txHashes)
 
-        // This fills out toVerify, alreadyVerified (roots) and downloadedSignedTxns.
-        fetchDependenciesAndCheckSignatures(txHashes, toVerify, alreadyVerified, downloadedSignedTxns)
+        // For each transaction, verify it and insert it into the database. As we are iterating over them in a
+        // depth-first order, we should not encounter any verification failures due to missing data. If we fail
+        // half way through, it's no big deal, although it might result in us attempting to re-download data
+        // redundantly next time we attempt verification.
+        val result = ArrayList<LedgerTransaction>()
 
-        if (stx != null) {
-            // Check the signatures on the stx first.
-            toVerify += stx!!.verifyToLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
-        } else if (wtx != null) {
-            wtx!!.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
+        for (tx in newTxns) {
+            // Resolve to a LedgerTransaction and then run all contracts.
+            val ltx = tx.toLedgerTransaction(serviceHub)
+            ltx.verify()
+            serviceHub.recordTransactions(tx)
+            result += ltx
         }
 
-        // Run all the contracts and throw an exception if any of them reject.
-        TransactionGroup(toVerify, alreadyVerified).verify()
-
-        // Now write all the transactions we just validated back to the database for next time, including
-        // signatures so we can serve up these transactions to other peers when we, in turn, send one that
-        // depends on them onto another peer.
+        // If this protocol is resolving a specific transaction, make sure we have its attachments and then verify
+        // it as well, but don't insert to the database. Note that when we were given a SignedTransaction (stx != null)
+        // we *could* insert, because successful verification implies we have everything we need here, and it might
+        // be a clearer API if we do that. But for consistency with the other c'tor we currently do not.
         //
-        // It may seem tempting to write transactions to the database as we receive them, instead of all at once
-        // here at the end. Doing it this way avoids cases where a transaction is in the database but its
-        // dependencies aren't, or an unvalidated and possibly broken tx is there.
-        serviceHub.recordTransactions(downloadedSignedTxns)
+        // If 'stx' is set, then 'wtx' is the contents (from the c'tor).
+        stx?.verifySignatures()
+        wtx?.let {
+            fetchMissingAttachments(listOf(it))
+            val ltx = it.toLedgerTransaction(serviceHub)
+            ltx.verify()
+            result += ltx
+        }
+
+        return result
     }
 
     override val topic: String get() = throw UnsupportedOperationException()
 
     @Suspendable
-    private fun fetchDependenciesAndCheckSignatures(depsToCheck: Set<SecureHash>,
-                                                    toVerify: HashSet<LedgerTransaction>,
-                                                    alreadyVerified: HashSet<LedgerTransaction>,
-                                                    downloadedSignedTxns: ArrayList<SignedTransaction>) {
-        // Maintain a work queue of all hashes to load/download, initialised with our starting set.
-        // Then either fetch them from the database or request them from the other side. Look up the
-        // signatures against our identity database, filtering the transactions into 'already checked'
-        // and 'need to check' sets.
+    private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
+        // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
+        // first traversal across the dependency graph.
         //
         // TODO: This approach has two problems. Analyze and resolve them:
         //
@@ -103,45 +112,49 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
         val nextRequests = LinkedHashSet<SecureHash>()   // Keep things unique but ordered, for unit test stability.
         nextRequests.addAll(depsToCheck)
+        val resultQ = LinkedHashMap<SecureHash, SignedTransaction>()
 
         var limitCounter = 0
         while (nextRequests.isNotEmpty()) {
-            val (fromDisk, downloads) = subProtocol(FetchTransactionsProtocol(nextRequests, otherSide))
+            // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
+            // graph we're traversing.
+            val notAlreadyFetched = nextRequests.filterNot { it in resultQ }.toSet()
             nextRequests.clear()
 
-            // TODO: This could be done in parallel with other fetches for extra speed.
-            resolveMissingAttachments(downloads)
+            if (notAlreadyFetched.isEmpty())   // Done early.
+                break
 
-            // Resolve any legal identities from known public keys in the signatures.
-            val downloadedTxns = downloads.map {
-                it.verifyToLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
-            }
+            // Request the standalone transaction data (which may refer to things we don't yet have).
+            val downloads: List<SignedTransaction> = subProtocol(FetchTransactionsProtocol(notAlreadyFetched, otherSide)).downloaded
 
-            // Do the same for transactions loaded from disk (i.e. we checked them previously).
-            val loadedTxns = fromDisk.map {
-                it.verifyToLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
-            }
+            fetchMissingAttachments(downloads.map { it.tx })
 
-            toVerify.addAll(downloadedTxns)
-            alreadyVerified.addAll(loadedTxns)
-            downloadedSignedTxns.addAll(downloads)
+            for (stx in downloads)
+                check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
-            // And now add all the input states to the work queue for database or remote resolution.
-            nextRequests.addAll(downloadedTxns.flatMap { it.inputs }.map { it.txhash })
+            // Add all input states to the work queue.
+            val inputHashes = downloads.flatMap { it.tx.inputs }.map { it.txhash }
+            nextRequests.addAll(inputHashes)
 
-            // And loop around ...
-            // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a guess.
+            // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
             // TODO: Unit test the DoS limit.
-            limitCounter += nextRequests.size
+            limitCounter = limitCounter checkedAdd nextRequests.size
             if (limitCounter > 5000)
                 throw ExcessivelyLargeTransactionGraph()
         }
+
+        return resultQ.values.reversed()
     }
 
+    /**
+     * Returns a list of all the dependencies of the given transactions, deepest first i.e. the last downloaded comes
+     * first in the returned list and thus doesn't have any unverified dependencies.
+     */
     @Suspendable
-    private fun resolveMissingAttachments(downloads: List<SignedTransaction>) {
-        val missingAttachments = downloads.flatMap { stx ->
-            stx.tx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
+    private fun fetchMissingAttachments(downloads: List<WireTransaction>) {
+        // TODO: This could be done in parallel with other fetches for extra speed.
+        val missingAttachments = downloads.flatMap { wtx ->
+            wtx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
         }
         subProtocol(FetchAttachmentsProtocol(missingAttachments.toSet(), otherSide))
     }

@@ -3,7 +3,6 @@ package com.r3corda.core.serialization
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
-import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import org.junit.Before
@@ -97,7 +96,7 @@ class TransactionSerializationTests {
             tx2.signWith(DUMMY_NOTARY_KEY)
             tx2.signWith(DUMMY_KEY_2)
 
-            signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()
+            signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verifySignatures()
         }
     }
 
@@ -107,10 +106,6 @@ class TransactionSerializationTests {
         tx.signWith(DUMMY_KEY_1)
         tx.signWith(DUMMY_NOTARY_KEY)
         val stx = tx.toSignedTransaction()
-        val ltx = stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, MockStorageService().attachments)
-        assertEquals(tx.commands().map { it.value }, ltx.commands.map { it.value })
-        assertEquals(tx.inputStates(), ltx.inputs)
-        assertEquals(tx.outputStates(), ltx.outputs)
-        assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_NOTARY)!!.midpoint)
+        assertEquals(TEST_TX_TIME, (stx.tx.commands[1].value as TimestampCommand).midpoint)
     }
 }

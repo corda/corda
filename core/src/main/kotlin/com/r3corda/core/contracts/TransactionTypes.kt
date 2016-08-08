@@ -16,18 +16,17 @@ sealed class TransactionType {
      *
      * Note: Presence of _signatures_ is not checked, only the public keys to be signed for.
      */
-    fun verify(tx: TransactionForVerification) {
+    fun verify(tx: LedgerTransaction) {
         val missing = verifySigners(tx)
         if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
-
         verifyTransaction(tx)
     }
 
     /** Check that the list of signers includes all the necessary keys */
-    fun verifySigners(tx: TransactionForVerification): Set<PublicKey> {
+    fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
         val timestamp = tx.commands.noneOrSingle { it.value is TimestampCommand }
         val timestampKey = timestamp?.signers.orEmpty()
-        val notaryKey = (tx.inputs.map { it.notary.owningKey } + timestampKey).toSet()
+        val notaryKey = (tx.inputs.map { it.state.notary.owningKey } + timestampKey).toSet()
         if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey
@@ -40,10 +39,10 @@ sealed class TransactionType {
      * Return the list of public keys that that require signatures for the transaction type.
      * Note: the notary key is checked separately for all transactions and need not be included.
      */
-    abstract fun getRequiredSigners(tx: TransactionForVerification): Set<PublicKey>
+    abstract fun getRequiredSigners(tx: LedgerTransaction): Set<PublicKey>
 
     /** Implement type specific transaction validation logic */
-    abstract fun verifyTransaction(tx: TransactionForVerification)
+    abstract fun verifyTransaction(tx: LedgerTransaction)
 
     /** A general transaction type where transaction validity is determined by custom contract code */
     class General : TransactionType() {
@@ -54,10 +53,11 @@ sealed class TransactionType {
          * Check the transaction is contract-valid by running the verify() for each input and output state contract.
          * If any contract fails to verify, the whole transaction is considered to be invalid.
          */
-        override fun verifyTransaction(tx: TransactionForVerification) {
+        override fun verifyTransaction(tx: LedgerTransaction) {
             // TODO: Check that notary is unchanged
             val ctx = tx.toTransactionForContract()
 
+            // TODO: This will all be replaced in future once the sandbox and contract constraints work is done.
             val contracts = (ctx.inputs.map { it.contract } + ctx.outputs.map { it.contract }).toSet()
             for (contract in contracts) {
                 try {
@@ -68,10 +68,7 @@ sealed class TransactionType {
             }
         }
 
-        override fun getRequiredSigners(tx: TransactionForVerification): Set<PublicKey> {
-            val commandKeys = tx.commands.flatMap { it.signers }.toSet()
-            return commandKeys
-        }
+        override fun getRequiredSigners(tx: LedgerTransaction) = tx.commands.flatMap { it.signers }.toSet()
     }
 
     /**
@@ -91,14 +88,16 @@ sealed class TransactionType {
         }
 
         /**
-         * Check that the difference between inputs and outputs is only the notary field,
-         * and that all required signing public keys are present.
+         * Check that the difference between inputs and outputs is only the notary field, and that all required signing
+         * public keys are present.
+         *
+         * @throws TransactionVerificationException.InvalidNotaryChange if the validity check fails.
          */
-        override fun verifyTransaction(tx: TransactionForVerification) {
+        override fun verifyTransaction(tx: LedgerTransaction) {
             try {
-                tx.inputs.zip(tx.outputs).forEach {
-                    check(it.first.data == it.second.data)
-                    check(it.first.notary != it.second.notary)
+                for ((input, output) in tx.inputs.zip(tx.outputs)) {
+                    check(input.state.data == output.data)
+                    check(input.state.notary != output.notary)
                 }
                 check(tx.commands.isEmpty())
             } catch (e: IllegalStateException) {
@@ -106,9 +105,6 @@ sealed class TransactionType {
             }
         }
 
-        override fun getRequiredSigners(tx: TransactionForVerification): Set<PublicKey> {
-            val participantKeys = tx.inputs.flatMap { it.data.participants }.toSet()
-            return participantKeys
-        }
+        override fun getRequiredSigners(tx: LedgerTransaction) = tx.inputs.flatMap { it.state.data.participants }.toSet()
     }
 }

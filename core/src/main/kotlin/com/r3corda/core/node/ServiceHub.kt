@@ -1,7 +1,10 @@
 package com.r3corda.core.node
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.TransactionResolutionException
+import com.r3corda.core.contracts.TransactionState
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
@@ -24,19 +27,6 @@ interface ServiceHub {
     val networkMapCache: NetworkMapCache
     val schedulerService: SchedulerService
     val clock: Clock
-
-    /**
-     * Given a [LedgerTransaction], looks up all its dependencies in the local database, uses the identity service to map
-     * the [SignedTransaction]s the DB gives back into [LedgerTransaction]s, and then runs the smart contracts for the
-     * transaction. If no exception is thrown, the transaction is valid.
-     */
-    fun verifyTransaction(ltx: LedgerTransaction) {
-        val dependencies = ltx.inputs.map {
-            storageService.validatedTransactions.getTransaction(it.txhash) ?: throw TransactionResolutionException(it.txhash)
-        }
-        val ltxns = dependencies.map { it.verifyToLedgerTransaction(identityService, storageService.attachments) }
-        TransactionGroup(setOf(ltx), ltxns.toSet()).verify()
-    }
 
     /**
      * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then

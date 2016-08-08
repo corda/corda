@@ -1,10 +1,7 @@
 package com.r3corda.core.testing
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.serialize
 import java.io.InputStream
@@ -133,8 +130,7 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun verifies(): EnforceVerifyOrFail {
-        val resolvedTransaction = ledgerInterpreter.resolveWireTransaction(toWireTransaction())
-        resolvedTransaction.verify()
+        toWireTransaction().toLedgerTransaction(services).verify()
         return EnforceVerifyOrFail.Token
     }
 
@@ -185,26 +181,6 @@ data class TestLedgerDSLInterpreter private constructor (
                     nonVerifiedTransactionWithLocations = HashMap(nonVerifiedTransactionWithLocations)
             )
 
-    internal fun resolveWireTransaction(wireTransaction: WireTransaction): TransactionForVerification {
-        return wireTransaction.run {
-            val authenticatedCommands = commands.map {
-                AuthenticatedObject(it.signers, it.signers.mapNotNull { services.identityService.partyFromKey(it) }, it.value)
-            }
-            val resolvedInputStates = inputs.map { resolveStateRef<ContractState>(it) }
-            val resolvedAttachments = attachments.map { resolveAttachment(it) }
-            TransactionForVerification(
-                    inputs = resolvedInputStates,
-                    outputs = outputs,
-                    commands = authenticatedCommands,
-                    origHash = wireTransaction.serialized.hash,
-                    attachments = resolvedAttachments,
-                    signers = signers.toList(),
-                    type = type
-            )
-
-        }
-    }
-
     internal inline fun <reified S : ContractState> resolveStateRef(stateRef: StateRef): TransactionState<S> {
         val transactionWithLocation =
                 transactionWithLocations[stateRef.txhash] ?:
@@ -228,16 +204,6 @@ data class TestLedgerDSLInterpreter private constructor (
         val transactionInterpreter = TestTransactionDSLInterpreter(this, transactionBuilder)
         dsl(TransactionDSL(transactionInterpreter))
         return transactionInterpreter
-    }
-
-    fun toTransactionGroup(): TransactionGroup {
-        val ledgerTransactions = transactionWithLocations.map {
-            it.value.transaction.toLedgerTransaction(services.identityService, services.storageService.attachments)
-        }
-        val nonVerifiedLedgerTransactions = nonVerifiedTransactionWithLocations.map {
-            it.value.transaction.toLedgerTransaction(services.identityService, services.storageService.attachments)
-        }
-        return TransactionGroup(ledgerTransactions.toSet(), nonVerifiedLedgerTransactions.toSet())
     }
 
     fun transactionName(transactionHash: SecureHash): String? {
@@ -298,16 +264,18 @@ data class TestLedgerDSLInterpreter private constructor (
     }
 
     override fun verifies(): EnforceVerifyOrFail {
-        val transactionGroup = toTransactionGroup()
         try {
-            transactionGroup.verify()
+            services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature)) })
+            for ((key, value) in transactionWithLocations) {
+                value.transaction.toLedgerTransaction(services).verify()
+                services.recordTransactions(SignedTransaction(value.transaction.serialized, listOf(NullSignature)))
+            }
+            return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
-            val transactionWithLocation = transactionWithLocations[exception.tx.origHash]
+            val transactionWithLocation = transactionWithLocations[exception.tx.id]
             val transactionName = transactionWithLocation?.label ?: transactionWithLocation?.location ?: "<unknown>"
             throw VerifiesFailed(transactionName, exception)
         }
-
-        return EnforceVerifyOrFail.Token
     }
 
     override fun <S : ContractState> retrieveOutputStateAndRef(clazz: Class<S>, label: String): StateAndRef<S> {

@@ -23,11 +23,11 @@ class ValidatingNotaryProtocol(otherSide: Party,
                                uniquenessProvider: UniquenessProvider) : NotaryProtocol.Service(otherSide, sessionIdForSend, sessionIdForReceive, timestampChecker, uniquenessProvider) {
     @Suspendable
     override fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {
-        val wtx = stx.tx
         try {
             checkSignatures(stx)
-            validateDependencies(reqIdentity, wtx)
-            checkContractValid(wtx)
+            val wtx = stx.tx
+            resolveTransaction(reqIdentity, wtx)
+            wtx.toLedgerTransaction(serviceHub).verify()
         } catch (e: Exception) {
             when (e) {
                 is TransactionVerificationException,
@@ -39,18 +39,13 @@ class ValidatingNotaryProtocol(otherSide: Party,
 
     private fun checkSignatures(stx: SignedTransaction) {
         val myKey = serviceHub.storageService.myLegalIdentity.owningKey
-        val missing = stx.verify(false) - myKey
+        val missing = stx.verifySignatures(throwIfSignaturesAreMissing = false) - myKey
 
         if (missing.isNotEmpty()) throw NotaryException(NotaryError.SignaturesMissing(missing.toList()))
     }
 
-    private fun checkContractValid(wtx: WireTransaction) {
-        val ltx = wtx.toLedgerTransaction(serviceHub.identityService, serviceHub.storageService.attachments)
-        serviceHub.verifyTransaction(ltx)
-    }
-
     @Suspendable
-    private fun validateDependencies(reqIdentity: Party, wtx: WireTransaction) {
+    private fun resolveTransaction(reqIdentity: Party, wtx: WireTransaction) {
         subProtocol(ResolveTransactionsProtocol(wtx, reqIdentity))
     }
 }

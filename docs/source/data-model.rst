@@ -23,8 +23,8 @@ States contain arbitrary data, but they always contain at minimum a hash of the 
 Contract code (or just "contracts" in the rest of this document) are globally shared pieces of business logic.
 
 Contracts define a **verify function**, which is a pure function given the entire transaction as input. To be considered
-valid, the transaction must be **accepted** by the verify function of every contract pointed to by the
-input and output states.
+valid, the transaction must be **accepted** by the verify function of every contract pointed to by the input and output
+states.
 
 Beyond inputs and outputs, transactions may also contain **commands**, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as

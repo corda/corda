@@ -1,11 +1,12 @@
 package com.r3corda.contracts
 
 import com.r3corda.contracts.asset.*
+import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
-import com.r3corda.core.node.services.testing.MockStorageService
+import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
 import org.junit.Test
@@ -72,7 +73,6 @@ class CommercialPaperTestsGeneric {
     @Parameterized.Parameter
     lateinit var thisTest: ICommercialPaperTestTemplate
 
-    val attachments = MockStorageService().attachments
     val issuer = MEGA_CORP.ref(123)
 
     @Test
@@ -190,59 +190,62 @@ class CommercialPaperTestsGeneric {
 
     @Test
     fun `issue move and then redeem`() {
-        // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
-        val issueTX: LedgerTransaction = run {
-            val ptx = CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER,
-                    TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
+        val aliceServices = MockServices()
+        val alicesWallet = aliceServices.fillWithSomeTestCash(9000.DOLLARS)
+
+        val bigCorpServices = MockServices()
+        val bigCorpWallet = bigCorpServices.fillWithSomeTestCash(13000.DOLLARS)
+
+        // Propagate the cash transactions to each side.
+        aliceServices.recordTransactions(bigCorpWallet.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        bigCorpServices.recordTransactions(alicesWallet.states.map { aliceServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+
+        // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
+        val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
+        val issuance = bigCorpServices.storageService.myLegalIdentity.ref(1)
+        val issueTX: SignedTransaction =
+            CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
                 setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
-                signWith(MINI_CORP_KEY)
+                signWith(bigCorpServices.key)
                 signWith(DUMMY_NOTARY_KEY)
-            }
-            val stx = ptx.toSignedTransaction()
-            stx.verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
-        }
+            }.toSignedTransaction()
 
-        val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
-                3000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
-                3000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY,
-                3000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY
-        )
-
-        // Alice pays $9000 to MiniCorp to own some of their debt.
-        val moveTX: LedgerTransaction = run {
+        // Alice pays $9000 to BigCorp to own some of their debt.
+        val moveTX: SignedTransaction = run {
             val ptx = TransactionType.General.Builder()
-            Cash().generateSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
-            CommercialPaper().generateMove(ptx, issueTX.outRef(0), ALICE_PUBKEY)
-            ptx.signWith(MINI_CORP_KEY)
-            ptx.signWith(ALICE_KEY)
+            Cash().generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public, alicesWallet.statesOfType<Cash.State>())
+            CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
+            ptx.signWith(bigCorpServices.key)
+            ptx.signWith(aliceServices.key)
             ptx.signWith(DUMMY_NOTARY_KEY)
-            ptx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
+            ptx.toSignedTransaction()
         }
 
-        // Won't be validated.
-        val (corpWalletTX, corpWallet) = cashOutputsToWallet(
-                9000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY,
-                4000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` MINI_CORP_PUBKEY `with notary` DUMMY_NOTARY
-        )
-
-        fun makeRedeemTX(time: Instant): LedgerTransaction {
+        fun makeRedeemTX(time: Instant): SignedTransaction {
             val ptx = TransactionType.General.Builder()
             ptx.setTime(time, DUMMY_NOTARY, 30.seconds)
-            CommercialPaper().generateRedeem(ptx, moveTX.outRef(1), corpWallet)
-            ptx.signWith(ALICE_KEY)
-            ptx.signWith(MINI_CORP_KEY)
+            CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpWallet.statesOfType<Cash.State>())
+            ptx.signWith(aliceServices.key)
+            ptx.signWith(bigCorpServices.key)
             ptx.signWith(DUMMY_NOTARY_KEY)
-            return ptx.toSignedTransaction().verifyToLedgerTransaction(MOCK_IDENTITY_SERVICE, attachments)
+            return ptx.toSignedTransaction()
         }
 
         val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)
         val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days)
 
+        // Verify the txns are valid and insert into both sides.
+        listOf(issueTX, moveTX).forEach {
+            it.toLedgerTransaction(aliceServices).verify()
+            aliceServices.recordTransactions(it)
+            bigCorpServices.recordTransactions(it)
+        }
+
         val e = assertFailsWith(TransactionVerificationException::class) {
-            TransactionGroup(setOf(issueTX, moveTX, tooEarlyRedemption), setOf(corpWalletTX, alicesWalletTX)).verify()
+            tooEarlyRedemption.toLedgerTransaction(aliceServices).verify()
         }
         assertTrue(e.cause!!.message!!.contains("paper must have matured"))
 
-        TransactionGroup(setOf(issueTX, moveTX, validRedemption), setOf(corpWalletTX, alicesWalletTX)).verify()
+        validRedemption.toLedgerTransaction(aliceServices).verify()
     }
 }
