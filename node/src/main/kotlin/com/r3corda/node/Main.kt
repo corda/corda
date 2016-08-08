@@ -17,6 +17,8 @@ val log = LoggerFactory.getLogger("Main")
 object ParamsSpec {
     val parser = OptionParser()
 
+    // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.
+    // Other general configuration should live inside the config file unless we regularly need temporary overrides on the command line
     val baseDirectoryArg =
             parser.accepts("base-directory", "The directory to put all files under")
                     .withOptionalArg()
@@ -46,7 +48,7 @@ fun main(args: Array<String>) {
     }
     val appConfig = ConfigFactory.parseFile(configFile)
 
-    val cmdlineOverrideMap = HashMap<String, Any?>()
+    val cmdlineOverrideMap = HashMap<String, Any?>() // If we do require a few other command line overrides eg for a nicer development experience they would go inside this map.
     if (cmdlineOptions.has(ParamsSpec.baseDirectoryArg)) {
         cmdlineOverrideMap.put("basedir", baseDirectoryPath.toString())
     }
@@ -59,12 +61,12 @@ fun main(args: Array<String>) {
     val dir = conf.basedir.toAbsolutePath().normalize()
     logInfo(args, dir)
 
-    val dirFile = dir.toFile()
-    if (!dirFile.exists()) {
-        dirFile.mkdirs()
-    }
-
     try {
+        val dirFile = dir.toFile()
+        if (!dirFile.exists()) {
+            dirFile.mkdirs()
+        }
+
         val node = conf.createNode()
         node.start()
         try {

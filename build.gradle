@@ -24,6 +24,8 @@ buildscript {
 }
 
 plugins {
+    // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
+    // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     id "us.kirchmeier.capsule" version "1.0.2"
 }
 
@@ -223,22 +225,15 @@ task createStandalone(dependsOn: 'createCapsule') << {
         into "${buildDir}/standalone/nodeb"
         rename 'generalnodeb.conf', 'node.conf'
     }
-    delete("${buildDir}/standalone/runstandalone")
-    def myFile = file("${buildDir}/standalone/runstandalone")
-    def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
-    myFile << "#!/usr/bin/env bash\n"
-    myFile << "set -euo pipefail\n"
-    myFile << "trap 'kill \$(jobs -p)' SIGINT SIGTERM EXIT\n"
-    myFile << "export CAPSULE_CACHE_DIR=cache\n"
-    myFile << "pushd nameserver\n"
-    myFile << "( java -jar "+ jarName+" )& \n"
-    myFile << "popd\n"
-    myFile << "pushd nodea\n"
-    myFile << "( java -jar "+ jarName+" )& \n"
-    myFile << "popd\n"
-    myFile << "pushd nodeb\n"
-    myFile << "( java -jar "+ jarName+" )& \n"
-    myFile << "popd\n"
-    myFile << "read -p 'Any key to exit'\n"
-    myFile << "kill \$(jobs -p)\n"
+	
+	delete("${buildDir}/standalone/runstandalone")
+	def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
+	copy {
+		from "buildSrc/scripts/runstandalone"
+		filter { String line -> line.replace("JAR_NAME",jarName) }
+        filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol:org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
+		into "${buildDir}/standalone"
+	}
+
+
 }
