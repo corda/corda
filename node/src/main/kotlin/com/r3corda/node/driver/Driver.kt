@@ -10,7 +10,6 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.config.copy
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.typesafe.config.ConfigFactory
@@ -245,10 +244,7 @@ class DriverDSL(
 
         // Check that we shut down properly
         addressMustNotBeBound(messagingService.myHostPort)
-        val nodeInfo = networkMapNodeInfo
-        if (nodeInfo != null) {
-            addressMustNotBeBound((nodeInfo.address as ArtemisMessagingComponent.Address).hostAndPort)
-        }
+        addressMustNotBeBound(networkMapAddress)
     }
 
     /**
@@ -295,7 +291,7 @@ class DriverDSL(
         messagingServiceStarted = true
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
         // the network map service itself
-        val nodeInfo = NodeInfo(
+        val fakeNodeInfo = NodeInfo(
                 address = ArtemisMessagingClient.makeRecipient(networkMapAddress),
                 identity = Party(
                         name = networkMapName,
@@ -303,7 +299,7 @@ class DriverDSL(
                 ),
                 advertisedServices = setOf(NetworkMapService.Type)
         )
-        networkMapCache.addMapService(messagingService, nodeInfo, true)
+        networkMapCache.addMapService(messagingService, fakeNodeInfo, true)
         networkMapNodeInfo = poll {
             networkMapCache.partyNodes.forEach {
                 if (it.identity.name == networkMapName) {
@@ -356,14 +352,11 @@ class DriverDSL(
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
             val process = builder.start()
-            poll {
-                try {
-                    Socket(cliParams.messagingAddress.hostText, cliParams.messagingAddress.port).close()
-                    Unit
-                } catch (_exception: SocketException) {
-                    null
-                }
-            }
+            addressMustBeBound(cliParams.messagingAddress)
+            // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
+            // the handlers for the advertised services are not yet registered. A hacky workaround is that we wait for
+            // the web api address to be bound as well, as that starts after the services. Needs rethinking.
+            addressMustBeBound(cliParams.apiAddress)
 
             return process
         }

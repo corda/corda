@@ -7,8 +7,6 @@ import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.transactions.NotaryService
 import org.junit.Test
-import java.net.Socket
-import java.net.SocketException
 
 
 class DriverTests {
