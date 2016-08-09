@@ -190,7 +190,7 @@ class DriverDSL(
         val quasarJarPath: String
 ) : DriverDSLInternalInterface {
 
-    override val networkMapCache = InMemoryNetworkMapCache(null)
+    override val networkMapCache = InMemoryNetworkMapCache()
     private val networkMapName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
     private var networkMapNodeInfo: NodeInfo? = null
