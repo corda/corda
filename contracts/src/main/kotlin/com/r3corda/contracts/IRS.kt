@@ -672,8 +672,8 @@ class InterestRateSwap() : ClauseVerifier() {
             return (fixedLeg.fixedRatePayer.owningKey in ourKeys) || (floatingLeg.floatingRatePayer.owningKey in ourKeys)
         }
 
-        override val parties: Array<Party>
-            get() = arrayOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
+        override val parties: List<Party>
+            get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun nextScheduledActivity(thisStateRef: StateRef, protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null

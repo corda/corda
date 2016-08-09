@@ -230,7 +230,7 @@ interface DealState : LinearState {
     val ref: String
 
     /** Exposes the Parties involved in a generic way */
-    val parties: Array<Party>
+    val parties: List<Party>
 
     // TODO: This works by editing the keys used by a Party which is invalid.
     fun withPublicKey(before: Party, after: PublicKey): DealState
