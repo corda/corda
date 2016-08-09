@@ -23,7 +23,7 @@ abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeCo
     private val trustStorePath = directory.resolve("certificates").resolve("truststore.jks")
 
     // In future: can contain onion routing info, etc.
-    data class Address(val hostAndPort: HostAndPort) : SingleMessageRecipient
+    protected data class Address(val hostAndPort: HostAndPort) : SingleMessageRecipient
 
     protected enum class ConnectionDirection { INBOUND, OUTBOUND }
 

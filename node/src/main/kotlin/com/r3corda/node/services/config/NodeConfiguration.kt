@@ -97,19 +97,3 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
         )
     }
 }
-
-fun NodeConfiguration.copy(
-        myLegalName: String = this.myLegalName,
-        exportJMXto: String = this.exportJMXto,
-        nearestCity: String = this.nearestCity,
-        keyStorePassword: String = this.keyStorePassword,
-        trustStorePassword: String = this.trustStorePassword
-): NodeConfiguration {
-    return object : NodeConfiguration {
-        override val myLegalName: String = myLegalName
-        override val exportJMXto: String = exportJMXto
-        override val nearestCity: String = nearestCity
-        override val keyStorePassword: String = keyStorePassword
-        override val trustStorePassword: String = trustStorePassword
-    }
-}

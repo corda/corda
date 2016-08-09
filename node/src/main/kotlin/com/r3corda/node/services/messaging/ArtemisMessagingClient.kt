@@ -65,8 +65,7 @@ class ArtemisMessagingClient(directory: Path,
     private val mutex = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
 
-    private var serverLocator: ServerLocator? = null
-    private var clientFactory: ClientSessionFactory? = null
+    private lateinit var clientFactory: ClientSessionFactory
     private var session: ClientSession? = null
     private var consumer: ClientConsumer? = null
 
@@ -87,11 +86,8 @@ class ArtemisMessagingClient(directory: Path,
     private fun configureAndStartClient() {
         log.info("Connecting to server: $serverHostPort")
         // Connect to our server.
-        val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(
-                tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port))
-        this.serverLocator = serverLocator
-        val clientFactory = serverLocator.createSessionFactory()
-        this.clientFactory = clientFactory
+        clientFactory = ActiveMQClient.createServerLocatorWithoutHA(
+                tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port)).createSessionFactory()
 
         // Create a queue on which to receive messages and set up the handler.
         val session = clientFactory.createSession()
@@ -172,8 +168,6 @@ class ArtemisMessagingClient(directory: Path,
         producers.clear()
         consumer?.close()
         session?.close()
-        clientFactory?.close()
-        serverLocator?.close()
         // We expect to be garbage collected shortly after being stopped, so we don't null anything explicitly here.
         running = false
     }
