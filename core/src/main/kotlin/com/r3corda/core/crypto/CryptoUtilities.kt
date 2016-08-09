@@ -68,12 +68,12 @@ fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bits)
  */
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by. */
-    open class WithKey(val by: PublicKey, bits: ByteArray, covering: Int = 0) : DigitalSignature(bits) {
+    open class WithKey(val by: PublicKey, bits: ByteArray) : DigitalSignature(bits) {
         fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
         fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bits, this)
     }
 
-    class LegallyIdentifiable(val signer: Party, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey, bits)
 }
 
 /**
@@ -156,7 +156,7 @@ fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes, party: Party) = signWithECDSA
 fun KeyPair.signWithECDSA(bitsToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
     check(public == party.owningKey)
     val sig = signWithECDSA(bitsToSign)
-    return DigitalSignature.LegallyIdentifiable(party, sig.bits, 0)
+    return DigitalSignature.LegallyIdentifiable(party, sig.bits)
 }
 
 /** Utility to simplify the act of verifying a signature */

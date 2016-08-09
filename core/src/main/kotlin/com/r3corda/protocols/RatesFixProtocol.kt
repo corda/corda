@@ -13,7 +13,6 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
 import com.r3corda.protocols.RatesFixProtocol.FixOutOfRange
 import java.math.BigDecimal
-import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -32,7 +31,6 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
                             private val fixOf: FixOf,
                             private val expectedRate: BigDecimal,
                             private val rateTolerance: BigDecimal,
-                            private val timeOut: Duration,
                             override val progressTracker: ProgressTracker = RatesFixProtocol.tracker(fixOf.name)) : ProtocolLogic<Unit>() {
 
     companion object {
