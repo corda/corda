@@ -12,14 +12,14 @@ import rx.subjects.PublishSubject
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache() : InMemoryNetworkMapCache(null) {
+class MockNetworkMapCache() : InMemoryNetworkMapCache() {
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     data class MockAddress(val id: String): SingleMessageRecipient
 
     init {
-        var mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")))
-        var mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")))
+        val mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")))
+        val mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")))
         registeredNodes[mockNodeA.identity] = mockNodeA
         registeredNodes[mockNodeB.identity] = mockNodeB
     }

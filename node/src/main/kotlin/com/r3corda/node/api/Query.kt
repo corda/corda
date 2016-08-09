@@ -8,15 +8,6 @@ interface StatesQuery {
         fun select(criteria: Criteria): Selection {
             return Selection(criteria)
         }
-
-        fun selectAllDeals(): Selection {
-            return select(Criteria.AllDeals)
-        }
-
-        fun selectDeal(ref: String): Selection {
-            return select(Criteria.Deal(ref))
-        }
-
     }
 
     // TODO make constructors private

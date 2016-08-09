@@ -21,11 +21,6 @@ data class TransactionForContract(val inputs: List<ContractState>,
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 
-    @Deprecated("This property was renamed to inputs", ReplaceWith("inputs"))
-    val inStates: List<ContractState> get() = inputs
-    @Deprecated("This property was renamed to outputs", ReplaceWith("outputs"))
-    val outStates: List<ContractState> get() = outputs
-
     /**
      * Given a type and a function that returns a grouping key, associates inputs and outputs together so that they
      * can be processed as one. The grouping key is any arbitrary object that can act as a map key (so must implement

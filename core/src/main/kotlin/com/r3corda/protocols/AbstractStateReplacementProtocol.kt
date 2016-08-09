@@ -35,9 +35,9 @@ abstract class AbstractStateReplacementProtocol<T> {
                          override val replyToParty: Party,
                          override val sessionID: Long) : PartyRequestMessage
 
-    abstract class Instigator<S : ContractState, T>(val originalState: StateAndRef<S>,
-                                                    val modification: T,
-                                                    override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<StateAndRef<S>>() {
+    abstract class Instigator<out S : ContractState, T>(val originalState: StateAndRef<S>,
+                                                        val modification: T,
+                                                        override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<StateAndRef<S>>() {
         companion object {
 
             object SIGNING : ProgressTracker.Step("Requesting signatures from other parties")
@@ -117,10 +117,10 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
     }
 
-    abstract class Acceptor<T>(val otherSide: Party,
-                               val sessionIdForSend: Long,
-                               val sessionIdForReceive: Long,
-                               override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
+    abstract class Acceptor<in T>(val otherSide: Party,
+                                  val sessionIdForSend: Long,
+                                  val sessionIdForReceive: Long,
+                                  override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
 
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
@@ -220,11 +220,9 @@ abstract class AbstractStateReplacementProtocol<T> {
 }
 
 
-/** Thrown when a participant refuses proposed the state replacement */
+/** Thrown when a participant refuses the proposed state replacement */
 class StateReplacementRefused(val identity: Party, val state: StateRef, val detail: String?) {
-    override fun toString(): String
-            = "A participant $identity refused to change state $state"
+    override fun toString()  = "A participant $identity refused to change state $state: " + (detail ?: "no reason provided")
 }
 
-class StateReplacementException(val error: StateReplacementRefused)
-: Exception("State change failed - $error")
+class StateReplacementException(val error: StateReplacementRefused)  : Exception("State change failed - $error")

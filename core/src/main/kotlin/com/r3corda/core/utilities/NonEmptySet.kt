@@ -12,7 +12,7 @@ import java.util.*
  * The underlying set is exposed for Kryo to access, but should not be accessed directly.
  */
 class NonEmptySet<T>(initial: T) : MutableSet<T> {
-    private val set: MutableSet<T> = HashSet<T>()
+    private val set: MutableSet<T> = HashSet()
 
     init {
         set.add(initial)
@@ -28,7 +28,7 @@ class NonEmptySet<T>(initial: T) : MutableSet<T> {
     override fun containsAll(elements: Collection<T>): Boolean = set.containsAll(elements)
     override fun isEmpty(): Boolean = false
 
-    override fun iterator(): MutableIterator<T> = Iterator<T>(set.iterator())
+    override fun iterator(): MutableIterator<T> = Iterator(set.iterator())
 
     override fun remove(element: T): Boolean =
             // Test either there's more than one element, or the removal is a no-op
@@ -65,7 +65,7 @@ class NonEmptySet<T>(initial: T) : MutableSet<T> {
     override fun equals(other: Any?): Boolean =
             if (other is Set<*>)
                 // Delegate down to the wrapped set's equals() function
-                set.equals(other)
+                set == other
             else
                 false
 
@@ -84,7 +84,7 @@ class NonEmptySet<T>(initial: T) : MutableSet<T> {
 }
 
 fun <T> nonEmptySetOf(initial: T, vararg elements: T): NonEmptySet<T> {
-    val set = NonEmptySet<T>(initial)
+    val set = NonEmptySet(initial)
     // We add the first element twice, but it's a set, so who cares
     set.addAll(elements)
     return set

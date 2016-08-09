@@ -46,7 +46,7 @@ class ProtocolLogicRefFactory(private val protocolWhitelist: Map<String, Set<Str
             return
         }
         // TODO: make this specific to the attachments in the [AppContext] by including [SecureHash] in whitelist check
-        require(protocolWhitelist[className]!!.contains(argClassName)) { "Args to ${className} must have types on the args whitelist: $argClassName" }
+        require(protocolWhitelist[className]!!.contains(argClassName)) { "Args to $className must have types on the args whitelist: $argClassName" }
     }
 
     /**

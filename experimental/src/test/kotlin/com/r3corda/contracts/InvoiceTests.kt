@@ -73,7 +73,7 @@ class InvoiceTests {
             this `fails with` "the transaction is signed by the invoice owner"
         }
 
-        var props = invoiceProperties.copy(seller = invoiceProperties.buyer);
+        var props = invoiceProperties.copy(seller = invoiceProperties.buyer)
         transaction {
             output { initialInvoiceState.copy(props = props) }
             command(MEGA_CORP_PUBKEY) { Invoice.Commands.Issue() }
@@ -88,7 +88,7 @@ class InvoiceTests {
             this `fails with` "the invoice must not be assigned"
         }
 
-        props = invoiceProperties.copy(invoiceID = "");
+        props = invoiceProperties.copy(invoiceID = "")
         transaction {
             output { initialInvoiceState.copy(props = props) }
             command(MEGA_CORP_PUBKEY) { Invoice.Commands.Issue() }
@@ -98,7 +98,7 @@ class InvoiceTests {
 
         val withMessage = "the term must be a positive number"
         val r = try {
-            props = invoiceProperties.copy(term = 0);
+            props = invoiceProperties.copy(term = 0)
             false
         } catch (e: Exception) {
             val m = e.message
@@ -179,7 +179,7 @@ class InvoiceTests {
             this `fails with` "the transaction must be signed by the owner"
         }
 
-        var props = invoiceProperties.copy(seller = invoiceProperties.buyer);
+        var props = invoiceProperties.copy(seller = invoiceProperties.buyer)
         transaction {
             input { initialInvoiceState }
             output { initialInvoiceState.copy(props = props) }

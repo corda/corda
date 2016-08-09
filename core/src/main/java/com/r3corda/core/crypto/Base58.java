@@ -28,7 +28,7 @@ import java.util.*;
  * same as the original author of the R3 repository.
  */
 public class Base58 {
-    public static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
+    private static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
     private static final char ENCODED_ZERO = ALPHABET[0];
     private static final int[] INDEXES = new int[128];
 

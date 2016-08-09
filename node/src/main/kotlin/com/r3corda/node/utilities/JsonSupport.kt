@@ -13,8 +13,6 @@ import com.r3corda.core.contracts.BusinessCalendar
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.IdentityService
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime

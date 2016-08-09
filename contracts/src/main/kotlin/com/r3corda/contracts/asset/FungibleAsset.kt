@@ -2,7 +2,6 @@ package com.r3corda.contracts.asset
 
 import com.r3corda.core.contracts.*
 import java.security.PublicKey
-import java.util.*
 
 class InsufficientBalanceException(val amountMissing: Amount<*>) : Exception() {
     override fun toString() = "Insufficient balance, missing $amountMissing"

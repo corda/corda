@@ -13,6 +13,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+// TODO: This suppress is needed due to KT-260, fixed in Kotlin 1.0.4 so remove after upgrading.
+@Suppress("CAST_NEVER_SUCCEEDS")
 class WhitelistTrustManagerTest {
     companion object {
         @BeforeClass

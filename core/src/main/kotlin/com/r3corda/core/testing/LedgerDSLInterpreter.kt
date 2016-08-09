@@ -151,12 +151,6 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
             outputStateAndRef<S>().state.data
 
     /**
-     * Retrieves the output [StateRef] based on the label.
-     * @see OutputStateLookup.retrieveOutputStateAndRef
-     */
-    fun String.outputRef(): StateRef = outputStateAndRef<ContractState>().ref
-
-    /**
      * @see OutputStateLookup.retrieveOutputStateAndRef
      */
     fun <S : ContractState> retrieveOutput(clazz: Class<S>, label: String) =

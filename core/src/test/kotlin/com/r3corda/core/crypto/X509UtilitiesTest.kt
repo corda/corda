@@ -11,7 +11,6 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.nio.file.Paths
 import java.security.PrivateKey
 import java.security.SecureRandom
 import java.security.Signature
@@ -196,7 +195,7 @@ class X509UtilitiesTest {
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         keyManagerFactory.init(keyStore, "serverstorepass".toCharArray())
-        val keyManagers = keyManagerFactory.getKeyManagers()
+        val keyManagers = keyManagerFactory.keyManagers
         val trustMgrFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustMgrFactory.init(trustStore)
         val trustManagers = trustMgrFactory.trustManagers

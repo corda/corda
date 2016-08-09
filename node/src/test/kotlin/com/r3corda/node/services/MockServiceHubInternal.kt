@@ -19,6 +19,7 @@ import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.wallet.NodeWalletService
 import java.time.Clock
 
+@Suppress("LeakingThis")
 open class MockServiceHubInternal(
         customWallet: WalletService? = null,
         val keyManagement: KeyManagementService? = null,

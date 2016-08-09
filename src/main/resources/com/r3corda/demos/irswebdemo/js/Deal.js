@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
     let calculationModel = {
@@ -25,7 +25,7 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
 
     let Deal = function(dealViewModel) {
         let now = new Date();
-        let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`
+        let tradeId = `T${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}.${now.getUTCHours()}:${now.getUTCMinutes()}:${now.getUTCSeconds()}:${now.getUTCMilliseconds()}`;
 
         this.toJson = () => {
             let fixedLeg = {};
@@ -70,10 +70,10 @@ define(['viewmodel/FixedRate'], (fixedRateViewModel) => {
                 floatingLeg: floatingLeg,
                 calculation: calculationModel,
                 common: common
-            }
+            };
 
             return json;
         };
     };
     return Deal;
-})
+});

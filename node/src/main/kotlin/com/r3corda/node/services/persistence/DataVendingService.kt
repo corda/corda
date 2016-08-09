@@ -62,7 +62,7 @@ object DataVending {
                     if (data.accepted) {
                         future.set(Unit)
                     } else {
-                        future.setException(TransactionRejectedError("Transaction ${transaction} rejected by remote party ${recipient.identity}"))
+                        future.setException(TransactionRejectedError("Transaction $transaction rejected by remote party ${recipient.identity}"))
                     }
                 }
                 val msg = NotifyTxRequestMessage(transaction, myIdentity, sessionID)

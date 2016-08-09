@@ -157,9 +157,7 @@ object TwoPartyDealProtocol {
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
-                for (regulator in regulators) {
-                    send(regulator.identity, DEFAULT_SESSION_ID, fullySigned)
-                }
+                regulators.forEach { send(it.identity, DEFAULT_SESSION_ID, fullySigned) }
             }
 
             return fullySigned
@@ -276,12 +274,12 @@ object TwoPartyDealProtocol {
     /**
      * One side of the protocol for inserting a pre-agreed deal.
      */
-    open class Instigator<T : DealState>(override val otherSide: Party,
-                                         val notary: Party,
-                                         override val payload: T,
-                                         override val myKeyPair: KeyPair,
-                                         override val otherSessionID: Long,
-                                         override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<T>() {
+    open class Instigator<out T : DealState>(override val otherSide: Party,
+                                             val notary: Party,
+                                             override val payload: T,
+                                             override val myKeyPair: KeyPair,
+                                             override val otherSessionID: Long,
+                                             override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<T>() {
 
         override val notaryNode: NodeInfo get() =
             serviceHub.networkMapCache.notaryNodes.filter { it.identity == notary }.single()
@@ -378,7 +376,7 @@ object TwoPartyDealProtocol {
             val newDeal = deal
 
             val ptx = TransactionType.General.Builder()
-            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0].identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE, initiation.timeout) {
+            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0].identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload), fix)

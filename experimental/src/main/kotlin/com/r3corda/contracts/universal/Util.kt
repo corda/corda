@@ -34,7 +34,7 @@ fun liableParties(contract: Arrangement) : Set<PublicKey> {
         throw IllegalArgumentException()
     }
 
-    return visit(contract);
+    return visit(contract)
 }
 
 /** returns list of involved parties for a given contract */
@@ -53,7 +53,7 @@ fun involvedParties(arrangement: Arrangement) : Set<PublicKey> {
         }
     }
 
-    return visit(arrangement);
+    return visit(arrangement)
 }
 
 fun replaceParty(action: Action, from: Party, to: Party) : Action {

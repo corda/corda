@@ -30,13 +30,13 @@ class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal) {
         //
         // Note: exported as pennies.
         val m = serviceHubInternal.monitoringService.metrics
-        for (balance in wallet.cashBalances) {
-            val metric = balanceMetrics.getOrPut(balance.key) {
+        for ((key, value) in wallet.cashBalances) {
+            val metric = balanceMetrics.getOrPut(key) {
                 val newMetric = BalanceMetric()
-                m.register("WalletBalances.${balance.key}Pennies", newMetric)
+                m.register("WalletBalances.${key}Pennies", newMetric)
                 newMetric
             }
-            metric.pennies = balance.value.quantity
+            metric.pennies = value.quantity
         }
     }
 }

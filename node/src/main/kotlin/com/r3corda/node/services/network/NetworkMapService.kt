@@ -280,7 +280,7 @@ class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddOrRemo
         return WireNodeRegistration(regSerialized, regSig)
     }
 
-    override fun toString() : String = "$node #${serial} (${type})"
+    override fun toString() : String = "$node #$serial ($type)"
 }
 
 /**

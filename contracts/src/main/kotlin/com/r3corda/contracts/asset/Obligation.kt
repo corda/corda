@@ -181,7 +181,7 @@ class Obligation<P> : ClauseVerifier() {
                     // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
                     // time.
                     "amounts paid must match recipients to settle" by inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
-                    "amount in settle command ${command.value.amount} matches settled total ${totalAmountSettled}" by (command.value.amount == totalAmountSettled)
+                    "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" by (command.value.amount == totalAmountSettled)
                     "signatures are present from all obligors" by command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
                     "at obligor ${obligor.name} the obligations after settlement balance" by
@@ -384,7 +384,7 @@ class Obligation<P> : ClauseVerifier() {
      * A default command mutates inputs and produces identical outputs, except that the lifecycle changes.
      */
     @VisibleForTesting
-    protected fun verifySetLifecycleCommand(inputs: List<FungibleAsset<Terms<P>>>,
+    private fun verifySetLifecycleCommand(inputs: List<FungibleAsset<Terms<P>>>,
                                             outputs: List<FungibleAsset<Terms<P>>>,
                                             tx: TransactionForContract,
                                             setLifecycleCommand: AuthenticatedObject<Commands.SetLifecycle>) {
@@ -439,7 +439,7 @@ class Obligation<P> : ClauseVerifier() {
             "signer is in the state parties" by (signer in netState!!.partyKeys)
         }
 
-        val out = states.reduce { stateA, stateB -> stateA.net(stateB) }
+        val out = states.reduce(State<P>::net)
         if (out.quantity > 0L)
             tx.addOutputState(out)
         tx.addCommand(Commands.Net(NetType.PAYMENT), signer)
@@ -456,11 +456,12 @@ class Obligation<P> : ClauseVerifier() {
      * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
+    @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
                      changeKey: PublicKey, assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
             = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, changeKey, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
-            generateExitCommand = { amount -> Commands.Exit<P>(amount) }
+            generateExitCommand = { amount -> Commands.Exit(amount) }
     )
 
     /**
@@ -525,7 +526,7 @@ class Obligation<P> : ClauseVerifier() {
             Lifecycle.DEFAULTED -> Lifecycle.NORMAL
             Lifecycle.NORMAL -> Lifecycle.DEFAULTED
         }
-        require(states.all { it.lifecycle == existingLifecycle }) { "initial lifecycle must be ${existingLifecycle} for all input states" }
+        require(states.all { it.lifecycle == existingLifecycle }) { "initial lifecycle must be $existingLifecycle for all input states" }
 
         // Produce a new set of states
         val groups = statesAndRefs.groupBy { it.state.data.issuanceDef }
@@ -713,8 +714,8 @@ infix fun <T> Obligation.State<T>.between(parties: Pair<Party, PublicKey>) = cop
 infix fun <T> Obligation.State<T>.`owned by`(owner: PublicKey) = copy(beneficiary = owner)
 infix fun <T> Obligation.State<T>.`issued by`(party: Party) = copy(obligor = party)
 // For Java users:
-fun <T> Obligation.State<T>.ownedBy(owner: PublicKey) = copy(beneficiary = owner)
-fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
+@Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: PublicKey) = copy(beneficiary = owner)
+@Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: Party) = copy(obligor = party)
 
 val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
     get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)

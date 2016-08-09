@@ -7,7 +7,6 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.services.api.Checkpoint
 import com.r3corda.node.services.statemachine.FiberRequest
-import com.r3corda.node.services.statemachine.StateMachineManager
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After

@@ -51,6 +51,7 @@ open class NetClause<P> : SingleClause {
     override val requiredCommands: Set<Class<out CommandData>>
         get() = setOf(Obligation.Commands.Net::class.java)
 
+    @Suppress("ConvertLambdaToReference")
     override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
         val command = commands.requireSingleCommand<Obligation.Commands.Net>()
         val groups = when (command.value.type) {
@@ -67,10 +68,10 @@ open class NetClause<P> : SingleClause {
      * Verify a netting command. This handles both close-out and payment netting.
      */
     @VisibleForTesting
-    public fun verifyNetCommand(inputs: List<Obligation.State<P>>,
-                                outputs: List<Obligation.State<P>>,
-                                command: AuthenticatedObject<Obligation.Commands.Net>,
-                                netState: NetState<P>) {
+    fun verifyNetCommand(inputs: List<Obligation.State<P>>,
+                         outputs: List<Obligation.State<P>>,
+                         command: AuthenticatedObject<Obligation.Commands.Net>,
+                         netState: NetState<P>) {
         val template = netState.template
         // Create two maps of balances from obligors to beneficiaries, one for input states, the other for output states.
         val inputBalances = extractAmountsDue(template, inputs)

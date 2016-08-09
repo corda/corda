@@ -105,7 +105,7 @@ data class SingletonSerializationToken private constructor(private val className
     constructor(toBeTokenized: SerializeAsToken) : this(toBeTokenized.javaClass.name)
 
     override fun fromToken(context: SerializeAsTokenContext): Any = context.tokenToTokenized[this] ?:
-            throw IllegalStateException("Unable to find tokenized instance of ${className} in context $context")
+            throw IllegalStateException("Unable to find tokenized instance of $className in context $context")
 
     companion object {
         fun registerWithContext(token: SingletonSerializationToken, toBeTokenized: SerializeAsToken, context: SerializeAsTokenContext): SerializationToken =
@@ -126,7 +126,7 @@ data class SingletonSerializationToken private constructor(private val className
  * to indicate which instance the token is a serialized form of.
  */
 abstract class SingletonSerializeAsToken() : SerializeAsToken {
-
+    @Suppress("LeakingThis")
     private val token = SingletonSerializationToken(this)
 
     override fun toToken(context: SerializeAsTokenContext) = SingletonSerializationToken.registerWithContext(token, this, context)

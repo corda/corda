@@ -11,7 +11,7 @@ class FinanceTypesTest {
 
     @Test
     fun `make sure Amount has decimal places`() {
-        var x = Amount(1, Currency.getInstance("USD"))
+        val x = Amount(1, Currency.getInstance("USD"))
         assert("0.01" in x.toString())
     }
 
@@ -44,17 +44,17 @@ class FinanceTypesTest {
 
     @Test
     fun `schedule generator 1`() {
-        var ret = BusinessCalendar.createGenericSchedule(startDate = LocalDate.of(2014, 11, 25), period = Frequency.Monthly, noOfAdditionalPeriods = 3)
+        val ret = BusinessCalendar.createGenericSchedule(startDate = LocalDate.of(2014, 11, 25), period = Frequency.Monthly, noOfAdditionalPeriods = 3)
         // We know that Jan 25th 2015 is on the weekend -> It should not be in this list returned.
-        assert(!(LocalDate.of(2015, 1, 25) in ret))
+        assert(LocalDate.of(2015, 1, 25) !in ret)
         println(ret)
     }
 
     @Test
     fun `schedule generator 2`() {
-        var ret = BusinessCalendar.createGenericSchedule(startDate = LocalDate.of(2015, 11, 25), period = Frequency.Monthly, noOfAdditionalPeriods = 3, calendar = BusinessCalendar.getInstance("London"), dateRollConvention = DateRollConvention.Following)
+        val ret = BusinessCalendar.createGenericSchedule(startDate = LocalDate.of(2015, 11, 25), period = Frequency.Monthly, noOfAdditionalPeriods = 3, calendar = BusinessCalendar.getInstance("London"), dateRollConvention = DateRollConvention.Following)
         // Xmas should not be in the list!
-        assert(!(LocalDate.of(2015, 12, 25) in ret))
+        assert(LocalDate.of(2015, 12, 25) !in ret)
         println(ret)
     }
 
@@ -126,7 +126,7 @@ class FinanceTypesTest {
         )
 
         for ((inc, exp) in expected) {
-            var result = ldn.moveBusinessDays(firstDay, DateRollDirection.FORWARD, inc)
+            val result = ldn.moveBusinessDays(firstDay, DateRollDirection.FORWARD, inc)
             assertEquals(exp, result)
         }
     }
@@ -146,7 +146,7 @@ class FinanceTypesTest {
         )
 
         for ((inc, exp) in expected) {
-            var result = ldn.moveBusinessDays(firstDay, DateRollDirection.BACKWARD, inc)
+            val result = ldn.moveBusinessDays(firstDay, DateRollDirection.BACKWARD, inc)
             assertEquals(exp, result)
         }
 

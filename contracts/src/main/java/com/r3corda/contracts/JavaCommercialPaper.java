@@ -24,7 +24,7 @@ import static kotlin.collections.CollectionsKt.*;
  */
 public class JavaCommercialPaper extends ClauseVerifier {
     //public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
-    public static Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
+    private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
     public static class State implements ContractState, ICommercialPaperState {
         private PartyAndReference issuance;
@@ -326,7 +326,7 @@ public class JavaCommercialPaper extends ClauseVerifier {
     public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
         return tx.getCommands()
                 .stream()
-                .filter((AuthenticatedObject<CommandData> command) -> { return command.getValue() instanceof Commands; })
+                .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
                 .collect(Collectors.toList());
     }
 

@@ -8,23 +8,23 @@ import java.util.*;
 
 public class ProtocolLogicRefFromJavaTest {
 
-    public static class ParamType1 {
-        public final int value;
+    private static class ParamType1 {
+        final int value;
 
         ParamType1(int v) {
             value = v;
         }
     }
 
-    public static class ParamType2 {
-        public final String value;
+    private static class ParamType2 {
+        final String value;
 
         ParamType2(String v) {
             value = v;
         }
     }
 
-    public static class JavaProtocolLogic extends ProtocolLogic<Void> {
+    private static class JavaProtocolLogic extends ProtocolLogic<Void> {
 
         public JavaProtocolLogic(ParamType1 A, ParamType2 b) {
         }
@@ -41,7 +41,7 @@ public class ProtocolLogicRefFromJavaTest {
         }
     }
 
-    public static class JavaNoArgProtocolLogic extends ProtocolLogic<Void> {
+    private static class JavaNoArgProtocolLogic extends ProtocolLogic<Void> {
 
         public JavaNoArgProtocolLogic() {
         }
@@ -72,8 +72,7 @@ public class ProtocolLogicRefFromJavaTest {
     @Test
     public void testNoArg() {
         Map<String, Set<String>> whiteList = new HashMap<>();
-        Set<String> argsList = new HashSet<>();
-        whiteList.put(JavaNoArgProtocolLogic.class.getName(), argsList);
+        whiteList.put(JavaNoArgProtocolLogic.class.getName(), new HashSet<>());
         ProtocolLogicRefFactory factory = new ProtocolLogicRefFactory(whiteList);
         factory.create(JavaNoArgProtocolLogic.class);
     }

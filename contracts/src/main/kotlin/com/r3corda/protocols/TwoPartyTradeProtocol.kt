@@ -48,7 +48,7 @@ object TwoPartyTradeProtocol {
 
     val TOPIC = "platform.trade"
 
-    class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception()
+    class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }

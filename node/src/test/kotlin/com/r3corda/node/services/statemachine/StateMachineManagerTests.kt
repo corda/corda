@@ -2,7 +2,6 @@ package com.r3corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.node.services.MockServiceHubInternal
 import com.r3corda.node.services.api.Checkpoint

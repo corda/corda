@@ -11,6 +11,7 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
+import com.r3corda.protocols.RatesFixProtocol.FixOutOfRange
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
@@ -46,7 +47,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     override val topic: String get() = TOPIC
 
-    class FixOutOfRange(val byAmount: BigDecimal) : Exception()
+    class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
 
     data class QueryRequest(val queries: List<FixOf>, override val replyToParty: Party, override val sessionID: Long, val deadline: Instant) : PartyRequestMessage
     data class SignRequest(val tx: WireTransaction, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage

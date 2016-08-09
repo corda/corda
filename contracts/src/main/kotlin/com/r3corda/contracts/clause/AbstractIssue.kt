@@ -14,7 +14,7 @@ import com.r3corda.core.contracts.clauses.MatchBehaviour
  * @param sumOrZero function to convert a list of states into an amount of the token, and returns zero if there are
  * no states in the list. Takes in an instance of the token definition for constructing the zero amount if needed.
  */
-abstract class AbstractIssue<S: ContractState, T: Any>(
+abstract class AbstractIssue<in S: ContractState, T: Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,
         val sumOrZero: List<S>.(token: Issued<T>) -> Amount<Issued<T>>
 ) : GroupClause<S, Issued<T>> {

@@ -41,8 +41,8 @@ val Int.FCOJ: Amount<Commodity> get() = FCOJ(this)
 infix fun Currency.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Commodity.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-infix fun Currency.issuedBy(deposit: PartyAndReference) = Issued<Currency>(deposit, this)
-infix fun Commodity.issuedBy(deposit: PartyAndReference) = Issued<Commodity>(deposit, this)
+infix fun Currency.issuedBy(deposit: PartyAndReference) = Issued(deposit, this)
+infix fun Commodity.issuedBy(deposit: PartyAndReference) = Issued(deposit, this)
 infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantity, token.issuedBy(deposit))
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,7 +64,7 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
         filter { it.value is T }.
         filter { if (signer == null) true else signer in it.signers }.
         filter { if (party == null) true else party in it.signingParties }.
-        map { AuthenticatedObject<T>(it.signers, it.signingParties, it.value as T) }
+        map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
 /** Filters the command list by type, parties and public keys all at once. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKey>?,
@@ -72,7 +72,7 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
         filter { it.value is T }.
         filter { if (signers == null) true else it.signers.containsAll(signers)}.
         filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
-        map { AuthenticatedObject<T>(it.signers, it.signingParties, it.value as T) }
+        map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
     select<T>().single()
@@ -99,7 +99,7 @@ fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority:
 fun List<AuthenticatedObject<CommandData>>.getTimestampByName(vararg names: String): TimestampCommand? {
     val timestampCmd = filter { it.value is TimestampCommand }.singleOrNull() ?: return null
     val tsaNames = timestampCmd.signingParties.map { it.name.toLowerCase() }
-    val acceptableNames = names.map { it.toLowerCase() }
+    val acceptableNames = names.map(String::toLowerCase)
     val acceptableNameFound = tsaNames.intersect(acceptableNames).isNotEmpty()
     if (acceptableNameFound)
         return timestampCmd.value as TimestampCommand

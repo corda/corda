@@ -75,7 +75,7 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, Amount(amount.quantity, currency))
         val takeChangeFrom = gathered.lastOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount<Issued<T>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
         } else {
             null
         }
@@ -139,7 +139,7 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
         val takeChangeFrom = gathered.firstOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
-            Amount<Issued<T>>(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
+            Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.issuanceDef)
         } else {
             null
         }
@@ -175,7 +175,7 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
                         outputs: List<S>,
                         commands: Collection<AuthenticatedObject<CommandData>>,
                         token: Issued<T>): Set<CommandData> {
-        val inputAmount: Amount<Issued<T>> = inputs.sumFungibleOrNull<T>() ?: throw IllegalArgumentException("there is at least one asset input for group ${token}")
+        val inputAmount: Amount<Issued<T>> = inputs.sumFungibleOrNull<T>() ?: throw IllegalArgumentException("there is at least one asset input for group $token")
         val deposit = token.issuer
         val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(token)
 

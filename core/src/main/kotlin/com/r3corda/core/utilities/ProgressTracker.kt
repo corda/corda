@@ -151,6 +151,7 @@ class ProgressTracker(vararg steps: Step) {
     var parent: ProgressTracker? = null
         private set
 
+    @Suppress("unused")   // TODO: Review by EOY2016 if this property is useful anywhere.
     /** Walks up the tree to find the top level tracker. If this is the top level tracker, returns 'this' */
     val topLevelTracker: ProgressTracker
         get() {

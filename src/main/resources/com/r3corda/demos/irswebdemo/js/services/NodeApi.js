@@ -15,7 +15,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                     curLoading[type] = false;
                     throw arg;
                 });
-            }
+            };
 
             let changeDateOnNode = (newDate) => {
                 const dateStr = formatDateForNode(newDate);
@@ -24,7 +24,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                     date = newDate;
                     return this.getDateModel(date);
                 });
-            }
+            };
 
             this.getDate = () => {
                 return load('date', $http.get('/api/irs/demodate')).then((resp) => {
@@ -32,7 +32,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                     date = new Date(parts[0], parts[1] - 1, parts[2]); // JS uses 0 based months
                     return this.getDateModel(date);
                 });
-            }
+            };
 
             this.updateDate = (type) => {
                 let newDate = date;
@@ -74,17 +74,17 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                     "month": date.getMonth() + 1, // JS uses 0 based months
                     "day": date.getDate()
                 };
-            }
+            };
 
             this.isLoading = () => {
                 return _.reduce(Object.keys(curLoading), (last, key) => {
                     return (last || curLoading[key]);
                 }, false);
-            }
+            };
 
             this.newDeal = () => {
                 return dealViewModel;
-            }
+            };
 
             this.createDeal = (deal) => {
                 return load('create-deal', $http.post('/api/irs/deals', deal.toJson()))

@@ -52,7 +52,6 @@ val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
 
 val DUMMY_KEY_1: KeyPair by lazy { generateKeyPair() }
 val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
-val DUMMY_KEY_3: KeyPair by lazy { generateKeyPair() }
 
 val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
 val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public

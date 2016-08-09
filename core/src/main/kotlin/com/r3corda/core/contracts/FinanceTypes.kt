@@ -71,7 +71,7 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
 
 fun <T> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
 fun <T> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
-fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) sumOrThrow() else Amount<T>(0, currency)
+fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -136,7 +136,7 @@ data class Tenor(val name: String) {
         return daysToMaturity.toInt()
     }
 
-    override fun toString(): String = "$name"
+    override fun toString(): String = name
 
     enum class TimeUnit(val code: String) {
         Day("D"), Week("W"), Month("M"), Year("Y")
@@ -237,6 +237,7 @@ enum class PaymentRule {
  * Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
  * that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).
  */
+@Suppress("unused")   // TODO: Revisit post-Vega and see if annualCompoundCount is still needed.
 enum class Frequency(val annualCompoundCount: Int) {
     Annual(1) {
         override fun offset(d: LocalDate, n: Long) = d.plusYears(1 * n)
@@ -265,6 +266,7 @@ enum class Frequency(val annualCompoundCount: Int) {
 }
 
 
+@Suppress("unused")     // This utility may be useful in future. TODO: Review before API stability guarantees in place.
 fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = accordingToCalendar.isWorkingDay(this)
 
 // TODO: Make Calendar data come from an oracle
@@ -274,7 +276,7 @@ fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = acc
  * typical feature of financial contracts, in which a business may not want a payment event to fall on a day when
  * no staff are around to handle problems.
  */
-open class BusinessCalendar private constructor(val calendars: Array<out String>, val holidayDates: List<LocalDate>) {
+open class BusinessCalendar private constructor(val holidayDates: List<LocalDate>) {
     class UnknownCalendar(name: String) : Exception("$name not found")
 
     companion object {
@@ -288,7 +290,7 @@ open class BusinessCalendar private constructor(val calendars: Array<out String>
         fun parseDateFromString(it: String) = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
         /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
-        fun getInstance(vararg calname: String) = BusinessCalendar(calname,
+        fun getInstance(vararg calname: String) = BusinessCalendar(
                 calname.flatMap { (TEST_CALENDAR_DATA[it] ?: throw UnknownCalendar(it)).split(",") }.
                         toSet().
                         map { parseDateFromString(it) }.
@@ -426,7 +428,7 @@ data class Commodity(val symbol: String,
                      val commodityCode: String = symbol,
                      val defaultFractionDigits: Int = 0) {
     companion object {
-        private val registry = mapOf<String, Commodity>(
+        private val registry = mapOf(
                 Pair("FCOJ", Commodity("FCOJ", "Frozen concentrated orange juice"))
         )
         fun getInstance(symbol: String): Commodity?

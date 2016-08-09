@@ -10,7 +10,7 @@ class ProtocolLogicRefTest {
     data class ParamType1(val value: Int)
     data class ParamType2(val value: String)
 
-    @Suppress("UNUSED_PARAMETER") // We will never use A or b
+    @Suppress("UNUSED_PARAMETER", "unused")    // Things are used via reflection.
     class KotlinProtocolLogic(A: ParamType1, b: ParamType2) : ProtocolLogic<Unit>() {
         constructor() : this(ParamType1(1), ParamType2("2"))
 
@@ -22,22 +22,18 @@ class ProtocolLogicRefTest {
 
         constructor(kotlinType: Int) : this(ParamType1(kotlinType), ParamType2("b"))
 
-        override fun call(): Unit {
-        }
-
+        override fun call() = Unit
         override val topic: String get() = throw UnsupportedOperationException()
     }
 
     class KotlinNoArgProtocolLogic : ProtocolLogic<Unit>() {
-        override fun call(): Unit {
-        }
+        override fun call() = Unit
         override val topic: String get() = throw UnsupportedOperationException()
     }
 
     @Suppress("UNUSED_PARAMETER") // We will never use A or b
     class NotWhiteListedKotlinProtocolLogic(A: Int, b: String) : ProtocolLogic<Unit>() {
-        override fun call(): Unit {
-        }
+        override fun call() = Unit
         override val topic: String get() = throw UnsupportedOperationException()
     }
 
@@ -99,5 +95,4 @@ class ProtocolLogicRefTest {
         val args = mapOf(Pair("kotlinType", 3))
         factory.createKotlin(KotlinProtocolLogic::class.java, args)
     }
-
 }

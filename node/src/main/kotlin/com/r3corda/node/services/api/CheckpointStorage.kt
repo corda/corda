@@ -3,7 +3,6 @@ package com.r3corda.node.services.api
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.services.statemachine.FiberRequest
 import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
-import com.r3corda.node.services.statemachine.StateMachineManager
 
 /**
  * Thread-safe storage of fiber checkpoints.

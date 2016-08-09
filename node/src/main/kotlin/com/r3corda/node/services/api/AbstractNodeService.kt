@@ -2,7 +2,6 @@ package com.r3corda.node.services.api
 
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.MessagingService
-import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.serialization.SingletonSerializeAsToken

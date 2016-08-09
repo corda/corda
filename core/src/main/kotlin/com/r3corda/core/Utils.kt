@@ -20,14 +20,18 @@ import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
+@Suppress("unused")   // It's here for completeness
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
+@Suppress("unused")   // It's here for completeness
 val Int.minutes: Duration get() = Duration.ofMinutes(this.toLong())
 val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
 
-val Int.bd: BigDecimal get() = BigDecimal(this)
-val Double.bd: BigDecimal get() = BigDecimal(this)
-val String.bd: BigDecimal get() = BigDecimal(this)
-val Long.bd: BigDecimal get() = BigDecimal(this)
+
+// TODO: Review by EOY2016 if we ever found these utilities helpful.
+@Suppress("unused") val Int.bd: BigDecimal get() = BigDecimal(this)
+@Suppress("unused") val Double.bd: BigDecimal get() = BigDecimal(this)
+@Suppress("unused") val String.bd: BigDecimal get() = BigDecimal(this)
+@Suppress("unused") val Long.bd: BigDecimal get() = BigDecimal(this)
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
@@ -149,8 +153,7 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
  *
  * val ii = state.locked { i }
  */
-class ThreadBox<out T>(content: T, val lock: ReentrantLock = ReentrantLock()) {
-    val content = content
+class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()) {
     inline fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
     inline fun <R> alreadyLocked(body: T.() -> R): R {
         check(lock.isHeldByCurrentThread, { "Expected $lock to already be locked." })
