@@ -75,6 +75,12 @@ no staff are around to handle problems.</p>
 </tr>
 <tr>
 <td>
+<a href="-commodity/index.html">Commodity</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Commodity</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-contract/index.html">Contract</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">Contract</span></code><p>Implemented by a program that implements business logic on the shared ledger. All participants run this code for
@@ -246,7 +252,7 @@ with the commands from the wire, and verified/looked up.</p>
 <td>
 <a href="-multilateral-nettable-state/index.html">MultilateralNettableState</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">MultilateralNettableState</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code><p>Interface for state objects that support being netted with other state objects.</p>
+<code><span class="keyword">interface </span><span class="identifier">MultilateralNettableState</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code><p>Interface for state objects that support being netted with other state objects.</p>
 </td>
 </tr>
 <tr>
@@ -383,26 +389,10 @@ simplify verification logic in contracts.</p>
 </tr>
 <tr>
 <td>
-<a href="-transaction-for-verification/index.html">TransactionForVerification</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TransactionForVerification</span></code><p>A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="-transaction-graph-search/index.html">TransactionGraphSearch</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">TransactionGraphSearch</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Callable.html"><span class="identifier">Callable</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Given a map of transaction id to <a href="-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
 the starting point down in order to find transactions that match the given query criteria.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-transaction-group/index.html">TransactionGroup</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">TransactionGroup</span></code><p>A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
-verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
-this subgraph does not contain conflicts and is accepted by the involved contracts.</p>
 </td>
 </tr>
 <tr>
@@ -523,6 +513,12 @@ This is the definitive state that is stored on the ledger and used in transactio
 </tr>
 <tr>
 <td>
+<a href="-f-c-o-j.html">FCOJ</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">FCOJ</span><span class="symbol">: </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="-g-b-p.html">GBP</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">GBP</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a></code></td>
@@ -553,6 +549,12 @@ This is the definitive state that is stored on the ledger and used in transactio
 </tr>
 <tr>
 <td>
+<a href="-f-c-o-j.html">FCOJ</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">FCOJ</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$FCOJ(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="-p-o-u-n-d-s.html">POUNDS</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">POUNDS</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$POUNDS(kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
@@ -568,6 +570,12 @@ This is the definitive state that is stored on the ledger and used in transactio
 <a href="calculate-days-between.html">calculateDaysBetween</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">calculateDaysBetween</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/startDate">startDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/endDate">endDate</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/dcbYear">dcbYear</span><span class="symbol">:</span>&nbsp;<a href="-day-count-basis-year/index.html"><span class="identifier">DayCountBasisYear</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$calculateDaysBetween(java.time.LocalDate, java.time.LocalDate, com.r3corda.core.contracts.DayCountBasisYear, com.r3corda.core.contracts.DayCountBasisDay)/dcbDay">dcbDay</span><span class="symbol">:</span>&nbsp;<a href="-day-count-basis-day/index.html"><span class="identifier">DayCountBasisDay</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="commodity.html">commodity</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">commodity</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$commodity(kotlin.String)/code">code</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -587,12 +595,14 @@ This is the definitive state that is stored on the ledger and used in transactio
 <td>
 <a href="issued by.html">issued by</a></td>
 <td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issued by(com.r3corda.core.contracts.Commodity, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><br/>
 <code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issued by</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issued by(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="issued-by.html">issuedBy</a></td>
 <td>
+<code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issuedBy(com.r3corda.core.contracts.Commodity, com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><br/>
 <code><span class="keyword">infix</span> <span class="keyword">fun </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">issuedBy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$issuedBy(com.r3corda.core.contracts.Amount((java.util.Currency)), com.r3corda.core.contracts.PartyAndReference)/deposit">deposit</span><span class="symbol">:</span>&nbsp;<a href="-party-and-reference/index.html"><span class="identifier">PartyAndReference</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
@@ -605,7 +615,10 @@ This is the definitive state that is stored on the ledger and used in transactio
 <td>
 <a href="to-ledger-transaction.html">toLedgerTransaction</a></td>
 <td>
-<code><span class="keyword">fun </span><a href="-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">.</span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$toLedgerTransaction(com.r3corda.core.contracts.WireTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$toLedgerTransaction(com.r3corda.core.contracts.WireTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/attachmentStorage">attachmentStorage</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Looks up identities and attachments from storage to generate a <a href="-ledger-transaction/index.html">LedgerTransaction</a>.</p>
+<code><span class="keyword">fun </span><a href="-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">.</span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$toLedgerTransaction(com.r3corda.core.contracts.WireTransaction, com.r3corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Looks up identities and attachments from storage to generate a <a href="-ledger-transaction/index.html">LedgerTransaction</a>. A transaction is expected to
+have been fully resolved using the resolution protocol by this point.</p>
+<code><span class="keyword">fun </span><a href="-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">.</span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$toLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Calls <a href="#">verify</a> to check all required signatures are present, and then calls <a href="to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a>
+with the passed in <a href="../com.r3corda.core.node/-service-hub/index.html">ServiceHub</a> to resolve the dependencies, returning an unverified LedgerTransaction.</p>
 </td>
 </tr>
 <tr>
@@ -614,14 +627,6 @@ This is the definitive state that is stored on the ledger and used in transactio
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a></code><br/>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyMoveCommand</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-ownable-state/index.html"><span class="identifier">OwnableState</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyMoveCommand(kotlin.collections.List((com.r3corda.core.contracts.OwnableState)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="-move-command/index.html"><span class="identifier">MoveCommand</span></a></code><p>Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="verify-to-ledger-transaction.html">verifyToLedgerTransaction</a></td>
-<td>
-<code><span class="keyword">fun </span><a href="-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">.</span><span class="identifier">verifyToLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyToLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyToLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/attachmentStorage">attachmentStorage</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Calls <a href="#">verify</a> to check all required signatures are present, and then uses the passed <a href="../com.r3corda.core.node.services/-identity-service/index.html">IdentityService</a> to call
-<a href="to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a> to look up well known identities from pubkeys.</p>
 </td>
 </tr>
 <tr>
@@ -636,6 +641,15 @@ This is the definitive state that is stored on the ledger and used in transactio
 <a href="with-notary.html">withNotary</a></td>
 <td>
 <code><span class="keyword">infix</span> <span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">withNotary</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$withNotary(com.r3corda.core.contracts.withNotary.T, com.r3corda.core.crypto.Party)/newNotary">newNotary</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="without-issuer.html">withoutIssuer</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">withoutIssuer</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Strips the issuer and returns an <a href="-amount/index.html">Amount</a> of the raw token directly. This is useful when you are mixing code that
+cares about specific issuers with code that will accept any, or which is imposing issuer constraints via some
+other mechanism and the additional type safety is not wanted.</p>
+</td>
 </tr>
 </tbody>
 </table>

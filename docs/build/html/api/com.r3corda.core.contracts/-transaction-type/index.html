@@ -44,7 +44,7 @@ any contract code, it just checks that the states are unmodified apart from the 
 <td>
 <a href="get-required-signers.html">getRequiredSigners</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getRequiredSigners</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$getRequiredSigners(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Return the list of public keys that that require signatures for the transaction type.
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">getRequiredSigners</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$getRequiredSigners(com.r3corda.core.contracts.LedgerTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Return the list of public keys that that require signatures for the transaction type.
 Note: the notary key is checked separately for all transactions and need not be included.</p>
 </td>
 </tr>
@@ -58,21 +58,21 @@ Note: the notary key is checked separately for all transactions and need not be 
 <td>
 <a href="verify.html">verify</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$verify(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Check that the transaction is valid based on:</p>
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$verify(com.r3corda.core.contracts.LedgerTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Check that the transaction is valid based on:</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="verify-signers.html">verifySigners</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">verifySigners</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$verifySigners(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Check that the list of signers includes all the necessary keys</p>
+<code><span class="keyword">fun </span><span class="identifier">verifySigners</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$verifySigners(com.r3corda.core.contracts.LedgerTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Check that the list of signers includes all the necessary keys</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="verify-transaction.html">verifyTransaction</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$verifyTransaction(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Implement type specific transaction validation logic</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType$verifyTransaction(com.r3corda.core.contracts.LedgerTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Implement type specific transaction validation logic</p>
 </td>
 </tr>
 </tbody>

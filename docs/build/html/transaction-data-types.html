@@ -103,7 +103,11 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -236,6 +240,27 @@ in place of the attachments themselves (see also <a class="reference internal" h
 <code class="docutils literal"><span class="pre">LedgerTransaction</span></code>, which involves verifying the signatures and associating them to the relevant command(s), and
 resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
 <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> type.</p>
+<p>When constructing a new transaction from scratch, you use <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>, which is a mutable transaction that
+can be signed once modification of the internals is complete. It is typical for contract classes to expose helper
+methods that can contribute to a <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>.</p>
+<p>Here&#8217;s an example of building a transaction that creates an issuance of bananas (note that bananas are not a real
+contract type in the library):</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">notaryToUse</span><span class="p">:</span> <span class="n">Party</span> <span class="p">=</span> <span class="p">...</span>
+<span class="k">val</span> <span class="py">txb</span> <span class="p">=</span> <span class="n">TransactionBuilder</span><span class="p">(</span><span class="n">notary</span> <span class="p">=</span> <span class="n">notaryToUse</span><span class="p">).</span><span class="n">withItems</span><span class="p">(</span><span class="n">BananaState</span><span class="p">(</span><span class="n">Amount</span><span class="p">(</span><span class="m">20</span><span class="p">,</span> <span class="n">Bananas</span><span class="p">),</span> <span class="n">fromCountry</span> <span class="p">=</span> <span class="s">&quot;Elbonia&quot;</span><span class="p">))</span>
+<span class="n">txb</span><span class="p">.</span><span class="n">signWith</span><span class="p">(</span><span class="n">myKey</span><span class="p">)</span>
+<span class="n">txb</span><span class="p">.</span><span class="n">setTime</span><span class="p">(</span><span class="n">Instant</span><span class="p">.</span><span class="n">now</span><span class="p">(),</span> <span class="n">notaryToUse</span><span class="p">,</span> <span class="m">30.</span><span class="n">seconds</span><span class="p">)</span>
+<span class="c1">// We must disable the check for sufficient signatures, because this transaction is not yet notarised.</span>
+<span class="k">val</span> <span class="py">stx</span> <span class="p">=</span> <span class="n">txb</span><span class="p">.</span><span class="n">toSignedTransaction</span><span class="p">(</span><span class="n">checkSufficientSignatures</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
+<span class="c1">// Alternatively, let&#39;s just check it verifies pretending it was fully signed. To do this, we get</span>
+<span class="c1">// a WireTransaction, which is what the SignedTransaction wraps. Thus by verifying that directly we</span>
+<span class="c1">// skip signature checking.</span>
+<span class="n">txb</span><span class="p">.</span><span class="n">toWireTransaction</span><span class="p">().</span><span class="n">toLedgerTransaction</span><span class="p">(</span><span class="n">services</span><span class="p">).</span><span class="n">verify</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>In a unit test, you would typically use a freshly created <code class="docutils literal"><span class="pre">MockServices</span></code> object, or more realistically, you would
+write your tests using the <a class="reference internal" href="tutorial-test-dsl.html"><span class="doc">domain specific language for writing tests</span></a>.</p>
 </div>
 <div class="section" id="party-and-publickey">
 <h2>Party and PublicKey<a class="headerlink" href="#party-and-publickey" title="Permalink to this headline">¶</a></h2>

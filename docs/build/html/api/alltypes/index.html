@@ -147,12 +147,24 @@ properties loaded from the attachments.  And perhaps the authenticated user for 
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.messaging/-artemis-messaging-service/index.html">com.r3corda.node.services.messaging.ArtemisMessagingService</a></td>
+<a href="../com.r3corda.node.services.messaging/-artemis-messaging-client/index.html">com.r3corda.node.services.messaging.ArtemisMessagingClient</a></td>
 <td>
 <p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
-with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
-as well for interop.</p>
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.messaging/-artemis-messaging-component/index.html">com.r3corda.node.services.messaging.ArtemisMessagingComponent</a></td>
+<td>
+<p>The base class for Artemis services that defines shared data structures and transport configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">com.r3corda.node.services.messaging.ArtemisMessagingServer</a></td>
+<td>
+<p>This class configures and manages an Apache Artemis message queue broker.</p>
 </td>
 </tr>
 <tr>
@@ -357,6 +369,23 @@ that delegates to the supplied list of clauses.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts/-commodity/index.html">com.r3corda.core.contracts.Commodity</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.asset/-commodity-contract/index.html">com.r3corda.contracts.asset.CommodityContract</a></td>
+<td>
+<p>A commodity contract represents an amount of some commodity, tracked on a distributed ledger. The design of this
+contract is intentionally similar to the <a href="../com.r3corda.contracts.asset/-cash/index.html">Cash</a> contract, and the same commands (issue, move, exit) apply, the
+differences are in representation of the underlying commodity. Issuer in this context means the party who has the
+commodity, or is otherwise responsible for delivering the commodity on demand, and the deposit reference is use for
+internal accounting by the issuer (it might be, for example, a warehouse and/or location within a warehouse).</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.servlets/-config/index.html">com.r3corda.node.servlets.Config</a></td>
 <td>
 <p>Primary purpose is to install Kotlin extensions for Jackson ObjectMapper so data classes work
@@ -505,6 +534,16 @@ implementation of general protocols that manipulate many agreement types.</p>
 <p>A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
 signature. It isnt used currently, but experience from Bitcoin suggests such a feature is useful, especially when
 building partially signed transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.protocols/-direct-request-message/index.html">com.r3corda.protocols.DirectRequestMessage</a></td>
+<td>
+<p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
+use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
+in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
+started on).</p>
 </td>
 </tr>
 <tr>
@@ -720,6 +759,12 @@ If the rate is null returns a zero payment. // TODO: Is this the desired behavio
 <td>
 <p>Frequency at which an event occurs - the enumerator also casts to an integer specifying the number of times per year
 that would divide into (eg annually = 1, semiannual = 2, monthly = 12 etc).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.config/-full-node-configuration/index.html">com.r3corda.node.services.config.FullNodeConfiguration</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -941,6 +986,12 @@ quantifiable with integer quantities.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.crypto/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package com.r3corda.core.crypto)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core/kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a> (extensions in package com.r3corda.core)</td>
 <td>
 </td>
@@ -1150,6 +1201,14 @@ Components that do IO are either swapped out for mocks, or pointed to a <a href=
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.node.services.testing/-mock-services/index.html">com.r3corda.core.node.services.testing.MockServices</a></td>
+<td>
+<p>A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
+building chains of transactions and verifying them. It isnt sufficient for testing protocols however.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node.services.testing/-mock-storage-service/index.html">com.r3corda.core.node.services.testing.MockStorageService</a></td>
 <td>
 </td>
@@ -1200,6 +1259,12 @@ Used in cases where all parties (or their proxies) are signing, such as central 
 <td>
 <p>An abstract class with helper methods for a type of Clock that might have its concept of "now"
 adjusted externally.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.config/-name-service-config/index.html">com.r3corda.node.services.config.NameServiceConfig</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1420,12 +1485,29 @@ must point to the same notary.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.crypto/-null-signature.html">com.r3corda.core.crypto.NullSignature</a></td>
+<td>
+<p>A signature with a key and value of zero. Useful when you want a signature object that you know wont ever be used.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.contracts.asset/-obligation/index.html">com.r3corda.contracts.asset.Obligation</a></td>
 <td>
 <p>An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
 <a href="../com.r3corda.contracts.asset/-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
 multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
 to be netted/merged, with settlement only for any remainder amount.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.contracts.asset/-on-ledger-asset/index.html">com.r3corda.contracts.asset.OnLedgerAsset</a></td>
+<td>
+<p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour (a blend of
+issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in the same
+transaction.</p>
 </td>
 </tr>
 <tr>
@@ -1450,6 +1532,12 @@ be looked up both in ledger{..} and transaction{..} blocks.</p>
 <a href="../com.r3corda.core.contracts/-ownable-state/index.html">com.r3corda.core.contracts.OwnableState</a></td>
 <td>
 <p>A contract state that can have a single owner.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node/-params-spec/index.html">com.r3corda.node.ParamsSpec</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1658,14 +1746,6 @@ for each step.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.utilities/-recording-map/index.html">com.r3corda.core.utilities.RecordingMap</a></td>
-<td>
-<p>A RecordingMap wraps a regular Map&lt;K, V&gt; and records the sequence of gets and puts to it. This is useful in
-white box unit tests to ensure that code is accessing a data store as much as you expect.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.contracts/-reference-rate/index.html">com.r3corda.contracts.ReferenceRate</a></td>
 <td>
 <p>So a reference rate is a rate that takes its value from a source at a given date
@@ -1696,9 +1776,9 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 <td>
 <a href="../com.r3corda.protocols/-resolve-transactions-protocol/index.html">com.r3corda.protocols.ResolveTransactionsProtocol</a></td>
 <td>
-<p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
-their dependencies, and verifies them together using a single <a href="../com.r3corda.core.contracts/-transaction-group/index.html">TransactionGroup</a>. If no exception is thrown, then
-all the transactions have been successfully verified and inserted into the local database.</p>
+<p>This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
+dependencies. Once a transaction is checked its inserted into local storage so it can be relayed and wont be
+checked again.</p>
 </td>
 </tr>
 <tr>
@@ -1961,7 +2041,7 @@ transaction defined the state and where in that transaction it was.</p>
 <td>
 <a href="../com.r3corda.protocols/-state-replacement-refused/index.html">com.r3corda.protocols.StateReplacementRefused</a></td>
 <td>
-<p>Thrown when a participant refuses proposed the state replacement</p>
+<p>Thrown when a participant refuses the proposed state replacement</p>
 </td>
 </tr>
 <tr>
@@ -2131,26 +2211,10 @@ simplify verification logic in contracts.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts/-transaction-for-verification/index.html">com.r3corda.core.contracts.TransactionForVerification</a></td>
-<td>
-<p>A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.contracts/-transaction-graph-search/index.html">com.r3corda.core.contracts.TransactionGraphSearch</a></td>
 <td>
 <p>Given a map of transaction id to <a href="../com.r3corda.core.contracts/-signed-transaction/index.html">SignedTransaction</a>, performs a breadth first search of the dependency graph from
 the starting point down in order to find transactions that match the given query criteria.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts/-transaction-group/index.html">com.r3corda.core.contracts.TransactionGroup</a></td>
-<td>
-<p>A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
-verified. Successful verification does not imply the non-existence of other conflicting transactions: simply that
-this subgraph does not contain conflicts and is accepted by the involved contracts.</p>
 </td>
 </tr>
 <tr>

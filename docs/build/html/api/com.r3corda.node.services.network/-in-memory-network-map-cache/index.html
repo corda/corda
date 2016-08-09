@@ -18,7 +18,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">InMemoryNetworkMapCache</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$<init>(com.r3corda.node.services.api.MessagingServiceInternal)/netInternal">netInternal</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a><span class="symbol">?</span><span class="symbol">)</span></code><p>Extremely simple in-memory cache of the network map.</p>
+<code><span class="identifier">InMemoryNetworkMapCache</span><span class="symbol">(</span><span class="symbol">)</span></code><p>Extremely simple in-memory cache of the network map.</p>
 </td>
 </tr>
 </tbody>
@@ -28,9 +28,10 @@
 <tbody>
 <tr>
 <td>
-<a href="net-internal.html">netInternal</a></td>
+<a href="changed.html">changed</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">netInternal</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a><span class="symbol">?</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">changed</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-network-map-cache/-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span></code><p>Tracks changes to the network map cache</p>
+</td>
 </tr>
 <tr>
 <td>

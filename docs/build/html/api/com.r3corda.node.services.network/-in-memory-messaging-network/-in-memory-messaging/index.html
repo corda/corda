@@ -25,12 +25,6 @@ when all entities on the network are being simulated in-process.</p>
 <td>
 <code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">Handler</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code></td>
 </tr>
-<tr>
-<td>
-<a href="-inner-state/index.html">InnerState</a></td>
-<td>
-<code><span class="keyword">inner</span> <span class="keyword">class </span><span class="identifier">InnerState</span></code></td>
-</tr>
 </tbody>
 </table>
 <h3>Constructors</h3>
@@ -52,28 +46,10 @@ when all entities on the network are being simulated in-process.</p>
 <tbody>
 <tr>
 <td>
-<a href="background-thread.html">backgroundThread</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">backgroundThread</span><span class="symbol">: </span><span class="identifier">Nothing</span><span class="symbol">?</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="my-address.html">myAddress</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">myAddress</span><span class="symbol">: </span><a href="../../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code><p>Returns an address that refers to this node.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="running.html">running</a></td>
-<td>
-<code><span class="keyword">var </span><span class="identifier">running</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="state.html">state</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">state</span><span class="symbol">: </span><a href="../../../com.r3corda.core/-thread-box/index.html"><span class="identifier">ThreadBox</span></a><span class="symbol">&lt;</span><a href="-inner-state/index.html"><span class="identifier">InnerState</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -106,12 +82,6 @@ given executor.</p>
 is true, waits until one has been provided on a different thread via send. If block is false, the return
 result indicates whether a message was delivered or not.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="register-trusted-address.html">registerTrustedAddress</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">registerTrustedAddress</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryMessagingNetwork.InMemoryMessaging$registerTrustedAddress(com.r3corda.core.messaging.SingleMessageRecipient)/address">address</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>

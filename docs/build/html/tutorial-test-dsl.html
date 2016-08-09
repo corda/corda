@@ -95,7 +95,11 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -193,13 +197,13 @@ verifying their correctness.</p>
 </div>
 </div>
 <p>The DSL keyword <code class="docutils literal"><span class="pre">ledger</span></code> takes a closure that can build up several transactions and may verify their overall
-correctness.</p>
+correctness. A ledger is effectively a fresh world with no pre-existing transactions or services within it.</p>
 <p>Let&#8217;s add a Cash transaction:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span>@Test
 fun simpleCashDoesntCompile() {
     val inState = Cash.State(
-            amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+            amount = 1000.DOLLARS `issued by` DUMMY_CASH_ISSUER,
             owner = DUMMY_PUBKEY_1
     )
     ledger {
@@ -213,7 +217,7 @@ fun simpleCashDoesntCompile() {
 <div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Test</span>
 <span class="kd">public</span> <span class="kt">void</span> <span class="nf">simpleCashDoesntCompile</span><span class="o">()</span> <span class="o">{</span>
     <span class="n">Cash</span><span class="o">.</span><span class="na">State</span> <span class="n">inState</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Cash</span><span class="o">.</span><span class="na">State</span><span class="o">(</span>
-            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getMEGA_CORP</span><span class="o">().</span><span class="na">ref</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span><span class="mi">1</span><span class="o">)),</span>
+            <span class="n">issuedBy</span><span class="o">(</span><span class="n">DOLLARS</span><span class="o">(</span><span class="mi">1000</span><span class="o">),</span> <span class="n">getDUMMY_CASH_ISSUER</span><span class="o">()),</span>
             <span class="n">getDUMMY_PUBKEY_1</span><span class="o">()</span>
     <span class="o">);</span>
     <span class="n">ledger</span><span class="o">(</span><span class="n">l</span> <span class="o">-&gt;</span> <span class="o">{</span>
@@ -276,8 +280,13 @@ fun simpleCash() {
 </div>
 </div>
 <p>The code finally compiles. When run, it produces the following error:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span>com.r3corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [0101] at issuer MegaCorp the amounts balance
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>com.r3corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [01] at issuer Snake Oil Issuer the amounts balance
 </pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The reference here to the &#8216;Snake Oil Issuer&#8217; is because we are using the pre-canned <code class="docutils literal"><span class="pre">DUMMY_CASH_ISSUER</span></code>
+identity as the issuer of our cash.</p>
 </div>
 <p>The transaction verification failed, because the sum of inputs does not equal the sum of outputs. We can specify that
 this is intended behaviour by changing <code class="docutils literal"><span class="pre">this.verifies()</span></code> to <code class="docutils literal"><span class="pre">this</span> <span class="pre">`fails</span> <span class="pre">with`</span> <span class="pre">&quot;the</span> <span class="pre">amounts</span> <span class="pre">balance&quot;</span></code>:</p>

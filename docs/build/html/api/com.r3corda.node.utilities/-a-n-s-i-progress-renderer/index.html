@@ -11,7 +11,9 @@
 <p>Knows how to render a <a href="../../com.r3corda.core.utilities/-progress-tracker/index.html">ProgressTracker</a> to the terminal using coloured, emoji-fied output. Useful when writing small
 command line tools, demos, tests etc. Just set the <a href="progress-tracker.html">progressTracker</a> field and it will go ahead and start drawing
 if the terminal supports it. Otherwise it just prints out the name of the step whenever it changes.</p>
-<p>TODO: Thread safety</p>
+<p>When a progress tracker is on the screen, it takes over the bottom part and reconfigures logging so that, assuming
+1 log event == 1 line, the progress tracker is always glued to the bottom and logging scrolls above it.</p>
+<p>TODO: More thread safety</p>
 <br/>
 <br/>
 <br/>

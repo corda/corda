@@ -59,13 +59,6 @@
 <tbody>
 <tr>
 <td>
-<a href="get-missing-signatures.html">getMissingSignatures</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">getMissingSignatures</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Returns the set of missing signatures - a signature must be present for each signer public key.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="plus.html">plus</a></td>
 <td>
 <code><span class="keyword">operator</span> <span class="keyword">fun </span><span class="identifier">plus</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$plus(com.r3corda.core.crypto.DigitalSignature.WithKey)/sig">sig</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">SignedTransaction</span></code><p>Alias for <a href="with-additional-signature.html">withAdditionalSignature</a> to let you use Kotlin operator overloading.</p>
@@ -73,20 +66,11 @@
 </tr>
 <tr>
 <td>
-<a href="verify.html">verify</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$verify(kotlin.Boolean)/throwIfSignaturesAreMissing">throwIfSignaturesAreMissing</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;true<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
-the set of pubkeys in the signers list. If any signatures are missing, either throws an exception (by default) or
-returns the list of keys that have missing signatures, depending on the parameter.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="verify-signatures.html">verifySignatures</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">verifySignatures</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
-to ensure there are no missing signatures: use verify() to do that. This weaker version can be useful for
-checking a partially signed transaction being prepared by multiple co-operating parties.</p>
+<code><span class="keyword">fun </span><span class="identifier">verifySignatures</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.SignedTransaction$verifySignatures(kotlin.Boolean)/throwIfSignaturesAreMissing">throwIfSignaturesAreMissing</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;true<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
+the set of pubkeys in the signers list. If any signatures are missing, either throws an exception (by default) or
+returns the list of keys that have missing signatures, depending on the parameter.</p>
 </td>
 </tr>
 <tr>
@@ -109,10 +93,10 @@ checking a partially signed transaction being prepared by multiple co-operating 
 <tbody>
 <tr>
 <td>
-<a href="../verify-to-ledger-transaction.html">verifyToLedgerTransaction</a></td>
+<a href="../to-ledger-transaction.html">toLedgerTransaction</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">SignedTransaction</span><span class="symbol">.</span><span class="identifier">verifyToLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$verifyToLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/identityService">identityService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts$verifyToLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.services.IdentityService, com.r3corda.core.node.services.AttachmentStorage)/attachmentStorage">attachmentStorage</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-attachment-storage/index.html"><span class="identifier">AttachmentStorage</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Calls <a href="#">verify</a> to check all required signatures are present, and then uses the passed <a href="../../com.r3corda.core.node.services/-identity-service/index.html">IdentityService</a> to call
-<a href="../to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a> to look up well known identities from pubkeys.</p>
+<code><span class="keyword">fun </span><span class="identifier">SignedTransaction</span><span class="symbol">.</span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts$toLedgerTransaction(com.r3corda.core.contracts.SignedTransaction, com.r3corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code><p>Calls <a href="#">verify</a> to check all required signatures are present, and then calls <a href="../to-ledger-transaction.html">WireTransaction.toLedgerTransaction</a>
+with the passed in <a href="../../com.r3corda.core.node/-service-hub/index.html">ServiceHub</a> to resolve the dependencies, returning an unverified LedgerTransaction.</p>
 </td>
 </tr>
 </tbody>

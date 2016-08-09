@@ -1,0 +1,70 @@
+<HTML>
+<HEAD>
+<title>CommodityContract.Clauses.Issue - </title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../../index.html">CommodityContract</a>&nbsp;/&nbsp;<a href="../index.html">Clauses</a>&nbsp;/&nbsp;<a href=".">Issue</a><br/>
+<br/>
+<h1>Issue</h1>
+<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.contracts.clause/-abstract-issue/index.html"><span class="identifier">AbstractIssue</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><br/>
+<p>Standard issue clause, specialised to match the commodity issue command.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Issue</span><span class="symbol">(</span><span class="symbol">)</span></code><p>Standard issue clause, specialised to match the commodity issue command.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="required-commands.html">requiredCommands</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Classes for commands which must ALL be present in transaction for this clause to be triggered</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../../../com.r3corda.contracts.clause/-abstract-issue/if-matched.html">ifMatched</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ifMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is not matches</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../../com.r3corda.contracts.clause/-abstract-issue/if-not-matched.html">ifNotMatched</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ifNotMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is matched</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../../../com.r3corda.contracts.clause/-abstract-issue/sum.html">sum</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sum</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../../com.r3corda.contracts.clause/-abstract-issue/sum-or-zero.html">sumOrZero</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">sumOrZero</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="symbol">(</span><a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

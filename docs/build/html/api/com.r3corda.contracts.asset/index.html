@@ -14,10 +14,21 @@
 <td>
 <a href="-cash/index.html">Cash</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
+<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-on-ledger-asset/index.html"><span class="identifier">OnLedgerAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
 input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
 (a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
 the same transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-commodity-contract/index.html">CommodityContract</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CommodityContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-on-ledger-asset/index.html"><span class="identifier">OnLedgerAsset</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">,</span>&nbsp;<a href="-commodity-contract/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code><p>A commodity contract represents an amount of some commodity, tracked on a distributed ledger. The design of this
+contract is intentionally similar to the <a href="-cash/index.html">Cash</a> contract, and the same commands (issue, move, exit) apply, the
+differences are in representation of the underlying commodity. Issuer in this context means the party who has the
+commodity, or is otherwise responsible for delivering the commodity on demand, and the deposit reference is use for
+internal accounting by the issuer (it might be, for example, a warehouse and/or location within a warehouse).</p>
 </td>
 </tr>
 <tr>
@@ -40,6 +51,16 @@ container), shares of the same class in a specific company are fungible and coun
 <a href="-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
 multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
 to be netted/merged, with settlement only for any remainder amount.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-on-ledger-asset/index.html">OnLedgerAsset</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">OnLedgerAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour (a blend of
+issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in the same
+transaction.</p>
 </td>
 </tr>
 </tbody>
@@ -81,6 +102,12 @@ to be netted/merged, with settlement only for any remainder amount.</p>
 <a href="-c-a-s-h_-p-r-o-g-r-a-m_-i-d.html">CASH_PROGRAM_ID</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">CASH_PROGRAM_ID</span><span class="symbol">: </span><a href="-cash/index.html"><span class="identifier">Cash</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-c-o-m-m-o-d-i-t-y_-p-r-o-g-r-a-m_-i-d.html">COMMODITY_PROGRAM_ID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">COMMODITY_PROGRAM_ID</span><span class="symbol">: </span><a href="-commodity-contract/index.html"><span class="identifier">CommodityContract</span></a></code></td>
 </tr>
 <tr>
 <td>

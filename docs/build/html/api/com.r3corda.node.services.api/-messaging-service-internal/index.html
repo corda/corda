@@ -27,12 +27,6 @@
 <tbody>
 <tr>
 <td>
-<a href="register-trusted-address.html">registerTrustedAddress</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">registerTrustedAddress</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.MessagingServiceInternal$registerTrustedAddress(com.r3corda.core.messaging.SingleMessageRecipient)/address">address</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="stop.html">stop</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
@@ -110,12 +104,10 @@ doesnt take the registration object, unlike the callback to <a href="../../com.r
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-client/index.html">ArtemisMessagingClient</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><span class="identifier">MessagingServiceInternal</span></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
-with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
-as well for interop.</p>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><span class="identifier">MessagingServiceInternal</span></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
 </td>
 </tr>
 <tr>

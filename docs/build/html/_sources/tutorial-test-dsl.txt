@@ -43,7 +43,7 @@ We start with the empty ledger:
         }
 
 The DSL keyword ``ledger`` takes a closure that can build up several transactions and may verify their overall
-correctness.
+correctness. A ledger is effectively a fresh world with no pre-existing transactions or services within it.
 
 Let's add a Cash transaction:
 
@@ -54,7 +54,7 @@ Let's add a Cash transaction:
         @Test
         fun simpleCashDoesntCompile() {
             val inState = Cash.State(
-                    amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
+                    amount = 1000.DOLLARS `issued by` DUMMY_CASH_ISSUER,
                     owner = DUMMY_PUBKEY_1
             )
             ledger {
@@ -69,7 +69,7 @@ Let's add a Cash transaction:
         @Test
         public void simpleCashDoesntCompile() {
             Cash.State inState = new Cash.State(
-                    issuedBy(DOLLARS(1000), getMEGA_CORP().ref((byte)1, (byte)1)),
+                    issuedBy(DOLLARS(1000), getDUMMY_CASH_ISSUER()),
                     getDUMMY_PUBKEY_1()
             );
             ledger(l -> {
@@ -139,7 +139,10 @@ last line of ``transaction``:
 
 The code finally compiles. When run, it produces the following error::
 
-    com.r3corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [0101] at issuer MegaCorp the amounts balance
+    com.r3corda.core.contracts.TransactionVerificationException$ContractRejection: java.lang.IllegalArgumentException: Failed requirement: for deposit [01] at issuer Snake Oil Issuer the amounts balance
+
+.. note:: The reference here to the 'Snake Oil Issuer' is because we are using the pre-canned ``DUMMY_CASH_ISSUER``
+    identity as the issuer of our cash.
 
 The transaction verification failed, because the sum of inputs does not equal the sum of outputs. We can specify that
 this is intended behaviour by changing ``this.verifies()`` to ``this `fails with` "the amounts balance"``:

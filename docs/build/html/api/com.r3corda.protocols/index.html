@@ -21,6 +21,16 @@ protocols.</p>
 </tr>
 <tr>
 <td>
+<a href="-direct-request-message/index.html">DirectRequestMessage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">DirectRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code><p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
+use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
+in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
+started on).</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-fetch-attachments-protocol/index.html">FetchAttachmentsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FetchAttachmentsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-attachment/index.html"><span class="identifier">Attachment</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">ByteArray</span><span class="symbol">&gt;</span></code><p>Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
@@ -81,9 +91,9 @@ for each step.</p>
 <td>
 <a href="-resolve-transactions-protocol/index.html">ResolveTransactionsProtocol</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>This protocol fetches each transaction identified by the given hashes from either disk or network, along with all
-their dependencies, and verifies them together using a single <a href="../com.r3corda.core.contracts/-transaction-group/index.html">TransactionGroup</a>. If no exception is thrown, then
-all the transactions have been successfully verified and inserted into the local database.</p>
+<code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
+dependencies. Once a transaction is checked its inserted into local storage so it can be relayed and wont be
+checked again.</p>
 </td>
 </tr>
 <tr>
@@ -98,7 +108,7 @@ fields such as replyTo and sessionID.</p>
 <td>
 <a href="-state-replacement-refused/index.html">StateReplacementRefused</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">StateReplacementRefused</span></code><p>Thrown when a participant refuses proposed the state replacement</p>
+<code><span class="keyword">class </span><span class="identifier">StateReplacementRefused</span></code><p>Thrown when a participant refuses the proposed state replacement</p>
 </td>
 </tr>
 <tr>

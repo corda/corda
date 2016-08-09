@@ -7,11 +7,14 @@
 <a href="../../index.html">com.r3corda.core.contracts</a>&nbsp;/&nbsp;<a href="../index.html">TransactionType</a>&nbsp;/&nbsp;<a href="index.html">NotaryChange</a>&nbsp;/&nbsp;<a href=".">verifyTransaction</a><br/>
 <br/>
 <h1>verifyTransaction</h1>
-<a name="com.r3corda.core.contracts.TransactionType.NotaryChange$verifyTransaction(com.r3corda.core.contracts.TransactionForVerification)"></a>
-<code><span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType.NotaryChange$verifyTransaction(com.r3corda.core.contracts.TransactionForVerification)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../-transaction-for-verification/index.html"><span class="identifier">TransactionForVerification</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
+<a name="com.r3corda.core.contracts.TransactionType.NotaryChange$verifyTransaction(com.r3corda.core.contracts.LedgerTransaction)"></a>
+<code><span class="keyword">fun </span><span class="identifier">verifyTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType.NotaryChange$verifyTransaction(com.r3corda.core.contracts.LedgerTransaction)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
 Overrides <a href="../verify-transaction.html">TransactionType.verifyTransaction</a><br/>
-<p>Check that the difference between inputs and outputs is only the notary field,
-and that all required signing public keys are present.</p>
+<p>Check that the difference between inputs and outputs is only the notary field, and that all required signing
+public keys are present.</p>
+<h3>Exceptions</h3>
+<a name="TransactionVerificationException.InvalidNotaryChange"></a>
+<code>TransactionVerificationException.InvalidNotaryChange</code> - if the validity check fails.<br/>
 <br/>
 <br/>
 </BODY>

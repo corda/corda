@@ -14,9 +14,33 @@ from an authoritative service, and adds easy lookup of the data stored within it
 with a specified network map service, which it fetches data from and then subscribes to updates of.</p>
 <br/>
 <br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-map-change/index.html">MapChange</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">MapChange</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-map-change-type/index.html">MapChangeType</a></td>
+<td>
+<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">MapChangeType</span></code></td>
+</tr>
+</tbody>
+</table>
 <h3>Properties</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="changed.html">changed</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">changed</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="-map-change/index.html"><span class="identifier">MapChange</span></a><span class="symbol">&gt;</span></code><p>Tracks changes to the network map cache</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="network-map-nodes.html">networkMapNodes</a></td>

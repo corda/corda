@@ -33,6 +33,13 @@ building partially signed transactions.</p>
 </tr>
 <tr>
 <td>
+<a href="-null-signature.html">NullSignature</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">NullSignature</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a></code><p>A signature with a key and value of zero. Useful when you want a signature object that you know wont ever be used.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-party/index.html">Party</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Party</span></code><p>A <a href="-party/index.html">Party</a> is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate.</p>
@@ -111,11 +118,36 @@ that we can delegate most of the checking to the proper Java code. We simply add
 <td>
 </td>
 </tr>
+<tr>
+<td>
+<a href="kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="ed25519-curve.html">ed25519Curve</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ed25519Curve</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
 </tbody>
 </table>
 <h3>Functions</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="entropy-to-key-pair.html">entropyToKeyPair</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">entropyToKeyPair</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.crypto$entropyToKeyPair(java.math.BigInteger)/entropy">entropy</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigInteger.html"><span class="identifier">BigInteger</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Returns a keypair derived from the given private key entropy. This is useful for unit tests and other cases where
+you want hard-coded private keys.</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="generate-key-pair.html">generateKeyPair</a></td>
@@ -128,6 +160,12 @@ that we can delegate most of the checking to the proper Java code. We simply add
 <a href="new-secure-random.html">newSecureRandom</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">newSecureRandom</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/SecureRandom.html"><span class="identifier">SecureRandom</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="parse-public-key-base58.html">parsePublicKeyBase58</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parsePublicKeyBase58</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.crypto$parsePublicKeyBase58(kotlin.String)/base58String">base58String</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 <tr>
 <td>

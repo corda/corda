@@ -39,6 +39,16 @@ fields such as replyTo and sessionID.</p>
 <tbody>
 <tr>
 <td>
+<a href="../-direct-request-message/index.html">DirectRequestMessage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">DirectRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code><p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
+use where we want to address a specific endpoint, not necessarily a specific user (for example if the same user logs
+in on two machines, we want to consistently deliver messages as part of a session, to the same machine the session
+started on).</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.node.services.network/-network-map-service/-network-map-request-message/index.html">NetworkMapRequestMessage</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">NetworkMapRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ServiceRequestMessage</span></code></td>

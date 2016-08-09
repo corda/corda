@@ -12,12 +12,24 @@
 <tbody>
 <tr>
 <td>
-<a href="-artemis-messaging-service/index.html">ArtemisMessagingService</a></td>
+<a href="-artemis-messaging-client/index.html">ArtemisMessagingClient</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here, we embed the entire server inside our own process. Nodes communicate
-with each other using an Artemis specific protocol, but it supports other protocols like AMQP/1.0
-as well for interop.</p>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-artemis-messaging-component/index.html">ArtemisMessagingComponent</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ArtemisMessagingComponent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>The base class for Artemis services that defines shared data structures and transport configuration</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingServer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code><p>This class configures and manages an Apache Artemis message queue broker.</p>
 </td>
 </tr>
 </tbody>

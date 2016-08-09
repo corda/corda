@@ -75,16 +75,6 @@ existing contract code.</p>
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.contracts.asset/-cash/index.html">Cash</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code><p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
-input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
-(a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
-the same transaction.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../../com.r3corda.contracts/-commercial-paper/index.html">CommercialPaper</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code></td>
@@ -108,6 +98,16 @@ This is just a representation of a vanilla Fixed vs Floating (same currency) IRS
 <a href="../../com.r3corda.contracts.asset/-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
 multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
 to be netted/merged, with settlement only for any remainder amount.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.asset/-on-ledger-asset/index.html">OnLedgerAsset</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">OnLedgerAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.contracts.asset/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ClauseVerifier</span></code><p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour (a blend of
+issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in the same
+transaction.</p>
 </td>
 </tr>
 </tbody>

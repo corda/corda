@@ -104,7 +104,11 @@
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -187,8 +191,8 @@ consume/destroy, these are called <strong>inputs</strong>, and contains a set of
 <strong>contract code</strong> file, which is a program expressed in JVM byte code that runs sandboxed inside a Java virtual machine.
 Contract code (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic.</p>
 <p>Contracts define a <strong>verify function</strong>, which is a pure function given the entire transaction as input. To be considered
-valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the
-input and output states.</p>
+valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the input and output
+states.</p>
 <p>Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
 arguments to the verify function. Each command has a list of <strong>public keys</strong> associated with it. The platform ensures

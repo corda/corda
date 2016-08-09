@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.contracts.clause</a>&nbsp;/&nbsp;<a href=".">AbstractIssue</a><br/>
 <br/>
 <h1>AbstractIssue</h1>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts.clauses/-group-clause.html"><span class="identifier">GroupClause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts.clauses/-group-clause.html"><span class="identifier">GroupClause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
 <p>Standard issue clause for contracts that issue fungible assets.</p>
 <h3>Parameters</h3>
 <a name="S"></a>
@@ -87,6 +87,13 @@ no states in the list. Takes in an instance of the token definition for construc
 <a href="../../com.r3corda.contracts.asset/-cash/-clauses/-issue/index.html">Issue</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><a href="../../com.r3corda.contracts.asset/-cash/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.asset/-commodity-contract/-clauses/-issue/index.html">Issue</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractIssue</span><span class="symbol">&lt;</span><a href="../../com.r3corda.contracts.asset/-commodity-contract/-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><p>Standard issue clause, specialised to match the commodity issue command.</p>
+</td>
 </tr>
 <tr>
 <td>

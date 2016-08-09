@@ -96,10 +96,15 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Running the demos</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#trader-demo">Trader demo</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#irs-demo">IRS demo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#irs-web-demo">IRS web demo</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="irs.html">The Interest Rate Swap Contract</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -172,6 +177,7 @@ so far. We have:</p>
 how this works in <a class="reference internal" href="protocol-state-machines.html"><span class="doc">Protocol state machines</span></a>.</li>
 <li>The IRS demo, which shows two nodes establishing an interest rate swap between them and performing fixings with a
 rates oracle, all driven via the HTTP API.</li>
+<li>The IRS demo web interface - a web interface to the IRS demo.</li>
 </ol>
 <p>The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.</p>
@@ -193,7 +199,7 @@ beforehand with the same parameters you plan to supply to the respective nodes.<
 </pre></div>
 </div>
 <p><strong>Other</strong>:</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">Other</span><span class="p">:</span> <span class="p">./</span><span class="n">gradlew</span> <span class="n">installDist</span> <span class="p">&amp;&amp;</span> <span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">BUYER</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="n">installDist</span> <span class="p">&amp;&amp;</span> <span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">trader</span><span class="p">-</span><span class="n">demo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">BUYER</span>
 </pre></div>
 </div>
 <p>It will compile things, if necessary, then create a directory named trader-demo/buyer with a bunch of files inside and
@@ -252,6 +258,50 @@ can see the other terminals whilst you run this command!:</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">irsdemo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">Date</span> <span class="m">2017</span><span class="p">-</span><span class="m">01</span><span class="p">-</span><span class="m">30</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="irs-web-demo">
+<h2>IRS web demo<a class="headerlink" href="#irs-web-demo" title="Permalink to this headline">¶</a></h2>
+<p>To install the web demo please follow these steps;</p>
+<ol class="arabic simple">
+<li>Install Node: <a class="reference external" href="https://nodejs.org/en/download/">https://nodejs.org/en/download/</a> and ensure the npm executable is on your classpath</li>
+<li>Open a terminal</li>
+<li>Run <cite>npm install -g bower</cite> or <cite>sudo npm install -g bower</cite> if on a <a href="#id1"><span class="problematic" id="id2">*</span></a>nix system.</li>
+<li>In the terminal navigate to <cite>&lt;corda&gt;/src/main/resources/com/r3corda/demos/irswebdemo</cite></li>
+<li>Run <cite>bower install</cite></li>
+</ol>
+<p>To run the web demo, run the first two steps from the IRS Demo:</p>
+<p>Open two terminals and in the first:</p>
+<p><strong>Windows</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>gradlew.bat installDist &amp; .\build\install\r3prototyping\bin\irsdemo.bat --role=NodeA
+</pre></div>
+</div>
+<p><strong>Other</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">gradlew</span> <span class="n">installDist</span> <span class="p">&amp;&amp;</span> <span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">irsdemo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">NodeA</span>
+</pre></div>
+</div>
+<p>And in the second run:</p>
+<p><strong>Windows</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>.\build\install\r3prototyping\bin\irsdemo.bat --role=NodeB
+</pre></div>
+</div>
+<p><strong>Other</strong>:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="p">./</span><span class="n">build</span><span class="p">/</span><span class="n">install</span><span class="p">/</span><span class="n">r3prototyping</span><span class="p">/</span><span class="n">bin</span><span class="p">/</span><span class="n">irsdemo</span> <span class="p">--</span><span class="n">role</span><span class="p">=</span><span class="n">NodeB</span>
+</pre></div>
+</div>
+<p>Now open your web browser to this URL:</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If using a custom node port address or port those must be used instead.</p>
+</div>
+<p><strong>Node A</strong>:</p>
+<blockquote>
+<div><a class="reference external" href="http://localhost:31338/web/irsdemo">http://localhost:31338/web/irsdemo</a></div></blockquote>
+<p><strong>Node B</strong>:</p>
+<blockquote>
+<div><a class="reference external" href="http://localhost:31340/web/irsdemo">http://localhost:31340/web/irsdemo</a></div></blockquote>
+<p>To use the demos click the &#8220;Create Deal&#8221; button, fill in the form, then click the &#8220;Submit&#8221; button. Now you will be
+able to use the time controls at the top left of the home page to run the fixings. Click any individual trade in the
+blotter to view it.</p>
 </div>
 </div>
 
