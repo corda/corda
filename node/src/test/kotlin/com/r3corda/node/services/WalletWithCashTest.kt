@@ -8,13 +8,16 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockServices
+import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
 import com.r3corda.core.testing.*
 import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.utilities.configureDatabase
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.Closeable
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -24,10 +27,12 @@ import kotlin.test.assertNull
 class WalletWithCashTest {
     lateinit var services: MockServices
     val wallet: WalletService get() = services.walletService
+    lateinit var dataSource: Closeable
 
     @Before
     fun setUp() {
         BriefLogFormatter.loggingOn(NodeWalletService::class)
+        dataSource = configureDatabase(makeTestDataSourceProperties()).first
         services = object : MockServices() {
             override val walletService: WalletService = NodeWalletService(this)
 
@@ -42,6 +47,7 @@ class WalletWithCashTest {
 
     @After
     fun tearDown() {
+        dataSource.close()
         BriefLogFormatter.loggingOff(NodeWalletService::class)
     }
 
@@ -51,14 +57,14 @@ class WalletWithCashTest {
         services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
         val w = wallet.currentWallet
-        assertEquals(3, w.states.size)
+        assertEquals(3, w.states.toList().size)
 
-        val state = w.states[0].state.data as Cash.State
+        val state = w.states.toList()[0].state.data as Cash.State
         assertEquals(29.01.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
         assertEquals(services.key.public, state.owner)
 
-        assertEquals(35.38.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states[2].state.data as Cash.State).amount)
-        assertEquals(35.61.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states[1].state.data as Cash.State).amount)
+        assertEquals(35.38.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
+        assertEquals(35.61.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
     }
 
     @Test
@@ -109,7 +115,7 @@ class WalletWithCashTest {
         }.toSignedTransaction()
 
         wallet.notify(dummyIssue.tx)
-        assertEquals(1, wallet.currentWallet.states.size)
+        assertEquals(1, wallet.currentWallet.states.toList().size)
 
         // Issue another linear state of the same thread (nonce different)
         val dummyIssue2 = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
@@ -120,7 +126,7 @@ class WalletWithCashTest {
         assertThatThrownBy {
             wallet.notify(dummyIssue2.tx)
         }
-        assertEquals(1, wallet.currentWallet.states.size)
+        assertEquals(1, wallet.currentWallet.states.toList().size)
     }
 
     @Test
@@ -136,7 +142,7 @@ class WalletWithCashTest {
         }.toSignedTransaction()
 
         wallet.notify(dummyIssue.tx)
-        assertEquals(1, wallet.currentWallet.states.size)
+        assertEquals(1, wallet.currentWallet.states.toList().size)
 
         // Move the same state
         val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
@@ -146,6 +152,6 @@ class WalletWithCashTest {
         }.toSignedTransaction()
 
         wallet.notify(dummyMove.tx)
-        assertEquals(1, wallet.currentWallet.states.size)
+        assertEquals(1, wallet.currentWallet.states.toList().size)
     }
 }

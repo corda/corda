@@ -280,7 +280,7 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
-inline fun <reified T : ContractState> List<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
+inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
     return mapNotNull { if (it.state.data is T) StateAndRef(TransactionState(it.state.data, it.state.notary), it.ref) else null }
 }
 

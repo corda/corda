@@ -23,6 +23,7 @@ import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
@@ -30,7 +31,6 @@ import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
-import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -126,8 +126,7 @@ fun runTraderDemo(args: Array<String>): Int {
             Role.BUYER -> "Bank A"
             Role.SELLER -> "Bank B"
         }
-        val override = ConfigFactory.parseString("myLegalName = $myLegalName")
-        NodeConfigurationFromConfig(override.withFallback(ConfigFactory.load()))
+        NodeConfigurationFromConfig(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = mapOf("myLegalName" to myLegalName)))
     }
 
     // Which services will this instance of the node provide to the network?
@@ -275,7 +274,8 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
     private fun logIssuanceAttachment(tradeTX: SignedTransaction) {
         // Find the original CP issuance.
         val search = TransactionGraphSearch(serviceHub.storageService.validatedTransactions, listOf(tradeTX.tx))
-        search.query = TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java)
+        search.query = TransactionGraphSearch.Query(withCommandOfType = CommercialPaper.Commands.Issue::class.java,
+                followInputsOfType = CommercialPaper.State::class.java)
         val cpIssuance = search.call().single()
 
         cpIssuance.attachments.first().let {

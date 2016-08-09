@@ -128,3 +128,17 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
                          override val myLegalIdentityKey: KeyPair = generateKeyPair(),
                          override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public))
 : SingletonSerializeAsToken(), TxWritableStorageService
+
+/**
+ * Make properties appropriate for creating a DataSource for unit tests.
+ *
+ * @param nodeName Reflects the "instance" of the in-memory database.  Defaults to a random string.
+ */
+fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
+    val props = Properties()
+    props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence")
+    props.setProperty("dataSource.user", "sa")
+    props.setProperty("dataSource.password", "")
+    return props
+}

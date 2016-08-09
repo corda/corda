@@ -12,11 +12,15 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.ConfigRenderOptions
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaType
 
@@ -26,6 +30,28 @@ interface NodeConfiguration {
     val nearestCity: String
     val keyStorePassword: String
     val trustStorePassword: String
+    val dataSourceProperties: Properties get() = Properties()
+
+    companion object {
+        val log = LoggerFactory.getLogger("NodeConfiguration")
+
+        fun loadConfig(baseDirectoryPath: Path, configFileOverride: Path? = null, allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
+            val defaultConfig = ConfigFactory.parseResources("reference.conf")
+
+            val normalisedBaseDir = baseDirectoryPath.normalize()
+            val configFile = (configFileOverride?.normalize() ?: normalisedBaseDir.resolve("node.conf")).toFile()
+            val appConfig = ConfigFactory.parseFile(configFile, ConfigParseOptions.defaults().setAllowMissing(allowMissingConfig))
+
+            val overridesMap = HashMap<String, Any?>() // If we do require a few other command line overrides eg for a nicer development experience they would go inside this map.
+            overridesMap.putAll(configOverrides)
+            overridesMap["basedir"] = normalisedBaseDir.toAbsolutePath().toString()
+            val overrideConfig = ConfigFactory.parseMap(overridesMap)
+
+            val mergedAndResolvedConfig = overrideConfig.withFallback(appConfig).withFallback(defaultConfig).resolve()
+            log.info("config:\n ${mergedAndResolvedConfig.root().render(ConfigRenderOptions.defaults())}")
+            return mergedAndResolvedConfig
+        }
+    }
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -40,8 +66,18 @@ operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
         Instant::class.java -> Instant.parse(getString(metadata.name)) as T
         HostAndPort::class.java -> HostAndPort.fromString(getString(metadata.name)) as T
         Path::class.java -> Paths.get(getString(metadata.name)) as T
+        Properties::class.java -> getProperties(metadata.name) as T
         else -> throw IllegalArgumentException("Unsupported type ${metadata.returnType}")
     }
+}
+
+fun Config.getProperties(path: String): Properties {
+    val obj = this.getObject(path)
+    val props = Properties()
+    for ((property, objectValue) in obj.entries) {
+        props.setProperty(property, objectValue.unwrapped().toString())
+    }
+    return props
 }
 
 class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : NodeConfiguration {
@@ -50,6 +86,7 @@ class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : N
     override val nearestCity: String by config
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
+    override val dataSourceProperties: Properties by config
 }
 
 class NameServiceConfig(conf: Config) {
@@ -65,6 +102,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val exportJMXto: String = "http"
     override val keyStorePassword: String by conf
     override val trustStorePassword: String by conf
+    override val dataSourceProperties: Properties by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
     val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
@@ -97,3 +135,4 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
         )
     }
 }
+

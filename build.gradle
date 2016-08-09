@@ -58,6 +58,9 @@ repositories {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
     }
     jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
 sourceSets {

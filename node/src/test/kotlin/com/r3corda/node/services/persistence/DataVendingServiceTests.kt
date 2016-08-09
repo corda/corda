@@ -45,7 +45,7 @@ class DataVendingServiceTests {
         // Complete the cash transaction, and then manually relay it
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction()
-        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
+        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
         val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
                 walletServiceNode.info, tx)
 
@@ -77,7 +77,7 @@ class DataVendingServiceTests {
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction(false)
-        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
+        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
         val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
                 walletServiceNode.info, tx)
 
@@ -87,6 +87,6 @@ class DataVendingServiceTests {
         assertTrue(ex.cause is DataVending.Service.TransactionRejectedError)
 
         // Check the transaction is not in the receiving node
-        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.size)
+        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
     }
 }

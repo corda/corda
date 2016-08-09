@@ -26,13 +26,11 @@ import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.typesafe.config.ConfigFactory
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import org.apache.commons.io.IOUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -308,8 +306,8 @@ private fun setup(params: CliParams.SetupNode): Int {
         dirFile.mkdirs()
     }
 
-    val configFile = params.dir.resolve("config").toFile()
-    val config = loadConfigFile(configFile, params.defaultLegalName)
+    val configFile = params.dir.resolve("config")
+    val config = loadConfigFile(params.dir, configFile, params.defaultLegalName)
     if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
         createIdentities(params, config)
     }
@@ -445,18 +443,16 @@ private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
         throw NotSetupException("Missing identity file. Please run node setup before running the node")
     }
 
-    val configFile = cliParams.dir.resolve("config").toFile()
-    return loadConfigFile(configFile, cliParams.defaultLegalName)
+    val configFile = cliParams.dir.resolve("config")
+    return loadConfigFile(cliParams.dir, configFile, cliParams.defaultLegalName)
 }
 
-private fun loadConfigFile(configFile: File, defaultLegalName: String): NodeConfiguration {
-    if (!configFile.exists()) {
+private fun loadConfigFile(baseDir: Path, configFile: Path, defaultLegalName: String): NodeConfiguration {
+    if (!Files.exists(configFile)) {
         createDefaultConfigFile(configFile, defaultLegalName)
         log.warn("Default config created at $configFile.")
     }
-
-    val config = ConfigFactory.parseFile(configFile).withFallback(ConfigFactory.load())
-    return NodeConfigurationFromConfig(config)
+    return NodeConfigurationFromConfig(NodeConfiguration.loadConfig(baseDir, configFileOverride = configFile))
 }
 
 private fun createIdentities(params: CliParams.SetupNode, nodeConf: NodeConfiguration) {
@@ -466,8 +462,8 @@ private fun createIdentities(params: CliParams.SetupNode, nodeConf: NodeConfigur
     node.stop()
 }
 
-private fun createDefaultConfigFile(configFile: File, legalName: String) {
-    configFile.writeBytes(
+private fun createDefaultConfigFile(configFile: Path, legalName: String) {
+    Files.write(configFile,
             """
         myLegalName = $legalName
         """.trimIndent().toByteArray())

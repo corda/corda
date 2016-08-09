@@ -46,7 +46,9 @@ import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.ANSIProgressObserver
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.configureDatabase
 import org.slf4j.Logger
+import java.io.Closeable
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -130,6 +132,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     val customServices: ArrayList<Any> = ArrayList()
+    protected val closeOnStop: ArrayList<Closeable> = ArrayList()
 
     /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
     inline fun <reified T: Any> findService() = customServices.filterIsInstance<T>().single()
@@ -155,12 +158,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         require(!started) { "Node has already been started" }
         log.info("Node starting up ...")
 
+        initialiseDatabasePersistence()
         val storageServices = initialiseStorageService(dir)
         storage = storageServices.first
         checkpointStorage = storageServices.second
         net = makeMessagingService()
         netMapCache = InMemoryNetworkMapCache()
-        wallet = NodeWalletService(services)
+        wallet = makeWalletService()
 
         identity = makeIdentityService()
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
@@ -197,6 +201,16 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         smm.start()
         started = true
         return this
+    }
+
+    private fun initialiseDatabasePersistence() {
+        val props = configuration.dataSourceProperties
+        if (props.isNotEmpty()) {
+            val (toClose, database) = configureDatabase(props)
+            // Now log the vendor string as this will also cause a connection to be tested eagerly.
+            log.info("Connected to ${database.vendor} database.")
+            closeOnStop += toClose
+        }
     }
 
     private fun initialiseProtocolLogicFactory(): ProtocolLogicRefFactory {
@@ -321,14 +335,20 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return service
     }
 
+    // TODO: sort out ordering of open & protected modifiers of functions in this class.
+    protected open fun makeWalletService(): WalletService = NodeWalletService(services)
+
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
         // network, including unsubscribing from updates from remote services. Possibly some sort of parameter to stop()
         // to indicate "Please shut down gracefully" vs "Shut down now".
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
-
         net.stop()
+        // Stop in opposite order to starting
+        for (toClose in closeOnStop.reversed()) {
+            toClose.close()
+        }
     }
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal
