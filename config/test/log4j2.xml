@@ -11,7 +11,10 @@
     </Appenders>
     <Loggers>
         <Root level="info">
-            <AppenderRef ref="Console-Appender" level="info"/>
+            <AppenderRef ref="Console-Appender"/>
         </Root>
+        <Logger name="com.r3corda" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
     </Loggers>
 </Configuration>

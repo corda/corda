@@ -9,7 +9,7 @@ import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.demos.api.InterestRateSwapAPI
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
@@ -79,7 +79,7 @@ sealed class CliParams {
     class RunNode(
             val node: IRSDemoNode,
             val dir: Path,
-            val networkAddress : HostAndPort,
+            val networkAddress: HostAndPort,
             val apiAddress: HostAndPort,
             val mapAddress: String,
             val identityFile: Path,
@@ -285,8 +285,8 @@ fun runIRSDemo(args: Array<String>): Int {
         return 1
     }
 
-    // Suppress the Artemis MQ noise, and activate the demo logging.
-    BriefLogFormatter.initVerbose("+demo.irsdemo", "+api-call", "+platform.deal", "-org.apache.activemq")
+    // Suppress the Artemis MQ noise, and activate the demo logging
+    LogHelper.setLevel("+IRSDemo", "+api-call", "+platform.deal", "-org.apache.activemq")
 
     return when (cliParams) {
         is CliParams.SetupNode -> setup(cliParams)
@@ -376,12 +376,12 @@ private fun runTrade(cliParams: CliParams.Trade): Int {
     }
 }
 
-private fun createRecipient(addr: String) : SingleMessageRecipient {
+private fun createRecipient(addr: String): SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
     return ArtemisMessagingClient.makeRecipient(hostAndPort)
 }
 
-private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient) : Node {
+private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient): Node {
     val config = getNodeConfig(params)
     val advertisedServices: Set<ServiceType>
     val networkMapId =
@@ -418,7 +418,7 @@ private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, adve
 private fun runUploadRates(host: HostAndPort) {
     // Note: the getResourceAsStream is an ugly hack to get the jvm to search in the right location
     val fileContents = IOUtils.toString(CliParams::class.java.getResourceAsStream("example.rates.txt"))
-    var timer : Timer? = null
+    var timer: Timer? = null
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
             val url = URL("http://${host.toString()}/upload/interest-rates")

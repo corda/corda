@@ -8,7 +8,7 @@ import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
 import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.configureDatabase
 import org.assertj.core.api.Assertions.assertThat
@@ -23,14 +23,14 @@ class NodeWalletServiceTest {
 
     @Before
     fun setUp() {
-        BriefLogFormatter.loggingOn(NodeWalletService::class)
+        LogHelper.setLevel(NodeWalletService::class)
         dataSource = configureDatabase(makeTestDataSourceProperties()).first
     }
 
     @After
     fun tearDown() {
         dataSource.close()
-        BriefLogFormatter.loggingOff(NodeWalletService::class)
+        LogHelper.reset(NodeWalletService::class)
     }
 
     @Test

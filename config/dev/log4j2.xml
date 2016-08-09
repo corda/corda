@@ -46,10 +46,14 @@
     </Appenders>
 
     <Loggers>
-        <Root level="trace">
-            <AppenderRef ref="Console-Appender" level="info"/>
-            <AppenderRef ref="RollingFile-Appender" level="debug"/>
+        <Root level="info">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Root>
+        <Logger name="com.r3corda" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Logger>
     </Loggers>
 
 </Configuration>

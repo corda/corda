@@ -36,7 +36,7 @@ import java.util.*
  *
  * You can get a printout of every message sent by using code like:
  *
- *    BriefLogFormatter.initVerbose("+messaging")
+ *    LogHelper.setLevel("+messages")
  */
 class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,

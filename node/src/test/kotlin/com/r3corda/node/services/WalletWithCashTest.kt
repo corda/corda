@@ -10,7 +10,7 @@ import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
 import com.r3corda.core.testing.*
-import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.configureDatabase
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -31,7 +31,7 @@ class WalletWithCashTest {
 
     @Before
     fun setUp() {
-        BriefLogFormatter.loggingOn(NodeWalletService::class)
+        LogHelper.setLevel(NodeWalletService::class)
         dataSource = configureDatabase(makeTestDataSourceProperties()).first
         services = object : MockServices() {
             override val walletService: WalletService = NodeWalletService(this)
@@ -47,8 +47,8 @@ class WalletWithCashTest {
 
     @After
     fun tearDown() {
+        LogHelper.reset(NodeWalletService::class)
         dataSource.close()
-        BriefLogFormatter.loggingOff(NodeWalletService::class)
     }
 
     @Test

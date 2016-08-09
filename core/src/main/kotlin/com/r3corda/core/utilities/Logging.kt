@@ -1,14 +1,11 @@
 package com.r3corda.core.utilities
 
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.appender.ConsoleAppender
+import org.apache.logging.log4j.core.config.LoggerConfig
 import org.slf4j.LoggerFactory
-import java.io.PrintWriter
-import java.io.StringWriter
-import java.text.MessageFormat
-import java.util.*
-import java.util.logging.Formatter
-import java.util.logging.Level
-import java.util.logging.LogRecord
-import java.util.logging.Logger
 import kotlin.reflect.KClass
 
 // A couple of inlined utility functions: the first is just a syntax convenience, the second lets us use
@@ -20,74 +17,47 @@ inline fun org.slf4j.Logger.trace(msg: () -> String) {
     if (isTraceEnabled) trace(msg())
 }
 
-/**
- * A Java logging formatter that writes more compact output than the default.
- */
-class BriefLogFormatter : Formatter() {
-    override fun format(logRecord: LogRecord): String {
-        val arguments = arrayOfNulls<Any>(7)
-        arguments[0] = logRecord.threadID
-        arguments[1] = when (logRecord.level) {
-            Level.SEVERE -> " **ERROR** "
-            Level.WARNING -> " (warning) "
-            else -> ""
+/** A configuration helper that allows modifying the log level for specific loggers */
+object LogHelper {
+    /**
+     * Takes a set of strings identifying logger names for which the logging level should be configured.
+     * If the logger name starts with a + or an ordinary character, the level is set to [Level.ALL]. If it starts
+     * with a - then logging is switched off.
+     */
+    fun setLevel(vararg loggerNames: String) {
+        for (spec in loggerNames) {
+            val (name, level) = when (spec[0]) {
+                '+' -> spec.substring(1) to Level.ALL
+                '-' -> spec.substring(1) to Level.OFF
+                else -> spec to Level.ALL
+            }
+            setLevel(name, level)
         }
-        val fullClassName = logRecord.sourceClassName
-        val dollarIndex = fullClassName.lastIndexOf('$')
-        val className = fullClassName.substring(fullClassName.lastIndexOf('.') + 1, if (dollarIndex == -1) fullClassName.length else dollarIndex)
-        arguments[2] = className
-        arguments[3] = logRecord.sourceMethodName
-        arguments[4] = Date(logRecord.millis)
-        arguments[5] = if (logRecord.parameters != null) MessageFormat.format(logRecord.message, *logRecord.parameters) else logRecord.message
-        if (logRecord.thrown != null) {
-            val result = StringWriter()
-            logRecord.thrown.printStackTrace(PrintWriter(result))
-            arguments[6] = result.toString()
-        } else {
-            arguments[6] = ""
-        }
-        return messageFormat.format(arguments)
     }
 
-    companion object {
-        private val messageFormat = MessageFormat("{4,date,HH:mm:ss} {0} {1}{2}.{3}: {5}\n{6}")
+    fun setLevel(vararg classes: KClass<*>) = setLevel(*classes.map { "+" + it.java.`package`.name }.toTypedArray())
 
-        // OpenJDK made a questionable, backwards incompatible change to the Logger implementation. It internally uses
-        // weak references now which means simply fetching the logger and changing its configuration won't work. We must
-        // keep a reference to our custom logger around.
-        private val loggerRefs = ArrayList<Logger>()
+    /** Removes custom configuration for the specified logger names */
+    fun reset(vararg names: String) {
+        val loggerContext = LogManager.getContext(false) as LoggerContext
+        val config = loggerContext.configuration
+        names.forEach { config.removeLogger(it) }
+        loggerContext.updateLoggers(config)
+    }
 
-        /** Configures JDK logging to use this class for everything.  */
-        fun init() {
-            val logger = Logger.getLogger("")
-            val handlers = logger.handlers
-            handlers[0].formatter = BriefLogFormatter()
-            loggerRefs.add(logger)
+    fun reset(vararg classes: KClass<*>) = reset(*classes.map { it.java.`package`.name }.toTypedArray())
+
+    /** Updates logging level for the specified Log4j logger name */
+    private fun setLevel(name: String, level: Level) {
+        val loggerContext = LogManager.getContext(false) as LoggerContext
+        val config = loggerContext.configuration
+        val loggerConfig = LoggerConfig(name, level, false)
+        val appender = config.appenders.map { it.value as? ConsoleAppender }.singleOrNull()
+        appender?.let {
+            loggerConfig.addAppender(appender, null, null)
         }
-
-        /**
-         * Takes a set of strings identifying logger names for which the logging level should be configured.
-         * If the logger name starts with a + or an ordinary character, the level is set to [Level.ALL]. If it starts
-         * with a - then logging is switched off.
-         */
-        fun initVerbose(vararg loggerNames: String) {
-            init()
-            loggerRefs[0].handlers[0].level = Level.ALL
-            for (spec in loggerNames) {
-                val (name, level) = when (spec[0]) {
-                    '+' -> spec.substring(1) to Level.FINEST
-                    '-' -> spec.substring(1) to Level.OFF
-                    else -> spec to Level.ALL
-                }
-                val logger = Logger.getLogger(name)
-                logger.level = level
-                loggerRefs.add(logger)
-            }
-        }
-
-        fun loggingOn(vararg names: String) = initVerbose(*names)
-        fun loggingOff(vararg names: String) = initVerbose(*names.map { "-" + it }.toTypedArray())
-        fun loggingOn(vararg classes: KClass<*>) = initVerbose(*classes.map { "+" + it.java.`package`.name }.toTypedArray())
-        fun loggingOff(vararg classes: KClass<*>) = initVerbose(*classes.map { "-" + it.java.`package`.name }.toTypedArray())
+        config.removeLogger(name)
+        config.addLogger(name, loggerConfig)
+        loggerContext.updateLoggers(config)
     }
 }

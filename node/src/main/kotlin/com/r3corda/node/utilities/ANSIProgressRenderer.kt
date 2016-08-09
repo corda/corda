@@ -9,7 +9,6 @@ import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.appender.AbstractOutputStreamAppender
 import org.apache.logging.log4j.core.appender.ConsoleAppender
 import org.apache.logging.log4j.core.appender.OutputStreamManager
-import org.apache.logging.log4j.core.config.LoggerConfig
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
@@ -85,10 +84,13 @@ object ANSIProgressRenderer {
             }
             scrollingAppender.start()
             manager.configuration.appenders[consoleAppender.name] = scrollingAppender
-            val loggerConfig: LoggerConfig = manager.configuration.loggers.values.single()
-            val appenderRefs = loggerConfig.appenderRefs
-            loggerConfig.appenders.keys.forEach { loggerConfig.removeAppender(it) }
-            appenderRefs.forEach { loggerConfig.addAppender(manager.configuration.appenders[it.ref], it.level, it.filter) }
+            val loggerConfigs = manager.configuration.loggers.values
+            for (config in loggerConfigs) {
+                val appenderRefs = config.appenderRefs
+                val consoleAppenders = config.appenders.filter { it.value is ConsoleAppender }.keys
+                consoleAppenders.forEach { config.removeAppender(it) }
+                appenderRefs.forEach { config.addAppender(manager.configuration.appenders[it.ref], it.level, it.filter) }
+            }
             manager.updateLoggers()
         }
 

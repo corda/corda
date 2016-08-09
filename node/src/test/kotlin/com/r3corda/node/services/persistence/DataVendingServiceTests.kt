@@ -7,7 +7,6 @@ import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.USD
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
 import org.junit.Before
 import org.junit.Test
@@ -21,10 +20,6 @@ import kotlin.test.assertTrue
  */
 class DataVendingServiceTests {
     lateinit var network: MockNetwork
-
-    init {
-        BriefLogFormatter.init()
-    }
 
     @Before
     fun setup() {

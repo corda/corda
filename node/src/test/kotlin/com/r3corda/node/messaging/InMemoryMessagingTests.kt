@@ -16,10 +16,6 @@ import kotlin.test.assertTrue
 class InMemoryMessagingTests {
     lateinit var network: MockNetwork
 
-    init {
-        // BriefLogFormatter.initVerbose()
-    }
-
     @Before
     fun setUp() {
         network = MockNetwork()
