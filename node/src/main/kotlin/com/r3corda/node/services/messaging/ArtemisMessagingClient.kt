@@ -1,13 +1,15 @@
 package com.r3corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.messaging.*
+import com.r3corda.core.serialization.opaque
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.utilities.AffinityExecutor
+import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import java.nio.file.FileSystems
@@ -20,18 +22,22 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
- * Artemis is a message queue broker and here we run a client connecting to the specified broker instance [ArtemisMessagingServer]
+ * Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+ * [ArtemisMessagingServer].
+ *
+ * Message handlers are run on the provided [AffinityExecutor] synchronously, that is, the Artemis callback threads
+ * are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given executor
+ * through into Artemis and from there, back through to senders.
  *
  * @param serverHostPort The address of the broker instance to connect to (might be running in the same process)
  * @param myHostPort What host and port to use as an address for incoming messages
- * @param defaultExecutor This will be used as the default executor to run message handlers on, if no other is specified.
  */
 @ThreadSafe
 class ArtemisMessagingClient(directory: Path,
                              config: NodeConfiguration,
                              val serverHostPort: HostAndPort,
                              val myHostPort: HostAndPort,
-                             val defaultExecutor: Executor = RunOnCallerThread) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
+                             val executor: AffinityExecutor) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<ArtemisMessagingClient>()
 
@@ -53,6 +59,9 @@ class ArtemisMessagingClient(directory: Path,
     private class InnerState {
         var running = false
         val producers = HashMap<Address, ClientProducer>()
+        var consumer: ClientConsumer? = null
+        var session: ClientSession? = null
+        var clientFactory: ClientSessionFactory? = null
     }
 
     /** A registration to handle messages of different types */
@@ -62,13 +71,8 @@ class ArtemisMessagingClient(directory: Path,
 
     override val myAddress: SingleMessageRecipient = Address(myHostPort)
 
-    private val mutex = ThreadBox(InnerState())
+    private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
-
-    private var serverLocator: ServerLocator? = null
-    private var clientFactory: ClientSessionFactory? = null
-    private var session: ClientSession? = null
-    private var consumer: ClientConsumer? = null
 
     // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
     private val undeliveredMessages = CopyOnWriteArrayList<Message>()
@@ -77,43 +81,42 @@ class ArtemisMessagingClient(directory: Path,
         require(directory.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
     }
 
-    fun start() = mutex.locked {
-        if (!running) {
-            configureAndStartClient()
+    fun start() {
+        state.locked {
+            check(!running)
             running = true
+
+            log.info("Connecting to server: $serverHostPort")
+            // Connect to our server.
+            val tcpTransport = tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port)
+            val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
+            clientFactory = locator.createSessionFactory()
+
+            // Create a queue on which to receive messages and set up the handler.
+            val session = clientFactory!!.createSession()
+            this.session = session
+
+            val address = myHostPort.toString()
+            val queueName = myHostPort.toString()
+            session.createQueue(address, queueName, false)
+            consumer = session.createConsumer(queueName).setMessageHandler { artemisMessage: ClientMessage ->
+                val message: Message? = artemisToCordaMessage(artemisMessage)
+                if (message != null)
+                    deliver(message)
+            }
+            session.start()
         }
     }
 
-    private fun configureAndStartClient() {
-        log.info("Connecting to server: $serverHostPort")
-        // Connect to our server.
-        val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(
-                tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port))
-        this.serverLocator = serverLocator
-        val clientFactory = serverLocator.createSessionFactory()
-        this.clientFactory = clientFactory
-
-        // Create a queue on which to receive messages and set up the handler.
-        val session = clientFactory.createSession()
-        this.session = session
-
-        val address = myHostPort.toString()
-        val queueName = myHostPort.toString()
-        session.createQueue(address, queueName, false)
-        consumer = session.createConsumer(queueName).setMessageHandler { message: ClientMessage -> handleIncomingMessage(message) }
-        session.start()
-    }
-
-    private fun handleIncomingMessage(message: ClientMessage) {
-        // This code runs for every inbound message.
+    private fun artemisToCordaMessage(message: ClientMessage): Message? {
         try {
             if (!message.containsProperty(TOPIC_PROPERTY)) {
                 log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
-                return
+                return null
             }
             if (!message.containsProperty(SESSION_ID_PROPERTY)) {
                 log.warn("Received message without a $SESSION_ID_PROPERTY property, ignoring")
-                return
+                return null
             }
             val topic = message.getStringProperty(TOPIC_PROPERTY)
             val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
@@ -126,18 +129,17 @@ class ArtemisMessagingClient(directory: Path,
                 override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
                 override val debugMessageID: String = message.messageID.toString()
                 override fun serialise(): ByteArray = body
-                override fun toString() = topic + "#" + String(data)
+                override fun toString() = topic + "#" + data.opaque()
             }
 
-            deliverMessage(msg)
-        } finally {
-            // TODO the message is delivered onto an executor and so we may be acking the message before we've
-            // finished processing it
-            message.acknowledge()
+            return msg
+        } catch (e: Exception) {
+            log.error("Internal error whilst reading MQ message", e)
+            return null
         }
     }
 
-    private fun deliverMessage(msg: Message): Boolean {
+    private fun deliver(msg: Message): Boolean {
         // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
         // or removed whilst the filter is executing will not affect anything.
         val deliverTo = handlers.filter { it.topicSession.isBlank() || it.topicSession == msg.topicSession }
@@ -155,57 +157,78 @@ class ArtemisMessagingClient(directory: Path,
         }
 
         for (handler in deliverTo) {
-            (handler.executor ?: defaultExecutor).execute {
-                try {
+            try {
+                // This will perform a BLOCKING call onto the executor, although we are not actually 'fetching' anything
+                // from the thread as the callbacks don't return anything. Thus if the handlers are slow, we will be slow,
+                // and Artemis can handle that case intelligently. We don't just invoke the handler directly in order to
+                // ensure that we have the features of the AffinityExecutor class throughout the bulk of the codebase.
+                //
+                // Note that handlers may re-enter this class. We aren't holding any locks at this point, so that's OK.
+                state.checkNotLocked()
+                executor.fetchFrom {
                     handler.callback(msg, handler)
-                } catch(e: Exception) {
-                    log.error("Caught exception whilst executing message handler for ${msg.topicSession}", e)
                 }
+            } catch(e: Exception) {
+                log.error("Caught exception whilst executing message handler for ${msg.topicSession}", e)
             }
         }
 
         return true
     }
 
-    override fun stop() = mutex.locked {
-        for (producer in producers.values) producer.close()
-        producers.clear()
-        consumer?.close()
-        session?.close()
-        clientFactory?.close()
-        serverLocator?.close()
-        // We expect to be garbage collected shortly after being stopped, so we don't null anything explicitly here.
-        running = false
+    override fun stop() {
+        state.locked {
+            if (clientFactory == null)
+                return  // Was never started to begin with, so just ignore.
+
+            // Setting the message handler to null here will block until there are no more threads running the handler,
+            // so once we come back we know we can close the consumer and no more messages are being processed
+            // anywhere, due to the blocking delivery.
+            try {
+                consumer?.messageHandler = null
+                consumer?.close()
+            } catch(e: ActiveMQObjectClosedException) {
+                // Ignore it: this can happen if the server has gone away before we do.
+            }
+            consumer = null
+
+            for (producer in producers.values) producer.close()
+            producers.clear()
+
+            // Closing the factory closes all the sessions it produced as well.
+            clientFactory!!.close()
+            clientFactory = null
+        }
     }
 
     override fun send(message: Message, target: MessageRecipients) {
         if (target !is Address)
             TODO("Only simple sends to single recipients are currently implemented")
-        val artemisMessage = session!!.createMessage(true).apply {
-            val sessionID = message.topicSession.sessionID
-            putStringProperty(TOPIC_PROPERTY, message.topicSession.topic)
-            putLongProperty(SESSION_ID_PROPERTY, sessionID)
-            writeBodyBufferBytes(message.data)
-        }
-        getProducerForAddress(target).send(artemisMessage)
-    }
 
-    private fun getProducerForAddress(address: Address): ClientProducer {
-        return mutex.locked {
-            producers.getOrPut(address) {
-                if (address != myAddress) {
-                    maybeCreateQueue(address.hostAndPort)
-                }
-                session!!.createProducer(address.hostAndPort.toString())
+        state.locked {
+            val artemisMessage = session!!.createMessage(true).apply {
+                val sessionID = message.topicSession.sessionID
+                putStringProperty(TOPIC_PROPERTY, message.topicSession.topic)
+                putLongProperty(SESSION_ID_PROPERTY, sessionID)
+                writeBodyBufferBytes(message.data)
             }
+
+            val producer = producers.getOrPut(target) {
+                if (target != myAddress)
+                    maybeCreateQueue(target.hostAndPort)
+                session!!.createProducer(target.hostAndPort.toString())
+            }
+            producer.send(artemisMessage)
         }
     }
 
     private fun maybeCreateQueue(hostAndPort: HostAndPort) {
-        val name = hostAndPort.toString()
-        val queueQuery = session!!.queueQuery(SimpleString(name))
-        if (!queueQuery.isExists) {
-            session!!.createQueue(name, name, true /* durable */)
+        state.alreadyLocked {
+            val name = hostAndPort.toString()
+            val queueQuery = session!!.queueQuery(SimpleString(name))
+            if (!queueQuery.isExists) {
+                session!!.createQueue(name, name, true /* durable */)
+            }
         }
     }
 
@@ -219,7 +242,7 @@ class ArtemisMessagingClient(directory: Path,
         require(!topicSession.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
         val handler = Handler(executor, topicSession, callback)
         handlers.add(handler)
-        undeliveredMessages.removeIf { deliverMessage(it) }
+        undeliveredMessages.removeIf { deliver(it) }
         return handler
     }
 

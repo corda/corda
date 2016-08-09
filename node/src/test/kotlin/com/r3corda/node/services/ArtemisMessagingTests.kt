@@ -7,6 +7,7 @@ import com.r3corda.core.testing.freeLocalHostAndPort
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.utilities.AffinityExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Rule
@@ -99,7 +100,7 @@ class ArtemisMessagingTests {
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort,
                                       local: HostAndPort = hostAndPort): ArtemisMessagingClient {
-        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, local).apply {
+        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, local, AffinityExecutor.SAME_THREAD).apply {
             configureWithDevSSLCertificate()
             messagingClient = this
         }

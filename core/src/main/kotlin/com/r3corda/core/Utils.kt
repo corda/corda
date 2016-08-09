@@ -159,6 +159,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
         check(lock.isHeldByCurrentThread, { "Expected $lock to already be locked." })
         return body(content)
     }
+    fun checkNotLocked() = check(!lock.isHeldByCurrentThread)
 }
 
 /**
