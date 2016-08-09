@@ -19,8 +19,8 @@ import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
@@ -115,7 +115,7 @@ fun runTraderDemo(args: Array<String>): Int {
     //
     // The first two strings correspond to the first argument to StateMachineManager.add() but the way we handle logging
     // for protocols will change in future.
-    BriefLogFormatter.initVerbose("+demo.buyer", "+demo.seller", "-org.apache.activemq")
+    LogHelper.setLevel("+demo.buyer", "+demo.seller", "-org.apache.activemq")
 
     val directory = Paths.get(baseDirectory, role.name.toLowerCase())
     log.info("Using base demo directory $directory")

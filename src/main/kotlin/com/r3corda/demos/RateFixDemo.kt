@@ -9,8 +9,8 @@ import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.core.utilities.Emoji
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
@@ -53,7 +53,7 @@ fun main(args: Array<String>) {
     }
 
     // Suppress the Artemis MQ noise, and activate the demo logging.
-    BriefLogFormatter.initVerbose("+demo.ratefix", "-org.apache.activemq")
+    LogHelper.setLevel("+RatesFixDemo", "-org.apache.activemq")
 
     val dir = Paths.get(options.valueOf(dirArg))
     val networkMapAddr = ArtemisMessagingClient.makeRecipient(options.valueOf(networkMapAddrArg))

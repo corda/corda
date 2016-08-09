@@ -15,7 +15,7 @@ import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.testing.*
-import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
@@ -68,12 +68,12 @@ class TwoPartyTradeProtocolTests {
     fun before() {
         net = MockNetwork(false)
         net.identities += MOCK_IDENTITY_SERVICE.identities
-        BriefLogFormatter.loggingOn("platform.trade", "core.contract.TransactionGroup", "recordingmap")
+        LogHelper.setLevel("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
     @After
     fun after() {
-        BriefLogFormatter.loggingOff("platform.trade", "core.contract.TransactionGroup", "recordingmap")
+        LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
     @Test
@@ -506,7 +506,7 @@ class TwoPartyTradeProtocolTests {
 
     interface TxRecord {
         data class Add(val transaction: SignedTransaction) : TxRecord
-        data class Get(val id: SecureHash): TxRecord
+        data class Get(val id: SecureHash) : TxRecord
     }
 
 

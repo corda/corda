@@ -15,7 +15,7 @@ import com.r3corda.core.testing.ALICE_PUBKEY
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
 import com.r3corda.core.testing.MEGA_CORP_KEY
-import com.r3corda.core.utilities.BriefLogFormatter
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.protocols.RatesFixProtocol
@@ -109,7 +109,7 @@ class NodeInterestRatesTest {
         val tx = TransactionType.General.Builder()
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
         val protocol = RatesFixProtocol(tx, n2.info.identity, fixOf, "0.675".bd, "0.1".bd)
-        BriefLogFormatter.initVerbose("rates")
+        LogHelper.setLevel("rates")
         net.runNetwork()
         val future = n1.smm.add("rates", protocol)
 
@@ -122,5 +122,5 @@ class NodeInterestRatesTest {
         assertEquals("0.678".bd, fix.value)
     }
 
-    private fun makeTX() =  TransactionType.General.Builder().withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY)
+    private fun makeTX() = TransactionType.General.Builder().withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY)
 }

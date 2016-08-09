@@ -7,7 +7,6 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.rootCauseExceptions
-import com.r3corda.core.utilities.BriefLogFormatter
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
@@ -31,10 +30,6 @@ import kotlin.test.assertFailsWith
 
 class AttachmentTests {
     lateinit var network: MockNetwork
-
-    init {
-        BriefLogFormatter.init()
-    }
 
     @Before
     fun setUp() {
