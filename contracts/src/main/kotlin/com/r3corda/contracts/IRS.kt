@@ -461,7 +461,7 @@ class InterestRateSwap() : ClauseVerifier() {
             override val ifNotMatched = MatchBehaviour.CONTINUE
 
             // These functions may make more sense to use for basket types, but for now let's leave them here
-            fun checkLegDates(legs: Array<CommonLeg>) {
+            fun checkLegDates(legs: List<CommonLeg>) {
                 requireThat {
                     "Effective date is before termination date" by legs.all { it.effectiveDate < it.terminationDate }
                     "Effective dates are in alignment" by legs.all { it.effectiveDate == legs[0].effectiveDate }
@@ -469,7 +469,7 @@ class InterestRateSwap() : ClauseVerifier() {
                 }
             }
 
-            fun checkLegAmounts(legs: Array<CommonLeg>) {
+            fun checkLegAmounts(legs: List<CommonLeg>) {
                 requireThat {
                     "The notional is non zero" by legs.any { it.notional.quantity > (0).toLong() }
                     "The notional for all legs must be the same" by legs.all { it.notional == legs[0].notional }
@@ -485,9 +485,9 @@ class InterestRateSwap() : ClauseVerifier() {
             }
 
             // TODO: After business rules discussion, add further checks to the schedules and rates
-            fun checkSchedules(@Suppress("UNUSED_PARAMETER") legs: Array<CommonLeg>): Boolean = true
+            fun checkSchedules(@Suppress("UNUSED_PARAMETER") legs: List<CommonLeg>): Boolean = true
 
-            fun checkRates(@Suppress("UNUSED_PARAMETER") legs: Array<CommonLeg>): Boolean = true
+            fun checkRates(@Suppress("UNUSED_PARAMETER") legs: List<CommonLeg>): Boolean = true
 
             /**
              * Compares two schedules of Floating Leg Payments, returns the difference (i.e. omissions in either leg or changes to the values).
@@ -550,14 +550,14 @@ class InterestRateSwap() : ClauseVerifier() {
                     "The effective date is before the termination date for the floating leg" by (irs.floatingLeg.effectiveDate < irs.floatingLeg.terminationDate)
                     "The effective dates are aligned" by (irs.floatingLeg.effectiveDate == irs.fixedLeg.effectiveDate)
                     "The termination dates are aligned" by (irs.floatingLeg.terminationDate == irs.fixedLeg.terminationDate)
-                    "The rates are valid" by checkRates(arrayOf(irs.fixedLeg, irs.floatingLeg))
-                    "The schedules are valid" by checkSchedules(arrayOf(irs.fixedLeg, irs.floatingLeg))
+                    "The rates are valid" by checkRates(listOf(irs.fixedLeg, irs.floatingLeg))
+                    "The schedules are valid" by checkSchedules(listOf(irs.fixedLeg, irs.floatingLeg))
                     "The fixing period date offset cannot be negative" by (irs.floatingLeg.fixingPeriodOffset >= 0)
 
                     // TODO: further tests
                 }
-                checkLegAmounts(arrayOf(irs.fixedLeg, irs.floatingLeg))
-                checkLegDates(arrayOf(irs.fixedLeg, irs.floatingLeg))
+                checkLegAmounts(listOf(irs.fixedLeg, irs.floatingLeg))
+                checkLegDates(listOf(irs.fixedLeg, irs.floatingLeg))
 
                 return setOf(command.value)
             }
