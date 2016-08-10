@@ -43,25 +43,27 @@ class Obligation<P> : Contract {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.example.gov/cash-settlement.html")
-    private val clauses = listOf(InterceptorClause(Clauses.VerifyLifecycle<P>(), Clauses.Net<P>()),
-                    Clauses.Group<P>())
 
     interface Clauses {
         /**
          * Parent clause for clauses that operate on grouped states (those which are fungible).
          */
-        class Group<P> : GroupClauseVerifier<State<P>, Issued<Terms<P>>>() {
-            override val ifMatched: MatchBehaviour = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
-            override val clauses = listOf(
-                    NoZeroSizedOutputs<State<P>, Terms<P>>(),
-                    SetLifecycle<P>(),
-                    VerifyLifecycle<P>(),
-                    Settle<P>(),
-                    Issue(),
-                    ConserveAmount()
-            )
-
+        class Group<P> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
+                AllComposition(
+                        NoZeroSizedOutputs<State<P>, Commands, Terms<P>>(),
+                        FirstComposition(
+                                SetLifecycle<P>(),
+                                AllComposition(
+                                        VerifyLifecycle<State<P>, Commands, Issued<Terms<P>>, P>(),
+                                        FirstComposition(
+                                                Settle<P>(),
+                                                Issue(),
+                                                ConserveAmount()
+                                        )
+                                )
+                        )
+                )
+        ) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<Obligation.State<P>, Issued<Terms<P>>>>
                     = tx.groupStates<Obligation.State<P>, Issued<Terms<P>>> { it.issuanceDef }
         }
@@ -69,58 +71,64 @@ class Obligation<P> : Contract {
         /**
          * Generic issuance clause
          */
-        class Issue<P> : AbstractIssue<State<P>, Terms<P>>({ -> sumObligations() }, { token: Issued<Terms<P>> -> sumObligationsOrZero(token) }) {
-            override val requiredCommands = setOf(Obligation.Commands.Issue::class.java)
+        class Issue<P> : AbstractIssue<State<P>, Commands, Terms<P>>({ -> sumObligations() }, { token: Issued<Terms<P>> -> sumObligationsOrZero(token) }) {
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
         /**
          * Generic move/exit clause for fungible assets
          */
-        class ConserveAmount<P> : AbstractConserveAmount<State<P>, Terms<P>>()
+        class ConserveAmount<P> : AbstractConserveAmount<State<P>, Commands, Terms<P>>()
 
         /**
          * Clause for supporting netting of obligations.
          */
-        class Net<P> : NetClause<P>()
+        class Net<C: CommandData, P> : NetClause<C, P>() {
+            val lifecycleClause = Clauses.VerifyLifecycle<ContractState, C, Unit, P>()
+            override fun toString(): String = "Net obligations"
+
+            override fun verify(tx: TransactionForContract, inputs: List<ContractState>, outputs: List<ContractState>, commands: List<AuthenticatedObject<C>>, groupingKey: Unit?): Set<C> {
+                lifecycleClause.verify(tx, inputs, outputs, commands, groupingKey)
+                return super.verify(tx, inputs, outputs, commands, groupingKey)
+            }
+        }
 
         /**
          * Obligation-specific clause for changing the lifecycle of one or more states.
          */
-        class SetLifecycle<P> : GroupClause<State<P>, Issued<Terms<P>>> {
-            override val requiredCommands = setOf(Commands.SetLifecycle::class.java)
-            override val ifMatched: MatchBehaviour = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour = MatchBehaviour.CONTINUE
+        class SetLifecycle<P> : ConcreteClause<State<P>, Commands, Issued<Terms<P>>>() {
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.SetLifecycle::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State<P>>,
                                 outputs: List<State<P>>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms<P>>): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: Issued<Terms<P>>?): Set<Commands> {
                 val command = commands.requireSingleCommand<Commands.SetLifecycle>()
                 Obligation<P>().verifySetLifecycleCommand(inputs, outputs, tx, command)
                 return setOf(command.value)
             }
+
+            override fun toString(): String = "Set obligation lifecycle"
         }
 
         /**
          * Obligation-specific clause for settling an outstanding obligation by witnessing
          * change of ownership of other states to fulfil
          */
-        class Settle<P> : GroupClause<State<P>, Issued<Terms<P>>> {
-            override val requiredCommands = setOf(Commands.Settle::class.java)
-            override val ifMatched: MatchBehaviour = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour = MatchBehaviour.CONTINUE
-
+        class Settle<P> : ConcreteClause<State<P>, Commands, Issued<Terms<P>>>() {
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Settle::class.java)
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State<P>>,
                                 outputs: List<State<P>>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms<P>>): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: Issued<Terms<P>>?): Set<Commands> {
+                require(groupingKey != null)
                 val command = commands.requireSingleCommand<Commands.Settle<P>>()
-                val obligor = token.issuer.party
-                val template = token.product
+                val obligor = groupingKey!!.issuer.party
+                val template = groupingKey.product
                 val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
-                val outputAmount: Amount<Issued<Terms<P>>> = outputs.sumObligationsOrZero(token)
+                val outputAmount: Amount<Issued<Terms<P>>> = outputs.sumObligationsOrZero(groupingKey)
 
                 // Sum up all asset state objects that are moving and fulfil our requirements
 
@@ -166,7 +174,7 @@ class Obligation<P> : Contract {
                 for ((beneficiary, obligations) in inputs.groupBy { it.owner }) {
                     val settled = amountReceivedByOwner[beneficiary]?.sumFungibleOrNull<P>()
                     if (settled != null) {
-                        val debt = obligations.sumObligationsOrZero(token)
+                        val debt = obligations.sumObligationsOrZero(groupingKey)
                         require(settled.quantity <= debt.quantity) { "Payment of $settled must not exceed debt $debt" }
                         totalPenniesSettled += settled.quantity
                     }
@@ -185,7 +193,7 @@ class Obligation<P> : Contract {
                     "signatures are present from all obligors" by command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
                     "at obligor ${obligor.name} the obligations after settlement balance" by
-                            (inputAmount == outputAmount + Amount(totalPenniesSettled, token))
+                            (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
                 }
                 return setOf(command.value)
             }
@@ -197,22 +205,15 @@ class Obligation<P> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<P> : SingleClause(), GroupClause<State<P>, Issued<Terms<P>>> {
-            override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData>
-                = verify(
-                    tx.inputs.filterIsInstance<State<P>>(),
-                    tx.outputs.filterIsInstance<State<P>>()
-            )
-
+        class VerifyLifecycle<S: ContractState, C: CommandData, T: Any, P> : ConcreteClause<S, C, T>() {
             override fun verify(tx: TransactionForContract,
-                                inputs: List<State<P>>,
-                                outputs: List<State<P>>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms<P>>): Set<CommandData>
-                = verify(inputs, outputs)
-
-            fun verify(inputs: List<State<P>>,
-                       outputs: List<State<P>>): Set<CommandData> {
+                                inputs: List<S>,
+                                outputs: List<S>,
+                                commands: List<AuthenticatedObject<C>>,
+                                groupingKey: T?): Set<C>
+                = verify(inputs.filterIsInstance<State<P>>(), outputs.filterIsInstance<State<P>>())
+            private fun verify(inputs: List<State<P>>,
+                                outputs: List<State<P>>): Set<C> {
                 requireThat {
                     "all inputs are in the normal state " by inputs.all { it.lifecycle == Lifecycle.NORMAL }
                     "all outputs are in the normal state " by outputs.all { it.lifecycle == Lifecycle.NORMAL }
@@ -330,7 +331,7 @@ class Obligation<P> : Contract {
          * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting
          * as only the beneficiary (not the obligor) needs to sign.
          */
-        data class Net(val type: NetType) : Obligation.Commands
+        data class Net(val type: NetType) : Commands
 
         /**
          * A command stating that a debt has been moved, optionally to fulfil another contract.
@@ -373,9 +374,10 @@ class Obligation<P> : Contract {
         data class Exit<P>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
-            = tx.commands.select<Obligation.Commands>()
-    override fun verify(tx: TransactionForContract) = verifyClauses(tx, clauses, extractCommands(tx))
+    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstComposition<ContractState, Commands, Unit>(
+            Clauses.Net<Commands, P>(),
+            Clauses.Group<P>()
+    ), tx.commands.select<Obligation.Commands>())
 
     /**
      * A default command mutates inputs and produces identical outputs, except that the lifecycle changes.

@@ -1,7 +1,7 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.clauses.MatchBehaviour
-import com.r3corda.core.contracts.clauses.SingleClause
+import com.r3corda.core.contracts.clauses.ConcreteClause
+import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -218,14 +218,18 @@ interface LinearState: ContractState {
     /**
      * Standard clause to verify the LinearState safety properties.
      */
-    class ClauseVerifier<S: LinearState>(val stateClass: Class<S>) : SingleClause() {
-        override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
-            val inputs = tx.inputs.filterIsInstance(stateClass)
-            val inputIds = inputs.map { it.linearId }.distinct()
-            require(inputIds.count() == inputs.count()) { "LinearStates cannot be merged" }
-            val outputs = tx.outputs.filterIsInstance(stateClass)
-            val outputIds = outputs.map { it.linearId }.distinct()
-            require(outputIds.count() == outputs.count()) { "LinearStates cannot be split" }
+    class ClauseVerifier<S : LinearState>(val stateClass: Class<S>) : ConcreteClause<ContractState, CommandData, Unit>() {
+        override fun verify(tx: TransactionForContract,
+                            inputs: List<ContractState>,
+                            outputs: List<ContractState>,
+                            commands: List<AuthenticatedObject<CommandData>>,
+                            groupingKey: Unit?): Set<CommandData> {
+            val filteredInputs = inputs.filterIsInstance(stateClass)
+            val inputIds = filteredInputs.map { it.linearId }.distinct()
+            require(inputIds.count() == filteredInputs.count()) { "LinearStates cannot be merged" }
+            val filteredOutputs = outputs.filterIsInstance(stateClass)
+            val outputIds = filteredOutputs.map { it.linearId }.distinct()
+            require(outputIds.count() == filteredOutputs.count()) { "LinearStates cannot be split" }
             return emptySet()
         }
     }

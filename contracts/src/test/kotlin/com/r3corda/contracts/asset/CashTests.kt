@@ -172,11 +172,11 @@ class CashTests {
             }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                this `fails with` "All commands must be matched at end of execution."
+                this `fails with` "The following commands were not matched at the end of execution"
             }
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
-                this `fails with` "All commands must be matched at end of execution."
+                this `fails with` "The following commands were not matched at the end of execution"
             }
             this.verifies()
         }

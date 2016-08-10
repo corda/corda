@@ -5,8 +5,7 @@ import com.r3corda.contracts.asset.Obligation
 import com.r3corda.contracts.asset.extractAmountsDue
 import com.r3corda.contracts.asset.sumAmountsDue
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.MatchBehaviour
-import com.r3corda.core.contracts.clauses.SingleClause
+import com.r3corda.core.contracts.clauses.ConcreteClause
 import java.security.PublicKey
 
 /**
@@ -43,22 +42,24 @@ data class MultilateralNetState<P>(
  * Clause for netting contract states. Currently only supports obligation contract.
  */
 // TODO: Make this usable for any nettable contract states
-open class NetClause<P> : SingleClause() {
-    override val ifMatched: MatchBehaviour = MatchBehaviour.END
-    override val ifNotMatched: MatchBehaviour = MatchBehaviour.CONTINUE
+open class NetClause<C: CommandData, P> : ConcreteClause<ContractState, C, Unit>() {
     override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")
-    override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
+    override fun verify(tx: TransactionForContract,
+                        inputs: List<ContractState>,
+                        outputs: List<ContractState>,
+                        commands: List<AuthenticatedObject<C>>,
+                        groupingKey: Unit?): Set<C> {
         val command = commands.requireSingleCommand<Obligation.Commands.Net>()
         val groups = when (command.value.type) {
             NetType.CLOSE_OUT -> tx.groupStates { it: Obligation.State<P> -> it.bilateralNetState }
             NetType.PAYMENT -> tx.groupStates { it: Obligation.State<P> -> it.multilateralNetState }
         }
-        for ((inputs, outputs, key) in groups) {
-            verifyNetCommand(inputs, outputs, command, key)
+        for ((groupInputs, groupOutputs, key) in groups) {
+            verifyNetCommand(groupInputs, groupOutputs, command, key)
         }
-        return setOf(command.value)
+        return setOf(command.value as C)
     }
 
     /**

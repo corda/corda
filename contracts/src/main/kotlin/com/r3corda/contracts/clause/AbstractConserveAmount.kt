@@ -5,8 +5,7 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumFungibleOrNull
 import com.r3corda.contracts.asset.sumFungibleOrZero
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.GroupClause
-import com.r3corda.core.contracts.clauses.MatchBehaviour
+import com.r3corda.core.contracts.clauses.ConcreteClause
 import com.r3corda.core.crypto.Party
 import java.security.PublicKey
 import java.util.*
@@ -16,14 +15,7 @@ import java.util.*
  * Move command is provided, and errors if absent. Must be the last clause under a grouping clause;
  * errors on no-match, ends on match.
  */
-abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause<S, Issued<T>> {
-    override val ifMatched: MatchBehaviour
-        get() = MatchBehaviour.END
-    override val ifNotMatched: MatchBehaviour
-        get() = MatchBehaviour.ERROR
-    override val requiredCommands: Set<Class<out CommandData>>
-        get() = emptySet()
-
+abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T : Any> : ConcreteClause<S, C, Issued<T>>() {
     /**
      * Gather assets from the given list of states, sufficient to match or exceed the given amount.
      *
@@ -177,16 +169,18 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
     override fun verify(tx: TransactionForContract,
                         inputs: List<S>,
                         outputs: List<S>,
-                        commands: Collection<AuthenticatedObject<CommandData>>,
-                        token: Issued<T>): Set<CommandData> {
-        val inputAmount: Amount<Issued<T>> = inputs.sumFungibleOrNull<T>() ?: throw IllegalArgumentException("there is at least one asset input for group $token")
-        val deposit = token.issuer
-        val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(token)
+                        commands: List<AuthenticatedObject<C>>,
+                        groupingKey: Issued<T>?): Set<C> {
+        require(groupingKey != null) { "Conserve amount clause can only be used on grouped states" }
+        val matchedCommands = commands.filter { command -> command.value is FungibleAsset.Commands.Move || command.value is FungibleAsset.Commands.Exit<*> }
+        val inputAmount: Amount<Issued<T>> = inputs.sumFungibleOrNull<T>() ?: throw IllegalArgumentException("there is at least one asset input for group $groupingKey")
+        val deposit = groupingKey!!.issuer
+        val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(groupingKey)
 
         // If we want to remove assets from the ledger, that must be signed for by the issuer and owner.
         val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
-        val exitCommand = tx.commands.select<FungibleAsset.Commands.Exit<T>>(parties = null, signers = exitKeys).filter {it.value.amount.token == token}.singleOrNull()
-        val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, token)
+        val exitCommand = matchedCommands.select<FungibleAsset.Commands.Exit<T>>(parties = null, signers = exitKeys).filter { it.value.amount.token == groupingKey }.singleOrNull()
+        val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, groupingKey)
 
         requireThat {
             "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
@@ -194,8 +188,12 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
                     (inputAmount == outputAmount + amountExitingLedger)
         }
 
-        return listOf(exitCommand?.value, verifyMoveCommand<FungibleAsset.Commands.Move>(inputs, tx))
-                .filter { it != null }
-                .requireNoNulls().toSet()
+        verifyMoveCommand<FungibleAsset.Commands.Move>(inputs, commands)
+
+        // This is safe because we've taken the commands from a collection of C objects at the start
+        @Suppress("UNCHECKED_CAST")
+        return matchedCommands.map { it.value }.toSet()
     }
+
+    override fun toString(): String = "Conserve amount between inputs and outputs"
 }

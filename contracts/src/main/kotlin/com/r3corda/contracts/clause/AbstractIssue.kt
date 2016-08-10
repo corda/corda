@@ -1,8 +1,7 @@
 package com.r3corda.contracts.clause
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.GroupClause
-import com.r3corda.core.contracts.clauses.MatchBehaviour
+import com.r3corda.core.contracts.clauses.ConcreteClause
 
 /**
  * Standard issue clause for contracts that issue fungible assets.
@@ -14,18 +13,16 @@ import com.r3corda.core.contracts.clauses.MatchBehaviour
  * @param sumOrZero function to convert a list of states into an amount of the token, and returns zero if there are
  * no states in the list. Takes in an instance of the token definition for constructing the zero amount if needed.
  */
-abstract class AbstractIssue<in S: ContractState, T: Any>(
+abstract class AbstractIssue<in S: ContractState, C: CommandData, T: Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,
         val sumOrZero: List<S>.(token: Issued<T>) -> Amount<Issued<T>>
-) : GroupClause<S, Issued<T>> {
-    override val ifMatched = MatchBehaviour.END
-    override val ifNotMatched = MatchBehaviour.CONTINUE
-
+) : ConcreteClause<S, C, Issued<T>>() {
     override fun verify(tx: TransactionForContract,
                         inputs: List<S>,
                         outputs: List<S>,
-                        commands: Collection<AuthenticatedObject<CommandData>>,
-                        token: Issued<T>): Set<CommandData> {
+                        commands: List<AuthenticatedObject<C>>,
+                        groupingKey: Issued<T>?): Set<C> {
+        require(groupingKey != null)
         // TODO: Take in matched commands as a parameter
         val issueCommand = commands.requireSingleCommand<IssueCommand>()
 
@@ -40,8 +37,8 @@ abstract class AbstractIssue<in S: ContractState, T: Any>(
         // external mechanism (such as locally defined rules on which parties are trustworthy).
 
         // The grouping already ensures that all outputs have the same deposit reference and token.
-        val issuer = token.issuer.party
-        val inputAmount = inputs.sumOrZero(token)
+        val issuer = groupingKey!!.issuer.party
+        val inputAmount = inputs.sumOrZero(groupingKey)
         val outputAmount = outputs.sum()
         requireThat {
             "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
@@ -51,6 +48,8 @@ abstract class AbstractIssue<in S: ContractState, T: Any>(
             "output values sum to more than the inputs" by (outputAmount > inputAmount)
         }
 
-        return setOf(issueCommand.value)
+        // This is safe because we've taken the command from a collection of C objects at the start
+        @Suppress("UNCHECKED_CAST")
+        return setOf(issueCommand.value as C)
     }
 }
