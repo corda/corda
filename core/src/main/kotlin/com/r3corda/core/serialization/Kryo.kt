@@ -16,6 +16,7 @@ import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.utilities.NonEmptySet
 import com.r3corda.core.utilities.NonEmptySetSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.guava.*
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
@@ -357,7 +358,13 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
         addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
-        
+
+        ImmutableListSerializer.registerSerializers(k)
+        ImmutableSetSerializer.registerSerializers(k)
+        ImmutableSortedSetSerializer.registerSerializers(k)
+        ImmutableMapSerializer.registerSerializers(k)
+        ImmutableMultimapSerializer.registerSerializers(k)
+
         noReferencesWithin<WireTransaction>()
     }
 }
