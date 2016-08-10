@@ -7,12 +7,10 @@ import com.r3corda.core.crypto.toBase58String
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.config.copy
 import com.r3corda.node.services.network.NetworkMapService
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import joptsimple.OptionSet
@@ -30,7 +28,7 @@ class NodeRunner {
         @JvmStatic fun main(arguments: Array<String>) {
             val cliParams = CliParams.parse(CliParams.parser.parse(*arguments))
 
-            val nodeDirectory = Paths.get(cliParams.baseDirectory, cliParams.legalName)
+            val nodeDirectory = Paths.get(cliParams.baseDirectory)
             createNodeRunDirectory(nodeDirectory)
 
             with(cliParams) {
@@ -48,15 +46,12 @@ class NodeRunner {
                         } else {
                             null
                         }
-                val nodeConfiguration =
-                        NodeConfigurationFromConfig(
-                                ConfigFactory.parseResources(
-                                        nodeConfigurationPath,
-                                        ConfigParseOptions.defaults().setAllowMissing(false)
-                                )
-                        ).copy(
-                                myLegalName = legalName
+                val nodeConfiguration = NodeConfigurationFromConfig(
+                        NodeConfiguration.loadConfig(
+                                baseDirectoryPath = nodeDirectory,
+                                allowMissingConfig = false
                         )
+                )
 
                 val node = Node(
                         dir = nodeDirectory,
@@ -67,7 +62,7 @@ class NodeRunner {
                         advertisedServices = services.toSet()
                 )
 
-                log.info("Starting $legalName with services $services on addresses $messagingAddress and $apiAddress")
+                log.info("Starting ${nodeConfiguration.myLegalName} with services $services on addresses $messagingAddress and $apiAddress")
                 node.start()
             }
         }
@@ -80,9 +75,7 @@ class NodeRunner {
             val networkMapAddress: HostAndPort?,
             val messagingAddress: HostAndPort,
             val apiAddress: HostAndPort,
-            val baseDirectory: String,
-            val nodeConfigurationPath: String,
-            val legalName: String
+            val baseDirectory: String
     ) {
 
         companion object {
@@ -101,10 +94,6 @@ class NodeRunner {
                     parser.accepts("api-address").withRequiredArg().ofType(String::class.java)
             val baseDirectory =
                     parser.accepts("base-directory").withRequiredArg().ofType(String::class.java)
-            val nodeConfigurationPath =
-                    parser.accepts("node-configuration-path").withRequiredArg().ofType(String::class.java)
-            val legalName =
-                    parser.accepts("legal-name").withRequiredArg().ofType(String::class.java)
 
             private fun <T> requiredArgument(optionSet: OptionSet, spec: ArgumentAcceptingOptionSpec<T>) =
                     optionSet.valueOf(spec) ?: throw IllegalArgumentException("Must provide $spec")
@@ -117,8 +106,6 @@ class NodeRunner {
                 val messagingAddress = requiredArgument(optionSet, messagingAddress)
                 val apiAddress = requiredArgument(optionSet, apiAddress)
                 val baseDirectory = requiredArgument(optionSet, baseDirectory)
-                val nodeConfigurationPath = requiredArgument(optionSet, nodeConfigurationPath)
-                val legalName = requiredArgument(optionSet, legalName)
 
                 return CliParams(
                         services = services.map { object : ServiceType(it) {} }.toSet(),
@@ -127,9 +114,7 @@ class NodeRunner {
                         baseDirectory = baseDirectory,
                         networkMapName = networkMapName,
                         networkMapPublicKey = networkMapPublicKey,
-                        networkMapAddress = networkMapAddress?.let { HostAndPort.fromString(it) },
-                        nodeConfigurationPath = nodeConfigurationPath,
-                        legalName = legalName
+                        networkMapAddress = networkMapAddress?.let { HostAndPort.fromString(it) }
                 )
             }
         }
@@ -158,10 +143,6 @@ class NodeRunner {
             cliArguments.add(apiAddress.toString())
             cliArguments.add("--base-directory")
             cliArguments.add(baseDirectory.toString())
-            cliArguments.add("--node-configuration-path")
-            cliArguments.add(nodeConfigurationPath)
-            cliArguments.add("--legal-name")
-            cliArguments.add(legalName)
             return cliArguments
         }
     }

@@ -7,15 +7,16 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
+import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.config.copy
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
@@ -82,7 +83,6 @@ sealed class PortAllocation {
  * @param baseDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
  *   and may be specified in [DriverDSL.startNode].
- * @param nodeConfigurationPath The path to the node's .conf, defaults to "reference.conf".
  * @param quasarJarPath The path to quasar.jar, relative to cwd. Defaults to "lib/quasar.jar". TODO remove this once we can bundle quasar properly.
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
@@ -91,7 +91,6 @@ sealed class PortAllocation {
   */
 fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
-        nodeConfigurationPath: String = "reference.conf",
         quasarJarPath: String = "lib/quasar.jar",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
@@ -101,7 +100,6 @@ fun <A> driver(
             portAllocation = portAllocation,
             debugPortAllocation = debugPortAllocation,
             baseDirectory = baseDirectory,
-            nodeConfigurationPath = nodeConfigurationPath,
             quasarJarPath = quasarJarPath
         ),
         coerce = { it },
@@ -186,7 +184,6 @@ class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val baseDirectory: String,
-        val nodeConfigurationPath: String,
         val quasarJarPath: String
 ) : DriverDSLInternalInterface {
 
@@ -196,19 +193,19 @@ class DriverDSL(
     private var networkMapNodeInfo: NodeInfo? = null
     private val registeredProcesses = LinkedList<Process>()
 
-    val nodeConfiguration =
-            NodeConfigurationFromConfig(
-                    ConfigFactory.parseResources(
-                            nodeConfigurationPath,
-                            ConfigParseOptions.defaults().setAllowMissing(false)
+    val driverNodeConfiguration = NodeConfigurationFromConfig(
+            NodeConfiguration.loadConfig(
+                    baseDirectoryPath = Paths.get(baseDirectory, "driver-artemis"),
+                    allowMissingConfig = true,
+                    configOverrides = mapOf(
+                            "myLegalName" to "driver-artemis"
                     )
-            ).copy(
-                    myLegalName = "driver-artemis"
             )
+    )
 
     override val messagingService = ArtemisMessagingClient(
             Paths.get(baseDirectory, "driver-artemis"),
-            nodeConfiguration,
+            driverNodeConfiguration,
             serverHostPort = networkMapAddress,
             myHostPort = portAllocation.nextHostAndPort()
     )
@@ -261,6 +258,16 @@ class DriverDSL(
         val debugPort = debugPortAllocation.nextPort()
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
+        val nodeDirectory = "$baseDirectory/$name"
+
+        val config = NodeConfiguration.loadConfig(
+                baseDirectoryPath = Paths.get(nodeDirectory),
+                allowMissingConfig = true,
+                configOverrides = mapOf(
+                        "myLegalName" to name
+                )
+        )
+
         val driverCliParams = NodeRunner.CliParams(
                 services = advertisedServices,
                 networkMapName = networkMapNodeInfo!!.identity.name,
@@ -268,11 +275,9 @@ class DriverDSL(
                 networkMapAddress = networkMapAddress,
                 messagingAddress = messagingAddress,
                 apiAddress = apiAddress,
-                baseDirectory = baseDirectory,
-                nodeConfigurationPath = nodeConfigurationPath,
-                legalName = name
+                baseDirectory = nodeDirectory
         )
-        registerProcess(startNode(driverCliParams, quasarJarPath, debugPort))
+        registerProcess(DriverDSL.startNode(config, driverCliParams, name, quasarJarPath, debugPort))
 
         return poll {
             networkMapCache.partyNodes.forEach {
@@ -313,6 +318,17 @@ class DriverDSL(
     private fun startNetworkMapService() {
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = debugPortAllocation.nextPort()
+
+        val nodeDirectory = "$baseDirectory/$networkMapName"
+
+        val config = NodeConfiguration.loadConfig(
+                baseDirectoryPath = Paths.get(nodeDirectory),
+                allowMissingConfig = true,
+                configOverrides = mapOf(
+                        "myLegalName" to networkMapName
+                )
+        )
+
         val driverCliParams = NodeRunner.CliParams(
                 services = setOf(NetworkMapService.Type),
                 networkMapName = null,
@@ -320,12 +336,10 @@ class DriverDSL(
                 networkMapAddress = null,
                 messagingAddress = networkMapAddress,
                 apiAddress = apiAddress,
-                baseDirectory = baseDirectory,
-                nodeConfigurationPath = nodeConfigurationPath,
-                legalName = networkMapName
+                baseDirectory = nodeDirectory
         )
         log.info("Starting network-map-service")
-        registerProcess(startNode(driverCliParams, quasarJarPath, debugPort))
+        registerProcess(startNode(config, driverCliParams, networkMapName, quasarJarPath, debugPort))
     }
 
     companion object {
@@ -338,13 +352,23 @@ class DriverDSL(
         )
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
-        private fun startNode(cliParams: NodeRunner.CliParams, quasarJarPath: String, debugPort: Int): Process {
+        private fun startNode(
+                config: Config,
+                cliParams: NodeRunner.CliParams,
+                legalName: String,
+                quasarJarPath: String,
+                debugPort: Int
+        ): Process {
+
+            // Write node.conf
+            writeConfig("${cliParams.baseDirectory}", "node.conf", config)
+
             val className = NodeRunner::class.java.canonicalName
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
             val javaArgs = listOf(path) +
-                    listOf("-Dname=${cliParams.legalName}", "-javaagent:$quasarJarPath",
+                    listOf("-Dname=$legalName", "-javaagent:$quasarJarPath",
                             "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort",
                             "-cp", classpath, className) +
                     cliParams.toCliArguments()
@@ -362,3 +386,9 @@ class DriverDSL(
         }
     }
 }
+
+fun writeConfig(path: String, filename: String, config: Config) {
+    File(path).mkdirs()
+    File("$path/$filename").writeText(config.root().render(ConfigRenderOptions.concise()))
+}
+
