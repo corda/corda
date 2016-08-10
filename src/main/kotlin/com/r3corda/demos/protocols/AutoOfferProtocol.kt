@@ -102,7 +102,7 @@ object AutoOfferProtocol {
 
             val notary = serviceHub.networkMapCache.notaryNodes.first().identity
             // need to pick which ever party is not us
-            val otherParty = notUs(*dealToBeOffered.parties).single()
+            val otherParty = notUs(dealToBeOffered.parties).single()
             progressTracker.currentStep = ANNOUNCING
             send(otherParty, 0, AutoOfferMessage(serviceHub.storageService.myLegalIdentity, notary, ourSessionID, dealToBeOffered))
             progressTracker.currentStep = DEALING
@@ -110,7 +110,7 @@ object AutoOfferProtocol {
             return stx
         }
 
-        private fun notUs(vararg parties: Party): List<Party> {
+        private fun notUs(parties: List<Party>): List<Party> {
             val notUsParties: MutableList<Party> = arrayListOf()
             for (party in parties) {
                 if (serviceHub.storageService.myLegalIdentity != party) {
