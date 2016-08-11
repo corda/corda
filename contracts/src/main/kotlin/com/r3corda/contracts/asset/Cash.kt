@@ -60,7 +60,7 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
                         Issue(),
                         ConserveAmount())
 
-            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
                     = tx.groupStates<State, Issued<Currency>> { it.issuanceDef }
         }
 
