@@ -560,3 +560,105 @@ and linked ahead of time.
 
 In future, the progress tracking framework will become a vital part of how exceptions, errors, and other faults are
 surfaced to human operators for investigation and resolution.
+
+Unit testing
+------------
+
+A protocol can be a fairly complex thing that interacts with many services and other parties over the network. That
+means unit testing one requires some infrastructure to provide lightweight mock implementations. The MockNetwork
+provides this testing infrastructure layer; you can find this class in the node module
+
+A good example to examine for learning how to unit test protocols is the ``ResolveTransactionsProtocol`` tests. This
+protocol takes care of downloading and verifying transaction graphs, with all the needed dependencies. We start
+with this basic skeleton:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      class ResolveTransactionsProtocolTest {
+          lateinit var net: MockNetwork
+          lateinit var a: MockNetwork.MockNode
+          lateinit var b: MockNetwork.MockNode
+          lateinit var notary: Party
+
+          @Before
+          fun setup() {
+              net = MockNetwork()
+              val nodes = net.createSomeNodes()
+              a = nodes.partyNodes[0]
+              b = nodes.partyNodes[1]
+              notary = nodes.notaryNode.info.identity
+              net.runNetwork()
+          }
+
+          @After
+          fun tearDown() {
+              net.stopNodes()
+          }
+      }
+
+We create a mock network in our ``@Before`` setup method and create a couple of nodes. We also record the identity
+of the notary in our test network, which will come in handy later. We also tidy up when we're done.
+
+Next, we write a test case:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      @Test
+      fun resolveFromTwoHashes() {
+          val (stx1, stx2) = makeTransactions()
+          val p = ResolveTransactionsProtocol(setOf(stx2.id), a.info.identity)
+          val future = b.services.startProtocol("resolve", p)
+          net.runNetwork()
+          val results = future.get()
+          assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
+          assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
+          assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
+      }
+
+We'll take a look at the ``makeTransactions`` function in a moment. For now, it's enough to know that it returns two
+``SignedTransaction`` objects, the second of which spends the first. Both transactions are known by node A
+but not node B.
+
+The test logic is simple enough: we create the protocol, giving it node A's identity as the target to talk to.
+Then we start it on node B and use the ``net.runNetwork()`` method to bounce messages around until things have
+settled (i.e. there are no more messages waiting to be delivered). All this is done using an in memory message
+routing implementation that is fast to initialise and use. Finally, we obtain the result of the protocol and do
+some tests on it. We also check the contents of node B's database to see that the protocol had the intended effect
+on the node's persistent state.
+
+Here's what ``makeTransactions`` looks like:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      private fun makeTransactions(): Pair<SignedTransaction, SignedTransaction> {
+          // Make a chain of custody of dummy states and insert into node A.
+          val dummy1: SignedTransaction = DummyContract.generateInitial(MEGA_CORP.ref(1), 0, notary).let {
+              it.signWith(MEGA_CORP_KEY)
+              it.signWith(DUMMY_NOTARY_KEY)
+              it.toSignedTransaction(false)
+          }
+          val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), MINI_CORP_PUBKEY).let {
+              it.signWith(MEGA_CORP_KEY)
+              it.signWith(DUMMY_NOTARY_KEY)
+              it.toSignedTransaction()
+          }
+          a.services.recordTransactions(dummy1, dummy2)
+          return Pair(dummy1, dummy2)
+      }
+
+We're using the ``DummyContract``, a simple test smart contract which stores a single number in its states, along
+with ownership and issuer information. You can issue such states, exit them and re-assign ownership (move them).
+It doesn't do anything else. This code simply creates a transaction that issues a dummy state (the issuer is
+``MEGA_CORP``, a pre-defined unit test identity), signs it with the test notary and MegaCorp keys and then
+converts the builder to the final ``SignedTransaction``. It then does so again, but this time instead of issuing
+it re-assigns ownership instead. The chain of two transactions is finally committed to node A by sending them
+directly to the ``a.services.recordTransaction`` method (note that this method doesn't check the transactions are
+valid).
+
+And that's it: you can explore the documentation for the `MockNode API <api/com.r3corda.node.internal.testing/-mock-network/index.html>`_ here.
