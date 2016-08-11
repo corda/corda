@@ -18,6 +18,9 @@ repositories {
     maven {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
     }
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
 sourceSets {
@@ -34,6 +37,9 @@ dependencies {
 
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:19.0"
+
+    // Bring in the MockNode infrastructure for writing protocol unit tests.
+    testCompile project(":node")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"

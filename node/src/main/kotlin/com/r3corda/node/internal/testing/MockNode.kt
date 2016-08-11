@@ -11,6 +11,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockIdentityService
 import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
+import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
@@ -160,6 +161,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
     }
 
+    // TODO: Move this to using createSomeNodes which doesn't conflate network services with network users.
     /**
      * Sets up a two node network, in which the first node runs network map and notary services and the other
      * doesn't.
@@ -172,8 +174,35 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         )
     }
 
-    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null) = createNode(null, -1, defaultFactory, true, legalName, keyPair, false, NetworkMapService.Type, SimpleNotaryService.Type)
-    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null) = createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
+    /**
+     * A bundle that separates the generic user nodes and service-providing nodes. A real network might not be so
+     * clearly separated, but this is convenient for testing.
+     */
+    data class BasketOfNodes(val partyNodes: List<MockNode>, val notaryNode: MockNode, val mapNode: MockNode)
+
+    /**
+     * Sets up a network with the requested number of nodes (defaulting to two), with one or more service nodes that
+     * run a notary, network map, any oracles etc. Can't be combined with [createTwoNodes].
+     */
+    fun createSomeNodes(numPartyNodes: Int = 2, nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = DUMMY_NOTARY_KEY): BasketOfNodes {
+        require(nodes.isEmpty())
+        val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = NetworkMapService.Type)
+        val notaryNode = createNode(mapNode.info, nodeFactory = nodeFactory, keyPair = notaryKeyPair,
+                advertisedServices = SimpleNotaryService.Type)
+        val nodes = ArrayList<MockNode>()
+        repeat(numPartyNodes) {
+            nodes += createPartyNode(mapNode.info)
+        }
+        return BasketOfNodes(nodes, notaryNode, mapNode)
+    }
+
+    fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
+        return createNode(null, -1, defaultFactory, true, legalName, keyPair, false, NetworkMapService.Type, SimpleNotaryService.Type)
+    }
+
+    fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null): MockNode {
+        return createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
+    }
 
     @Suppress("unused")  // This is used from the network visualiser tool.
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
