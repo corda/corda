@@ -1,6 +1,7 @@
 package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
 import com.r3corda.core.testing.*
@@ -394,9 +395,10 @@ class IRSTests {
 
     @Test
     fun `ensure failure occurs when there are inbound states for an agreement command`() {
+        val irs = singleIRS()
         transaction {
-            input() { singleIRS() }
-            output("irs post agreement") { singleIRS() }
+            input() { irs }
+            output("irs post agreement") { irs }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
             this `fails with` "There are no in states for an agreement"
@@ -665,10 +667,11 @@ class IRSTests {
             transaction("Agreement") {
                 output("irs post agreement2") {
                     irs.copy(
-                            irs.fixedLeg,
-                            irs.floatingLeg,
-                            irs.calculation,
-                            irs.common.copy(tradeID = "t2")
+                            linearId = UniqueIdentifier("t2"),
+                            fixedLeg = irs.fixedLeg,
+                            floatingLeg = irs.floatingLeg,
+                            calculation = irs.calculation,
+                            common = irs.common.copy(tradeID = "t2")
                     )
                 }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }

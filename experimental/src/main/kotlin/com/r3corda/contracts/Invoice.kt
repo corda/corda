@@ -64,8 +64,8 @@ class Invoice : Contract {
             val owner: Party,
             val buyer: Party,
             val assigned: Boolean,
-            val props: InvoiceProperties
-
+            val props: InvoiceProperties,
+            override val linearId: UniqueIdentifier = UniqueIdentifier()
     ) : LinearState {
 
         override val contract = INVOICE_PROGRAM_ID
@@ -83,8 +83,6 @@ class Invoice : Contract {
 
         // iterate over the goods list and sum up the price for each
         val amount: Amount<Issued<Currency>> get() = props.amount
-
-        override val thread = SecureHash.Companion.sha256(props.invoiceID)
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return owner.owningKey in ourKeys || buyer.owningKey in ourKeys

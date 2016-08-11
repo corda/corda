@@ -435,3 +435,21 @@ data class Commodity(val symbol: String,
                 = registry[symbol]
     }
 }
+
+/**
+ * This class provides a truly unique identifier of a trade, state, or other business object.
+ * @param externalId If there is an existing weak identifer e.g. trade reference id.
+ * This should be set here the first time a UniqueIdentifier identifier is created as part of an issue,
+ * or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong id.
+ * @param id Should never be set by user code and left as default initialised.
+ * So that the first time a state is issued this should be given a new UUID.
+ * Subsequent copies and evolutions of a state should just copy the externalId and Id fields unmodified.
+ */
+data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) {
+    override fun toString(): String {
+        if (externalId != null) {
+            return "${externalId}_${id.toString()}"
+        }
+        return id.toString()
+    }
+}
