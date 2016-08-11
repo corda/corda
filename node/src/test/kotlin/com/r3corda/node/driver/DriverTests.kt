@@ -1,6 +1,5 @@
 package com.r3corda.node.driver
 
-import com.google.common.net.HostAndPort
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.node.services.api.RegulatorService
@@ -10,7 +9,6 @@ import org.junit.Test
 
 
 class DriverTests {
-
     companion object {
         fun nodeMustBeUp(networkMapCache: NetworkMapCache, nodeInfo: NodeInfo, nodeName: String) {
             val address = nodeInfo.address as ArtemisMessagingComponent.Address
@@ -33,7 +31,7 @@ class DriverTests {
 
     @Test
     fun simpleNodeStartupShutdownWorks() {
-        val (notary, regulator) = driver(quasarJarPath = "../lib/quasar.jar") {
+        val (notary, regulator) = driver {
             val notary = startNode("TestNotary", setOf(NotaryService.Type))
             val regulator = startNode("Regulator", setOf(RegulatorService.Type))
 
@@ -47,7 +45,7 @@ class DriverTests {
 
     @Test
     fun startingNodeWithNoServicesWorks() {
-        val noService = driver(quasarJarPath = "../lib/quasar.jar") {
+        val noService = driver {
             val noService = startNode("NoService")
             nodeMustBeUp(networkMapCache, noService, "NoService")
             noService
@@ -57,7 +55,7 @@ class DriverTests {
 
     @Test
     fun randomFreePortAllocationWorks() {
-        val nodeInfo = driver(quasarJarPath = "../lib/quasar.jar", portAllocation = PortAllocation.RandomFree()) {
+        val nodeInfo = driver(portAllocation = PortAllocation.RandomFree()) {
             val nodeInfo = startNode("NoService")
             nodeMustBeUp(networkMapCache, nodeInfo, "NoService")
             nodeInfo

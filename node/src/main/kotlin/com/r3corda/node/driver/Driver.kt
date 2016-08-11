@@ -20,6 +20,7 @@ import java.io.File
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
+import java.net.URLClassLoader
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
@@ -83,7 +84,6 @@ sealed class PortAllocation {
  * @param baseDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
  *   and may be specified in [DriverDSL.startNode].
- * @param quasarJarPath The path to quasar.jar, relative to cwd. Defaults to "lib/quasar.jar". TODO remove this once we can bundle quasar properly.
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @param dsl The dsl itself
@@ -91,7 +91,6 @@ sealed class PortAllocation {
   */
 fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
-        quasarJarPath: String = "lib/quasar.jar",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         dsl: DriverDSLExposedInterface.() -> A
@@ -99,13 +98,11 @@ fun <A> driver(
         driverDsl = DriverDSL(
             portAllocation = portAllocation,
             debugPortAllocation = debugPortAllocation,
-            baseDirectory = baseDirectory,
-            quasarJarPath = quasarJarPath
+            baseDirectory = baseDirectory
         ),
         coerce = { it },
         dsl = dsl
 )
-
 
 /**
  * This is a helper method to allow extending of the DSL, along the lines of
@@ -183,8 +180,7 @@ fun <A> poll(f: () -> A?): A {
 class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
-        val baseDirectory: String,
-        val quasarJarPath: String
+        val baseDirectory: String
 ) : DriverDSLInternalInterface {
 
     override val networkMapCache = InMemoryNetworkMapCache()
@@ -192,6 +188,15 @@ class DriverDSL(
     private val networkMapAddress = portAllocation.nextHostAndPort()
     private var networkMapNodeInfo: NodeInfo? = null
     private val registeredProcesses = LinkedList<Process>()
+
+    //TODO: remove this once we can bundle quasar properly.
+    private val quasarJarPath: String by lazy {
+        val cl = ClassLoader.getSystemClassLoader()
+        val urls = (cl as URLClassLoader).urLs
+        val quasarPattern = ".*quasar.*\\.jar$".toRegex()
+        val quasarPath = urls.map { it.path }.first { quasarPattern.matches(it) }
+        quasarPath
+    }
 
     val driverNodeConfiguration = NodeConfigurationFromConfig(
             NodeConfiguration.loadConfig(
