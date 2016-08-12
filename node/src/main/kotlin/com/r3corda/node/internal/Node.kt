@@ -226,6 +226,12 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         return this
     }
 
+    /** Starts a blocking event loop for message dispatch. */
+    fun run() {
+        (net as ArtemisMessagingClient).run()
+    }
+
+    // TODO: Do we really need setup?
     override fun setup(): Node {
         super.setup()
         return this
@@ -234,6 +240,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
     private var shutdown = false
 
     override fun stop() {
+        check(!serverThread.isOnThread)
         synchronized(this) {
             if (shutdown) return
             shutdown = true
@@ -244,6 +251,9 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         // Terminate the messaging system. This will block until messages that are in-flight have finished being
         // processed so it may take a moment.
         super.stop()
+        // We do another wait here, even though any in-flight messages have been drained away now because the
+        // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
+        // arbitrary and might be inappropriate.
         MoreExecutors.shutdownAndAwaitTermination(serverThread, 50, TimeUnit.SECONDS)
         messageBroker?.stop()
         nodeFileLock!!.release()

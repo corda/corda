@@ -16,9 +16,8 @@ import org.junit.rules.TemporaryFolder
 import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
-import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class ArtemisMessagingTests {
@@ -66,8 +65,9 @@ class ArtemisMessagingTests {
 
         createMessagingServer(serverAddress).start()
 
-        val messagingClient = createMessagingClient(server = invalidServerAddress)
-        assertThatThrownBy { messagingClient.start() }
+        messagingClient = createMessagingClient(server = invalidServerAddress)
+        assertThatThrownBy { messagingClient!!.start() }
+        messagingClient = null
     }
 
     @Test
@@ -84,6 +84,7 @@ class ArtemisMessagingTests {
 
         val messagingClient = createMessagingClient()
         messagingClient.start()
+        thread { messagingClient.run() }
 
         messagingClient.addMessageHandler(topic) { message, r ->
             receivedMessages.add(message)
@@ -92,8 +93,7 @@ class ArtemisMessagingTests {
         val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val actual = receivedMessages.poll(2, SECONDS)
-        assertNotNull(actual)
+        val actual: Message = receivedMessages.take()
         assertEquals("first msg", String(actual.data))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }

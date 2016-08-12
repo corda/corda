@@ -28,6 +28,7 @@ interface AffinityExecutor : Executor {
             execute(runnable)
     }
 
+    // TODO: Rename this to executeWithResult
     /**
      * Runs the given function on the executor, blocking until the result is available. Be careful not to deadlock this
      * way! Make sure the executor can't possibly be waiting for the calling thread.

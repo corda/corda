@@ -17,6 +17,7 @@ import java.nio.file.Path
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
 
@@ -57,6 +58,7 @@ class ArtemisMessagingClient(directory: Path,
     }
 
     private class InnerState {
+        var started = false
         var running = false
         val producers = HashMap<Address, ClientProducer>()
         var consumer: ClientConsumer? = null
@@ -83,8 +85,8 @@ class ArtemisMessagingClient(directory: Path,
 
     fun start() {
         state.locked {
-            check(!running)
-            running = true
+            check(!started) { "start can't be called twice" }
+            started = true
 
             log.info("Connecting to server: $serverHostPort")
             // Connect to our server.
@@ -99,13 +101,57 @@ class ArtemisMessagingClient(directory: Path,
             val address = myHostPort.toString()
             val queueName = myHostPort.toString()
             session.createQueue(address, queueName, false)
-            consumer = session.createConsumer(queueName).setMessageHandler { artemisMessage: ClientMessage ->
-                val message: Message? = artemisToCordaMessage(artemisMessage)
-                if (message != null)
-                    deliver(message)
-            }
+            consumer = session.createConsumer(queueName)
             session.start()
         }
+    }
+
+    private var shutdownLatch = CountDownLatch(1)
+
+    /** Starts the event loop: this method only returns once [stop] has been called. */
+    fun run() {
+        val consumer = state.locked {
+            check(started)
+            check(!running) { "run can't be called twice" }
+            running = true
+            consumer!!
+        }
+
+        while (true) {
+            // Two possibilities here:
+            //
+            // 1. We block waiting for a message and the consumer is closed in another thread. In this case
+            //    receive returns null and we break out of the loop.
+            // 2. We receive a message and process it, and stop() is called during delivery. In this case,
+            //    calling receive will throw and we break out of the loop.
+            //
+            // It's safe to call into receive simultaneous with other threads calling send on a producer.
+            val artemisMessage: ClientMessage = try {
+                consumer.receive()
+            } catch(e: ActiveMQObjectClosedException) {
+                null
+            } ?: break
+
+            val message: Message? = artemisToCordaMessage(artemisMessage)
+            if (message != null)
+                deliver(message)
+
+            // Ack the message so it won't be redelivered. We should only really do this when there were no
+            // transient failures. If we caught an exception in the handler, we could back off and retry delivery
+            // a few times before giving up and redirecting the message to a dead-letter address for admin or
+            // developer inspection. Artemis has the features to do this for us, we just need to enable them.
+            //
+            // TODO: Setup Artemis delayed redelivery and dead letter addresses.
+            //
+            // ACKing a message calls back into the session which isn't thread safe, so we have to ensure it
+            // doesn't collide with a send here. Note that stop() could have been called whilst we were
+            // processing a message but if so, it'll be parked waiting for us to count down the latch, so
+            // the session itself is still around and we can still ack messages as a result.
+            state.locked {
+                artemisMessage.acknowledge()
+            }
+        }
+        shutdownLatch.countDown()
     }
 
     private fun artemisToCordaMessage(message: ClientMessage): Message? {
@@ -140,6 +186,7 @@ class ArtemisMessagingClient(directory: Path,
     }
 
     private fun deliver(msg: Message): Boolean {
+        state.checkNotLocked()
         // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
         // or removed whilst the filter is executing will not affect anything.
         val deliverTo = handlers.filter { it.topicSession.isBlank() || it.topicSession == msg.topicSession }
@@ -158,13 +205,14 @@ class ArtemisMessagingClient(directory: Path,
 
         for (handler in deliverTo) {
             try {
-                // This will perform a BLOCKING call onto the executor, although we are not actually 'fetching' anything
-                // from the thread as the callbacks don't return anything. Thus if the handlers are slow, we will be slow,
-                // and Artemis can handle that case intelligently. We don't just invoke the handler directly in order to
-                // ensure that we have the features of the AffinityExecutor class throughout the bulk of the codebase.
+                // This will perform a BLOCKING call onto the executor. Thus if the handlers are slow, we will
+                // be slow, and Artemis can handle that case intelligently. We don't just invoke the handler
+                // directly in order to ensure that we have the features of the AffinityExecutor class throughout
+                // the bulk of the codebase and other non-messaging jobs can be scheduled onto the server executor
+                // easily.
                 //
-                // Note that handlers may re-enter this class. We aren't holding any locks at this point, so that's OK.
-                state.checkNotLocked()
+                // Note that handlers may re-enter this class. We aren't holding any locks and methods like
+                // start/run/stop have re-entrancy assertions at the top, so it is OK.
                 executor.fetchFrom {
                     handler.callback(msg, handler)
                 }
@@ -177,21 +225,24 @@ class ArtemisMessagingClient(directory: Path,
     }
 
     override fun stop() {
-        state.locked {
-            if (clientFactory == null)
-                return  // Was never started to begin with, so just ignore.
+        val running = state.locked {
+            // We allow stop() to be called without a run() in between, but it must have at least been started.
+            check(started)
 
-            // Setting the message handler to null here will block until there are no more threads running the handler,
-            // so once we come back we know we can close the consumer and no more messages are being processed
-            // anywhere, due to the blocking delivery.
+            val c = consumer ?: throw IllegalStateException("stop can't be called twice")
             try {
-                consumer?.messageHandler = null
-                consumer?.close()
+                c.close()
             } catch(e: ActiveMQObjectClosedException) {
                 // Ignore it: this can happen if the server has gone away before we do.
             }
             consumer = null
-
+            running
+        }
+        if (running && !executor.isOnThread) {
+            // Wait for the main loop to notice the consumer has gone and finish up.
+            shutdownLatch.await()
+        }
+        state.locked {
             for (producer in producers.values) producer.close()
             producers.clear()
 

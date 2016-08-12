@@ -2,22 +2,20 @@ package com.r3corda.demos
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.CommercialPaper
 import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
+import com.r3corda.core.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
-import com.r3corda.core.days
-import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
-import com.r3corda.core.seconds
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
@@ -40,7 +38,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
@@ -73,10 +71,6 @@ val DEFAULT_BASE_DIRECTORY = "./build/trader-demo"
 private val log: Logger = LoggerFactory.getLogger("TraderDemo")
 
 fun main(args: Array<String>) {
-    exitProcess(runTraderDemo(args))
-}
-
-fun runTraderDemo(args: Array<String>): Int {
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
@@ -90,7 +84,7 @@ fun runTraderDemo(args: Array<String>): Int {
     } catch (e: Exception) {
         log.error(e.message)
         printHelp(parser)
-        return 1
+        exitProcess(1)
     }
 
     val role = options.valueOf(roleArg)!!
@@ -160,12 +154,13 @@ fun runTraderDemo(args: Array<String>): Int {
     if (role == Role.BUYER) {
         runBuyer(node, amount)
     } else {
-        node.networkMapRegistrationFuture.get()
-        val party = node.netMapCache.getNodeByLegalName("Bank A")?.identity ?: throw IllegalStateException("Cannot find other node?!")
-        runSeller(node, amount, party)
+        node.networkMapRegistrationFuture.success {
+            val party = node.netMapCache.getNodeByLegalName("Bank A")?.identity ?: throw IllegalStateException("Cannot find other node?!")
+            runSeller(node, amount, party)
+        }
     }
 
-    return 0
+    node.run()
 }
 
 private fun runSeller(node: Node, amount: Amount<Currency>, otherSide: Party) {
@@ -182,18 +177,20 @@ private fun runSeller(node: Node, amount: Amount<Currency>, otherSide: Party) {
         }
     }
 
-    var tradeTX: SignedTransaction? = null
+    val tradeTX: ListenableFuture<SignedTransaction>
     if (node.isPreviousCheckpointsPresent) {
-        node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).forEach {
-            tradeTX = it.second.get()
-        }
+        tradeTX = node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).single().second
     } else {
         val seller = TraderDemoProtocolSeller(otherSide, amount)
-        tradeTX = node.smm.add("demo.seller", seller).get()
+        tradeTX = node.smm.add("demo.seller", seller)
     }
-    println("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(tradeTX!!.tx)}")
 
-    node.stop()
+    tradeTX.success {
+        println("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(it.tx)}")
+        thread {
+            node.stop()
+        }
+    }
 }
 
 private fun runBuyer(node: Node, amount: Amount<Currency>) {
@@ -222,13 +219,11 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
         val buyer = TraderDemoProtocolBuyer(otherSide, attachmentsPath, amount)
         node.smm.add("demo.buyer", buyer)
     }
-
-    CountDownLatch(1).await()  // Prevent the application from terminating
 }
 
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
 
-val DEMO_TOPIC = "initiate.demo.trade"
+private val DEMO_TOPIC = "initiate.demo.trade"
 
 private class TraderDemoProtocolBuyer(val otherSide: Party,
                                       private val attachmentsPath: Path,

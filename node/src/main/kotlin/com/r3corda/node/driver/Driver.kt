@@ -27,6 +27,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlin.concurrent.thread
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes.
@@ -292,6 +293,7 @@ class DriverDSL(
         startNetworkMapService()
         messagingService.configureWithDevSSLCertificate()
         messagingService.start()
+        thread { messagingService.run() }
         messagingServiceStarted = true
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
         // the network map service itself
