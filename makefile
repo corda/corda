@@ -810,6 +810,12 @@ ifeq ($(kernel),darwin)
 
 		sysroot = $(sdk-dir)/$(target)$(ios-version).sdk
 
+# apparently, the header files we need are part of the simulator SDK
+# but not the device SDK, so we copy them from the former even if
+# we're targeting the latter
+
+		header-sysroot := $(subst iPhoneOS,iPhoneSimulator,$(sysroot))
+
 		ios-bin = $(platform-dir)/Developer/usr/bin
 
 		found-gcc = $(shell if test -f $(ios-bin)/gcc; then echo true; else echo false; fi)
@@ -2319,37 +2325,37 @@ ifeq ($(platform),windows)
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
 
-ifeq ($(kernel),darwin)
+ifeq ($(kernel),darwin)	
 	mkdir -p $(build)/openjdk/netinet
 	for file in \
-		$(sysroot)/usr/include/netinet/ip.h \
-		$(sysroot)/usr/include/netinet/in_systm.h \
-		$(sysroot)/usr/include/netinet/ip_icmp.h \
-		$(sysroot)/usr/include/netinet/in_var.h \
-		$(sysroot)/usr/include/netinet/icmp6.h \
-		$(sysroot)/usr/include/netinet/ip_var.h; do \
+		$(header-sysroot)/usr/include/netinet/ip.h \
+		$(header-sysroot)/usr/include/netinet/in_systm.h \
+		$(header-sysroot)/usr/include/netinet/ip_icmp.h \
+		$(header-sysroot)/usr/include/netinet/in_var.h \
+		$(header-sysroot)/usr/include/netinet/icmp6.h \
+		$(header-sysroot)/usr/include/netinet/ip_var.h; do \
 		if [ ! -f "$(build)/openjdk/netinet/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/netinet6
 	for file in \
-		$(sysroot)/usr/include/netinet6/in6_var.h; do \
+		$(header-sysroot)/usr/include/netinet6/in6_var.h; do \
 		if [ ! -f "$(build)/openjdk/netinet6/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/net
 	for file in \
-		$(sysroot)/usr/include/net/if_arp.h; do \
+		$(header-sysroot)/usr/include/net/if_arp.h; do \
 		if [ ! -f "$(build)/openjdk/net/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/sys
 	for file in \
-		$(sysroot)/usr/include/sys/kern_event.h \
-		$(sysroot)/usr/include/sys/sys_domain.h; do \
+		$(header-sysroot)/usr/include/sys/kern_event.h \
+		$(header-sysroot)/usr/include/sys/sys_domain.h; do \
 		if [ ! -f "$(build)/openjdk/sys/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
 		fi; \
