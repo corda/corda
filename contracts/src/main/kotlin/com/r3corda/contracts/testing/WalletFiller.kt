@@ -13,6 +13,8 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.testing.DUMMY_NOTARY_KEY
+import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
@@ -24,10 +26,11 @@ import java.util.*
  *
  * The service hub needs to provide at least a key management service and a storage service.
  *
+ * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
  * @return a wallet object that represents the generated states (it will NOT be the full wallet from the service hub!).
  */
 fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
-                                    notary: Party = DUMMY_NOTARY,
+                                    outputNotary: Party = DUMMY_NOTARY,
                                     atLeastThisManyStates: Int = 3,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
@@ -40,8 +43,8 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
-        val issuance = TransactionType.General.Builder()
-        cash.generateIssue(issuance, Amount(pennies, Issued(DUMMY_CASH_ISSUER.copy(reference = ref), howMuch.token)), myKey, notary)
+        val issuance = TransactionType.General.Builder(null)
+        cash.generateIssue(issuance, Amount(pennies, Issued(DUMMY_CASH_ISSUER.copy(reference = ref), howMuch.token)), myKey, outputNotary)
         issuance.signWith(DUMMY_CASH_ISSUER_KEY)
 
         return@map issuance.toSignedTransaction(true)

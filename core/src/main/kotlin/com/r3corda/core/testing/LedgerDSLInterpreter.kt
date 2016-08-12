@@ -126,14 +126,14 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
      * @see LedgerDSLInterpreter._transaction
      */
     @JvmOverloads
-    fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(),
+    fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
                     dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) =
             _transaction(label, transactionBuilder, dsl)
     /**
      * @see LedgerDSLInterpreter._unverifiedTransaction
      */
     @JvmOverloads
-    fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(),
+    fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
                     dsl: TransactionDSL<TransactionDSLInterpreter>.() -> Unit) =
             _unverifiedTransaction(label, transactionBuilder, dsl)
 

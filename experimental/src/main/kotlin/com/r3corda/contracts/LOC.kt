@@ -71,7 +71,7 @@ class LOC : Contract {
     override fun verify(tx: TransactionForContract) {
         val command = tx.commands.requireSingleCommand<LOC.Commands>()
 
-        val time = tx.commands.getTimestampByName("Notary Service")?.midpoint
+        val time = tx.timestamp?.midpoint
         if (time == null) throw IllegalArgumentException("must be timestamped")
 
         when (command.value) {
@@ -146,7 +146,7 @@ class LOC : Contract {
     fun generateIssue(beneficiaryPaid: Boolean, issued: Boolean, terminated: Boolean, props: LOCProperties, notary: Party): TransactionBuilder {
         val state = State(beneficiaryPaid, issued, terminated, props)
         val builder = TransactionType.General.Builder(notary = notary)
-        builder.setTime(Instant.now(), notary, 1.days)
+        builder.setTime(Instant.now(), 1.days)
         return builder.withItems(state, Command(Commands.Issuance(), props.issuingbank.owningKey))
     }
 

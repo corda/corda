@@ -111,6 +111,6 @@ fun freeLocalHostAndPort(): HostAndPort {
  */
 @JvmOverloads fun transaction(
         transactionLabel: String? = null,
-        transactionBuilder: TransactionBuilder = TransactionBuilder(),
+        transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
 ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }

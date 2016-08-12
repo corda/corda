@@ -107,7 +107,7 @@ fun issueState(node: AbstractNode): StateAndRef<*> {
 fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode): StateAndRef<DummyContract.MultiOwnerState> {
     val state = TransactionState(DummyContract.MultiOwnerState(0,
             listOf(nodeA.info.identity.owningKey, nodeB.info.identity.owningKey)), DUMMY_NOTARY)
-    val tx = TransactionType.NotaryChange.Builder().withItems(state)
+    val tx = TransactionType.NotaryChange.Builder(DUMMY_NOTARY).withItems(state)
     tx.signWith(nodeA.storage.myLegalIdentityKey)
     tx.signWith(nodeB.storage.myLegalIdentityKey)
     tx.signWith(DUMMY_NOTARY_KEY)
@@ -120,7 +120,7 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode): StateAndRef<
 
 fun issueInvalidState(node: AbstractNode, notary: Party = DUMMY_NOTARY): StateAndRef<*> {
     val tx = DummyContract().generateInitial(node.info.identity.ref(0), Random().nextInt(), notary)
-    tx.setTime(Instant.now(), notary, 30.seconds)
+    tx.setTime(Instant.now(), 30.seconds)
     tx.signWith(node.storage.myLegalIdentityKey)
     val stx = tx.toSignedTransaction(false)
     node.services.recordTransactions(listOf(stx))

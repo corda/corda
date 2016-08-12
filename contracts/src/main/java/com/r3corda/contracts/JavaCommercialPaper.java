@@ -3,6 +3,9 @@ package com.r3corda.contracts;
 import com.google.common.collect.*;
 import com.r3corda.contracts.asset.*;
 import com.r3corda.core.contracts.*;
+import static com.r3corda.core.contracts.ContractsDSL.requireThat;
+
+import com.r3corda.core.contracts.Timestamp;
 import com.r3corda.core.contracts.TransactionForContract.*;
 import com.r3corda.core.contracts.clauses.*;
 import com.r3corda.core.crypto.*;
@@ -219,15 +222,14 @@ public class JavaCommercialPaper implements Contract {
                 if (!cmd.getSigners().contains(input.getOwner()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
-                Party notary = cmd.getValue().notary;
-                TimestampCommand timestampCommand = tx.getTimestampBy(notary);
-                Instant time = null == timestampCommand
+                Timestamp timestamp = tx.getTimestamp();
+                Instant time = null == timestamp
                         ? null
-                        : timestampCommand.getBefore();
+                        : timestamp.getBefore();
                 Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
                 requireThat(require -> {
-                    require.by("must be timestamped", timestampCommand != null);
+                    require.by("must be timestamped", timestamp != null);
                     require.by("received amount equals the face value: "
                             + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
                     require.by("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
@@ -257,7 +259,7 @@ public class JavaCommercialPaper implements Contract {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
                 Party notary = cmd.getValue().notary;
-                TimestampCommand timestampCommand = tx.getTimestampBy(notary);
+                Timestamp timestampCommand = tx.getTimestamp();
                 Instant time = null == timestampCommand
                         ? null
                         : timestampCommand.getBefore();
@@ -338,7 +340,7 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary);
-        return new TransactionType.General.Builder().withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
+        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {

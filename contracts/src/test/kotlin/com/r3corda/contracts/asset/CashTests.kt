@@ -92,7 +92,7 @@ class CashTests {
         }
 
         // Test generation works.
-        val ptx = TransactionType.General.Builder()
+        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0].data as Cash.State
@@ -104,7 +104,7 @@ class CashTests {
 
         // Test issuance from the issuance definition
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
-        val templatePtx = TransactionType.General.Builder()
+        val templatePtx = TransactionType.General.Builder(DUMMY_NOTARY)
         Cash().generateIssue(templatePtx, amount, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
         assertTrue(templatePtx.inputStates().isEmpty())
         assertEquals(ptx.outputStates()[0], templatePtx.outputStates()[0])
@@ -171,14 +171,14 @@ class CashTests {
     @Test(expected = IllegalStateException::class)
     fun `reject issuance with inputs`() {
         // Issue some cash
-        var ptx = TransactionType.General.Builder()
+        var ptx = TransactionType.General.Builder(DUMMY_NOTARY)
 
         Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
         ptx.signWith(MINI_CORP_KEY)
         val tx = ptx.toSignedTransaction()
 
         // Include the previously issued cash in a new issuance command
-        ptx = TransactionType.General.Builder()
+        ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         ptx.addInputState(tx.tx.outRef<Cash.State>(0))
         Cash().generateIssue(ptx, 100.DOLLARS `issued by`  MINI_CORP.ref(12, 34), owner = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
     }
@@ -384,13 +384,13 @@ class CashTests {
      * Generate an exit transaction, removing some amount of cash from the ledger.
      */
     fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
-        val tx = TransactionType.General.Builder()
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), OUR_PUBKEY_1, WALLET)
         return tx.toWireTransaction()
     }
 
     fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
-        val tx = TransactionType.General.Builder()
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
     }
@@ -454,7 +454,7 @@ class CashTests {
 
     @Test
     fun generateSimpleSpendWithParties() {
-        val tx = TransactionType.General.Builder()
+        val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         Cash().generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, WALLET, setOf(MINI_CORP))
         assertEquals(WALLET[2].ref, tx.inputStates()[0])
     }

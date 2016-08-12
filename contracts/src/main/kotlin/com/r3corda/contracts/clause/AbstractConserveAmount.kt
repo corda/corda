@@ -66,11 +66,11 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
         val currency = amountIssued.token.product
         val amount = Amount(amountIssued.quantity, currency)
         var acceptableCoins = assetStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
-        val notary = acceptableCoins.firstOrNull()?.state?.notary
+        tx.notary = acceptableCoins.firstOrNull()?.state?.notary
         // TODO: We should be prepared to produce multiple transactions exiting inputs from
         // different notaries, or at least group states by notary and take the set with the
         // highest total value
-        acceptableCoins = acceptableCoins.filter { it.state.notary == notary }
+        acceptableCoins = acceptableCoins.filter { it.state.notary == tx.notary }
 
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, Amount(amount.quantity, currency))
         val takeChangeFrom = gathered.lastOrNull()
@@ -128,13 +128,18 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
         // Finally, we add the states to the provided partial transaction.
 
         val currency = amount.token
-        val acceptableCoins = run {
+        var acceptableCoins = run {
             val ofCurrency = assetsStates.filter { it.state.data.amount.token.product == currency }
             if (onlyFromParties != null)
                 ofCurrency.filter { it.state.data.deposit.party in onlyFromParties }
             else
                 ofCurrency
         }
+        tx.notary = acceptableCoins.firstOrNull()?.state?.notary
+        // TODO: We should be prepared to produce multiple transactions spending inputs from
+        // different notaries, or at least group states by notary and take the set with the
+        // highest total value
+        acceptableCoins = acceptableCoins.filter { it.state.notary == tx.notary }
 
         val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
         val takeChangeFrom = gathered.firstOrNull()

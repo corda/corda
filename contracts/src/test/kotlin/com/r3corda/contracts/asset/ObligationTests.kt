@@ -256,7 +256,7 @@ class ObligationTests {
     fun `generate payment net transaction with remainder`() {
         val obligationAliceToBob = oneMillionDollars.OBLIGATION between Pair(ALICE, BOB_PUBKEY)
         val obligationBobToAlice = (2000000.DOLLARS `issued by` defaultIssuer).OBLIGATION between Pair(BOB, ALICE_PUBKEY)
-        val tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val tx = TransactionType.General.Builder(null).apply {
             Obligation<Currency>().generatePaymentNetting(this, obligationAliceToBob.issuanceDef, DUMMY_NOTARY, obligationAliceToBob, obligationBobToAlice)
             signWith(ALICE_KEY)
             signWith(BOB_KEY)
@@ -274,7 +274,7 @@ class ObligationTests {
         val dueBefore = TEST_TX_TIME - Duration.ofDays(7)
 
         // Generate a transaction issuing the obligation
-        var tx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        var tx = TransactionType.General.Builder(null).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement.copy(dueBefore = dueBefore), 100.DOLLARS.quantity,
                     beneficiary = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)
@@ -306,13 +306,13 @@ class ObligationTests {
     /** Test generating a transaction to settle an obligation. */
     @Test
     fun `generate settlement transaction`() {
-        val cashTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val cashTx = TransactionType.General.Builder(null).apply {
             Cash().generateIssue(this, 100.DOLLARS `issued by` defaultIssuer, MINI_CORP_PUBKEY, DUMMY_NOTARY)
             signWith(MEGA_CORP_KEY)
         }.toSignedTransaction().tx
 
         // Generate a transaction issuing the obligation
-        val obligationTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+        val obligationTx = TransactionType.General.Builder(null).apply {
             Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
                     beneficiary = MINI_CORP_PUBKEY, notary = DUMMY_NOTARY)
             signWith(MINI_CORP_KEY)

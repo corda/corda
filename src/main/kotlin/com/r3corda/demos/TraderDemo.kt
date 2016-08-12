@@ -208,7 +208,7 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     //
     // TODO: At some point this demo should be extended to have a central bank node.
     node.services.fillWithSomeTestCash(3000.DOLLARS,
-                                       notary = node.info.identity, // In this demo, the buyer and notary are the same.
+                                       outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
                                        ownedBy = node.services.keyManagementService.freshKey().public)
 
     // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
@@ -350,7 +350,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
             tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
 
             // Requesting timestamping, all CP must be timestamped.
-            tx.setTime(Instant.now(), notaryNode.identity, 30.seconds)
+            tx.setTime(Instant.now(), 30.seconds)
 
             // Sign it as ourselves.
             tx.signWith(keyPair)
@@ -368,7 +368,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
-            val builder = TransactionType.General.Builder()
+            val builder = TransactionType.General.Builder(notaryNode.identity)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
             val notarySignature = subProtocol(NotaryProtocol.Client(builder.toSignedTransaction(false)))

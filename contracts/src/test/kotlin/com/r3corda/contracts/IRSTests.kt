@@ -217,7 +217,7 @@ class IRSTests {
                     calculation = dummyIRS.calculation,
                     common = dummyIRS.common,
                     notary = DUMMY_NOTARY).apply {
-                setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
+                setTime(TEST_TX_TIME, 30.seconds)
                 signWith(MEGA_CORP_KEY)
                 signWith(MINI_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
@@ -299,11 +299,11 @@ class IRSTests {
         while (true) {
             val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
             val fixTX: SignedTransaction = run {
-                val tx = TransactionType.General.Builder()
+                val tx = TransactionType.General.Builder(DUMMY_NOTARY)
                 val fixing = Fix(nextFix, "0.052".percent.value)
                 InterestRateSwap().generateFix(tx, previousTXN.tx.outRef(0), fixing)
                 with(tx) {
-                    setTime(TEST_TX_TIME, DUMMY_NOTARY, 30.seconds)
+                    setTime(TEST_TX_TIME, 30.seconds)
                     signWith(MEGA_CORP_KEY)
                     signWith(MINI_CORP_KEY)
                     signWith(DUMMY_NOTARY_KEY)

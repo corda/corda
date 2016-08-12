@@ -17,6 +17,7 @@ sealed class TransactionType {
      * Note: Presence of _signatures_ is not checked, only the public keys to be signed for.
      */
     fun verify(tx: LedgerTransaction) {
+        require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
         val missing = verifySigners(tx)
         if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
         verifyTransaction(tx)
@@ -24,9 +25,7 @@ sealed class TransactionType {
 
     /** Check that the list of signers includes all the necessary keys */
     fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
-        val timestamp = tx.commands.noneOrSingle { it.value is TimestampCommand }
-        val timestampKey = timestamp?.signers.orEmpty()
-        val notaryKey = (tx.inputs.map { it.state.notary.owningKey } + timestampKey).toSet()
+        val notaryKey = tx.inputs.map { it.state.notary.owningKey }.toSet()
         if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey
@@ -47,14 +46,26 @@ sealed class TransactionType {
     /** A general transaction type where transaction validity is determined by custom contract code */
     class General : TransactionType() {
         /** Just uses the default [TransactionBuilder] with no special logic */
-        class Builder(notary: Party? = null) : TransactionBuilder(General(), notary) {}
+        class Builder(notary: Party?) : TransactionBuilder(General(), notary) {}
 
         /**
          * Check the transaction is contract-valid by running the verify() for each input and output state contract.
          * If any contract fails to verify, the whole transaction is considered to be invalid.
          */
         override fun verifyTransaction(tx: LedgerTransaction) {
-            // TODO: Check that notary is unchanged
+            // Make sure the notary has stayed the same. As we can't tell how inputs and outputs connect, if there
+            // are any inputs, all outputs must have the same notary.
+            // TODO: Is that the correct set of restrictions? May need to come back to this, see if we can be more
+            //       flexible on output notaries.
+            if (tx.notary != null
+                && tx.inputs.isNotEmpty()) {
+                tx.outputs.forEach {
+                    if (it.notary != tx.notary) {
+                        throw TransactionVerificationException.NotaryChangeInWrongTransactionType(tx, it.notary)
+                    }
+                }
+            }
+
             val ctx = tx.toTransactionForContract()
 
             // TODO: This will all be replaced in future once the sandbox and contract constraints work is done.
@@ -80,7 +91,7 @@ sealed class TransactionType {
          * A transaction builder that automatically sets the transaction type to [NotaryChange]
          * and adds the list of participants to the signers set for every input state.
          */
-        class Builder(notary: Party? = null) : TransactionBuilder(NotaryChange(), notary) {
+        class Builder(notary: Party) : TransactionBuilder(NotaryChange(), notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
                 signers.addAll(stateAndRef.state.data.participants)
                 super.addInputState(stateAndRef)

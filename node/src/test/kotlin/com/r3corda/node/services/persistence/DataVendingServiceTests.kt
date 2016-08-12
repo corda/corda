@@ -34,7 +34,7 @@ class DataVendingServiceTests {
         network.runNetwork()
 
         // Generate an issuance transaction
-        val ptx = TransactionType.General.Builder()
+        val ptx = TransactionType.General.Builder(null)
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // Complete the cash transaction, and then manually relay it
@@ -66,7 +66,7 @@ class DataVendingServiceTests {
         network.runNetwork()
 
         // Generate an issuance transaction
-        val ptx = TransactionType.General.Builder()
+        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid

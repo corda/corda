@@ -2,7 +2,8 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.TimestampCommand
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.Timestamp
 import com.r3corda.core.contracts.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
@@ -51,7 +52,9 @@ object NotaryProtocol {
         @Suspendable
         override fun call(): DigitalSignature.LegallyIdentifiable {
             progressTracker.currentStep = REQUESTING
-            notaryParty = findNotaryParty()
+            val wtx = stx.tx
+            notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
+            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) { "Input states must have the same Notary" }
 
             val sendSessionID = random63BitValue()
             val receiveSessionID = random63BitValue()
@@ -81,25 +84,6 @@ object NotaryProtocol {
         private fun validateSignature(sig: DigitalSignature.LegallyIdentifiable, data: SerializedBytes<WireTransaction>) {
             check(sig.signer == notaryParty) { "Notary result not signed by the correct service" }
             sig.verifyWithECDSA(data)
-        }
-
-        private fun findNotaryParty(): Party {
-            var maybeNotaryKey: PublicKey? = null
-            val wtx = stx.tx
-
-            val timestampCommand = wtx.commands.singleOrNull { it.value is TimestampCommand }
-            if (timestampCommand != null) maybeNotaryKey = timestampCommand.signers.first()
-
-            for (stateRef in wtx.inputs) {
-                val inputNotaryKey = serviceHub.loadState(stateRef).notary.owningKey
-                if (maybeNotaryKey != null)
-                    check(maybeNotaryKey == inputNotaryKey) { "Input states and timestamp must have the same Notary" }
-                else maybeNotaryKey = inputNotaryKey
-            }
-
-            val notaryKey = maybeNotaryKey ?: throw IllegalStateException("Transaction does not specify a Notary")
-            val notaryParty = serviceHub.networkMapCache.getNodeByPublicKey(notaryKey)?.identity
-            return notaryParty ?: throw IllegalStateException("No Notary node can be found with the specified public key")
         }
     }
 
@@ -139,15 +123,8 @@ object NotaryProtocol {
         }
 
         private fun validateTimestamp(tx: WireTransaction) {
-            val timestampCmd = try {
-                tx.commands.noneOrSingle { it.value is TimestampCommand } ?: return
-            } catch (e: IllegalArgumentException) {
-                throw NotaryException(NotaryError.MoreThanOneTimestamp())
-            }
-            val myIdentity = serviceHub.storageService.myLegalIdentity
-            if (!timestampCmd.signers.contains(myIdentity.owningKey))
-                throw NotaryException(NotaryError.NotForMe())
-            if (!timestampChecker.isValid(timestampCmd.value as TimestampCommand))
+            if (tx.timestamp != null
+                    && !timestampChecker.isValid(tx.timestamp))
                 throw NotaryException(NotaryError.TimestampInvalid())
         }
 
@@ -222,11 +199,6 @@ sealed class NotaryError {
     class Conflict(val tx: WireTransaction, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
         override fun toString() = "One or more input states for transaction ${tx.id} have been used in another transaction"
     }
-
-    class MoreThanOneTimestamp : NotaryError()
-
-    /** Thrown if the timestamp command in the transaction doesn't list this Notary as a signer */
-    class NotForMe : NotaryError()
 
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
     class TimestampInvalid : NotaryError()

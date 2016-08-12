@@ -30,11 +30,6 @@ class LCApplication : Contract {
         val inputs = tx.inputs.filterIsInstance<State>()
         val outputs = tx.outputs.filterIsInstance<State>()
 
-        // Here, we match acceptable timestamp authorities by name. The list of acceptable TSAs (oracles) must be
-        // hard coded into the contract because otherwise we could fail to gain consensus, if nodes disagree about
-        // who or what is a trusted authority.
-        tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
-
         when (command.value) {
             is Commands.ApplyForLC -> {
                 verifyApply(inputs, outputs, command as AuthenticatedObject<Commands.ApplyForLC>, tx)
@@ -134,7 +129,7 @@ class LCApplication : Contract {
 
     fun generateApply(props: LCApplicationProperties, notary: Party, purchaseOrder: Attachment): TransactionBuilder {
         val state = State(props.issuer.owningKey, Status.PENDING_ISSUER_REVIEW, props)
-        val txBuilder = TransactionType.General.Builder().withItems(state, Command(Commands.ApplyForLC(), props.applicant.owningKey))
+        val txBuilder = TransactionType.General.Builder(notary).withItems(state, Command(Commands.ApplyForLC(), props.applicant.owningKey))
         txBuilder.addAttachment(purchaseOrder.id)
         return txBuilder
     }

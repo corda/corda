@@ -447,8 +447,8 @@ class InterestRateSwap() : Contract {
                 fixingCalendar, index, indexSource, indexTenor)
     }
 
-    private fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
-            = tx.commands.select<Commands>() + tx.commands.select<TimestampCommand>()
+    fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
+            = tx.commands.select<Commands>()
 
     override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clause.Timestamped(), Clause.Group()), extractCommands(tx))
 
@@ -519,12 +519,9 @@ class InterestRateSwap() : Contract {
             override val requiredCommands = emptySet<Class<out CommandData>>()
 
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
-                // TODO: This needs to either be the notary used for the inputs, or otherwise
-                // derived as the correct notary
-                @Suppress("DEPRECATION")
-                val command = tx.commands.getTimestampByName("Mock Company 0", "Notary Service", "Bank A")
-                        ?: throw IllegalArgumentException("must be timestamped")
-                return setOf(command)
+                require(tx.timestamp?.midpoint != null) { "must be timestamped" }
+                // We return an empty set because we don't process any commands
+                return emptySet()
             }
         }
 

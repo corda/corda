@@ -34,7 +34,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val issuance = run {
             val tx = CommercialPaper().generateIssue(seller.info.identity.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
                     Instant.now() + 10.days, notary.info.identity)
-            tx.setTime(Instant.now(), notary.info.identity, 30.seconds)
+            tx.setTime(Instant.now(), 30.seconds)
             tx.signWith(notary.storage.myLegalIdentityKey)
             tx.signWith(seller.storage.myLegalIdentityKey)
             tx.toSignedTransaction(true)

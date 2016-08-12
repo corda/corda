@@ -3,6 +3,7 @@ package com.r3corda.core.contracts
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.node.services.testing.MockTransactionStorage
 import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.testing.DUMMY_NOTARY_KEY
 import com.r3corda.core.testing.MEGA_CORP_KEY
 import org.junit.Test
 import java.security.KeyPair
@@ -26,14 +27,16 @@ class TransactionGraphSearchTests {
      * @param signer signer for the two transactions and their commands.
      */
     fun buildTransactions(command: CommandData, signer: KeyPair): GraphTransactionStorage {
-        val originTx = TransactionType.General.Builder().apply {
-            addOutputState(DummyState(random31BitValue()), DUMMY_NOTARY)
+        val originTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+            addOutputState(DummyState(random31BitValue()))
             addCommand(command, signer.public)
             signWith(signer)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction(false)
-        val inputTx = TransactionType.General.Builder().apply {
+        val inputTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             addInputState(originTx.tx.outRef<DummyState>(0))
             signWith(signer)
+            signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction(false)
         return GraphTransactionStorage(originTx, inputTx)
     }
