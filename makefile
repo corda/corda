@@ -1385,7 +1385,7 @@ ifneq ($(mode),fast)
 	host-vm-options := -$(mode)
 endif
 
-host-vm = build/$(build-platform)-$(build-arch)-interpret$(host-vm-options)/libjvm.so
+host-vm = build/$(build-platform)-$(build-arch)-interpret$(host-vm-options)/$(so-prefix)jvm$(so-suffix)
 
 bootimage-object = $(build)/bootimage-bin.o
 codeimage-object = $(build)/codeimage-bin.o
@@ -2180,7 +2180,12 @@ $(unittest-executable): $(unittest-executable-objects)
 
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
-	$(MAKE) process=interpret bootimage= bootimage-test= mode=$(mode)
+	$(MAKE) process=interpret \
+		bootimage= \
+		bootimage-test= \
+		mode=$(mode) \
+		platform=$(bootimage-platform) \
+		arch=$(build-arch)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
 		arch=$(build-arch) \
