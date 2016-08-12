@@ -2174,7 +2174,12 @@ $(unittest-executable): $(unittest-executable-objects)
 
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
-	$(MAKE) process=interpret bootimage= bootimage-test= mode=$(mode)
+	$(MAKE) process=interpret \
+		bootimage= \
+		bootimage-test= \
+		mode=$(mode) \
+		platform=$(bootimage-platform) \
+		arch=$(build-arch)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
 		arch=$(build-arch) \
