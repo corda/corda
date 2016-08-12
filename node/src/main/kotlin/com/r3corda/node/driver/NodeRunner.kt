@@ -8,8 +8,8 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
@@ -64,6 +64,7 @@ class NodeRunner {
 
                 log.info("Starting ${nodeConfiguration.myLegalName} with services $services on addresses $messagingAddress and $apiAddress")
                 node.start()
+                node.run()
             }
         }
     }

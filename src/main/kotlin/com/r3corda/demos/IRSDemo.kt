@@ -336,11 +336,7 @@ private fun runNode(cliParams: CliParams.RunNode): Int {
             runUploadRates(cliParams.apiAddress)
         }
 
-        try {
-            while (true) Thread.sleep(Long.MAX_VALUE)
-        } catch(e: InterruptedException) {
-            node.stop()
-        }
+        node.run()
     } catch (e: NotSetupException) {
         log.error(e.message)
         return 1
@@ -397,7 +393,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
             }
 
     val node = logElapsedTime("Node startup", log) {
-        Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).start()
+        Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).setup().start()
     }
 
     return node

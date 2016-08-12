@@ -42,18 +42,12 @@ fun main(args: Array<String>) {
 
     try {
         val dirFile = dir.toFile()
-        if (!dirFile.exists()) {
+        if (!dirFile.exists())
             dirFile.mkdirs()
-        }
 
         val node = conf.createNode()
         node.start()
-        try {
-            // TODO create a proper daemon and/or provide some console handler to give interactive commands
-            while (true) Thread.sleep(Long.MAX_VALUE)
-        } catch(e: InterruptedException) {
-            node.stop()
-        }
+        node.run()
     } catch (e: Exception) {
         log.error("Exception during node startup", e)
         System.exit(1)

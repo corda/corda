@@ -7,6 +7,7 @@ import com.r3corda.core.testing.freeLocalHostAndPort
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.utilities.AffinityExecutor
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Rule
@@ -15,9 +16,8 @@ import org.junit.rules.TemporaryFolder
 import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
-import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class ArtemisMessagingTests {
@@ -65,8 +65,9 @@ class ArtemisMessagingTests {
 
         createMessagingServer(serverAddress).start()
 
-        val messagingClient = createMessagingClient(server = invalidServerAddress)
-        assertThatThrownBy { messagingClient.start() }
+        messagingClient = createMessagingClient(server = invalidServerAddress)
+        assertThatThrownBy { messagingClient!!.start() }
+        messagingClient = null
     }
 
     @Test
@@ -83,6 +84,7 @@ class ArtemisMessagingTests {
 
         val messagingClient = createMessagingClient()
         messagingClient.start()
+        thread { messagingClient.run() }
 
         messagingClient.addMessageHandler(topic) { message, r ->
             receivedMessages.add(message)
@@ -91,15 +93,14 @@ class ArtemisMessagingTests {
         val message = messagingClient.createMessage(topic, DEFAULT_SESSION_ID, "first msg".toByteArray())
         messagingClient.send(message, messagingClient.myAddress)
 
-        val actual = receivedMessages.poll(2, SECONDS)
-        assertNotNull(actual)
+        val actual: Message = receivedMessages.take()
         assertEquals("first msg", String(actual.data))
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort,
                                       local: HostAndPort = hostAndPort): ArtemisMessagingClient {
-        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, local).apply {
+        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, local, AffinityExecutor.SAME_THREAD).apply {
             configureWithDevSSLCertificate()
             messagingClient = this
         }

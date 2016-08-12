@@ -2,6 +2,7 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.MoreExecutors
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -31,11 +32,11 @@ import java.net.InetSocketAddress
 import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.time.Clock
+import java.util.concurrent.TimeUnit
 import javax.management.ObjectName
+import kotlin.concurrent.thread
 
 class ConfigurationException(message: String) : Exception(message)
-
-// TODO: Split this into a regression testing environment
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
@@ -63,6 +64,43 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
     override val log = loggerFor<Node>()
 
+    // DISCUSSION
+    //
+    // We use a single server thread for now, which means all message handling is serialized.
+    //
+    // Writing thread safe code is hard. In this project we are writing most node services and code to be thread safe, but
+    // the possibility of mistakes is always present. Thus we make a deliberate decision here to trade off some multi-core
+    // scalability in order to gain developer productivity by setting the size of the serverThread pool to one, which will
+    // reduce the number of threading bugs we will need to tackle.
+    //
+    // This leaves us with four possibilities in future:
+    //
+    // (1) We discover that processing messages is fast and that our eventual use cases do not need very high
+    //     processing rates. We have benefited from the higher productivity and not lost anything.
+    //
+    // (2) We discover that we need greater multi-core scalability, but that the bulk of our time goes into particular CPU
+    //     hotspots that are easily multi-threaded e.g. signature checking. We successfully multi-thread those hotspots
+    //     and find that our software now scales sufficiently well to satisfy our user's needs.
+    //
+    // (3) We discover that it wasn't enough, but that we only need to run some messages in parallel and that the bulk of
+    //     the work can stay single threaded. For example perhaps we find that latency sensitive UI requests must be handled
+    //     on a separate thread pool where long blocking operations are not allowed, but that the bulk of the heavy lifting
+    //     can stay single threaded. In this case we would need a separate thread pool, but we still minimise the amount of
+    //     thread safe code we need to write and test.
+    //
+    // (4) None of the above are sufficient and we need to run all messages in parallel to get maximum (single machine)
+    //     scalability and fully saturate all cores. In that case we can go fully free-threaded, e.g. change the number '1'
+    //     below to some multiple of the core count. Alternatively by using the ForkJoinPool and let it figure out the right
+    //     number of threads by itself. This will require some investment in stress testing to build confidence that we
+    //     haven't made any mistakes, but it will only be necessary if eventual deployment scenarios demand it.
+    //
+    // Note that the messaging subsystem schedules work onto this thread in a blocking manner. That means if the server
+    // thread becomes too slow and a backlog of work starts to builds up it propagates back through into the messaging
+    // layer, which can then react to the backpressure. Artemis MQ in particular knows how to do flow control by paging
+    // messages to disk rather than letting us run out of RAM.
+    //
+    // The primary work done by the server thread is execution of protocol logics, and related
+    // serialisation/deserialisation work.
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
     lateinit var webServer: Server
@@ -180,20 +218,46 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
                 }.
                 build().
                 start()
+
+        Runtime.getRuntime().addShutdownHook(thread(start = false) {
+            stop()
+        })
+
         return this
     }
 
+    /** Starts a blocking event loop for message dispatch. */
+    fun run() {
+        (net as ArtemisMessagingClient).run()
+    }
+
+    // TODO: Do we really need setup?
     override fun setup(): Node {
         super.setup()
         return this
     }
 
+    private var shutdown = false
+
     override fun stop() {
+        check(!serverThread.isOnThread)
+        synchronized(this) {
+            if (shutdown) return
+            shutdown = true
+        }
+        log.info("Shutting down ...")
+        // Shut down the web server.
         webServer.stop()
+        // Terminate the messaging system. This will block until messages that are in-flight have finished being
+        // processed so it may take a moment.
         super.stop()
+        // We do another wait here, even though any in-flight messages have been drained away now because the
+        // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
+        // arbitrary and might be inappropriate.
+        MoreExecutors.shutdownAndAwaitTermination(serverThread, 50, TimeUnit.SECONDS)
         messageBroker?.stop()
         nodeFileLock!!.release()
-        serverThread.shutdownNow()
+        log.info("Shutdown complete")
     }
 
     private fun alreadyRunningNodeCheck() {

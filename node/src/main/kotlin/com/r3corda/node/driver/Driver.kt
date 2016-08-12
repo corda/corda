@@ -8,10 +8,11 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.utilities.AffinityExecutor
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.Logger
@@ -26,6 +27,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlin.concurrent.thread
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes.
@@ -207,7 +209,8 @@ class DriverDSL(
             Paths.get(baseDirectory, "driver-artemis"),
             driverNodeConfiguration,
             serverHostPort = networkMapAddress,
-            myHostPort = portAllocation.nextHostAndPort()
+            myHostPort = portAllocation.nextHostAndPort(),
+            executor = AffinityExecutor.ServiceAffinityExecutor("Client thread", 1)
     )
     var messagingServiceStarted = false
 
@@ -220,9 +223,7 @@ class DriverDSL(
     }
 
     override fun shutdown() {
-        registeredProcesses.forEach {
-            it.destroy()
-        }
+        registeredProcesses.forEach(Process::destroy)
         /** Wait 5 seconds, then [Process.destroyForcibly] */
         val finishedFuture = Executors.newSingleThreadExecutor().submit {
             waitForAllNodesToFinish()
@@ -235,9 +236,8 @@ class DriverDSL(
                 it.destroyForcibly()
             }
         }
-        if (messagingServiceStarted){
+        if (messagingServiceStarted)
             messagingService.stop()
-        }
 
         // Check that we shut down properly
         addressMustNotBeBound(messagingService.myHostPort)
@@ -293,6 +293,7 @@ class DriverDSL(
         startNetworkMapService()
         messagingService.configureWithDevSSLCertificate()
         messagingService.start()
+        thread { messagingService.run() }
         messagingServiceStarted = true
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
         // the network map service itself
@@ -361,7 +362,7 @@ class DriverDSL(
         ): Process {
 
             // Write node.conf
-            writeConfig("${cliParams.baseDirectory}", "node.conf", config)
+            writeConfig(cliParams.baseDirectory, "node.conf", config)
 
             val className = NodeRunner::class.java.canonicalName
             val separator = System.getProperty("file.separator")
