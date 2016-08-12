@@ -215,8 +215,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
      * restarted with checkpointed state machines in the storage service.
      */
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
+        val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
         try {
-            val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
             // Need to add before iterating in case of immediate completion
             initFiber(fiber) {
                 val checkpoint = Checkpoint(serializeFiber(fiber), null)
@@ -229,11 +229,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                 }
                 totalStartedProtocols.inc()
             }
-            return fiber.resultFuture
         } catch (e: Throwable) {
+            // TODO: We should be able to remove this as we get more confident that we never fail to log exceptions.
             e.printStackTrace()
-            throw e
+            check(fiber.resultFuture.isDone)
         }
+        return fiber.resultFuture
     }
 
     private fun updateCheckpoint(psm: ProtocolStateMachineImpl<*>,
