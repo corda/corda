@@ -1,5 +1,6 @@
 package com.r3corda.core
 
+import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -215,3 +216,5 @@ fun extractZipFile(zipPath: Path, toPath: Path) {
 }
 
 // TODO: Generic csv printing utility for clases.
+
+val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)

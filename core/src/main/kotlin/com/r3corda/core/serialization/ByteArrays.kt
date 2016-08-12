@@ -1,6 +1,7 @@
 package com.r3corda.core.serialization
 
 import com.google.common.io.BaseEncoding
+import java.io.ByteArrayInputStream
 import java.util.*
 
 /**
@@ -27,6 +28,9 @@ open class OpaqueBytes(val bits: ByteArray) {
     override fun toString() = "[" + BaseEncoding.base16().encode(bits) + "]"
 
     val size: Int get() = bits.size
+
+    /** Returns a [ByteArrayInputStream] of the bytes */
+    fun open() = ByteArrayInputStream(bits)
 }
 
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)

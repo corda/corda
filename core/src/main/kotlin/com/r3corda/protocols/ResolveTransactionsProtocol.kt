@@ -41,6 +41,10 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     private var stx: SignedTransaction? = null
     private var wtx: WireTransaction? = null
 
+    // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
+    /** The maximum number of transactions this protocol will try to download before bailing out. */
+    var transactionCountLimit = 5000
+
     /**
      * Resolve the full history of a transaction and verify it with its dependencies.
      */
@@ -65,11 +69,11 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // redundantly next time we attempt verification.
         val result = ArrayList<LedgerTransaction>()
 
-        for (tx in newTxns) {
+        for (stx in newTxns) {
             // Resolve to a LedgerTransaction and then run all contracts.
-            val ltx = tx.toLedgerTransaction(serviceHub)
+            val ltx = stx.toLedgerTransaction(serviceHub)
             ltx.verify()
-            serviceHub.recordTransactions(tx)
+            serviceHub.recordTransactions(stx)
             result += ltx
         }
 
@@ -114,6 +118,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         nextRequests.addAll(depsToCheck)
         val resultQ = LinkedHashMap<SecureHash, SignedTransaction>()
 
+        val limit = transactionCountLimit
+        check(limit > 0) { "$limit is not a valid count limit" }
         var limitCounter = 0
         while (nextRequests.isNotEmpty()) {
             // Don't re-download the same tx when we haven't verified it yet but it's referenced multiple times in the
@@ -136,10 +142,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
             val inputHashes = downloads.flatMap { it.tx.inputs }.map { it.txhash }
             nextRequests.addAll(inputHashes)
 
-            // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
-            // TODO: Unit test the DoS limit.
             limitCounter = limitCounter checkedAdd nextRequests.size
-            if (limitCounter > 5000)
+            if (limitCounter > limit)
                 throw ExcessivelyLargeTransactionGraph()
         }
 
@@ -156,6 +160,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         val missingAttachments = downloads.flatMap { wtx ->
             wtx.attachments.filter { serviceHub.storageService.attachments.openAttachment(it) == null }
         }
-        subProtocol(FetchAttachmentsProtocol(missingAttachments.toSet(), otherSide))
+        if (missingAttachments.isNotEmpty())
+            subProtocol(FetchAttachmentsProtocol(missingAttachments.toSet(), otherSide))
     }
 }

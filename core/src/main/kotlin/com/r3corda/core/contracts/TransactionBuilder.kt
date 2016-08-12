@@ -81,6 +81,7 @@ open class TransactionBuilder(
                 is TransactionState<*> -> addOutputState(t)
                 is ContractState -> addOutputState(t)
                 is Command -> addCommand(t)
+                is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
@@ -120,8 +121,9 @@ open class TransactionBuilder(
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */
-    fun addSignatureUnchecked(sig: DigitalSignature.WithKey) {
+    fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
         currentSigs.add(sig)
+        return this
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),

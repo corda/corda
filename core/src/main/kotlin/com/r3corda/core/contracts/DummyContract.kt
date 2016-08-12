@@ -46,8 +46,21 @@ class DummyContract : Contract {
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("")
 
-    fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
-        val state = SingleOwnerState(magicNumber, owner.party.owningKey)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
+    companion object {
+        @JvmStatic
+        fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder {
+            val state = SingleOwnerState(magicNumber, owner.party.owningKey)
+            return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
+        }
+
+        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: PublicKey): TransactionBuilder {
+            val priorState = prior.state.data
+            val (cmd, state) = priorState.withNewOwner(newOwner)
+            return TransactionType.General.Builder(notary = prior.state.notary).withItems(
+                    /* INPUT   */ prior,
+                    /* COMMAND */ Command(cmd, priorState.owner),
+                    /* OUTPUT  */ state
+            )
+        }
     }
 }
