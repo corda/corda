@@ -1,5 +1,6 @@
 package com.r3corda.node.services.persistence
 
+import co.paralleluniverse.strands.SettableFuture
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.primitives.Ints
@@ -12,6 +13,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
+import kotlin.test.assertEquals
 
 class PerFileTransactionStorageTests {
 
@@ -67,6 +70,16 @@ class PerFileTransactionStorageTests {
         Files.write(storeDir.resolve("random-non-tx-file"), "this is not a transaction!!".toByteArray())
         newTransactionStorage()
         assertThat(transactionStorage.transactions).containsExactly(transactions)
+    }
+
+    @Test
+    fun `updates are fired`() {
+        val future = SettableFuture<SignedTransaction>()
+        transactionStorage.updates.subscribe { tx -> future.set(tx) }
+        val expected = newTransaction()
+        transactionStorage.addTransaction(expected)
+        val actual = future.get(1, TimeUnit.SECONDS)
+        assertEquals(expected, actual)
     }
 
     private fun newTransactionStorage() {

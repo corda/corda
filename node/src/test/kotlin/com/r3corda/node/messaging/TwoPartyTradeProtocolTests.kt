@@ -28,6 +28,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -492,6 +493,8 @@ class TwoPartyTradeProtocolTests {
     class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {
 
         val records: MutableList<TxRecord> = Collections.synchronizedList(ArrayList<TxRecord>())
+        override val updates: Observable<SignedTransaction>
+            get() = delegate.updates
 
         override fun addTransaction(transaction: SignedTransaction) {
             records.add(TxRecord.Add(transaction))

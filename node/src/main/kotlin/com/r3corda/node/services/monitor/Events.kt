@@ -12,6 +12,7 @@ import java.util.*
  * Events triggered by changes in the node, and sent to monitoring client(s).
  */
 sealed class ServiceToClientEvent(val time: Instant) {
+    class Transaction(time: Instant, val transaction: SignedTransaction) : ServiceToClientEvent(time)
     class OutputState(time: Instant, val consumed: Set<StateRef>, val produced: Set<StateAndRef<ContractState>>) : ServiceToClientEvent(time)
     class StateMachine(time: Instant, val fiberId: Long, val label: String, val addOrRemove: AddOrRemove) : ServiceToClientEvent(time)
     class Progress(time: Instant, val fiberId: Long, val message: String) : ServiceToClientEvent(time)

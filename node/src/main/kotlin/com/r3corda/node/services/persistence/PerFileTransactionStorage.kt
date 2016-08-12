@@ -7,6 +7,8 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -25,6 +27,13 @@ class PerFileTransactionStorage(val storeDir: Path) : TransactionStorage {
 
     private val _transactions = ConcurrentHashMap<SecureHash, SignedTransaction>()
 
+    private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
+
+    override val updates: Observable<SignedTransaction>
+        get() = _updatesPublisher
+
+    private fun notify(transaction: SignedTransaction) = _updatesPublisher.onNext(transaction)
+
     init {
         logger.trace { "Initialising per file transaction storage on $storeDir" }
         Files.createDirectories(storeDir)
@@ -39,6 +48,7 @@ class PerFileTransactionStorage(val storeDir: Path) : TransactionStorage {
         transaction.serialize().writeToFile(transactionFile)
         _transactions[transaction.id] = transaction
         logger.trace { "Stored $transaction to $transactionFile" }
+        notify(transaction)
     }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = _transactions[id]
