@@ -24,6 +24,7 @@ abstract class NotaryService(val smm: StateMachineManager,
                              val timestampChecker: TimestampChecker,
                              val uniquenessProvider: UniquenessProvider,
                              networkMapCache: NetworkMapCache) : AbstractNodeService(net, networkMapCache) {
+    // Do not specify this as an advertised service. Use a concrete implementation.
     object Type : ServiceType("corda.notary")
 
     abstract val logger: org.slf4j.Logger
