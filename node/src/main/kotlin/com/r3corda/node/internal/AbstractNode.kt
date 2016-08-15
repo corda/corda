@@ -257,7 +257,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         val notaryServiceType = serviceTypes.singleOrNull { it.isSubTypeOf(NotaryService.Type) }
         if (notaryServiceType != null) {
-            makeNotaryService(notaryServiceType)
+            inNodeNotaryService = makeNotaryService(notaryServiceType)
         }
     }
 
@@ -313,19 +313,17 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }
 
-    open protected fun makeNotaryService(type: ServiceType) {
+    open protected fun makeNotaryService(type: ServiceType): NotaryService {
         val uniquenessProvider = InMemoryUniquenessProvider()
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
-        inNodeNotaryService = when (type) {
+        return when (type) {
             SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
             ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
         }
-
-        require(inNodeNotaryService != null)
     }
 
     protected open fun makeIdentityService(): IdentityService {
