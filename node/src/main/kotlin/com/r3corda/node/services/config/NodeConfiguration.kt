@@ -36,7 +36,7 @@ interface NodeConfiguration {
         val log = LoggerFactory.getLogger("NodeConfiguration")
 
         fun loadConfig(baseDirectoryPath: Path, configFileOverride: Path? = null, allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
-            val defaultConfig = ConfigFactory.parseResources("reference.conf")
+            val defaultConfig = ConfigFactory.parseResources("reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
 
             val normalisedBaseDir = baseDirectoryPath.normalize()
             val configFile = (configFileOverride?.normalize() ?: normalisedBaseDir.resolve("node.conf")).toFile()
