@@ -62,7 +62,7 @@ open class MockServiceHubInternal(
     lateinit var smm: StateMachineManager
 
     override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-        return smm.add(loggerName, logic)
+        return smm.add(loggerName, logic).resultFuture
     }
 
     init {

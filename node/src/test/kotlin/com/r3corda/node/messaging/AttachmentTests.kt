@@ -55,7 +55,7 @@ class AttachmentTests {
 
         // Get node one to run a protocol to fetch it and insert it.
         network.runNetwork()
-        val f1 = n1.smm.add("tests.fetch1", FetchAttachmentsProtocol(setOf(id), n0.info.identity))
+        val f1 = n1.services.startProtocol("tests.fetch1", FetchAttachmentsProtocol(setOf(id), n0.info.identity))
         network.runNetwork()
         assertEquals(0, f1.get().fromDisk.size)
 
@@ -66,7 +66,7 @@ class AttachmentTests {
         // Shut down node zero and ensure node one can still resolve the attachment.
         n0.stop()
 
-        val response: FetchDataProtocol.Result<Attachment> = n1.smm.add("tests.fetch1", FetchAttachmentsProtocol(setOf(id), n0.info.identity)).get()
+        val response: FetchDataProtocol.Result<Attachment> = n1.services.startProtocol("tests.fetch1", FetchAttachmentsProtocol(setOf(id), n0.info.identity)).get()
         assertEquals(attachment, response.fromDisk[0])
     }
 
@@ -77,7 +77,7 @@ class AttachmentTests {
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
         network.runNetwork()
-        val f1 = n1.smm.add("tests.fetch2", FetchAttachmentsProtocol(setOf(hash), n0.info.identity))
+        val f1 = n1.services.startProtocol("tests.fetch2", FetchAttachmentsProtocol(setOf(hash), n0.info.identity))
         network.runNetwork()
         val e = assertFailsWith<FetchDataProtocol.HashNotFound> { rootCauseExceptions { f1.get() } }
         assertEquals(hash, e.requested)
@@ -110,7 +110,7 @@ class AttachmentTests {
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
         network.runNetwork()
-        val f1 = n1.smm.add("tests.fetch1", FetchAttachmentsProtocol(setOf(id), n0.info.identity))
+        val f1 = n1.services.startProtocol("tests.fetch1", FetchAttachmentsProtocol(setOf(id), n0.info.identity))
         network.runNetwork()
         assertFailsWith<FetchDataProtocol.DownloadedVsRequestedDataMismatch> {
             rootCauseExceptions { f1.get() }

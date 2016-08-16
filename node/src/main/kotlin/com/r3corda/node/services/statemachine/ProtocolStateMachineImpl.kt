@@ -44,13 +44,18 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
-    val resultFuture: ListenableFuture<R> get() {
+    override val resultFuture: ListenableFuture<R> get() {
         return _resultFuture ?: run {
             val f = SettableFuture.create<R>()
             _resultFuture = f
             return f
         }
     }
+    /**
+     * Unique ID for the deserialized instance protocol state machine. This is NOT maintained across a state machine
+     * being serialized and then deserialized.
+     */
+    override val machineId: Long get() = this.id
 
     init {
         logic.psm = this

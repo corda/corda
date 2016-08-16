@@ -6,6 +6,7 @@ import com.r3corda.contracts.CommercialPaper
 import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
+import com.r3corda.core.contracts.OwnableState
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.days
@@ -52,7 +53,7 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         val sellerProtocol = TwoPartyTradeProtocol.Seller(
                 buyer.info.identity,
                 notary.info,
-                issuance.tx.outRef(0),
+                issuance.tx.outRef<OwnableState>(0),
                 amount,
                 seller.storage.myLegalIdentityKey,
                 sessionID)
@@ -60,8 +61,8 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         showConsensusFor(listOf(buyer, seller, notary))
         showProgressFor(listOf(buyer, seller))
 
-        val buyerFuture = buyer.smm.add("bank.$buyerBankIndex.${TwoPartyTradeProtocol.TOPIC}.buyer", buyerProtocol)
-        val sellerFuture = seller.smm.add("bank.$sellerBankIndex.${TwoPartyTradeProtocol.TOPIC}.seller", sellerProtocol)
+        val buyerFuture = buyer.services.startProtocol("bank.$buyerBankIndex.${TwoPartyTradeProtocol.TOPIC}.buyer", buyerProtocol)
+        val sellerFuture = seller.services.startProtocol("bank.$sellerBankIndex.${TwoPartyTradeProtocol.TOPIC}.seller", sellerProtocol)
 
         return Futures.successfulAsList(buyerFuture, sellerFuture)
     }

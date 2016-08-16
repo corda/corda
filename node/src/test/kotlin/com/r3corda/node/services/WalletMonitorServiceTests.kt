@@ -22,10 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.test.fail
+import kotlin.test.*
 
 /**
  * Unit tests for the wallet monitoring service.
@@ -44,7 +41,7 @@ class WalletMonitorServiceTests {
     private fun authenticate(monitorServiceNode: MockNetwork.MockNode, registerNode: MockNetwork.MockNode): Long {
         network.runNetwork()
         val sessionID = random63BitValue()
-        val authenticatePsm = registerNode.smm.add(WalletMonitorService.REGISTER_TOPIC,
+        val authenticatePsm = registerNode.services.startProtocol(WalletMonitorService.REGISTER_TOPIC,
                 TestRegisterPSM(monitorServiceNode.info, sessionID))
         network.runNetwork()
         authenticatePsm.get(1, TimeUnit.SECONDS)
@@ -78,7 +75,7 @@ class WalletMonitorServiceTests {
 
         network.runNetwork()
         val sessionID = random63BitValue()
-        val authenticatePsm = registerNode.smm.add(WalletMonitorService.REGISTER_TOPIC,
+        val authenticatePsm = registerNode.services.startProtocol(WalletMonitorService.REGISTER_TOPIC,
                 TestRegisterPSM(monitorServiceNode.info, sessionID))
         network.runNetwork()
         val result = authenticatePsm.get(1, TimeUnit.SECONDS)
@@ -92,7 +89,7 @@ class WalletMonitorServiceTests {
     fun `event received`() {
         val (monitorServiceNode, registerNode) = network.createTwoNodes()
         val sessionID = authenticate(monitorServiceNode, registerNode)
-        var receivePsm = registerNode.smm.add(WalletMonitorService.IN_EVENT_TOPIC,
+        var receivePsm = registerNode.services.startProtocol(WalletMonitorService.IN_EVENT_TOPIC,
                 TestReceiveWalletUpdatePSM(sessionID))
         var expected = Wallet.Update(emptySet(), emptySet())
         monitorServiceNode.inNodeWalletMonitorService!!.notifyWalletUpdate(expected)
@@ -102,7 +99,7 @@ class WalletMonitorServiceTests {
         assertEquals(expected.produced, actual.produced)
 
         // Check that states are passed through correctly
-        receivePsm = registerNode.smm.add(WalletMonitorService.IN_EVENT_TOPIC,
+        receivePsm = registerNode.services.startProtocol(WalletMonitorService.IN_EVENT_TOPIC,
                 TestReceiveWalletUpdatePSM(sessionID))
         val consumed = setOf(StateRef(SecureHash.randomSHA256(), 0))
         val producedState = TransactionState(DummyContract.SingleOwnerState(newSecureRandom().nextInt(), DUMMY_PUBKEY_1), DUMMY_NOTARY)
@@ -131,29 +128,30 @@ class WalletMonitorServiceTests {
         assertFalse(monitorServiceNode.services.walletService.currentWallet.states.iterator().hasNext())
 
         // Tell the monitoring service node to issue some cash
-        val recipientKey = monitorServiceNode.services.storageService.myLegalIdentityKey.public
-        val outEvent = ClientToServiceCommand.IssueCash(GBP, ref, quantity, recipientKey, DUMMY_NOTARY)
+        val recipient = monitorServiceNode.services.storageService.myLegalIdentity
+        val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, DUMMY_NOTARY)
         val message = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
                 ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, outEvent).serialize().bits)
         registerNode.net.send(message, monitorServiceNode.net.myAddress)
         network.runNetwork()
+
+        val expectedState = Cash.State(Amount(quantity,
+                Issued(monitorServiceNode.services.storageService.myLegalIdentity.ref(ref), GBP)),
+                recipient.owningKey)
 
         // Check we've received a response
         events.forEach { event ->
             when (event) {
                 is ServiceToClientEvent.TransactionBuild -> {
                     // Check the returned event is correct
-                    val actual = event.state as TransactionBuildResult.Complete
-                    val expected = TransactionBuildResult.Complete(actual.transaction, null)
-                    assertEquals(expected, actual)
+                    val tx = (event.state as TransactionBuildResult.ProtocolStarted).transaction
+                    assertNotNull(tx)
+                    assertEquals(expectedState, tx!!.tx.outputs.single().data)
                 }
                 is ServiceToClientEvent.OutputState -> {
                     // Check the generated state is correct
                     val actual = event.produced.single().state.data
-                    val expected = Cash.State(Amount(quantity,
-                            Issued(monitorServiceNode.services.storageService.myLegalIdentity.ref(ref), GBP)),
-                            recipientKey)
-                    assertEquals(expected, actual)
+                    assertEquals(expectedState, actual)
                 }
                 else -> fail("Unexpected in event ${event}")
             }
@@ -178,29 +176,30 @@ class WalletMonitorServiceTests {
         assertFalse(monitorServiceNode.services.walletService.currentWallet.states.iterator().hasNext())
 
         // Tell the monitoring service node to issue some cash
-        val recipientKey = monitorServiceNode.services.storageService.myLegalIdentityKey.public
-        val outEvent = ClientToServiceCommand.IssueCash(GBP, ref, quantity, recipientKey, DUMMY_NOTARY)
+        val recipient = monitorServiceNode.services.storageService.myLegalIdentity
+        val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, DUMMY_NOTARY)
         val message = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
                 ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, outEvent).serialize().bits)
         registerNode.net.send(message, monitorServiceNode.net.myAddress)
         network.runNetwork()
+
+        val expectedState = Cash.State(Amount(quantity,
+                Issued(monitorServiceNode.services.storageService.myLegalIdentity.ref(ref), GBP)),
+                recipient.owningKey)
 
         // Check we've received a response
         events.forEach { event ->
             when (event) {
                 is ServiceToClientEvent.TransactionBuild -> {
                     // Check the returned event is correct
-                    val actual = event.state as TransactionBuildResult.Complete
-                    val expected = TransactionBuildResult.Complete(actual.transaction, null)
-                    assertEquals(expected, actual)
+                    val tx = (event.state as TransactionBuildResult.ProtocolStarted).transaction
+                    assertNotNull(tx)
+                    assertEquals(expectedState, tx!!.tx.outputs.single().data)
                 }
                 is ServiceToClientEvent.OutputState -> {
                     // Check the generated state is correct
                     val actual = event.produced.single().state.data
-                    val expected = Cash.State(Amount(quantity,
-                            Issued(monitorServiceNode.services.storageService.myLegalIdentity.ref(ref), GBP)),
-                            recipientKey)
-                    assertEquals(expected, actual)
+                    assertEquals(expectedState, actual)
                 }
                 else -> fail("Unexpected in event ${event}")
             }

@@ -46,7 +46,7 @@ class NotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val signature = future.get()
@@ -62,7 +62,7 @@ class NotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val signature = future.get()
@@ -79,7 +79,7 @@ class NotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
@@ -98,8 +98,8 @@ class NotaryServiceTests {
 
         val firstSpend = NotaryProtocol.Client(stx)
         val secondSpend = NotaryProtocol.Client(stx)
-        clientNode.smm.add("${NotaryProtocol.TOPIC}.first", firstSpend)
-        val future = clientNode.smm.add("${NotaryProtocol.TOPIC}.second", secondSpend)
+        clientNode.services.startProtocol("${NotaryProtocol.TOPIC}.first", firstSpend)
+        val future = clientNode.services.startProtocol("${NotaryProtocol.TOPIC}.second", secondSpend)
 
         net.runNetwork()
 

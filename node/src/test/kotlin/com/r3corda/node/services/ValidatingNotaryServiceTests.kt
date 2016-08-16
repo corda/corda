@@ -45,7 +45,7 @@ class ValidatingNotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
@@ -65,7 +65,7 @@ class ValidatingNotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }

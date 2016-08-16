@@ -1,6 +1,7 @@
 package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.utilities.UntrustworthyData
@@ -23,4 +24,9 @@ interface ProtocolStateMachine<R> {
 
     val serviceHub: ServiceHub
     val logger: Logger
+
+    /** Unique ID for this machine, valid only while it is in memory. */
+    val machineId: Long
+    /** This future will complete when the call method returns. */
+    val resultFuture: ListenableFuture<R>
 }
