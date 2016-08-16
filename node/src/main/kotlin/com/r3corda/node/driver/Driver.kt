@@ -196,8 +196,8 @@ class DriverDSL(
         val cl = ClassLoader.getSystemClassLoader()
         val urls = (cl as URLClassLoader).urLs
         val quasarPattern = ".*quasar.*\\.jar$".toRegex()
-        val quasarPath = urls.map { it.path }.first { quasarPattern.matches(it) }
-        quasarPath
+        val quasarPath = urls.first { quasarPattern.matches(it.path) }
+        Paths.get(quasarPath.toURI()).toString()
     }
 
     val driverNodeConfiguration = NodeConfigurationFromConfig(
