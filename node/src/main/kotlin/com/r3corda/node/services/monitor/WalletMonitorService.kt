@@ -62,6 +62,7 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
         addMessageHandler(OUT_EVENT_TOPIC) { req: ClientToServiceCommandMessage -> processEventRequest(req) }
 
         // Notify listeners on state changes
+        services.storageService.validatedTransactions.updates.subscribe { tx -> notifyTransaction(tx) }
         services.walletService.updates.subscribe { update -> notifyWalletUpdate(update) }
         smm.changes.subscribe { change ->
             val fiberId: Long = change.third
@@ -85,6 +86,10 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
     @VisibleForTesting
     internal fun notifyWalletUpdate(update: Wallet.Update)
             = notifyEvent(ServiceToClientEvent.OutputState(Instant.now(), update.consumed, update.produced))
+
+    @VisibleForTesting
+    internal fun notifyTransaction(transaction: SignedTransaction)
+        = notifyEvent(ServiceToClientEvent.Transaction(Instant.now(), transaction))
 
     private fun processEventRequest(reqMessage: ClientToServiceCommandMessage) {
         val req = reqMessage.command

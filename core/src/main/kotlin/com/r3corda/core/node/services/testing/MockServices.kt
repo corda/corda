@@ -15,6 +15,8 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.MEGA_CORP
 import com.r3corda.core.testing.MINI_CORP
+import rx.Observable
+import rx.subjects.PublishSubject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -116,9 +118,19 @@ class MockAttachmentStorage : AttachmentStorage {
 
 open class MockTransactionStorage : TransactionStorage {
     private val txns = HashMap<SecureHash, SignedTransaction>()
+
+    private val _updatesPublisher = PublishSubject.create<SignedTransaction>()
+
+    override val updates: Observable<SignedTransaction>
+        get() = _updatesPublisher
+
+    private fun notify(transaction: SignedTransaction) = _updatesPublisher.onNext(transaction)
+
     override fun addTransaction(transaction: SignedTransaction) {
         txns[transaction.id] = transaction
+        notify(transaction)
     }
+
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
 }
 
