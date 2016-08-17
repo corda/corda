@@ -12,6 +12,7 @@ import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.node.services.api.ServiceHubInternal
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ExecutionException
 
 /**
  * A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a [ProtocolLogic] instance.
@@ -62,7 +63,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
         } catch (t: Throwable) {
             actionOnEnd()
             _resultFuture?.setException(t)
-            throw t
+            throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception

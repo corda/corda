@@ -26,6 +26,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
 import java.util.Collections.synchronizedMap
+import java.util.concurrent.ExecutionException
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -216,23 +217,32 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
      */
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
         val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
+        // Need to add before iterating in case of immediate completion
+        initFiber(fiber) {
+            val checkpoint = Checkpoint(serializeFiber(fiber), null)
+            checkpointStorage.addCheckpoint(checkpoint)
+            checkpoint
+        }
         try {
-            // Need to add before iterating in case of immediate completion
-            initFiber(fiber) {
-                val checkpoint = Checkpoint(serializeFiber(fiber), null)
-                checkpointStorage.addCheckpoint(checkpoint)
-                checkpoint
-            }
             executor.executeASAP {
                 iterateStateMachine(fiber, null) {
                     fiber.start()
                 }
                 totalStartedProtocols.inc()
             }
-        } catch (e: Throwable) {
-            // TODO: We should be able to remove this as we get more confident that we never fail to log exceptions.
-            e.printStackTrace()
-            check(fiber.resultFuture.isDone)
+        } catch (e: ExecutionException) {
+            // There are two ways we can take exceptions in this method:
+            //
+            // 1) A bug in the SMM code itself whilst setting up the new protocol. In that case the exception will
+            //    propagate out of this method as it would for any method.
+            //
+            // 2) An exception in the first part of the fiber after it's been invoked for the first time via
+            //    fiber.start(). In this case the exception will be caught and stashed in the protocol logic future,
+            //    then sent to the unhandled exception handler above which logs it, and is then rethrown wrapped
+            //    in an ExecutionException or RuntimeException+EE so we can just catch it here and ignore it.
+        } catch (e: RuntimeException) {
+            if (e.cause !is ExecutionException)
+                throw e
         }
         return fiber.resultFuture
     }
