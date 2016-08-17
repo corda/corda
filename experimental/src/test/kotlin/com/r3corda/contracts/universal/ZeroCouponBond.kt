@@ -1,6 +1,7 @@
 package com.r3corda.contracts.universal
 
 import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.testing.TEST_TX_TIME
 import com.r3corda.core.testing.transaction
 import org.junit.Test
 
@@ -65,6 +66,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outState }
+            timestamp(TEST_TX_TIME)
 
             tweak {
                 command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -82,6 +84,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outState }
+            timestamp(TEST_TX_TIME)
 
             command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "action must be authorized"
@@ -93,6 +96,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outStateWrong }
+            timestamp(TEST_TX_TIME)
 
             command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output state must match action result state"

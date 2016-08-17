@@ -47,6 +47,7 @@ class UniversalContract : Contract {
                 val actions = actions(inState.details)
 
                 requireThat {
+                    "action must be timestamped" by ( tx.timestamp != null )
                     "action must be defined" by ( actions.containsKey(value.name) )
                     "action must be authorized" by ( cmd.signers.any { actions[ value.name ]!!.actors.any { party -> party.owningKey == it } } )
                     "condition must be met" by ( true ) // todo
