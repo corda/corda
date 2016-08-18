@@ -13,7 +13,7 @@ class DriverTests {
         fun nodeMustBeUp(networkMapCache: NetworkMapCache, nodeInfo: NodeInfo, nodeName: String) {
             val address = nodeInfo.address as ArtemisMessagingComponent.Address
             // Check that the node is registered in the network map
-            poll {
+            poll("network map cache for $nodeName") {
                 networkMapCache.get().firstOrNull {
                     it.identity.name == nodeName
                 }

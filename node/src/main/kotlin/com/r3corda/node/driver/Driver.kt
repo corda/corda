@@ -154,7 +154,7 @@ private fun getTimestampAsDirectoryName(): String {
 }
 
 fun addressMustBeBound(hostAndPort: HostAndPort) {
-    poll {
+    poll("address $hostAndPort to bind") {
         try {
             Socket(hostAndPort.hostText, hostAndPort.port).close()
             Unit
@@ -165,7 +165,7 @@ fun addressMustBeBound(hostAndPort: HostAndPort) {
 }
 
 fun addressMustNotBeBound(hostAndPort: HostAndPort) {
-    poll {
+    poll("address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.hostText, hostAndPort.port).close()
             null
@@ -175,16 +175,16 @@ fun addressMustNotBeBound(hostAndPort: HostAndPort) {
     }
 }
 
-fun <A> poll(f: () -> A?): A {
+fun <A> poll(pollName: String, pollIntervalMs: Long = 500, warnCount: Int = 120, f: () -> A?): A {
     var counter = 0
     var result = f()
-    while (result == null && counter < 120) {
-        counter++
-        Thread.sleep(500)
+    while (result == null) {
+        if (counter == warnCount) {
+            log.warn("Been polling $pollName for ${pollIntervalMs * warnCount / 1000.0} seconds...")
+        }
+        counter = (counter % warnCount) + 1
+        Thread.sleep(pollIntervalMs)
         result = f()
-    }
-    if (result == null) {
-        throw Exception("Poll timed out")
     }
     return result
 }
@@ -326,7 +326,7 @@ class DriverDSL(
                 advertisedServices = setOf(NetworkMapService.Type)
         )
         networkMapCache.addMapService(messagingService, fakeNodeInfo, true)
-        networkMapNodeInfo = poll {
+        networkMapNodeInfo = poll("network map cache for $networkMapName") {
             networkMapCache.partyNodes.forEach {
                 if (it.identity.name == networkMapName) {
                     return@poll it
