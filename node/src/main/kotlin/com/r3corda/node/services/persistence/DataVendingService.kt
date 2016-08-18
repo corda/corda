@@ -99,21 +99,17 @@ object DataVending {
             // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
             //       cash without from unknown parties?
 
-            try {
-                services.startProtocol(NOTIFY_TX_PROTOCOL_TOPIC, ResolveTransactionsProtocol(req.tx, req.replyToParty))
-                    .success {
-                        services.recordTransactions(req.tx)
-                        val resp = NotifyTxResponseMessage(true)
-                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
-                        net.send(msg, req.getReplyTo(services.networkMapCache))
-                    }.failure { throwable ->
-                        val resp = NotifyTxResponseMessage(false)
-                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
-                        net.send(msg, req.getReplyTo(services.networkMapCache))
-                    }
-            } catch(t: Exception) {
-                // Already handled by the hooks on the future, ignore
-            }
+            services.startProtocol(NOTIFY_TX_PROTOCOL_TOPIC, ResolveTransactionsProtocol(req.tx, req.replyToParty))
+                .success {
+                    services.recordTransactions(req.tx)
+                    val resp = NotifyTxResponseMessage(true)
+                    val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
+                    net.send(msg, req.getReplyTo(services.networkMapCache))
+                }.failure { throwable ->
+                    val resp = NotifyTxResponseMessage(false)
+                    val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
+                    net.send(msg, req.getReplyTo(services.networkMapCache))
+                }
         }
 
         private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {
