@@ -74,12 +74,14 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
         class ConserveAmount : AbstractConserveAmount<State, Currency>()
     }
 
-    /** A state representing a cash claim against some party */
+    /** A state representing a cash claim against some party. */
     data class State(
             override val amount: Amount<Issued<Currency>>,
 
-            /** There must be a MoveCommand signed by this key to claim the amount */
-            override val owner: PublicKey
+            /** There must be a MoveCommand signed by this key to claim the amount. */
+            override val owner: PublicKey,
+            /** Cash may be encumbered by an additional state. */
+            override val encumbrance: Int? = null
     ) : FungibleAsset<Currency> {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
         : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)

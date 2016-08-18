@@ -111,6 +111,11 @@ interface ContractState {
      * list should just contain the owner.
      */
     val participants: List<PublicKey>
+
+    /** The encumbrance state, if present, forces additional controls over this state, since the encumbrance state contract
+     * will also be verified.
+     */
+    val encumbrance: Int? get() = null
 }
 
 /**

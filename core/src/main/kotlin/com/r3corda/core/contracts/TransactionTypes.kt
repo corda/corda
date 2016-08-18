@@ -77,6 +77,15 @@ sealed class TransactionType {
                     throw TransactionVerificationException.ContractRejection(tx, contract, e)
                 }
             }
+
+            // Validate that all encumbrances exist within the set of input states.
+            tx.inputs.filter { it.state.data.encumbrance != null }.forEach {
+                encumberedInput ->
+                if (tx.inputs.none { it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.data.encumbrance }) {
+                    throw TransactionVerificationException.TransactionMissingEncumbranceException(tx)
+                }
+            }
+
         }
 
         override fun getRequiredSigners(tx: LedgerTransaction) = tx.commands.flatMap { it.signers }.toSet()

@@ -120,6 +120,12 @@ public class JavaCommercialPaper implements Contract {
         public List<PublicKey> getParticipants() {
             return ImmutableList.of(this.owner);
         }
+
+        @Nullable
+        @Override
+        public Integer getEncumbrance() {
+            return null;
+        }
     }
 
     public interface Clause {
