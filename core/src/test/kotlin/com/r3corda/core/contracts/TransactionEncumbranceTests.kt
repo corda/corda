@@ -58,7 +58,7 @@ class TransactionEncumbranceTests {
 
     @Test
     fun trivial() {
-        // A transaction containing an input state that is encumbered must fail if the encumbrance is missing.
+        // A transaction containing an input state that is encumbered must fail if the encumbrance is missing on the inputs.
         assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
             transaction {
                 input { encumberedState }
@@ -83,9 +83,7 @@ class TransactionEncumbranceTests {
         assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
             transaction {
                 input { unencumberedState }
-                input { unencumberedState }
-                output { unencumberedState }
-                // The encumbered state refers to an encumbrance in position 1, so what follows is wrong.
+                // The encumbered state refers to an encumbrance in position 1, so there should be at least 2 outputs.
                 output { encumberedState }
                 command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this.verifies()
