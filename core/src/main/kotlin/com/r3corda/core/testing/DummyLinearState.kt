@@ -11,9 +11,11 @@ import java.security.PublicKey
 class DummyLinearContract: Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("Test")
 
-    override fun verify(tx: TransactionForContract) = verifyClauses(tx,
-                                                        listOf(LinearState.ClauseVerifier(State::class.java)),
-                                                        emptyList())
+    override fun verify(tx: TransactionForContract) {
+        verifyClauses(tx,
+                listOf(LinearState.ClauseVerifier(State::class.java)),
+                emptyList())
+    }
 
 
     class State(

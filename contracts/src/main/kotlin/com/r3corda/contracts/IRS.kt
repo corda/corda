@@ -450,11 +450,11 @@ class InterestRateSwap() : Contract {
     fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
             = tx.commands.select<Commands>()
 
-    override fun verify(tx: TransactionForContract) = verifyClauses(tx,
-                                                            listOf(Clause.Timestamped(),
-                                                                    Clause.Group(),
-                                                                    LinearState.ClauseVerifier(State::class.java)),
-                                                            extractCommands(tx))
+    override fun verify(tx: TransactionForContract) {
+        verifyClauses(tx,
+                listOf(Clause.Timestamped(), Clause.Group(), LinearState.ClauseVerifier(State::class.java)),
+                extractCommands(tx))
+    }
 
     interface Clause {
         /**
