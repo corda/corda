@@ -40,7 +40,6 @@ import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
@@ -128,8 +127,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var wallet: WalletService
     lateinit var keyManagement: E2ETestKeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
-    var inNodeNotaryService: NotaryService? = null
     var inNodeWalletMonitorService: WalletMonitorService? = null
+    var inNodeNotaryService: NotaryService? = null
+    var uniquenessProvider: UniquenessProvider? = null
     lateinit var identity: IdentityService
     lateinit var net: MessagingServiceInternal
     lateinit var netMapCache: NetworkMapCache
@@ -186,6 +186,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         customServices.clear()
         customServices.addAll(buildPluginServices(tokenizableServices))
+
+        // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
+        //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
+        advertisedServices.singleOrNull { it.isSubTypeOf(NotaryService.Type) }?.let {
+            uniquenessProvider = makeUniquenessProvider()
+            tokenizableServices.add(uniquenessProvider!!)
+        }
 
         smm = StateMachineManager(services,
                 listOf(tokenizableServices),
@@ -326,7 +333,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     open protected fun makeNotaryService(type: ServiceType): NotaryService {
-        val uniquenessProvider = InMemoryUniquenessProvider()
+        val uniquenessProvider = makeUniquenessProvider()
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
         return when (type) {
@@ -337,6 +344,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             }
         }
     }
+
+    protected abstract fun makeUniquenessProvider(): UniquenessProvider
 
     protected open fun makeIdentityService(): IdentityService {
         val service = InMemoryIdentityService()

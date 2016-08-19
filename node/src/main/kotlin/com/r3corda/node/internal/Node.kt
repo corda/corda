@@ -3,7 +3,6 @@ package com.r3corda.node.internal
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.utilities.loggerFor
@@ -13,6 +12,7 @@ import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.servlets.AttachmentDownloadServlet
 import com.r3corda.node.servlets.Config
 import com.r3corda.node.servlets.DataUploadServlet
@@ -233,6 +233,8 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             jerseyServlet.initOrder = 0 // Initialise at server start
         }
     }
+
+    override fun makeUniquenessProvider() = PersistentUniquenessProvider()
 
     override fun start(): Node {
         alreadyRunningNodeCheck()
