@@ -119,19 +119,21 @@ class ObligationTests {
         }
 
         // Test generation works.
-        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Obligation<Currency>().generateIssue(ptx, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
-                beneficiary = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
-        assertTrue(ptx.inputStates().isEmpty())
+        val tx = TransactionType.General.Builder(notary = null).apply {
+            Obligation<Currency>().generateIssue(this, MINI_CORP, megaCorpDollarSettlement, 100.DOLLARS.quantity,
+                    beneficiary = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
+            signWith(MINI_CORP_KEY)
+        }.toSignedTransaction().tx
+        assertTrue(tx.inputs.isEmpty())
         val expected = Obligation.State(
                 obligor = MINI_CORP,
                 quantity = 100.DOLLARS.quantity,
                 beneficiary = DUMMY_PUBKEY_1,
                 template = megaCorpDollarSettlement
         )
-        assertEquals(ptx.outputStates()[0].data, expected)
-        assertTrue(ptx.commands()[0].value is Obligation.Commands.Issue)
-        assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
+        assertEquals(tx.outputs[0].data, expected)
+        assertTrue(tx.commands[0].value is Obligation.Commands.Issue)
+        assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
 
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
