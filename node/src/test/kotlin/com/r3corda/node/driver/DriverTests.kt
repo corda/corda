@@ -13,7 +13,7 @@ class DriverTests {
         fun nodeMustBeUp(networkMapCache: NetworkMapCache, nodeInfo: NodeInfo, nodeName: String) {
             val address = nodeInfo.address as ArtemisMessagingComponent.Address
             // Check that the node is registered in the network map
-            poll {
+            poll("network map cache for $nodeName") {
                 networkMapCache.get().firstOrNull {
                     it.identity.name == nodeName
                 }
@@ -35,9 +35,9 @@ class DriverTests {
             val notary = startNode("TestNotary", setOf(NotaryService.Type))
             val regulator = startNode("Regulator", setOf(RegulatorService.Type))
 
-            nodeMustBeUp(networkMapCache, notary, "TestNotary")
-            nodeMustBeUp(networkMapCache, regulator, "Regulator")
-            Pair(notary, regulator)
+            nodeMustBeUp(networkMapCache, notary.get(), "TestNotary")
+            nodeMustBeUp(networkMapCache, regulator.get(), "Regulator")
+            Pair(notary.get(), regulator.get())
         }
         nodeMustBeDown(notary)
         nodeMustBeDown(regulator)
@@ -47,8 +47,8 @@ class DriverTests {
     fun startingNodeWithNoServicesWorks() {
         val noService = driver {
             val noService = startNode("NoService")
-            nodeMustBeUp(networkMapCache, noService, "NoService")
-            noService
+            nodeMustBeUp(networkMapCache, noService.get(), "NoService")
+            noService.get()
         }
         nodeMustBeDown(noService)
     }
@@ -57,8 +57,8 @@ class DriverTests {
     fun randomFreePortAllocationWorks() {
         val nodeInfo = driver(portAllocation = PortAllocation.RandomFree()) {
             val nodeInfo = startNode("NoService")
-            nodeMustBeUp(networkMapCache, nodeInfo, "NoService")
-            nodeInfo
+            nodeMustBeUp(networkMapCache, nodeInfo.get(), "NoService")
+            nodeInfo.get()
         }
         nodeMustBeDown(nodeInfo)
     }
