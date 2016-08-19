@@ -43,13 +43,10 @@ data class MultilateralNetState<P>(
  * Clause for netting contract states. Currently only supports obligation contract.
  */
 // TODO: Make this usable for any nettable contract states
-open class NetClause<P> : SingleClause {
-    override val ifNotMatched: MatchBehaviour
-        get() = MatchBehaviour.CONTINUE
-    override val ifMatched: MatchBehaviour
-        get() = MatchBehaviour.END
-    override val requiredCommands: Set<Class<out CommandData>>
-        get() = setOf(Obligation.Commands.Net::class.java)
+open class NetClause<P> : SingleClause() {
+    override val ifMatched: MatchBehaviour = MatchBehaviour.END
+    override val ifNotMatched: MatchBehaviour = MatchBehaviour.CONTINUE
+    override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")
     override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {

@@ -9,10 +9,10 @@ import java.util.*
  * A clause which intercepts calls to a wrapped clause, and passes them through verification
  * only from a pre-clause. This is similar to an inceptor in aspect orientated programming.
  */
-data class InterceptorClause(
+class InterceptorClause(
         val preclause: SingleVerify,
         val clause: SingleClause
-) : SingleClause {
+) : SingleClause() {
     override val ifNotMatched: MatchBehaviour
         get() = clause.ifNotMatched
     override val ifMatched: MatchBehaviour
@@ -25,4 +25,6 @@ data class InterceptorClause(
         consumed.addAll(clause.verify(tx, commands))
         return consumed
     }
+
+    override fun toString(): String = "Interceptor clause [${clause}]"
 }

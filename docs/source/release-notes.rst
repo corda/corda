@@ -54,6 +54,7 @@ API changes:
 * The ``arg`` method in the test DSL is now called ``command`` to be consistent with the rest of the data model.
 * The messaging APIs have changed somewhat to now use a new ``TopicSession`` object. These APIs will continue to change
   in the upcoming releases.
+* Clauses now have default values provided for ``ifMatched``, ``ifNotMatched`` and ``requiredCommands``.
 
 New documentation:
 

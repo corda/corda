@@ -197,11 +197,7 @@ class Obligation<P> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<P> : SingleClause, GroupClause<State<P>, Issued<Terms<P>>> {
-            override val requiredCommands: Set<Class<out CommandData>> = emptySet()
-            override val ifMatched: MatchBehaviour = MatchBehaviour.CONTINUE
-            override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
-
+        class VerifyLifecycle<P> : SingleClause(), GroupClause<State<P>, Issued<Terms<P>>> {
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData>
                 = verify(
                     tx.inputs.filterIsInstance<State<P>>(),

@@ -21,7 +21,7 @@ interface GroupVerify<in S, in T : Any> {
 
 interface GroupClause<in S : ContractState, in T : Any> : Clause, GroupVerify<S, T>
 
-abstract class GroupClauseVerifier<S : ContractState, T : Any> : SingleClause {
+abstract class GroupClauseVerifier<S : ContractState, T : Any> : SingleClause() {
     abstract val clauses: List<GroupClause<S, T>>
     override val requiredCommands: Set<Class<out CommandData>>
         get() = emptySet()
