@@ -112,8 +112,18 @@ interface ContractState {
      */
     val participants: List<PublicKey>
 
-    /** The encumbrance state, if present, forces additional controls over this state, since the encumbrance state contract
-     * will also be verified.
+    /**
+     * All contract states may be _encumbered_ by up to one other state.
+     *
+     * The encumbrance state, if present, forces additional controls over this state, since the encumbrance state contract
+     * will also be verified during the execution of the transaction. For example, a contract state could be encumbered
+     * with a time-lock contract state; the state is then only processable in a transaction that verifies that the time
+     * specified in the encumbrance time-lock has passed.
+     *
+     * The encumbered state refers to another by index, and the referred encumbrance state
+     * is an output state in a particular position on the same transaction that created the encumbered state. An alternative
+     * would be encumber by reference to a StateRef., which would allow the specification of encumbrance by a state created
+     * in a prior transaction.
      */
     val encumbrance: Int? get() = null
 }
