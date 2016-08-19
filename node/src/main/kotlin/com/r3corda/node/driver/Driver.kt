@@ -120,6 +120,7 @@ sealed class PortAllocation {
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode.
  * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
   */
@@ -127,12 +128,14 @@ fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        isDebug: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
-            portAllocation = portAllocation,
-            debugPortAllocation = debugPortAllocation,
-            baseDirectory = baseDirectory
+                portAllocation = portAllocation,
+                debugPortAllocation = debugPortAllocation,
+                baseDirectory = baseDirectory,
+                isDebug = isDebug
         ),
         coerce = { it },
         dsl = dsl
@@ -214,7 +217,8 @@ fun <A> poll(pollName: String, pollIntervalMs: Long = 500, warnCount: Int = 120,
 class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
-        val baseDirectory: String
+        val baseDirectory: String,
+        val isDebug: Boolean
 ) : DriverDSLInternalInterface {
     override val networkMapCache = InMemoryNetworkMapCache()
     private val networkMapName = "NetworkMapService"
@@ -280,7 +284,7 @@ class DriverDSL(
     override fun startNode(providedName: String?, advertisedServices: Set<ServiceType>): Future<NodeInfo> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
-        val debugPort = debugPortAllocation.nextPort()
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
         val nodeDirectory = "$baseDirectory/$name"
@@ -403,7 +407,7 @@ class DriverDSL(
 
     private fun startNetworkMapService() {
         val apiAddress = portAllocation.nextHostAndPort()
-        val debugPort = debugPortAllocation.nextPort()
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
 
         val nodeDirectory = "$baseDirectory/$networkMapName"
 
@@ -443,7 +447,7 @@ class DriverDSL(
                 cliParams: NodeRunner.CliParams,
                 legalName: String,
                 quasarJarPath: String,
-                debugPort: Int
+                debugPort: Int?
         ): Process {
 
             // Write node.conf
@@ -455,9 +459,12 @@ class DriverDSL(
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
             val javaArgs = listOf(path) +
                     listOf("-Dname=$legalName", "-javaagent:$quasarJarPath",
-                            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort",
                             "-cp", classpath, className) +
-                    cliParams.toCliArguments()
+                    cliParams.toCliArguments() +
+                    if (debugPort != null)
+                        listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
+                    else
+                        listOf()
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
