@@ -81,11 +81,21 @@ sealed class TransactionType {
             // Validate that all encumbrances exist within the set of input states.
             tx.inputs.filter { it.state.data.encumbrance != null }.forEach {
                 encumberedInput ->
-                if (tx.inputs.none { it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.data.encumbrance }) {
+                if (tx.inputs.none { it.ref.txhash == encumberedInput.ref.txhash &&
+                        it.ref.index == encumberedInput.state.data.encumbrance }) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(tx)
                 }
             }
 
+            // Check that an encumbered state does not refer to itself as the encumbrance, and that the number of outputs
+            // can contain the encumbrance.
+            tx.outputs.forEachIndexed { i, it ->
+                if (it.data.encumbrance != null) {
+                    if (it.data.encumbrance == i || it.data.encumbrance!! >= tx.outputs.size) {
+                        throw TransactionVerificationException.TransactionMissingEncumbranceException(tx)
+                    }
+                }
+            }
         }
 
         override fun getRequiredSigners(tx: LedgerTransaction) = tx.commands.flatMap { it.signers }.toSet()

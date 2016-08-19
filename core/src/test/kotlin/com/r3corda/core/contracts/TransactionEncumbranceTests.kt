@@ -67,6 +67,35 @@ class TransactionEncumbranceTests {
                 this.verifies()
             }
         }
+        // An encumbered state must not be encumbered by itself.
+        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
+            transaction {
+                input { unencumberedState }
+                input { unencumberedState }
+                output { unencumberedState }
+                // The encumbered state refers to an encumbrance in position 1, so what follows is wrong.
+                output { encumberedState }
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this.verifies()
+            }
+        }
+        // An encumbered state must not reference an index greater than the size of the output states.
+        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
+            transaction {
+                input { unencumberedState }
+                input { unencumberedState }
+                output { unencumberedState }
+                // The encumbered state refers to an encumbrance in position 1, so what follows is wrong.
+                output { encumberedState }
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                this.verifies()
+            }
+        }
+
+    }
+
+    @Test
+    fun testEncumbranceEffects() {
         // A transaction containing an input state that is encumbered must fail if the encumbrance is not in the correct position.
         assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
             ledger {
