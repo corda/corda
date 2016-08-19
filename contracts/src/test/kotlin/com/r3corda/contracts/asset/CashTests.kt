@@ -61,7 +61,7 @@ class CashTests {
     }
 
     @Test
-    fun issueMoney() {
+    fun `issue by move`() {
         // Check we can't "move" money into existence.
         transaction {
             input { DummyState() }
@@ -70,7 +70,10 @@ class CashTests {
 
             this `fails with` "there is at least one asset input"
         }
+    }
 
+    @Test
+    fun issue() {
         // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
         // institution is allowed to issue as much cash as they want.
         transaction {
@@ -92,25 +95,38 @@ class CashTests {
             command(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             this.verifies()
         }
+    }
 
+    @Test
+    fun generateIssueRaw() {
         // Test generation works.
-        val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Cash().generateIssue(ptx, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
-        assertTrue(ptx.inputStates().isEmpty())
-        val s = ptx.outputStates()[0].data as Cash.State
+        val tx: WireTransaction = TransactionType.General.Builder(notary = null).apply {
+            Cash().generateIssue(this, 100.DOLLARS `issued by` MINI_CORP.ref(12, 34), owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
+            signWith(MINI_CORP_KEY)
+        }.toSignedTransaction().tx
+        assertTrue(tx.inputs.isEmpty())
+        val s = tx.outputs[0].data as Cash.State
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
         assertEquals(MINI_CORP, s.deposit.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
-        assertTrue(ptx.commands()[0].value is Cash.Commands.Issue)
-        assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].signers[0])
+        assertTrue(tx.commands[0].value is Cash.Commands.Issue)
+        assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])
+    }
 
-        // Test issuance from the issuance definition
+    @Test
+    fun generateIssueFromAmount() {
+        // Test issuance from an issued amount
         val amount = 100.DOLLARS `issued by` MINI_CORP.ref(12, 34)
-        val templatePtx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Cash().generateIssue(templatePtx, amount, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
-        assertTrue(templatePtx.inputStates().isEmpty())
-        assertEquals(ptx.outputStates()[0], templatePtx.outputStates()[0])
+        val tx: WireTransaction = TransactionType.General.Builder(notary = null).apply {
+            Cash().generateIssue(this, amount, owner = DUMMY_PUBKEY_1, notary = DUMMY_NOTARY)
+            signWith(MINI_CORP_KEY)
+        }.toSignedTransaction().tx
+        assertTrue(tx.inputs.isEmpty())
+        assertEquals(tx.outputs[0], tx.outputs[0])
+    }
 
+    @Test
+    fun `extended issue examples`() {
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
             input { issuerInState }
