@@ -9,7 +9,7 @@ import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.StateAndRef
-import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.contracts.UniqueIdentifier
 import com.r3corda.core.failure
 import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.node.services.testing.MockIdentityService
@@ -80,7 +80,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps: Map<SecureHash, StateAndRef<InterestRateSwap.State>> = node1.services.walletService.linearHeadsOfType<InterestRateSwap.State>()
+        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.walletService.linearHeadsOfType<InterestRateSwap.State>()
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.

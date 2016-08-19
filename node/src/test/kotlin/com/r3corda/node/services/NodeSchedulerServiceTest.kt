@@ -82,7 +82,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         override val participants: List<PublicKey>
             get() = throw UnsupportedOperationException()
 
-        override val thread = SecureHash.sha256("does not matter but we need it to be unique ${Math.random()}")
+        override val linearId = UniqueIdentifier()
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
 
