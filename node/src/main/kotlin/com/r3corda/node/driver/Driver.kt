@@ -45,7 +45,7 @@ import kotlin.concurrent.thread
 private val log: Logger = LoggerFactory.getLogger(DriverDSL::class.java)
 
 /**
- * This is the interface that's exposed to
+ * This is the interface that's exposed to DSL users.
  */
 interface DriverDSLExposedInterface {
     /**
@@ -59,11 +59,11 @@ interface DriverDSLExposedInterface {
     fun startNode(providedName: String? = null, advertisedServices: Set<ServiceType> = setOf()): Future<NodeInfo>
 
     /**
-     * Starts an [ArtemisMessagingClient]
+     * Starts an [ArtemisMessagingClient].
      *
-     * @param providedName name of the client, which will be used for creating its directory
-     * @param serverAddress the artemis server to connect to, for example a [Node]
-     * @param clientAddress the address of the client (this is not bound by the client!), defaults to [serverAddress] if null
+     * @param providedName name of the client, which will be used for creating its directory.
+     * @param serverAddress the artemis server to connect to, for example a [Node].
+     * @param clientAddress the address of the client (this is not bound by the client!), defaults to [serverAddress] if null.
      */
     fun startClient(providedName: String, serverAddress: HostAndPort, clientAddress: HostAndPort?): Future<ArtemisMessagingClient>
     /**
@@ -110,18 +110,18 @@ sealed class PortAllocation {
  *     (...)
  *   }
  *
- * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously returns a [Future] of the
- * [NodeInfo] that may be waited on, which guarantees that the new node registered with the network map service.
+ * Note that [DriverDSL.startNode] does not wait for the node to start up synchronously, but rather returns a [Future]
+ * of the [NodeInfo] that may be waited on, which completes when the new node registered with the network map service.
  *
- * The driver implicitly bootstraps a [NetworkMapService] that may be accessed through a local cache [DriverDSL.networkMapCache]
+ * The driver implicitly bootstraps a [NetworkMapService] that may be accessed through a local cache [DriverDSL.networkMapCache].
  *
  * @param baseDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
  *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
- * @param dsl The dsl itself
- * @return The value returned in the [dsl] closure
+ * @param dsl The dsl itself.
+ * @return The value returned in the [dsl] closure.
   */
 fun <A> driver(
         baseDirectory: String = "build/${getTimestampAsDirectoryName()}",
@@ -144,7 +144,7 @@ fun <A> driver(
  *   interface SomeOtherInternalDSLInterface : DriverDSLInternalInterface, SomeOtherExposedDSLInterface
  *   class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by driverDSL, SomeOtherInternalDSLInterface
  *
- * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause
+ * @param coerce We need this explicit coercion witness because we can't put an extra DI : D bound in a `where` clause.
  */
 fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericDriver(
         driverDsl: D,
@@ -381,7 +381,7 @@ class DriverDSL(
         startNetworkMapService()
         val networkMapClient = startClient("driver-$networkMapName-client", networkMapAddress, portAllocation.nextHostAndPort()).get()
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
-        // the network map service itself
+        // the network map service itself.
         val fakeNodeInfo = NodeInfo(
                 address = ArtemisMessagingClient.makeRecipient(networkMapAddress),
                 identity = Party(
