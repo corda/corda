@@ -32,14 +32,14 @@ class EndDate : Perceivable<Instant>
  */
 data class TimePerceivable(val cmp: Comparison, val instant: Perceivable<Instant>) : Perceivable<Boolean>
 
-fun parseInstant(str: String) = DateFormat.getDateInstance(DateFormat.SHORT, Locale.US).parse(str).toInstant()
+fun parseDate(str: String) = Instant.parse(str+"T00:00:00Z")
 
 fun before(expiry: Perceivable<Instant>) = TimePerceivable(Comparison.LTE, expiry)
 fun after(expiry: Perceivable<Instant>) = TimePerceivable(Comparison.GTE, expiry)
 fun before(expiry: Instant) = TimePerceivable(Comparison.LTE, const(expiry))
 fun after(expiry: Instant) = TimePerceivable(Comparison.GTE, const(expiry))
-fun before(expiry: String) = TimePerceivable(Comparison.LTE, const(parseInstant(expiry)))
-fun after(expiry: String) = TimePerceivable(Comparison.GTE, const(parseInstant(expiry)))
+fun before(expiry: String) = TimePerceivable(Comparison.LTE, const(parseDate(expiry)))
+fun after(expiry: String) = TimePerceivable(Comparison.GTE, const(parseDate(expiry)))
 
 data class PerceivableAnd(val left: Perceivable<Boolean>, val right: Perceivable<Boolean>) : Perceivable<Boolean>
 infix fun Perceivable<Boolean>.and(obs: Perceivable<Boolean>) = PerceivableAnd(this, obs)

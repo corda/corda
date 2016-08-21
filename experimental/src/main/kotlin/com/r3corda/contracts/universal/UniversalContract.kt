@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import java.security.PublicKey
+import java.time.Instant
 
 /**
  * Created by sofusmortensen on 23/05/16.
@@ -31,6 +32,24 @@ class UniversalContract : Contract {
         class Issue : TypeOnlyCommandData(), Commands
     }
 
+    fun eval(tx: TransactionForContract, condition: Perceivable<Instant>) : Instant = when (condition) {
+        is Const<Instant> -> condition.value
+        else -> throw NotImplementedError()
+    }
+
+    fun eval(tx: TransactionForContract, condition: Perceivable<Boolean>) : Boolean = when (condition) {
+        is PerceivableAnd -> eval(tx, condition.left) && eval(tx, condition.right)
+        is PerceivableOr -> eval(tx, condition.right) || eval(tx, condition.right)
+        is Const<Boolean> -> condition.value
+        is TimePerceivable -> when (condition.cmp) {
+            Comparison.LTE -> tx.timestamp!!.after!! <= eval(tx, condition.instant)
+            Comparison.GTE -> tx.timestamp!!.before!! >= eval(tx, condition.instant)
+            else -> throw NotImplementedError()
+        }
+        else -> throw NotImplementedError()
+    }
+
+
     override fun verify(tx: TransactionForContract) {
 
         requireThat {
@@ -46,18 +65,19 @@ class UniversalContract : Contract {
                 val inState = tx.inputs.single() as State
                 val actions = actions(inState.details)
 
+                val action = actions[value.name] ?: throw IllegalArgumentException("Failed requirement: action must be defined")
+
                 requireThat {
                     "action must be timestamped" by ( tx.timestamp != null )
-                    "action must be defined" by ( actions.containsKey(value.name) )
-                    "action must be authorized" by ( cmd.signers.any { actions[ value.name ]!!.actors.any { party -> party.owningKey == it } } )
-                    "condition must be met" by ( true ) // todo
+                    "action must be authorized" by ( cmd.signers.any { action.actors.any { party -> party.owningKey == it } } )
+                    "condition must be met" by ( eval(tx, action.condition) )
                 }
 
                 when (tx.outputs.size) {
                     1 -> {
                         val outState = tx.outputs.single() as State
                         requireThat {
-                            "output state must match action result state" by (actions[value.name]!!.arrangement.equals(outState.details))
+                            "output state must match action result state" by (action.arrangement.equals(outState.details))
                         }
                     }
                     0 -> throw IllegalArgumentException("must have at least one out state")
@@ -66,7 +86,7 @@ class UniversalContract : Contract {
                         var allContracts = And( tx.outputs.map { (it as State).details }.toSet() )
 
                         requireThat {
-                            "output states must match action result state" by (actions[value.name]!!.arrangement.equals(allContracts))
+                            "output states must match action result state" by (action.arrangement.equals(allContracts))
                         }
 
                     }

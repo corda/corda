@@ -4,6 +4,7 @@ import com.r3corda.core.testing.DUMMY_NOTARY
 import com.r3corda.core.testing.TEST_TX_TIME
 import com.r3corda.core.testing.transaction
 import org.junit.Test
+import java.time.Instant
 
 /**
  * Created by sofusmortensen on 01/06/16.
@@ -13,7 +14,7 @@ class ZeroCouponBond {
 
     val contract =
             (roadRunner or wileECoyote).may {
-                "execute".givenThat(after("01/09/2017")) {
+                "execute".givenThat(after("2017-09-01")) {
                     wileECoyote.gives(roadRunner, 100.K*GBP)
                 }
             }
@@ -21,10 +22,12 @@ class ZeroCouponBond {
 
     val contractMove =
             (porkyPig or wileECoyote).may {
-                "execute".givenThat(after("01/09/2017")) {
+                "execute".givenThat(after("2017-09-01")) {
                     wileECoyote.gives(porkyPig, 100.K*GBP)
                 }
             }
+
+    val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
     val transfer = arrange { wileECoyote.gives(roadRunner, 100.K*GBP) }
     val transferWrong = arrange { wileECoyote.gives(roadRunner, 80.K*GBP) }
@@ -66,7 +69,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outState }
-            timestamp(TEST_TX_TIME)
+            timestamp(TEST_TX_TIME_1)
 
             tweak {
                 command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -84,7 +87,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outState }
-            timestamp(TEST_TX_TIME)
+            timestamp(TEST_TX_TIME_1)
 
             command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "action must be authorized"
@@ -96,7 +99,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outStateWrong }
-            timestamp(TEST_TX_TIME)
+            timestamp(TEST_TX_TIME_1)
 
             command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output state must match action result state"

@@ -14,10 +14,11 @@ import java.time.Instant
 class FXSwap {
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
+    val TEST_TX_TIME_TOO_EARLY: Instant get() = Instant.parse("2017-08-31T12:00:00.00Z")
 
     val contract =
             (roadRunner or wileECoyote).may {
-                "execute".givenThat(after("01/09/2017")) {
+                "execute".givenThat(after("2017-09-01")) {
                     wileECoyote.gives(roadRunner, 1200.K*USD)
                     roadRunner.gives(wileECoyote, 1.M*EUR)
                 }
@@ -111,6 +112,19 @@ class FXSwap {
 
             command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "action must be authorized"
+        }
+    }
+
+    @Test
+    fun `execute - before maturity`() {
+        transaction {
+            input { inState }
+            output { outState1 }
+            output { outState2 }
+            timestamp(TEST_TX_TIME_TOO_EARLY)
+
+            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            this `fails with` "condition must be met"
         }
     }
 

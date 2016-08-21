@@ -46,11 +46,11 @@ class ContractDefinition {
 
 
     val cds_contract = roadRunner.may {
-        "payout".givenThat( acmeCorporationHasDefaulted and before("01/09/2017") ) {
+        "payout".givenThat( acmeCorporationHasDefaulted and before("2017-09-01") ) {
             wileECoyote.gives(roadRunner, 1.M*USD)
         }
     } or wileECoyote.may {
-        "expire".givenThat( after("01/09/2017") ) {}
+        "expire".givenThat( after("2017-09-01") ) {}
     }
 
 
@@ -60,21 +60,21 @@ class ContractDefinition {
             roadRunner.gives(wileECoyote, 1200.K*USD)
         }
     } or wileECoyote.may {
-        "expire".givenThat(after("01/09/2017")) {}
+        "expire".givenThat(after("2017-09-01")) {}
     }
 
 
     val european_fx_option = roadRunner.may {
         "exercise".anytime {
             (roadRunner or wileECoyote).may {
-                "execute".givenThat( after("01/09/2017") ) {
+                "execute".givenThat( after("2017-09-01") ) {
                     wileECoyote.gives( roadRunner, 1.M*EUR )
                     roadRunner.gives( wileECoyote, 1200.K*USD )
                 }
             }
         }
     } or wileECoyote.may {
-        "expire".givenThat( after("01/09/2017")) {}
+        "expire".givenThat( after("2017-09-01")) {}
     }
 
 
