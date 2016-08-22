@@ -27,7 +27,6 @@ class NodeRunner {
     companion object {
         @JvmStatic fun main(arguments: Array<String>) {
             val cliParams = CliParams.parse(CliParams.parser.parse(*arguments))
-
             val nodeDirectory = Paths.get(cliParams.baseDirectory)
             createNodeRunDirectory(nodeDirectory)
 
