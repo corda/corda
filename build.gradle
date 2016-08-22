@@ -108,6 +108,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
+    compile 'co.paralleluniverse:capsule:1.0.3'
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
@@ -199,11 +200,14 @@ applicationDistribution.into("bin") {
 task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
     applicationClass 'com.r3corda.node.MainKt'
 
+    applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class')
+
     capsuleManifest {
         appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
         systemProperties['log4j.configuration'] = 'log4j2.xml'
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         minJavaVersion = '1.8.0'
+        caplets = ['CordaCaplet']
     }
 }
 
