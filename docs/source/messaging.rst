@@ -1,12 +1,9 @@
 Networking and messaging
 ========================
 
-Although the platform does not currently provide a network backend, some preliminary interfaces are defined along with
-an in-memory implementation provided for use by unit tests and other exploratory code. An implementation based on Apache
-Kafka is also being developed, which should be sufficient for real use cases to be implemented in the short run, even
-though in the long run a fully peer to peer protocol will be required.
-
-This article quickly explains the basic networking interfaces in the code.
+The platform defines preliminary interfaces for the messaging layer along with an ArtemisMQ implementation, and an
+in-memory implementation provided for use by unit tests and other exploratory code. This article quickly explains the
+basic networking interfaces in the code.
 
 Messaging vs networking
 -----------------------
