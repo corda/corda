@@ -9,16 +9,19 @@
 <h1>ArtemisMessagingClient</h1>
 <code><span class="keyword">class </span><span class="identifier">ArtemisMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><br/>
 <p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a>.</p>
+<p>Message handlers are run on the provided <a href="../../com.r3corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> synchronously, that is, the Artemis callback threads
+are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given executor
+through into Artemis and from there, back through to senders.</p>
+<br/>
+<br/>
 <h3>Parameters</h3>
 <a name="serverHostPort"></a>
 <code>serverHostPort</code> - The address of the broker instance to connect to (might be running in the same process)<br/>
 <br/>
 <a name="myHostPort"></a>
 <code>myHostPort</code> - What host and port to use as an address for incoming messages<br/>
-<br/>
-<a name="defaultExecutor"></a>
-<code>defaultExecutor</code> - This will be used as the default executor to run message handlers on, if no other is specified.<br/>
 <br/>
 <br/>
 <h3>Types</h3>
@@ -40,8 +43,9 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">ArtemisMessagingClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , java.util.concurrent.Executor)/directory">directory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , java.util.concurrent.Executor)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , java.util.concurrent.Executor)/serverHostPort">serverHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , java.util.concurrent.Executor)/myHostPort">myHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , java.util.concurrent.Executor)/defaultExecutor">defaultExecutor</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a>&nbsp;<span class="symbol">=</span>&nbsp;RunOnCallerThread<span class="symbol">)</span></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
+<code><span class="identifier">ArtemisMessagingClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , com.r3corda.node.utilities.AffinityExecutor)/directory">directory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , com.r3corda.node.utilities.AffinityExecutor)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , com.r3corda.node.utilities.AffinityExecutor)/serverHostPort">serverHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , com.r3corda.node.utilities.AffinityExecutor)/myHostPort">myHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , , com.r3corda.node.utilities.AffinityExecutor)/executor">executor</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a><span class="symbol">)</span></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../-artemis-messaging-server/index.html">ArtemisMessagingServer</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -51,9 +55,9 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <tbody>
 <tr>
 <td>
-<a href="default-executor.html">defaultExecutor</a></td>
+<a href="executor.html">executor</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">defaultExecutor</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Executor.html"><span class="identifier">Executor</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">executor</span><span class="symbol">: </span><a href="../../com.r3corda.node.utilities/-affinity-executor/index.html"><span class="identifier">AffinityExecutor</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -124,6 +128,13 @@ this method has returned, although executions that are currently in flight will 
 </tr>
 <tr>
 <td>
+<a href="run.html">run</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">run</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Starts the event loop: this method only returns once <a href="stop.html">stop</a> has been called.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="send.html">send</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">send</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$send(com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageRecipients)/message">message</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingClient$send(com.r3corda.core.messaging.Message, com.r3corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Sends a message to the given receiver. The details of how receivers are identified is up to the messaging
@@ -142,7 +153,11 @@ delivered: if the recipients are offline then the message could be queued hours 
 <td>
 <a href="stop.html">stop</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Initiates shutdown: if called from a thread that isnt controlled by the executor passed to the constructor
+then this will block until all in-flight messages have finished being handled and acknowledged. If called
+from a thread thats a part of the <a href="../../com.r3corda.node.utilities/-affinity-executor/index.html">AffinityExecutor</a> given to the constructor, it returns immediately and
+shutdown is asynchronous.</p>
+</td>
 </tr>
 </tbody>
 </table>

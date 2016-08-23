@@ -29,7 +29,11 @@
 <td>
 <a href="stop.html">stop</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Initiates shutdown: if called from a thread that isnt controlled by the executor passed to the constructor
+then this will block until all in-flight messages have finished being handled and acknowledged. If called
+from a thread thats a part of the <a href="#">AffinityExecutor</a> given to the constructor, it returns immediately and
+shutdown is asynchronous.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -107,7 +111,8 @@ doesnt take the registration object, unlike the callback to <a href="../../com.r
 <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-client/index.html">ArtemisMessagingClient</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ArtemisMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><span class="identifier">MessagingServiceInternal</span></code><p>This class implements the <a href="../../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="../../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a>.</p>
 </td>
 </tr>
 <tr>

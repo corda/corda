@@ -53,11 +53,9 @@ existing contract code.</p>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.core.contracts.clauses/-clause-verifier/index.html">ClauseVerifier</a></td>
+<a href="../../com.r3corda.contracts/-commercial-paper/index.html">CommercialPaper</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ClauseVerifier</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>Abstract superclass for clause-based contracts to extend, which provides a verify() function
-that delegates to the supplied list of clauses.</p>
-</td>
+<code><span class="keyword">class </span><span class="identifier">CommercialPaper</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
 </tr>
 <tr>
 <td>
@@ -70,6 +68,43 @@ that delegates to the supplied list of clauses.</p>
 <a href="../-dummy-contract/index.html">DummyContract</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">DummyContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.core.testing/-dummy-linear-contract/index.html">DummyLinearContract</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DummyLinearContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts/-interest-rate-swap/index.html">InterestRateSwap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
+This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
+It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
+Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
+This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.asset/-obligation/index.html">Obligation</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Obligation</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
+<a href="../../com.r3corda.contracts.asset/-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
+multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
+to be netted/merged, with settlement only for any remainder amount.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.contracts.asset/-on-ledger-asset/index.html">OnLedgerAsset</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">OnLedgerAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.contracts.asset/-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Contract</span></code><p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
+input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour (a blend of
+issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in the same
+transaction.</p>
+</td>
 </tr>
 </tbody>
 </table>

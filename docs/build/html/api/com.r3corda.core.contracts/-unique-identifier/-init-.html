@@ -1,0 +1,25 @@
+<HTML>
+<HEAD>
+<title>UniqueIdentifier.<init> - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.core.contracts</a>&nbsp;/&nbsp;<a href="index.html">UniqueIdentifier</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">UniqueIdentifier</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.UniqueIdentifier$<init>(kotlin.String, java.util.UUID)/externalId">externalId</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.UniqueIdentifier$<init>(kotlin.String, java.util.UUID)/id">id</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a>&nbsp;<span class="symbol">=</span>&nbsp;UUID.randomUUID()<span class="symbol">)</span></code><br/>
+<p>This class provides a truly unique identifier of a trade, state, or other business object.</p>
+<h3>Parameters</h3>
+<a name="externalId"></a>
+<code>externalId</code> - If there is an existing weak identifer e.g. trade reference id.
+This should be set here the first time a UniqueIdentifier identifier is created as part of an issue,
+or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong id.<br/>
+<br/>
+<a name="id"></a>
+<code>id</code> - Should never be set by user code and left as default initialised.
+So that the first time a state is issued this should be given a new UUID.
+Subsequent copies and evolutions of a state should just copy the externalId and Id fields unmodified.<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

@@ -174,21 +174,21 @@
 <h1>Writing a contract using clauses<a class="headerlink" href="#writing-a-contract-using-clauses" title="Permalink to this headline">¶</a></h1>
 <p>This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
 already completed &#8220;<a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a>&#8221;.</p>
-<p>Clauses are essentially &#8220;mini-contracts&#8221; which contain verification logic, and are composed together to form
+<p>Clauses are essentially micro-contracts which contain independent verification logic, and are composed together to form
 a contract. With appropriate design, they can be made to be reusable, for example issuing contract state objects is
 generally the same for all fungible contracts, so a single issuance clause can be shared. This cuts down on scope for
 error, and improves consistency of behaviour.</p>
 <p>Clauses can be composed of subclauses, either to combine clauses in different ways, or to apply specialised clauses.
-In the case of commercial paper, we have a &#8220;Grouping&#8221; outermost clause, which will contain the &#8220;Issue&#8221;, &#8220;Move&#8221; and
-&#8220;Redeem&#8221; clauses. The result is a contract that looks something like this:</p>
+In the case of commercial paper, we have a <code class="docutils literal"><span class="pre">Group</span></code> outermost clause, which will contain the <code class="docutils literal"><span class="pre">Issue</span></code>, <code class="docutils literal"><span class="pre">Move</span></code> and
+<code class="docutils literal"><span class="pre">Redeem</span></code> clauses. The result is a contract that looks something like this:</p>
 <blockquote>
 <div><ol class="arabic">
 <li><dl class="first docutils">
 <dt>Group input and output states together, and then apply the following clauses on each group:</dt>
 <dd><ol class="first last loweralpha simple">
-<li>If an Issue command is present, run appropriate tests and end processing this group.</li>
-<li>If a Move command is present, run appropriate tests and end processing this group.</li>
-<li>If a Redeem command is present, run appropriate tests and end processing this group.</li>
+<li>If an <code class="docutils literal"><span class="pre">Issue</span></code> command is present, run appropriate tests and end processing this group.</li>
+<li>If a <code class="docutils literal"><span class="pre">Move</span></code> command is present, run appropriate tests and end processing this group.</li>
+<li>If a <code class="docutils literal"><span class="pre">Redeem</span></code> command is present, run appropriate tests and end processing this group.</li>
 </ol>
 </dd>
 </dl>
@@ -197,20 +197,19 @@ In the case of commercial paper, we have a &#8220;Grouping&#8221; outermost clau
 </div></blockquote>
 <div class="section" id="commercial-paper-class">
 <h2>Commercial paper class<a class="headerlink" href="#commercial-paper-class" title="Permalink to this headline">¶</a></h2>
-<p>First we need to change the class from implementing <code class="docutils literal"><span class="pre">Contract</span></code>, to extend <code class="docutils literal"><span class="pre">ClauseVerifier</span></code>. This is an abstract
-class which provides a verify() function for us, and requires we provide a property (<code class="docutils literal"><span class="pre">clauses</span></code>) for the clauses to test,
-and a function (<code class="docutils literal"><span class="pre">extractCommands</span></code>) to extract the applicable commands from the transaction. This is important because
-<code class="docutils literal"><span class="pre">ClauseVerifier</span></code> checks that no commands applicable to the contract are left unprocessed at the end. The following
-examples are trimmed to the modified class definition and added elements, for brevity:</p>
+<p>To use the clause verification logic, the contract needs to call the <code class="docutils literal"><span class="pre">verifyClauses()</span></code> function, passing in the transaction,
+a list of clauses to verify, and a collection of commands the clauses are expected to handle all of. This list of
+commands is important because <code class="docutils literal"><span class="pre">verifyClauses()</span></code> checks that none of the commands are left unprocessed at the end, and
+raises an error if they are. The following examples are trimmed to the modified class definition and added elements, for
+brevity:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">ClauseVerifier</span> <span class="p">{</span>
-    <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">)</span>
 
-    <span class="k">override</span> <span class="k">val</span> <span class="py">clauses</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">SingleClause</span><span class="p">&gt;</span>
-        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="k">throw</span> <span class="n">UnsupportedOperationException</span><span class="p">(</span><span class="s">&quot;not implemented&quot;</span><span class="p">)</span>
-
-    <span class="k">override</span> <span class="k">fun</span> <span class="nf">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;</span>
+    <span class="k">private</span> <span class="k">fun</span> <span class="nf">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;</span>
         <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">select</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">&gt;()</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">)</span> <span class="p">=</span> <span class="n">verifyClauses</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">listOf</span><span class="p">(</span><span class="n">Clauses</span><span class="p">.</span><span class="n">Group</span><span class="p">()),</span> <span class="n">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">))</span>
 </pre></div>
 </div>
 <div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CommercialPaper</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
@@ -220,16 +219,16 @@ examples are trimmed to the modified class definition and added elements, for br
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">SingleClause</span><span class="o">&gt;</span> <span class="nf">getClauses</span><span class="o">()</span> <span class="o">{</span>
-        <span class="k">throw</span> <span class="n">UnsupportedOperationException</span><span class="o">(</span><span class="s">&quot;not implemented&quot;</span><span class="o">);</span>
-    <span class="o">}</span>
-
-    <span class="nd">@Override</span>
     <span class="kd">public</span> <span class="n">Collection</span><span class="o">&lt;</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="nf">extractCommands</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
         <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">()</span>
                 <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
                 <span class="o">.</span><span class="na">filter</span><span class="o">((</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;</span> <span class="n">command</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span> <span class="k">return</span> <span class="n">command</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">Commands</span><span class="o">;</span> <span class="o">})</span>
                 <span class="o">.</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verify</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IllegalArgumentException</span> <span class="o">{</span>
+        <span class="n">ClauseVerifier</span><span class="o">.</span><span class="na">verifyClauses</span><span class="o">(</span><span class="n">tx</span><span class="o">,</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="k">new</span> <span class="n">Clause</span><span class="o">.</span><span class="na">Group</span><span class="o">()),</span> <span class="n">extractCommands</span><span class="o">(</span><span class="n">tx</span><span class="o">));</span>
     <span class="o">}</span>
 </pre></div>
 </div>
@@ -239,9 +238,9 @@ examples are trimmed to the modified class definition and added elements, for br
 <h2>Clauses<a class="headerlink" href="#clauses" title="Permalink to this headline">¶</a></h2>
 <p>We&#8217;ll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
 grouping of input/output states later. The inner clauses need to implement the <code class="docutils literal"><span class="pre">GroupClause</span></code> interface, which defines
-the verify() function, and properties for key information on how the clause is processed. These properties specify the
-command(s) which must be present in order for the clause to be matched, and what to do after processing the clause
-depending on whether it was matched or not.</p>
+the verify() function, and properties (<code class="docutils literal"><span class="pre">ifMatched</span></code>, <code class="docutils literal"><span class="pre">ifNotMatched</span></code> and <code class="docutils literal"><span class="pre">requiredCommands</span></code>) defining how the clause
+is processed. These properties specify the command(s) which must be present in order for the clause to be matched,
+and what to do after processing the clause depending on whether it was matched or not.</p>
 <p>The <code class="docutils literal"><span class="pre">verify()</span></code> functions defined in the <code class="docutils literal"><span class="pre">SingleClause</span></code> and <code class="docutils literal"><span class="pre">GroupClause</span></code> interfaces is similar to the conventional
 <code class="docutils literal"><span class="pre">Contract</span></code> verification function, although it adds new parameters and returns the set of commands which it has processed.
 Normally this returned set is identical to the commands matched in order to trigger the clause, however in some cases the
@@ -324,7 +323,9 @@ the first (or otherwise) matched command.</p>
 </dd>
 </dl>
 <p>In this case we process commands against each group, until the first matching clause is found, so we <code class="docutils literal"><span class="pre">END</span></code> on a match
-and <code class="docutils literal"><span class="pre">CONTINUE</span></code> otherwise. <code class="docutils literal"><span class="pre">ERROR</span></code> can be used as a part of a clause which must always/never be matched.</p>
+and <code class="docutils literal"><span class="pre">CONTINUE</span></code> otherwise. <code class="docutils literal"><span class="pre">ERROR</span></code> can be used as a part of a clause which must always/never be matched.  By default
+clauses are always matched (<code class="docutils literal"><span class="pre">requiredCommands</span></code> is an empty set), execution continues after a clause is matched, and an
+error is raised if a clause is not matched.</p>
 </div>
 <div class="section" id="group-clause">
 <h2>Group Clause<a class="headerlink" href="#group-clause" title="Permalink to this headline">¶</a></h2>

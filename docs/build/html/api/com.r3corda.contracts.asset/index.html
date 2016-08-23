@@ -47,7 +47,7 @@ container), shares of the same class in a specific company are fungible and coun
 <td>
 <a href="-obligation/index.html">Obligation</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Obligation</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><p>An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
+<code><span class="keyword">class </span><span class="identifier">Obligation</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><p>An obligation contract commits the obligor to delivering a specified amount of a fungible asset (for example the
 <a href="-cash/index.html">Cash</a> contract) at a specified future point in time. Settlement transactions may split and merge contracts across
 multiple input and output states. The goal of this design is to handle amounts owed, and these contracts are expected
 to be netted/merged, with settlement only for any remainder amount.</p>
@@ -57,7 +57,7 @@ to be netted/merged, with settlement only for any remainder amount.</p>
 <td>
 <a href="-on-ledger-asset/index.html">OnLedgerAsset</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">OnLedgerAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">OnLedgerAsset</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fungible-asset/index.html"><span class="identifier">FungibleAsset</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><p>An asset transaction may split and merge assets represented by a set of (issuer, depositRef) pairs, across multiple
 input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour (a blend of
 issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in the same
 transaction.</p>

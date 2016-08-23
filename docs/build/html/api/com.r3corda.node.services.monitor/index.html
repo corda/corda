@@ -1,0 +1,81 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.node.services.monitor - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">com.r3corda.node.services.monitor</a><br/>
+<br/>
+<h2>Package com.r3corda.node.services.monitor</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-client-to-service-command/index.html">ClientToServiceCommand</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ClientToServiceCommand</span></code><p>A command from the monitoring client, to the node.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-client-to-service-command-message/index.html">ClientToServiceCommandMessage</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ClientToServiceCommandMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.protocols/-direct-request-message/index.html"><span class="identifier">DirectRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-deregister-request/index.html">DeregisterRequest</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DeregisterRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.protocols/-direct-request-message/index.html"><span class="identifier">DirectRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-deregister-response/index.html">DeregisterResponse</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DeregisterResponse</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-register-request/index.html">RegisterRequest</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">RegisterRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.protocols/-direct-request-message/index.html"><span class="identifier">DirectRequestMessage</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-register-response/index.html">RegisterResponse</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">RegisterResponse</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-service-to-client-event/index.html">ServiceToClientEvent</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ServiceToClientEvent</span></code><p>Events triggered by changes in the node, and sent to monitoring client(s).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-state-snapshot-message/index.html">StateSnapshotMessage</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">StateSnapshotMessage</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-transaction-build-result/index.html">TransactionBuildResult</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">TransactionBuildResult</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-wallet-monitor-service/index.html">WalletMonitorService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">WalletMonitorService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><p>Service which allows external clients to monitor the wallet service and state machine manager, as well as trigger
+actions within the node. The service also sends requests for user input back to clients, for example to enter
+additional information while a protocol runs, or confirm an action.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

@@ -7,7 +7,7 @@
 <a href="../../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../../index.html">Obligation</a>&nbsp;/&nbsp;<a href="../index.html">Clauses</a>&nbsp;/&nbsp;<a href=".">VerifyLifecycle</a><br/>
 <br/>
 <h1>VerifyLifecycle</h1>
-<code><span class="keyword">class </span><span class="identifier">VerifyLifecycle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts.clauses/-single-clause.html"><span class="identifier">SingleClause</span></a><span class="symbol">, </span><a href="../../../../com.r3corda.core.contracts.clauses/-group-clause.html"><span class="identifier">GroupClause</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">VerifyLifecycle</span><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts.clauses/-single-clause/index.html"><span class="identifier">SingleClause</span></a><span class="symbol">, </span><a href="../../../../com.r3corda.core.contracts.clauses/-group-clause.html"><span class="identifier">GroupClause</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&lt;</span><span class="identifier">P</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
 <p>Obligation-specific clause for verifying that all states are in
 normal lifecycle. In a group clause set, this must be run after
 any lifecycle change clause, which is the only clause that involve
@@ -29,28 +29,28 @@ non-standard lifecycle states on input/output.</p>
 </tr>
 </tbody>
 </table>
-<h3>Properties</h3>
+<h3>Inherited Properties</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="if-matched.html">ifMatched</a></td>
+<a href="../../../../com.r3corda.core.contracts.clauses/-single-clause/if-matched.html">ifMatched</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">ifMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is not matches</p>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ifMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is not matches</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="if-not-matched.html">ifNotMatched</a></td>
+<a href="../../../../com.r3corda.core.contracts.clauses/-single-clause/if-not-matched.html">ifNotMatched</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">ifNotMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is matched</p>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ifNotMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is matched</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="required-commands.html">requiredCommands</a></td>
+<a href="../../../../com.r3corda.core.contracts.clauses/-single-clause/required-commands.html">requiredCommands</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Classes for commands which must ALL be present in transaction for this clause to be triggered</p>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Classes for commands which must ALL be present in transaction for this clause to be triggered</p>
 </td>
 </tr>
 </tbody>

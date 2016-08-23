@@ -238,7 +238,7 @@ with the commands from the wire, and verified/looked up.</p>
 <td>
 <a href="-linear-state/index.html">LinearState</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code><p>A state that evolves by superseding itself, all of which share the common "thread".</p>
+<code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-contract-state/index.html"><span class="identifier">ContractState</span></a></code><p>A state that evolves by superseding itself, all of which share the common "linearId".</p>
 </td>
 </tr>
 <tr>
@@ -364,10 +364,10 @@ transaction defined the state and where in that transaction it was.</p>
 </tr>
 <tr>
 <td>
-<a href="-timestamp-command/index.html">TimestampCommand</a></td>
+<a href="-timestamp/index.html">Timestamp</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">TimestampCommand</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code><p>If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
-public keys are identified in the containing <a href="-command/index.html">Command</a> object. The true time must be between (after, before).</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Timestamp</span></code><p>If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
+between (after, before).</p>
 </td>
 </tr>
 <tr>
@@ -415,6 +415,13 @@ This is the definitive state that is stored on the ledger and used in transactio
 <a href="-type-only-command-data/index.html">TypeOnlyCommandData</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">TypeOnlyCommandData</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-command-data.html"><span class="identifier">CommandData</span></a></code><p>Commands that inherit from this are intended to have no data items: its only their presence that matters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-unique-identifier/index.html">UniqueIdentifier</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">UniqueIdentifier</span></code><p>This class provides a truly unique identifier of a trade, state, or other business object.</p>
 </td>
 </tr>
 <tr>
@@ -485,12 +492,6 @@ This is the definitive state that is stored on the ledger and used in transactio
 <tr>
 <td>
 <a href="kotlin.collections.-iterable/index.html">kotlin.collections.Iterable</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="kotlin.collections.-list/index.html">kotlin.collections.List</a></td>
 <td>
 </td>
 </tr>

@@ -126,5 +126,20 @@ when sending out "change" from spending/exiting.</p>
 </tr>
 </tbody>
 </table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-on-ledger-asset/verify.html">verify</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.OnLedgerAsset$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+Must throw an exception if theres a problem that should prevent state transition. Takes a single object
+rather than an argument so that additional data can be added without breaking binary compatibility with
+existing contract code.</p>
+</td>
+</tr>
+</tbody>
+</table>
 </BODY>
 </HTML>

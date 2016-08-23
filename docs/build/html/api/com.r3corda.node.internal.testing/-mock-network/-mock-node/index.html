@@ -91,6 +91,12 @@
 </tr>
 <tr>
 <td>
+<a href="../../../com.r3corda.node.internal/-abstract-node/close-on-stop.html">closeOnStop</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">closeOnStop</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="../../../com.r3corda.node.internal/-abstract-node/configuration.html">configuration</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="../../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
@@ -124,6 +130,12 @@
 <a href="../../../com.r3corda.node.internal/-abstract-node/in-node-notary-service.html">inNodeNotaryService</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">inNodeNotaryService</span><span class="symbol">: </span><a href="../../../com.r3corda.node.services.transactions/-notary-service/index.html"><span class="identifier">NotaryService</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.node.internal/-abstract-node/in-node-wallet-monitor-service.html">inNodeWalletMonitorService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeWalletMonitorService</span><span class="symbol">: </span><a href="../../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html"><span class="identifier">WalletMonitorService</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -267,6 +279,12 @@
 </tr>
 <tr>
 <td>
+<a href="make-wallet-service.html">makeWalletService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeWalletService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="no-network-map-configured.html">noNetworkMapConfigured</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">noNetworkMapConfigured</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>This is overriden by the mock node implementation to enable operation without any network map service</p>
@@ -330,7 +348,13 @@
 <td>
 <a href="../../../com.r3corda.node.internal/-abstract-node/make-notary-service.html">makeNotaryService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$makeNotaryService(com.r3corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$makeNotaryService(com.r3corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.node.services.transactions/-notary-service/index.html"><span class="identifier">NotaryService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../com.r3corda.node.internal/-abstract-node/make-wallet-monitor-service.html">makeWalletMonitorService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeWalletMonitorService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html"><span class="identifier">WalletMonitorService</span></a></code></td>
 </tr>
 <tr>
 <td>

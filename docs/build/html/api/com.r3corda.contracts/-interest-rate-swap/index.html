@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.contracts</a>&nbsp;/&nbsp;<a href=".">InterestRateSwap</a><br/>
 <br/>
 <h1>InterestRateSwap</h1>
-<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts.clauses/-clause-verifier/index.html"><span class="identifier">ClauseVerifier</span></a></code><br/>
+<code><span class="keyword">class </span><span class="identifier">InterestRateSwap</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><br/>
 <p>The Interest Rate Swap class. For a quick overview of what an IRS is, see here - http://www.pimco.co.uk/EN/Education/Pages/InterestRateSwapsBasics1-08.aspx (no endorsement).
 This contract has 4 significant data classes within it, the "Common", "Calculation", "FixedLeg" and "FloatingLeg".
 It also has 4 commands, "Agree", "Fix", "Pay" and "Mature".
@@ -94,12 +94,6 @@ This is just a representation of a vanilla Fixed vs Floating (same currency) IRS
 <tbody>
 <tr>
 <td>
-<a href="clauses.html">clauses</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">clauses</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts.clauses/-single-clause.html"><span class="identifier">SingleClause</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="legal-contract-reference.html">legalContractReference</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">legalContractReference</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
@@ -131,16 +125,11 @@ Note: The day count, interest rate calculation etc are not finished yet, but the
 <td>
 <code><span class="keyword">fun </span><span class="identifier">generateFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.InterestRateSwap.State)), com.r3corda.core.contracts.Fix)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.InterestRateSwap.State)), com.r3corda.core.contracts.Fix)/irs">irs</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.contracts.InterestRateSwap.State)), com.r3corda.core.contracts.Fix)/fixing">fixing</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
-</tbody>
-</table>
-<h3>Inherited Functions</h3>
-<table>
-<tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.core.contracts.clauses/-clause-verifier/verify.html">verify</a></td>
+<a href="verify.html">verify</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses.ClauseVerifier$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
 Must throw an exception if theres a problem that should prevent state transition. Takes a single object
 rather than an argument so that additional data can be added without breaking binary compatibility with
 existing contract code.</p>

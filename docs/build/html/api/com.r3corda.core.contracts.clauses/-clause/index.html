@@ -8,6 +8,7 @@
 <br/>
 <h1>Clause</h1>
 <code><span class="keyword">interface </span><span class="identifier">Clause</span></code><br/>
+<p>A clause that can be matched as part of execution of a contract.</p>
 <br/>
 <br/>
 <h3>Properties</h3>
@@ -47,9 +48,11 @@
 </tr>
 <tr>
 <td>
-<a href="../-single-clause.html">SingleClause</a></td>
+<a href="../-single-clause/index.html">SingleClause</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">SingleClause</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Clause</span><span class="symbol">, </span><a href="../-single-verify/index.html"><span class="identifier">SingleVerify</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">SingleClause</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Clause</span><span class="symbol">, </span><a href="../-single-verify/index.html"><span class="identifier">SingleVerify</span></a></code><p>A single verifiable clause. By default always matches, continues to the next clause when matched and errors
+if not matched.</p>
+</td>
 </tr>
 </tbody>
 </table>

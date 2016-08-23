@@ -58,6 +58,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="close-on-stop.html">closeOnStop</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">closeOnStop</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="configuration.html">configuration</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
@@ -91,6 +97,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="in-node-notary-service.html">inNodeNotaryService</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">inNodeNotaryService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.transactions/-notary-service/index.html"><span class="identifier">NotaryService</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="in-node-wallet-monitor-service.html">inNodeWalletMonitorService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeWalletMonitorService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html"><span class="identifier">WalletMonitorService</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -285,7 +297,19 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="make-notary-service.html">makeNotaryService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$makeNotaryService(com.r3corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeNotaryService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$makeNotaryService(com.r3corda.core.node.services.ServiceType)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.transactions/-notary-service/index.html"><span class="identifier">NotaryService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="make-wallet-monitor-service.html">makeWalletMonitorService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeWalletMonitorService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html"><span class="identifier">WalletMonitorService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="make-wallet-service.html">makeWalletService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeWalletService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
 </tr>
 <tr>
 <td>

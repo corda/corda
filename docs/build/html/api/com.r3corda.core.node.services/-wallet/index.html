@@ -41,7 +41,7 @@ or transactions observed and the Wallet.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">Wallet</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.Wallet$<init>(kotlin.collections.List((com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)))))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+<code><span class="identifier">Wallet</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.node.services.Wallet$<init>(kotlin.collections.Iterable((com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)))))/states">states</span><span class="symbol">:</span>&nbsp;<span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
 change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
 about new transactions from our peers and generate new transactions that consume states ourselves.</p>
@@ -56,7 +56,7 @@ about new transactions from our peers and generate new transactions that consume
 <td>
 <a href="states.html">states</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">states</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">states</span><span class="symbol">: </span><span class="identifier">Iterable</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -92,17 +92,6 @@ about new transactions from our peers and generate new transactions that consume
 <code><span class="keyword">val </span><span class="identifier">Wallet</span><span class="symbol">.</span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
 which we have no cash evaluate to null (not present in map), not 0.</p>
 </td>
-</tr>
-</tbody>
-</table>
-<h3>Companion Object Extension Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../../com.r3corda.core.testing/-in-memory-wallet-service/clashing-threads.html">clashingThreads</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">Wallet</span><span class="symbol">.</span><span class="identifier">clashingThreads</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

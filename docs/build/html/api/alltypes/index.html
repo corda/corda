@@ -150,7 +150,8 @@ properties loaded from the attachments.  And perhaps the authenticated user for 
 <a href="../com.r3corda.node.services.messaging/-artemis-messaging-client/index.html">com.r3corda.node.services.messaging.ArtemisMessagingClient</a></td>
 <td>
 <p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here we run a client connecting to the specified broker instance <a href="../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a></p>
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html">ArtemisMessagingServer</a>.</p>
 </td>
 </tr>
 <tr>
@@ -239,13 +240,6 @@ Bilateral states are used in close-out netting.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.utilities/-brief-log-formatter/index.html">com.r3corda.core.utilities.BriefLogFormatter</a></td>
-<td>
-<p>A Java logging formatter that writes more compact output than the default.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.contracts/-business-calendar/index.html">com.r3corda.core.contracts.BusinessCalendar</a></td>
 <td>
 <p>A business calendar performs date calculations that take into account national holidays and weekends. This is a
@@ -306,14 +300,7 @@ the same transaction.</p>
 <td>
 <a href="../com.r3corda.core.contracts.clauses/-clause/index.html">com.r3corda.core.contracts.clauses.Clause</a></td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts.clauses/-clause-verifier/index.html">com.r3corda.core.contracts.clauses.ClauseVerifier</a></td>
-<td>
-<p>Abstract superclass for clause-based contracts to extend, which provides a verify() function
-that delegates to the supplied list of clauses.</p>
+<p>A clause that can be matched as part of execution of a contract.</p>
 </td>
 </tr>
 <tr>
@@ -326,6 +313,19 @@ that delegates to the supplied list of clauses.</p>
 <tr>
 <td>
 <a href="../com.r3corda.demos/-cli-params-spec/index.html">com.r3corda.demos.CliParamsSpec</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-client-to-service-command/index.html">com.r3corda.node.services.monitor.ClientToServiceCommand</a></td>
+<td>
+<p>A command from the monitoring client, to the node.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-client-to-service-command-message/index.html">com.r3corda.node.services.monitor.ClientToServiceCommandMessage</a></td>
 <td>
 </td>
 </tr>
@@ -522,6 +522,18 @@ implementation of general protocols that manipulate many agreement types.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.services.monitor/-deregister-request/index.html">com.r3corda.node.services.monitor.DeregisterRequest</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-deregister-response/index.html">com.r3corda.node.services.monitor.DeregisterResponse</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.serialization/-deserialize-as-kotlin-object-def.html">com.r3corda.core.serialization.DeserializeAsKotlinObjectDef</a></td>
 <td>
 <p>Marker interface for kotlin object definitions so that they are deserialized as the singleton instance.</p>
@@ -560,13 +572,32 @@ started on).</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.driver/-driver-d-s-l/index.html">com.r3corda.node.driver.DriverDSL</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.driver/-driver-d-s-l-exposed-interface/index.html">com.r3corda.node.driver.DriverDSLExposedInterface</a></td>
+<td>
+<p>This is the interface thats exposed to DSL users.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.driver/-driver-d-s-l-internal-interface/index.html">com.r3corda.node.driver.DriverDSLInternalInterface</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-dummy-contract/index.html">com.r3corda.core.contracts.DummyContract</a></td>
 <td>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.testing/-dummy-linear-state/index.html">com.r3corda.core.testing.DummyLinearState</a></td>
+<a href="../com.r3corda.core.testing/-dummy-linear-contract/index.html">com.r3corda.core.testing.DummyLinearContract</a></td>
 <td>
 </td>
 </tr>
@@ -1074,13 +1105,7 @@ with the commands from the wire, and verified/looked up.</p>
 <td>
 <a href="../com.r3corda.core.contracts/-linear-state/index.html">com.r3corda.core.contracts.LinearState</a></td>
 <td>
-<p>A state that evolves by superseding itself, all of which share the common "thread".</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts/kotlin.collections.-list/index.html">kotlin.collections.List</a> (extensions in package com.r3corda.core.contracts)</td>
-<td>
+<p>A state that evolves by superseding itself, all of which share the common "linearId".</p>
 </td>
 </tr>
 <tr>
@@ -1093,6 +1118,13 @@ with the commands from the wire, and verified/looked up.</p>
 <td>
 <a href="../com.r3corda.core.contracts/java.time.-local-date/index.html">java.time.LocalDate</a> (extensions in package com.r3corda.core.contracts)</td>
 <td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.utilities/-log-helper/index.html">com.r3corda.core.utilities.LogHelper</a></td>
+<td>
+<p>A configuration helper that allows modifying the log level for specific loggers</p>
 </td>
 </tr>
 <tr>
@@ -1407,6 +1439,12 @@ rate fix (e.g. LIBOR, EURIBOR ...).</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.driver/-node-runner/index.html">com.r3corda.node.driver.NodeRunner</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.services.events/-node-scheduler-service/index.html">com.r3corda.node.services.events.NodeSchedulerService</a></td>
 <td>
 <p>A first pass of a simple <a href="../com.r3corda.core.node.services/-scheduler-service/index.html">SchedulerService</a> that works with <a href="#">MutableClock</a>s for testing, demonstrations and simulations
@@ -1417,8 +1455,8 @@ that also encompasses the <a href="#">Wallet</a> observer for processing transac
 <td>
 <a href="../com.r3corda.node.services.wallet/-node-wallet-service/index.html">com.r3corda.node.services.wallet.NodeWalletService</a></td>
 <td>
-<p>Currently, the node wallet service is just the in-memory wallet service until we have finished evaluating and
-selecting a persistence layer (probably an ORM over a SQL DB).</p>
+<p>Currently, the node wallet service is a very simple RDBMS backed implementation.  It will change significantly when
+we add further functionality as the design for the wallet and wallet service matures.</p>
 </td>
 </tr>
 <tr>
@@ -1619,6 +1657,12 @@ Labels should not refer to non-landmarks, for example, they should not contain t
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.driver/-port-allocation/index.html">com.r3corda.node.driver.PortAllocation</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.crypto/java.security.-private-key/index.html">java.security.PrivateKey</a> (extensions in package com.r3corda.core.crypto)</td>
 <td>
 </td>
@@ -1757,6 +1801,18 @@ e.g. LIBOR 6M as of 17 March 2016. Hence it requires a source (name) and a value
 <a href="../com.r3corda.core.serialization/-references-aware-java-serializer/index.html">com.r3corda.core.serialization.ReferencesAwareJavaSerializer</a></td>
 <td>
 <p>Improvement to the builtin JavaSerializer by honouring the <a href="#">Kryo.getReferences</a> setting.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-register-request/index.html">com.r3corda.node.services.monitor.RegisterRequest</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-register-response/index.html">com.r3corda.node.services.monitor.RegisterResponse</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -1923,6 +1979,13 @@ fields such as replyTo and sessionID.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.services.monitor/-service-to-client-event/index.html">com.r3corda.node.services.monitor.ServiceToClientEvent</a></td>
+<td>
+<p>Events triggered by changes in the node, and sent to monitoring client(s).</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node.services/-service-type/index.html">com.r3corda.core.node.services.ServiceType</a></td>
 <td>
 <p>Identifier for service types a node can expose over the network to other peers. These types are placed into network
@@ -1961,8 +2024,10 @@ contained within.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts.clauses/-single-clause.html">com.r3corda.core.contracts.clauses.SingleClause</a></td>
+<a href="../com.r3corda.core.contracts.clauses/-single-clause/index.html">com.r3corda.core.contracts.clauses.SingleClause</a></td>
 <td>
+<p>A single verifiable clause. By default always matches, continues to the next clause when matched and errors
+if not matched.</p>
 </td>
 </tr>
 <tr>
@@ -2046,6 +2111,12 @@ transaction defined the state and where in that transaction it was.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.node.services.monitor/-state-snapshot-message/index.html">com.r3corda.node.services.monitor.StateSnapshotMessage</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.node.api/-states-query/index.html">com.r3corda.node.api.StatesQuery</a></td>
 <td>
 <p>Extremely rudimentary query language which should most likely be replaced with a product.</p>
@@ -2124,6 +2195,12 @@ way that ensures itll be released if theres an exception.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core/kotlin.-throwable/index.html">kotlin.Throwable</a> (extensions in package com.r3corda.core)</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.utilities/-time-window/index.html">com.r3corda.core.utilities.TimeWindow</a></td>
 <td>
 <p>A class representing a window in time from a particular instant, lasting a specified duration.</p>
@@ -2131,17 +2208,17 @@ way that ensures itll be released if theres an exception.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.node.services/-timestamp-checker/index.html">com.r3corda.core.node.services.TimestampChecker</a></td>
+<a href="../com.r3corda.core.contracts/-timestamp/index.html">com.r3corda.core.contracts.Timestamp</a></td>
 <td>
-<p>Checks if the given timestamp falls within the allowed tolerance interval.</p>
+<p>If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
+between (after, before).</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts/-timestamp-command/index.html">com.r3corda.core.contracts.TimestampCommand</a></td>
+<a href="../com.r3corda.core.node.services/-timestamp-checker/index.html">com.r3corda.core.node.services.TimestampChecker</a></td>
 <td>
-<p>If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
-public keys are identified in the containing <a href="../com.r3corda.core.contracts/-command/index.html">Command</a> object. The true time must be between (after, before).</p>
+<p>Checks if the given timestamp falls within the allowed tolerance interval.</p>
 </td>
 </tr>
 <tr>
@@ -2164,6 +2241,12 @@ public keys are identified in the containing <a href="../com.r3corda.core.contra
 <td>
 <p>Simulates a never ending series of trades that go pair-wise through the banks (e.g. A and B trade with each other,
 then B and C trade with each other, then C and A etc).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-transaction-build-result/index.html">com.r3corda.node.services.monitor.TransactionBuildResult</a></td>
+<td>
 </td>
 </tr>
 <tr>
@@ -2291,6 +2374,13 @@ and seller) and the following steps:</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts/-unique-identifier/index.html">com.r3corda.core.contracts.UniqueIdentifier</a></td>
+<td>
+<p>This class provides a truly unique identifier of a trade, state, or other business object.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.node.services/-uniqueness-exception/index.html">com.r3corda.core.node.services.UniquenessException</a></td>
 <td>
 </td>
@@ -2357,6 +2447,15 @@ indeed valid.</p>
 because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
 change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
 about new transactions from our peers and generate new transactions that consume states ourselves.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html">com.r3corda.node.services.monitor.WalletMonitorService</a></td>
+<td>
+<p>Service which allows external clients to monitor the wallet service and state machine manager, as well as trigger
+actions within the node. The service also sends requests for user input back to clients, for example to enter
+additional information while a protocol runs, or confirm an action.</p>
 </td>
 </tr>
 <tr>

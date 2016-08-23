@@ -10,41 +10,40 @@ Writing a contract using clauses
 This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
 already completed ":doc:`tutorial-contract`".
 
-Clauses are essentially "mini-contracts" which contain verification logic, and are composed together to form
+Clauses are essentially micro-contracts which contain independent verification logic, and are composed together to form
 a contract. With appropriate design, they can be made to be reusable, for example issuing contract state objects is
 generally the same for all fungible contracts, so a single issuance clause can be shared. This cuts down on scope for
 error, and improves consistency of behaviour.
 
 Clauses can be composed of subclauses, either to combine clauses in different ways, or to apply specialised clauses.
-In the case of commercial paper, we have a "Grouping" outermost clause, which will contain the "Issue", "Move" and
-"Redeem" clauses. The result is a contract that looks something like this:
+In the case of commercial paper, we have a ``Group`` outermost clause, which will contain the ``Issue``, ``Move`` and
+``Redeem`` clauses. The result is a contract that looks something like this:
 
     1. Group input and output states together, and then apply the following clauses on each group:
-        a. If an Issue command is present, run appropriate tests and end processing this group.
-        b. If a Move command is present, run appropriate tests and end processing this group.
-        c. If a Redeem command is present, run appropriate tests and end processing this group.
+        a. If an ``Issue`` command is present, run appropriate tests and end processing this group.
+        b. If a ``Move`` command is present, run appropriate tests and end processing this group.
+        c. If a ``Redeem`` command is present, run appropriate tests and end processing this group.
 
 Commercial paper class
 ----------------------
 
-First we need to change the class from implementing ``Contract``, to extend ``ClauseVerifier``. This is an abstract
-class which provides a verify() function for us, and requires we provide a property (``clauses``) for the clauses to test,
-and a function (``extractCommands``) to extract the applicable commands from the transaction. This is important because
-``ClauseVerifier`` checks that no commands applicable to the contract are left unprocessed at the end. The following
-examples are trimmed to the modified class definition and added elements, for brevity:
+To use the clause verification logic, the contract needs to call the ``verifyClauses()`` function, passing in the transaction,
+a list of clauses to verify, and a collection of commands the clauses are expected to handle all of. This list of
+commands is important because ``verifyClauses()`` checks that none of the commands are left unprocessed at the end, and
+raises an error if they are. The following examples are trimmed to the modified class definition and added elements, for
+brevity:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-      class CommercialPaper : ClauseVerifier {
-          override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
+      class CommercialPaper : Contract {
+          override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
-          override val clauses: List<SingleClause>
-              get() = throw UnsupportedOperationException("not implemented")
-
-          override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
+          private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
               = tx.commands.select<Commands>()
+
+          override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clauses.Group()), extractCommands(tx))
 
    .. sourcecode:: java
 
@@ -55,11 +54,6 @@ examples are trimmed to the modified class definition and added elements, for br
           }
 
           @Override
-          public List<SingleClause> getClauses() {
-              throw UnsupportedOperationException("not implemented");
-          }
-
-          @Override
           public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
               return tx.getCommands()
                       .stream()
@@ -67,14 +61,19 @@ examples are trimmed to the modified class definition and added elements, for br
                       .collect(Collectors.toList());
           }
 
+          @Override
+          public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
+              ClauseVerifier.verifyClauses(tx, Collections.singletonList(new Clause.Group()), extractCommands(tx));
+          }
+
 Clauses
 -------
 
 We'll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
 grouping of input/output states later. The inner clauses need to implement the ``GroupClause`` interface, which defines
-the verify() function, and properties for key information on how the clause is processed. These properties specify the
-command(s) which must be present in order for the clause to be matched, and what to do after processing the clause
-depending on whether it was matched or not.
+the verify() function, and properties (``ifMatched``, ``ifNotMatched`` and ``requiredCommands``) defining how the clause
+is processed. These properties specify the command(s) which must be present in order for the clause to be matched,
+and what to do after processing the clause depending on whether it was matched or not.
 
 The ``verify()`` functions defined in the ``SingleClause`` and ``GroupClause`` interfaces is similar to the conventional
 ``Contract`` verification function, although it adds new parameters and returns the set of commands which it has processed.
@@ -158,7 +157,9 @@ The post-processing ``MatchBehaviour`` options are:
     * ERROR
 
 In this case we process commands against each group, until the first matching clause is found, so we ``END`` on a match
-and ``CONTINUE`` otherwise. ``ERROR`` can be used as a part of a clause which must always/never be matched.
+and ``CONTINUE`` otherwise. ``ERROR`` can be used as a part of a clause which must always/never be matched.  By default
+clauses are always matched (``requiredCommands`` is an empty set), execution continues after a clause is matched, and an
+error is raised if a clause is not matched.
 
 Group Clause
 ------------

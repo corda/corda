@@ -19,7 +19,7 @@ and adds the list of participants to the signers set for every input state.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">Builder</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType.NotaryChange.Builder$<init>(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code><p>A transaction builder that automatically sets the transaction type to <a href="../index.html">NotaryChange</a>
+<code><span class="identifier">Builder</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionType.NotaryChange.Builder$<init>(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span></code><p>A transaction builder that automatically sets the transaction type to <a href="../index.html">NotaryChange</a>
 and adds the list of participants to the signers set for every input state.</p>
 </td>
 </tr>
@@ -57,7 +57,7 @@ and adds the list of participants to the signers set for every input state.</p>
 <td>
 <a href="../../../-transaction-builder/notary.html">notary</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code></td>
+<code><span class="keyword">var </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -75,7 +75,13 @@ and adds the list of participants to the signers set for every input state.</p>
 <td>
 <a href="../../../-transaction-builder/time.html">time</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">time</span><span class="symbol">: </span><a href="../../../-timestamp-command/index.html"><span class="identifier">TimestampCommand</span></a><span class="symbol">?</span></code></td>
+<code><span class="keyword">val </span><s><span class="identifier">time</span></s><span class="symbol">: </span><a href="../../../-timestamp/index.html"><span class="identifier">Timestamp</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../../-transaction-builder/timestamp.html">timestamp</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">timestamp</span><span class="symbol">: </span><a href="../../../-timestamp/index.html"><span class="identifier">Timestamp</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -131,7 +137,7 @@ and adds the list of participants to the signers set for every input state.</p>
 <td>
 <a href="../../../-transaction-builder/add-signature-unchecked.html">addSignatureUnchecked</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">addSignatureUnchecked</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addSignatureUnchecked(com.r3corda.core.crypto.DigitalSignature.WithKey)/sig">sig</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Adds the signature directly to the transaction, without checking it for validity.</p>
+<code><span class="keyword">fun </span><span class="identifier">addSignatureUnchecked</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$addSignatureUnchecked(com.r3corda.core.crypto.DigitalSignature.WithKey)/sig">sig</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.crypto/-digital-signature/-with-key/index.html"><span class="identifier">WithKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Adds the signature directly to the transaction, without checking it for validity.</p>
 </td>
 </tr>
 <tr>
@@ -184,10 +190,10 @@ adds it.</p>
 <td>
 <a href="../../../-transaction-builder/set-time.html">setTime</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">setTime</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$setTime(java.time.Instant, com.r3corda.core.crypto.Party, java.time.Duration)/time">time</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$setTime(java.time.Instant, com.r3corda.core.crypto.Party, java.time.Duration)/authority">authority</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$setTime(java.time.Instant, com.r3corda.core.crypto.Party, java.time.Duration)/timeTolerance">timeTolerance</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Places a <a href="../../../-timestamp-command/index.html">TimestampCommand</a> in this transaction, removing any existing command if there is one.
+<code><span class="keyword">fun </span><span class="identifier">setTime</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$setTime(java.time.Instant, java.time.Duration)/time">time</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$setTime(java.time.Instant, java.time.Duration)/timeTolerance">timeTolerance</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Places a <a href="#">TimestampCommand</a> in this transaction, removing any existing command if there is one.
 The command requires a signature from the Notary service, which acts as a Timestamp Authority.
 The signature can be obtained using <a href="#">NotaryProtocol</a>.</p>
-</td>
+<code><span class="keyword">fun </span><span class="identifier">setTime</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.TransactionBuilder$setTime(com.r3corda.core.contracts.Timestamp)/newTimestamp">newTimestamp</span><span class="symbol">:</span>&nbsp;<a href="../../../-timestamp/index.html"><span class="identifier">Timestamp</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
