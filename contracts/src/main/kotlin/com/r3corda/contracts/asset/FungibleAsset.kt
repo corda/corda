@@ -29,7 +29,10 @@ interface FungibleAsset<T> : OwnableState {
     val deposit: PartyAndReference
     val issuanceDef: Issued<T>
     val amount: Amount<Issued<T>>
-    /** There must be an ExitCommand signed by these keys to destroy the amount */
+    /**
+     * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
+     * owner to sign, some (i.e. cash) also require the issuer.
+     */
     val exitKeys: Collection<PublicKey>
     /** There must be a MoveCommand signed by this key to claim the amount */
     override val owner: PublicKey

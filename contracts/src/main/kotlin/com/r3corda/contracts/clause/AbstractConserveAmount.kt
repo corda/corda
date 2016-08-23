@@ -53,16 +53,15 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
      *
      * @param tx transaction builder to add states and commands to.
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
-     * necessarily owned by us.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     changeKey: PublicKey, assetStates: List<StateAndRef<S>>,
+                     assetStates: List<StateAndRef<S>>,
                      deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKey) -> TransactionState<S>,
                      generateExitCommand: (Amount<Issued<T>>) -> CommandData): PublicKey {
+        val owner = assetStates.map { it.state.data.owner }.toSet().single()
         val currency = amountIssued.token.product
         val amount = Amount(amountIssued.quantity, currency)
         var acceptableCoins = assetStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
@@ -82,7 +81,7 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
 
         val outputs = if (change != null) {
             // Add a change output and adjust the last output downwards.
-            listOf(deriveState(gathered.last().state, change, changeKey))
+            listOf(deriveState(gathered.last().state, change, owner))
         } else emptyList()
 
         for (state in gathered) tx.addInputState(state)
@@ -184,15 +183,14 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
         val deposit = token.issuer
         val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(token)
 
-        // If we want to remove assets from the ledger, that must be signed for by the issuer.
-        // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
+        // If we want to remove assets from the ledger, that must be signed for by the issuer and owner.
         val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
         val exitCommand = tx.commands.select<FungibleAsset.Commands.Exit<T>>(parties = null, signers = exitKeys).filter {it.value.amount.token == token}.singleOrNull()
         val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, token)
 
         requireThat {
             "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-            "for reference ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
+            "for reference ${deposit.reference} at issuer ${deposit.party.name} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
                     (inputAmount == outputAmount + amountExitingLedger)
         }
 

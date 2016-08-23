@@ -85,7 +85,7 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
         : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val deposit = amount.token.issuer
-        override val exitKeys = setOf(deposit.party.owningKey)
+        override val exitKeys = setOf(owner, deposit.party.owningKey)
         override val contract = CASH_PROGRAM_ID
         override val issuanceDef = amount.token
         override val participants = listOf(owner)

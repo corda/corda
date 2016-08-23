@@ -193,7 +193,7 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
         Cash().generateExit(builder, Amount(req.pennies, Issued(issuer, req.currency)),
-                issuer.party.owningKey, services.walletService.currentWallet.statesOfType<Cash.State>())
+                services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
         builder.signWith(services.storageService.myLegalIdentityKey)
         val tx = builder.toSignedTransaction()
         services.walletService.notify(tx.tx)

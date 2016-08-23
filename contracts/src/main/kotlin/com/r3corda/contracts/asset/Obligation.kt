@@ -447,16 +447,14 @@ class Obligation<P> : Contract {
      *
      * @param tx transaction builder to add states and commands to.
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
-     * necessarily owned by us.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
-                     changeKey: PublicKey, assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
-            = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, changeKey, assetStates,
+                     assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
+            = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
             generateExitCommand = { amount -> Commands.Exit(amount) }
     )

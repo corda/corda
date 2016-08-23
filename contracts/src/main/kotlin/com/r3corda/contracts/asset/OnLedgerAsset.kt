@@ -44,8 +44,8 @@ abstract class OnLedgerAsset<T : Any, S : FungibleAsset<T>> : Contract {
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     changeKey: PublicKey, assetStates: List<StateAndRef<S>>): PublicKey
-        = conserveClause.generateExit(tx, amountIssued, changeKey, assetStates,
+                     assetStates: List<StateAndRef<S>>): PublicKey
+        = conserveClause.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
             generateExitCommand = { amount -> generateExitCommand(amount) }
     )

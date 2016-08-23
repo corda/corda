@@ -17,7 +17,9 @@ class CashTests {
             amount = 1000.DOLLARS `issued by` defaultIssuer,
             owner = DUMMY_PUBKEY_1
     )
-    val outState = inState.copy(owner = DUMMY_PUBKEY_2)
+    // Input state held by the issuer
+    val issuerInState = inState.copy(owner = defaultIssuer.party.owningKey)
+    val outState = issuerInState.copy(owner = DUMMY_PUBKEY_2)
 
     fun Cash.State.editDepositRef(ref: Byte) = copy(
             amount = Amount(amount.quantity, token = amount.token.copy(deposit.copy(reference = OpaqueBytes.of(ref))))
@@ -111,7 +113,7 @@ class CashTests {
 
         // We can consume $1000 in a transaction and output $2000 as long as it's signed by an issuer.
         transaction {
-            input { inState }
+            input { issuerInState }
             output { inState.copy(amount = inState.amount * 2) }
 
             // Move fails: not allowed to summon money.
@@ -279,12 +281,12 @@ class CashTests {
     fun exitLedger() {
         // Single input/output straightforward case.
         transaction {
-            input { inState }
-            output { outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
+            input { issuerInState }
+            output { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
             tweak {
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(100.DOLLARS `issued by` defaultIssuer) }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 this `fails with` "the amounts balance"
             }
 
@@ -293,20 +295,24 @@ class CashTests {
                 this `fails with` "required com.r3corda.contracts.asset.FungibleAsset.Commands.Move command"
 
                 tweak {
-                    command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                    command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                     this.verifies()
                 }
             }
         }
+    }
+
+    @Test
+    fun `exit ledger with multiple issuers`() {
         // Multi-issuer case.
         transaction {
-            input { inState }
-            input { inState `issued by` MINI_CORP }
+            input { issuerInState }
+            input { issuerInState.copy(owner = MINI_CORP_PUBKEY) `issued by` MINI_CORP }
 
-            output { inState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) `issued by` MINI_CORP }
-            output { inState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
+            output { issuerInState.copy(amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) `issued by` MINI_CORP }
+            output { issuerInState.copy(owner = MINI_CORP_PUBKEY, amount = issuerInState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
 
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
             this `fails with` "at issuer MegaCorp the amounts balance"
 
@@ -315,6 +321,18 @@ class CashTests {
 
             command(MINI_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` MINI_CORP.ref(defaultRef)) }
             this.verifies()
+        }
+    }
+
+    @Test
+    fun `exit cash not held by its issuer`() {
+        // Single input/output straightforward case.
+        transaction {
+            input { inState }
+            output { outState.copy(amount = inState.amount - (200.DOLLARS `issued by` defaultIssuer)) }
+            command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS `issued by` defaultIssuer) }
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this `fails with` "at issuer MegaCorp the amounts balance"
         }
     }
 
@@ -385,7 +403,7 @@ class CashTests {
      */
     fun makeExit(amount: Amount<Currency>, corp: Party, depositRef: Byte = 1): WireTransaction {
         val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-        Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), OUR_PUBKEY_1, WALLET)
+        Cash().generateExit(tx, Amount(amount.quantity, Issued(corp.ref(depositRef), amount.token)), WALLET)
         return tx.toWireTransaction()
     }
 
