@@ -19,11 +19,7 @@ class VerifyClausesTests {
     /** Very simple check that the function doesn't error when given any clause */
     @Test
     fun minimal() {
-        val clause = object : SingleClause {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = emptySet()
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
+        val clause = object : SingleClause() {
             override val ifNotMatched: MatchBehaviour
                 get() = MatchBehaviour.CONTINUE
 
@@ -36,14 +32,7 @@ class VerifyClausesTests {
     /** Check that when there are no required commands, a clause always matches */
     @Test
     fun emptyAlwaysMatches() {
-        val clause = object : SingleClause {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = emptySet()
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
-
+        val clause = object : SingleClause() {
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> = emptySet()
         }
         val tx = TransactionForContract(emptyList(), emptyList(), emptyList(), emptyList(), SecureHash.randomSHA256())
@@ -53,9 +42,7 @@ class VerifyClausesTests {
 
     @Test
     fun errorSuperfluousCommands() {
-        val clause = object : SingleClause {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = emptySet()
+        val clause = object : SingleClause() {
             override val ifMatched: MatchBehaviour
                 get() = MatchBehaviour.ERROR
             override val ifNotMatched: MatchBehaviour
@@ -73,7 +60,7 @@ class VerifyClausesTests {
     /** Check triggering of error if matched */
     @Test
     fun errorMatched() {
-        val clause = object : SingleClause {
+        val clause = object : SingleClause() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(DummyContract.Commands.Create::class.java)
             override val ifMatched: MatchBehaviour
@@ -98,13 +85,9 @@ class VerifyClausesTests {
     /** Check triggering of error if unmatched */
     @Test
     fun errorUnmatched() {
-        val clause = object : SingleClause {
+        val clause = object : SingleClause() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(DummyContract.Commands.Create::class.java)
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
 
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> = emptySet()
         }

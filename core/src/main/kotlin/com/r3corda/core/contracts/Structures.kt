@@ -218,11 +218,7 @@ interface LinearState: ContractState {
     /**
      * Standard clause to verify the LinearState safety properties.
      */
-    class ClauseVerifier<S: LinearState>(val stateClass: Class<S>) : SingleClause {
-        override val ifMatched = MatchBehaviour.CONTINUE
-        override val ifNotMatched = MatchBehaviour.ERROR
-        override val requiredCommands = emptySet<Class<out CommandData>>()
-
+    class ClauseVerifier<S: LinearState>(val stateClass: Class<S>) : SingleClause() {
         override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
             val inputs = tx.inputs.filterIsInstance(stateClass)
             val inputIds = inputs.map { it.linearId }.distinct()

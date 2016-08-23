@@ -27,7 +27,7 @@ fun verifyClauses(tx: TransactionForContract,
         }
 
         when (matchBehaviour) {
-            MatchBehaviour.ERROR -> throw IllegalStateException()
+            MatchBehaviour.ERROR -> throw IllegalStateException("Error due to matching/not matching ${clause}")
             MatchBehaviour.CONTINUE -> {
             }
             MatchBehaviour.END -> break@verify

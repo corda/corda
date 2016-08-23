@@ -517,11 +517,7 @@ class InterestRateSwap() : Contract {
             override val clauses = listOf(Agree(), Fix(), Pay(), Mature())
         }
 
-        class Timestamped : SingleClause {
-            override val ifMatched = MatchBehaviour.CONTINUE
-            override val ifNotMatched = MatchBehaviour.ERROR
-            override val requiredCommands = emptySet<Class<out CommandData>>()
-
+        class Timestamped : SingleClause() {
             override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
                 require(tx.timestamp?.midpoint != null) { "must be timestamped" }
                 // We return an empty set because we don't process any commands

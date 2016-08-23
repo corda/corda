@@ -16,13 +16,13 @@ generally the same for all fungible contracts, so a single issuance clause can b
 error, and improves consistency of behaviour.
 
 Clauses can be composed of subclauses, either to combine clauses in different ways, or to apply specialised clauses.
-In the case of commercial paper, we have a "Grouping" outermost clause, which will contain the "Issue", "Move" and
-"Redeem" clauses. The result is a contract that looks something like this:
+In the case of commercial paper, we have a ``Group`` outermost clause, which will contain the ``Issue``, ``Move`` and
+``Redeem`` clauses. The result is a contract that looks something like this:
 
     1. Group input and output states together, and then apply the following clauses on each group:
-        a. If an Issue command is present, run appropriate tests and end processing this group.
-        b. If a Move command is present, run appropriate tests and end processing this group.
-        c. If a Redeem command is present, run appropriate tests and end processing this group.
+        a. If an ``Issue`` command is present, run appropriate tests and end processing this group.
+        b. If a ``Move`` command is present, run appropriate tests and end processing this group.
+        c. If a ``Redeem`` command is present, run appropriate tests and end processing this group.
 
 Commercial paper class
 ----------------------
@@ -71,9 +71,9 @@ Clauses
 
 We'll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
 grouping of input/output states later. The inner clauses need to implement the ``GroupClause`` interface, which defines
-the verify() function, and properties for key information on how the clause is processed. These properties specify the
-command(s) which must be present in order for the clause to be matched, and what to do after processing the clause
-depending on whether it was matched or not.
+the verify() function, and properties (``ifMatched``, ``ifNotMatched`` and ``requiredCommands``) defining how the clause
+is processed. These properties specify the command(s) which must be present in order for the clause to be matched,
+and what to do after processing the clause depending on whether it was matched or not.
 
 The ``verify()`` functions defined in the ``SingleClause`` and ``GroupClause`` interfaces is similar to the conventional
 ``Contract`` verification function, although it adds new parameters and returns the set of commands which it has processed.
@@ -157,7 +157,9 @@ The post-processing ``MatchBehaviour`` options are:
     * ERROR
 
 In this case we process commands against each group, until the first matching clause is found, so we ``END`` on a match
-and ``CONTINUE`` otherwise. ``ERROR`` can be used as a part of a clause which must always/never be matched.
+and ``CONTINUE`` otherwise. ``ERROR`` can be used as a part of a clause which must always/never be matched.  By default
+clauses are always matched (``requiredCommands`` is an empty set), execution continues after a clause is matched, and an
+error is raised if a clause is not matched.
 
 Group Clause
 ------------

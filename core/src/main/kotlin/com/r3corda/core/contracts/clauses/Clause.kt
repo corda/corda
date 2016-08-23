@@ -41,4 +41,12 @@ interface SingleVerify {
 
 }
 
-interface SingleClause : Clause, SingleVerify
+/**
+ * A single verifiable clause. By default always matches, continues to the next clause when matched and errors
+ * if not matched.
+ */
+abstract class SingleClause : Clause, SingleVerify {
+    override val ifMatched: MatchBehaviour = MatchBehaviour.CONTINUE
+    override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
+    override val requiredCommands: Set<Class<out CommandData>> = emptySet()
+}
