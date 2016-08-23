@@ -93,7 +93,7 @@ class TwoPartyTradeProtocolTests {
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, null).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey, notaryNode.storage.myLegalIdentityKey)
 
@@ -144,7 +144,7 @@ class TwoPartyTradeProtocolTests {
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, null).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -262,7 +262,7 @@ class TwoPartyTradeProtocolTests {
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, attachmentID).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID).second
             val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -373,7 +373,7 @@ class TwoPartyTradeProtocolTests {
         val bobKey = bobNode.keyManagement.freshKey()
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public).second
         val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.storage.myLegalIdentity.owningKey,
-                1200.DOLLARS `issued by` issuer, notaryNode.info.identity, null).second
+                1200.DOLLARS `issued by` issuer, null).second
 
         insertFakeTransactions(bobsBadCash, bobNode.services, bobNode.storage.myLegalIdentityKey, bobNode.storage.myLegalIdentityKey)
         insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
@@ -479,13 +479,12 @@ class TwoPartyTradeProtocolTests {
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,
-            notary: Party,
             attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
         val ap = transaction {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
-            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue(notary) }
+            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)
                 timestamp(time = TEST_TX_TIME)
             if (attachmentID != null)
@@ -522,6 +521,4 @@ class TwoPartyTradeProtocolTests {
         data class Add(val transaction: SignedTransaction) : TxRecord
         data class Get(val id: SecureHash) : TxRecord
     }
-
-
 }
