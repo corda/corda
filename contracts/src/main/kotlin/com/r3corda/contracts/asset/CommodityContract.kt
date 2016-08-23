@@ -28,6 +28,9 @@ val COMMODITY_PROGRAM_ID = CommodityContract()
  * differences are in representation of the underlying commodity. Issuer in this context means the party who has the
  * commodity, or is otherwise responsible for delivering the commodity on demand, and the deposit reference is use for
  * internal accounting by the issuer (it might be, for example, a warehouse and/or location within a warehouse).
+ *
+ * This is an early stage example contract used to illustrate non-cash fungible assets, and is likely to change significantly
+ * in future.
  */
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
 class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {

@@ -423,16 +423,26 @@ enum class NetType {
     PAYMENT
 }
 
-data class Commodity(val symbol: String,
+/**
+ * Class representing a commodity, as an equivalent to the [Currency] class. This exists purely to enable the
+ * [CommodityContract] contract, and is likely to change in future.
+ *
+ * @param commodityCode a unique code for the commodity. No specific registry for these is currently defined, although
+ * this is likely to change in future.
+ * @param displayName human readable name for the commodity.
+ * @param defaultFractionDigits the number of digits normally after the decimal point when referring to quantities of
+ * this commodity.
+ */
+data class Commodity(val commodityCode: String,
                      val displayName: String,
-                     val commodityCode: String = symbol,
                      val defaultFractionDigits: Int = 0) {
     companion object {
         private val registry = mapOf(
+                // Simple example commodity, as in http://www.investopedia.com/university/commodities/commodities14.asp
                 Pair("FCOJ", Commodity("FCOJ", "Frozen concentrated orange juice"))
         )
-        fun getInstance(symbol: String): Commodity?
-                = registry[symbol]
+        fun getInstance(commodityCode: String): Commodity?
+                = registry[commodityCode]
     }
 }
 
