@@ -112,11 +112,16 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
     override fun makeMessagingService(): MessagingServiceInternal {
         val serverAddr = messagingServerAddr ?: {
-            messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr)
+            messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr, services.networkMapCache)
             p2pAddr
         }()
-
-        return ArtemisMessagingClient(dir, configuration, serverAddr, p2pAddr, serverThread)
+        if (networkMapService != null) {
+            return ArtemisMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread)
+        }
+        else
+        {
+            return ArtemisMessagingClient(dir, configuration, serverAddr, null, serverThread)
+        }
     }
 
     override fun startMessagingService() {
@@ -124,6 +129,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         messageBroker?.apply {
             configureWithDevSSLCertificate() // TODO: Create proper certificate provisioning process
             start()
+            bridgeToNetworkMapService(networkMapService)
         }
 
         // Start up the MQ client.

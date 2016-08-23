@@ -21,4 +21,4 @@ fi
 # Upload the rates to the buyer node
 curl -F rates=@scripts/example.rates.txt http://localhost:31338/upload/interest-rates
 
-$bin --network-address=localhost:31300 --directory=build/trader-demo/rates-fix --network-map=localhost:31337 --network-map-identity-file=build/trader-demo/buyer/identity-public --oracle=localhost --oracle-identity-file=build/trader-demo/buyer/identity-public
+$bin --network-address=localhost:31300 --directory=build/trader-demo/rates-fix --network-map=localhost:31337 --network-map-identity-file=build/trader-demo/buyer/identity-public

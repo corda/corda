@@ -35,7 +35,7 @@ class NodeRunner {
                 val networkMapNodeInfo =
                         if (networkMapName != null && networkMapPublicKey != null && networkMapAddress != null) {
                             NodeInfo(
-                                    address = ArtemisMessagingClient.makeRecipient(networkMapAddress),
+                                    address = ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress),
                                     identity = Party(
                                             name = networkMapName,
                                             owningKey = networkMapPublicKey

@@ -112,7 +112,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val clock: Clock = NodeClock()
 
     fun createNode(): Node {
-        val networkMapTarget = ArtemisMessagingClient.makeRecipient(mapService.address)
+        val networkMapTarget = ArtemisMessagingClient.makeNetworkMapAddress(mapService.address)
         val advertisedServices = mutableSetOf<ServiceType>()
         if (mapService.hostServiceLocally) advertisedServices.add(NetworkMapService.Type)
         if (hostNotaryServiceLocally) advertisedServices.add(SimpleNotaryService.Type)
