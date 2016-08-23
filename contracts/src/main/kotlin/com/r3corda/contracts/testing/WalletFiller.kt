@@ -13,8 +13,6 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.DUMMY_NOTARY_KEY
-import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
@@ -61,22 +59,29 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
 }
 
 private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {
-    val numStates = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
-    val amounts = LongArray(numStates)
-    val baseSize = howMuch.quantity / numStates
+    val numSlots = min + Math.floor(rng.nextDouble() * (max - min)).toInt()
+    val baseSize = howMuch.quantity / numSlots
     check(baseSize > 0) { baseSize }
-    var filledSoFar = 0L
-    for (i in 0..numStates - 1) {
-        if (i < numStates - 1) {
-            // Adjust the amount a bit up or down, to give more realistic amounts (not all identical).
-            amounts[i] = baseSize + (baseSize / 2 * (rng.nextDouble() - 0.5)).toLong()
-            filledSoFar += amounts[i]
+
+    val amounts = LongArray(numSlots) { baseSize }
+    var distanceFromGoal = 0L
+    // If we want 10 slots then max adjust is 0.1, so even if all random numbers come out to the largest downward
+    // adjustment possible, the last slot ends at zero. With 20 slots, max adjust is 0.05 etc.
+    val maxAdjust = 1.0 / numSlots
+    for (i in amounts.indices) {
+        if (i != amounts.lastIndex) {
+            val adjustBy = rng.nextDouble() * maxAdjust - (maxAdjust / 2)
+            val adjustment = (1 + adjustBy)
+            val adjustTo = (amounts[i] * adjustment).toLong()
+            amounts[i] = adjustTo
+            distanceFromGoal += baseSize - adjustTo
         } else {
-            // Handle inexact rounding.
-            amounts[i] = howMuch.quantity - filledSoFar
+            amounts[i] += distanceFromGoal
         }
-        check(amounts[i] >= 0) { "${amounts[i]} : $filledSoFar : $howMuch" }
     }
-    check(amounts.sum() == howMuch.quantity)
+
+    // The desired amount may not have divided equally to start with, so adjust the first value to make up.
+    amounts[0] += howMuch.quantity - amounts.sum()
+
     return amounts
 }

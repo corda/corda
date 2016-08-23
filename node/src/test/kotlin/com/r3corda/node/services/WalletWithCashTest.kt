@@ -5,7 +5,6 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
@@ -60,11 +59,11 @@ class WalletWithCashTest {
         assertEquals(3, w.states.toList().size)
 
         val state = w.states.toList()[0].state.data as Cash.State
-        assertEquals(29.01.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
+        assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
         assertEquals(services.key.public, state.owner)
 
-        assertEquals(35.38.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
-        assertEquals(35.61.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
+        assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
+        assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
     }
 
     @Test
