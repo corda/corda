@@ -2,62 +2,61 @@ Creating a Cordapp
 ==================
 
 A Cordapp is an application that runs on the Corda platform using Corda APIs and plugin system. Cordapps are self
-contained in separate JARs from the Corda standalone JAR that are created and distributed.
+contained in separate JARs from the Corda node server JAR that are created and distributed.
 
-Plugins
--------
+App Plugins
+-----------
 
-.. note:: Currently plugins are only supported for JVM languages.
+.. note:: Currently apps are only supported for JVM languages.
 
-To create a plugin you must extend from `CordaPluginRegistry`_. The JavaDoc contains
+To create an app plugin you must you must extend from `CordaPluginRegistry`_. The JavaDoc contains
 specific details of the implementation, but you can extend the server in the following ways:
 
 .. _CordaPluginRegistry: api/com.r3corda.core.node/-corda-plugin-registry/index.html
+.. _ServiceHubInternal: api/com.r3corda.node.services.api/-service-hub-internal/index.html
+.. _ServiceHub: api/com.r3corda.node.services.api/-service-hub/index.html
 
 1. Required protocols: Specify which protocols will be whitelisted for use in your web APIs.
-2. Service plugins: Register your services that run when Corda runs.
+2. Service plugins: Register your :ref:`services`.
 3. Web APIs: You may register your own endpoints under /api/ of the built-in web server.
 4. Static web endpoints: You may register your own static serving directories for serving web content.
 
-Services are used primarily for creating your own protocols, which will be the work horse of your Corda plugins. Web
-APIs and serving directories will be for creating your own interface to Corda.
+Services
+--------
 
-Standalone Nodes
-----------------
+.. _services:
 
-To use a plugin you must also have a standalone node. To create a standalone node you run:
+Services are classes which are constructed after the node has started. It is provided a `ServiceHubInternal`_ which
+allows a more rich API than the `ServiceHub`_ exposed to contracts. It enables adding protocols, registering
+message handlers and more. The service does not run in a thread, the only entry point to the service is during
+construction, where message handlers should be registered and threads started.
 
-**Windows**::
 
-    gradlew.bat createStandalone
+Starting Nodes
+--------------
 
-**Other**::
+To use an app you must also have a node server. To create a node server run the gradle createStandalone task.
 
-    ./gradlew createStandalone
+This will output the node JAR to ``build/libs/r3prototyping-x.y-SNAPSHOT-capsule.jar`` and several sample/standard
+node servers to ``build/standalone``. For now you can use the ``build/standalone/nodea`` configuration as a template.
 
-This will output the standalone to ``build/libs/r3prototyping-x.y-SNAPSHOT-capsule.jar`` and several sample/standard
-standalone nodes to ``build/standalone``. For now you can use the ``build/standalone/nodea`` directory as a template or
-example.
+Each node server must have a ``node.conf`` file in the same directory as the node JAR file. After first
+execution of the node server there will be many other configuration and persistence files created in this directory.
 
-Each standalone node must contain a ``node.conf`` file in the same directory as the standalone JAR file. After first
-execution of the standalone node there will be many other configuration and persistence files created in this directory.
+.. note:: Outside of development environments do not store your node directories in the build folder.
 
-.. warning:: Deleting your standalone node directory in any way, including ``gradle clean`` will delete all persistence.
-
-.. note:: Outside of development environments do not store your standalone node in the build folder.
-
-Installing Plugins
+Installing Apps
 ------------------
 
-Once you have created your distribution JAR you can install it to a node by adding it to ``<node_dir>/plugins/``. In this
-case the ``node_dir`` is the location where your standalone node's JAR and configuration file is.
+Once you have created your app JAR you can install it to a node by adding it to ``<node_dir>/plugins/``. In this
+case the ``node_dir`` is the location where your node server's JAR and configuration file is.
 
-.. note:: If the plugins directory does not exist you can create it manually.
+.. note:: If the directory does not exist you can create it manually.
 
 Starting your Node
 ------------------
 
-Now you have a standalone node with your Cordapp installed, you can run it by navigating to ``<node_dir>`` and running
+Now you have a node server with your Cordapp installed, you can run it by navigating to ``<node_dir>`` and running
 
     java -jar r3prototyping-x.y-SNAPSHOT-capsule.jar
 
