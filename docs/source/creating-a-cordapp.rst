@@ -1,20 +1,22 @@
 Creating a Cordapp
 ==================
 
-A Cordapp is an application that runs on the Corda platform using Corda APIs and plugin system. Cordapps will be self
-contained in separate JARs from the Corda core JAR that is created and distributed.
+A Cordapp is an application that runs on the Corda platform using Corda APIs and plugin system. Cordapps are self
+contained in separate JARs from the Corda standalone JAR that are created and distributed.
 
 Plugins
 -------
 
-.. note:: Currently plugins are only supported via Kotlin or Java.
+.. note:: Currently plugins are only supported for JVM languages.
 
-To create a plugin you must extend from ``com.r3corda.core.node.CordaPluginRegistry``. The JavaDoc will contain
-specific details of the implementation, but there are broadly the following extention points;
+To create a plugin you must extend from `CordaPluginRegistry`_. The JavaDoc contains
+specific details of the implementation, but you can extend the server in the following ways:
 
-1. Required protocols: Explicitly state which protocols are required for your plugin.
-2. Service plugins: Register your services that run when Corda runs, which will be provided a ``ServiceHub``.
-3. Web APIs: You may register your own endpoints under /api/ of the build in web server.
+.. _CordaPluginRegistry: api/com.r3corda.core.node/-corda-plugin-registry/index.html
+
+1. Required protocols: Specify which protocols will be whitelisted for use in your web APIs.
+2. Service plugins: Register your services that run when Corda runs.
+3. Web APIs: You may register your own endpoints under /api/ of the built-in web server.
 4. Static web endpoints: You may register your own static serving directories for serving web content.
 
 Services are used primarily for creating your own protocols, which will be the work horse of your Corda plugins. Web
