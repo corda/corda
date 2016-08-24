@@ -56,6 +56,9 @@ dependencies {
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
+    compile 'com.pholser:junit-quickcheck-core:0.6'
+    compile 'com.pholser:junit-quickcheck-generators:0.6'
+
     // Guava: Google utilities library.
     compile "com.google.guava:guava:19.0"
 
