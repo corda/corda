@@ -211,35 +211,35 @@ task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
     }
 }
 
-task createStandalone(dependsOn: 'createCapsule') << {
+task installTemplateNodes(dependsOn: 'createCapsule') << {
     copy {
         from createCapsule.outputs.getFiles()
         from 'config/dev/nameservernode.conf'
-        into "${buildDir}/standalone/nameserver"
+        into "${buildDir}/nodes/nameserver"
         rename 'nameservernode.conf', 'node.conf'
     }
 
     copy {
         from createCapsule.outputs.getFiles()
         from 'config/dev/generalnodea.conf'
-        into "${buildDir}/standalone/nodea"
+        into "${buildDir}/nodes/nodea"
         rename 'generalnodea.conf', 'node.conf'
     }
 
     copy {
         from createCapsule.outputs.getFiles()
         from 'config/dev/generalnodeb.conf'
-        into "${buildDir}/standalone/nodeb"
+        into "${buildDir}/nodes/nodeb"
         rename 'generalnodeb.conf', 'node.conf'
     }
 
-    delete("${buildDir}/standalone/runstandalone")
+    delete("${buildDir}/nodes/runnodes")
     def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
     copy {
-        from "buildSrc/scripts/runstandalone"
+        from "buildSrc/scripts/runnodes"
         filter { String line -> line.replace("JAR_NAME", jarName) }
         filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
-        into "${buildDir}/standalone"
+        into "${buildDir}/nodes"
     }
 
 }
