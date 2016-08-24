@@ -7,11 +7,10 @@ import com.pholser.junit.quickcheck.generator.GenerationStatus
 import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
-import com.r3corda.core.generators.*
+import com.r3corda.contracts.testing.SignedTransactionGenerator
 import com.r3corda.core.serialization.createKryo
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.testing.PartyGenerator
-import com.r3corda.core.testing.SignedTransactionGenerator
 import com.r3corda.protocols.BroadcastTransactionProtocol
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals

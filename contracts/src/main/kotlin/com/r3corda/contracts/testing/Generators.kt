@@ -11,6 +11,13 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.testing.*
 import java.util.*
 
+/**
+ * This file contains generators for quickcheck style testing. The idea is that we can write random instance generators
+ * for each type we have in the code and test against those instead of predefined mock data. This style of testing can
+ * catch corner case bugs and test algebraic properties of the code, for example deserialize(serialize(generatedThing)) == generatedThing
+ *
+ * TODO add combinators for easier Generator writing
+ */
 class ContractStateGenerator : Generator<ContractState>(ContractState::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): ContractState {
         return Cash.State(
