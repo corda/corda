@@ -86,7 +86,7 @@ class ArtemisMessagingClient(directory: Path,
     private val handlers = CopyOnWriteArrayList<Handler>()
 
     // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
-    private val undeliveredMessages = CopyOnWriteArrayList<Message>()
+    private var undeliveredMessages = listOf<Message>()
 
     init {
         require(directory.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
@@ -312,7 +312,9 @@ class ArtemisMessagingClient(directory: Path,
         require(!topicSession.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
         val handler = Handler(executor, topicSession, callback)
         handlers.add(handler)
-        undeliveredMessages.removeIf { deliver(it) }
+        val messagesToRedeliver = undeliveredMessages
+        undeliveredMessages = listOf()
+        messagesToRedeliver.forEach { deliver(it) }
         return handler
     }
 
