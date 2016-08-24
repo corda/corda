@@ -21,6 +21,8 @@ public class CordaCaplet extends Capsule {
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T attribute(Map.Entry<String, T> attr) {
+        // Equality is used here because Capsule never instantiates these attributes but instead reuses the ones
+        // defined as public static final fields on the Capsule class, therefore referential equality is safe.
         if(ATTR_APP_CLASS_PATH == attr) {
             T cp = super.attribute(attr);
             List<Path> classpath = (List<Path>) cp;
@@ -47,7 +49,6 @@ public class CordaCaplet extends Capsule {
     }
 
     private Boolean isJAR(File file) {
-        String[] parts = file.getName().split("\\.");
-        return (parts.length > 1) && (parts[parts.length - 1].toLowerCase().equals("jar"));
+        return file.getName().toLowerCase().endsWith(".jar");
     }
 }
