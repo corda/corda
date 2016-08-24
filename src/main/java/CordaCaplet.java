@@ -39,11 +39,15 @@ public class CordaCaplet extends Capsule {
 
         File[] files = dir.listFiles();
         for (File file : files) {
-            Boolean isJAR = FilenameUtils.getExtension(file.getName()).toLowerCase() == "jar";
-            if (file.isFile() && isJAR) {
+            if (file.isFile() && isJAR(file)) {
                 classpath.add(file.toPath().toAbsolutePath());
             }
         }
         return classpath;
+    }
+
+    private Boolean isJAR(File file) {
+        String[] parts = file.getName().split("\\.");
+        return (parts.length > 1) && (parts[parts.length - 1].toLowerCase().equals("jar"));
     }
 }
