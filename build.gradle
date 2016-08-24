@@ -197,9 +197,9 @@ applicationDistribution.into("bin") {
     fileMode = 0755
 }
 
-task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
+task buildCordaJAR(type: FatCapsule, dependsOn: 'quasarScan') {
     applicationClass 'com.r3corda.node.MainKt'
-
+    archiveName 'corda.jar'
     applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class')
 
     capsuleManifest {
@@ -211,30 +211,30 @@ task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
     }
 }
 
-task installTemplateNodes(dependsOn: 'createCapsule') << {
+task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
     copy {
-        from createCapsule.outputs.getFiles()
+        from buildCordaJAR.outputs.getFiles()
         from 'config/dev/nameservernode.conf'
         into "${buildDir}/nodes/nameserver"
         rename 'nameservernode.conf', 'node.conf'
     }
 
     copy {
-        from createCapsule.outputs.getFiles()
+        from buildCordaJAR.outputs.getFiles()
         from 'config/dev/generalnodea.conf'
         into "${buildDir}/nodes/nodea"
         rename 'generalnodea.conf', 'node.conf'
     }
 
     copy {
-        from createCapsule.outputs.getFiles()
+        from buildCordaJAR.outputs.getFiles()
         from 'config/dev/generalnodeb.conf'
         into "${buildDir}/nodes/nodeb"
         rename 'generalnodeb.conf', 'node.conf'
     }
 
     delete("${buildDir}/nodes/runnodes")
-    def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
+    def jarName = buildCordaJAR.outputs.getFiles().getSingleFile().getName()
     copy {
         from "buildSrc/scripts/runnodes"
         filter { String line -> line.replace("JAR_NAME", jarName) }
