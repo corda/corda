@@ -1,4 +1,4 @@
-Platform contracts
+Contract catalogue
 ==================
 
 There are a number of contracts supplied with Corda, which cover both core functionality (such as cash on ledger) and

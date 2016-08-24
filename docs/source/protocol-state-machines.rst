@@ -102,27 +102,19 @@ We start by defining a wrapper that namespaces the protocol code, two functions 
 of the protocol, and two classes that will contain the protocol definition. We also pick what data will be used by
 each side.
 
+.. note:: The code samples in this tutorial are only available in Kotlin, but you can use any JVM language to
+   write them and the approach is the same.
+
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
       object TwoPartyTradeProtocol {
-          val TRADE_TOPIC = "platform.trade"
+          val TOPIC = "platform.trade"
 
-          fun runSeller(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
-                        otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
-                        myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
-              val seller = Seller(otherSide, timestampingAuthority, assetToSell, price, myKeyPair, buyerSessionID)
-              smm.add("$TRADE_TOPIC.seller", seller)
-              return seller.resultFuture
-          }
-
-          fun runBuyer(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
-                       otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
-                       sessionID: Long): ListenableFuture<SignedTransaction> {
-              val buyer = Buyer(otherSide, timestampingAuthority.identity, acceptablePrice, typeToBuy, sessionID)
-              smm.add("$TRADE_TOPIC.buyer", buyer)
-              return buyer.resultFuture
+          class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
+          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
+              override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
           }
 
           // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
@@ -135,28 +127,24 @@ each side.
 
           class SignaturesFromSeller(val timestampAuthoritySig: DigitalSignature.WithKey, val sellerSig: DigitalSignature.WithKey)
 
-          class Seller(val otherSide: SingleMessageRecipient,
-                       val timestampingAuthority: LegallyIdentifiableNode,
-                       val assetToSell: StateAndRef<OwnableState>,
-                       val price: Amount,
-                       val myKeyPair: KeyPair,
-                       val buyerSessionID: Long) : ProtocolLogic<SignedTransaction>() {
+          open class Seller(val otherSide: Party,
+                            val notaryNode: NodeInfo,
+                            val assetToSell: StateAndRef<OwnableState>,
+                            val price: Amount<Currency>,
+                            val myKeyPair: KeyPair,
+                            val buyerSessionID: Long,
+                            override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
               }
           }
 
-          class UnacceptablePriceException(val givenPrice: Amount) : Exception()
-          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
-              override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
-          }
-
-          class Buyer(val otherSide: SingleMessageRecipient,
-                      val timestampingAuthority: Party,
-                      val acceptablePrice: Amount,
-                      val typeToBuy: Class<out OwnableState>,
-                      val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
+          open class Buyer(val otherSide: Party,
+                           val notary: Party,
+                           val acceptablePrice: Amount<Currency>,
+                           val typeToBuy: Class<out OwnableState>,
+                           val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
@@ -166,47 +154,36 @@ each side.
 
 Let's unpack what this code does:
 
-- It defines a several classes nested inside the main ``TwoPartyTradeProtocol`` singleton, and a couple of methods, one
-  to run the buyer side of the protocol and one to run the seller side. Some of the classes are simply protocol messages.
+- It defines a several classes nested inside the main ``TwoPartyTradeProtocol`` singleton. Some of the classes
+  are simply protocol messages or exceptions. The other two represent the buyer and seller side of the protocol.
 - It defines the "trade topic", which is just a string that namespaces this protocol. The prefix "platform." is reserved
-  by the DLG, but you can define your own protocols using standard Java-style reverse DNS notation.
-- The ``runBuyer`` and ``runSeller`` methods take a number of parameters that specialise the protocol for this run,
-  use them to construct a ``Buyer`` or ``Seller`` object respectively, and then add the new instances to the
-  ``StateMachineManager``. The purpose of this class is described below. The ``smm.add`` method takes a logger name as
-  the first parameter, this is just a standard JDK logging identifier string, and the instance to add.
+  by Corda, but you can define your own protocols using standard Java-style reverse DNS notation.
 
 Going through the data needed to become a seller, we have:
 
-- ``timestampingAuthority: LegallyIdentifiableNode`` - a reference to a node on the P2P network that acts as a trusted
-  timestamper. The use of timestamping is described in :doc:`data-model`.
 - ``otherSide: SingleMessageRecipient`` - the network address of the node with which you are trading.
+- ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`consensus`" for more
+  information on notaries.
 - ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
-- ``price: Amount`` - the agreed on price that the asset is being sold for.
+- ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint).
 - ``myKeyPair: KeyPair`` - the key pair that controls the asset being sold. It will be used to sign the transaction.
 - ``buyerSessionID: Long`` - a unique number that identifies this trade to the buyer. It is expected that the buyer
-  knows that the trade is going to take place and has sent you such a number already. (This field may go away in a future
-  iteration of the framework)
+  knows that the trade is going to take place and has sent you such a number already.
 
-.. note:: Session IDs keep different traffic streams separated, so for security they must be large and random enough
-   to be unguessable. 63 bits is good enough.
+.. note:: Session IDs will be automatically handled in a future version of the framework.
 
 And for the buyer:
 
-- ``acceptablePrice: Amount`` - the price that was agreed upon out of band. If the seller specifies a price less than
-  or equal to this, then the trade will go ahead.
+- ``acceptablePrice: Amount<Currency>`` - the price that was agreed upon out of band. If the seller specifies
+  a price less than or equal to this, then the trade will go ahead.
 - ``typeToBuy: Class<out OwnableState>`` - the type of state that is being purchased. This is used to check that the
   sell side of the protocol isn't trying to sell us the wrong thing, whether by accident or on purpose.
 - ``sessionID: Long`` - the session ID that was handed to the seller in order to start the protocol.
 
-The run methods return a ``ListenableFuture`` that will complete when the protocol has finished.
-
-Alright, so using this protocol shouldn't be too hard: in the simplest case we can just pass in the details of the trade
-to either runBuyer or runSeller, depending on who we are, and then call ``.get()`` on resulting object to
-block the calling thread until the protocol has finished. Or we could register a callback on the returned future that
-will be invoked when it's done, where we could e.g. update a user interface.
-
-Finally, we define a couple of exceptions, and two classes that will be used as a protocol message called
-``SellerTradeInfo`` and ``SignaturesFromSeller``.
+Alright, so using this protocol shouldn't be too hard: in the simplest case we can just create a Buyer or Seller
+with the details of the trade, depending on who we are. We then have to start the protocol in some way. Just
+calling the ``call`` method ourselves won't work: instead we need to ask the framework to start the protocol for
+us. More on that in a moment.
 
 Suspendable methods
 -------------------
@@ -221,50 +198,52 @@ invoked, all methods on the stack must have been marked. If you forget, then in 
 get a useful error message telling you which methods you didn't mark. The fix is simple enough: just add the annotation
 and try again.
 
-.. note:: A future version of Java is likely to remove this pre-marking requirement completely.
+.. note:: Java 9 is likely to remove this pre-marking requirement completely.
 
-The state machine manager
--------------------------
+Starting your protocol
+----------------------
 
-The SMM is a class responsible for taking care of all running protocols in a node. It knows how to register handlers
-with a ``MessagingService`` and iterate the right state machine when messages arrive. It provides the
-send/receive/sendAndReceive calls that let the code request network interaction and it will store a serialised copy of
-each state machine before it's suspended to wait for the network.
+The ``StateMachineManager`` is the class responsible for taking care of all running protocols in a node. It knows
+how to register handlers with the messaging system (see ":doc:`messaging`") and iterate the right state machine
+when messages arrive. It provides the send/receive/sendAndReceive calls that let the code request network
+interaction and it will save/restore serialised versions of the fiber at the right times.
 
-To get a ``StateMachineManager``, you currently have to build one by passing in a ``ServiceHub`` and a thread or thread
-pool which it can use. This will change in future so don't worry about the details of this too much: just check the
-unit tests to see how it's done.
+Protocols can be invoked in several ways. For instance, they can be triggered by scheduled events,
+see ":doc:`event-scheduling`" to learn more about this. Or they can be triggered via the HTTP API. Or they can
+be triggered directly via the Java-level node APIs from your app code.
+
+You request a protocol to be invoked by using the ``ServiceHub.invokeProtocolAsync`` method. This takes a
+Java reflection ``Class`` object that describes the protocol class to use (in this case, either Buyer or Seller).
+It also takes a set of arguments to pass to the constructor. Because it's possible for protocol invocations to
+be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
+protocol are checked against a whitelist, which can be extended by apps themselves at load time.
+
+The process of starting a protocol returns a ``ListenableFuture`` that you can use to either block waiting for
+the result, or register a callback that will be invoked when the result is ready.
 
 Implementing the seller
 -----------------------
 
-Let's implement the ``Seller.call`` method. This will be invoked by the platform when the protocol is started by the
-``StateMachineManager``.
+Let's implement the ``Seller.call`` method. This will be run when the protocol is invoked.
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-      val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
-
-      // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
-      val ourSignature = signWithOurKey(partialTX)
-      val tsaSig = subProtocol(TimestampingProtocol(timestampingAuthority, partialTX.txBits))
-
-      val stx: SignedTransaction = sendSignatures(partialTX, ourSignature, tsaSig)
-
-      return stx
+      @Suspendable
+      override fun call(): SignedTransaction {
+          val partialTX: SignedTransaction = receiveAndCheckProposedTransaction()
+          val ourSignature: DigitalSignature.WithKey = signWithOurKey(partialTX)
+          val notarySignature = getNotarySignature(partialTX)
+          val result: SignedTransaction = sendSignatures(partialTX, ourSignature, notarySignature)
+          return result
+      }
 
 Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it's
-valid. Then we sign with our own key, request a timestamping authority to assert with another signature that the
-timestamp in the transaction (if any) is valid, and finally we send back both our signature and the TSA's signature.
-Finally, we hand back to the code that invoked the protocol the finished transaction in a couple of different forms.
-
-.. note:: ``ProtocolLogic`` classes can be composed together. Here, we see the use of the ``subProtocol`` method, which
-   is given an instance of ``TimestampingProtocol``. This protocol will run to completion and yield a result, almost
-   as if it's a regular method call. In fact, under the hood, all the ``subProtocol`` method does is pass the current
-   fiber object into the newly created object and then run ``call()`` on it ... so it basically _is_ just a method call.
-   This is where we can see the benefits of using continuations/fibers as a programming model.
+valid. Then we sign with our own key and request a notary to assert with another signature that the
+timestamp in the transaction (if any) is valid and there are no double spends, and finally we send back both
+our signature and the notaries signature. Finally, we hand back to the code that invoked the protocol the
+finished transaction.
 
 Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
@@ -273,56 +252,48 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
    .. sourcecode:: kotlin
 
       @Suspendable
-      open fun receiveAndCheckProposedTransaction(): SignedTransaction {
+      private fun receiveAndCheckProposedTransaction(): SignedTransaction {
           val sessionID = random63BitValue()
 
           // Make the first message we'll send to kick off the protocol.
           val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
 
-          val maybeSTX = sendAndReceive<SignedTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
+          val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, buyerSessionID, sessionID, hello)
 
           maybeSTX.validate {
               // Check that the tx proposed by the buyer is valid.
-              val missingSigs = it.verify(throwIfSignaturesAreMissing = false)
-              if (missingSigs != setOf(myKeyPair.public, timestampingAuthority.identity.owningKey))
-                  throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
+              val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
+              val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
+              if (missingSigs != expected)
+                  throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs ${expected.toStringsShort()}")
 
               val wtx: WireTransaction = it.tx
               logger.trace { "Received partially signed transaction: ${it.id}" }
 
-              checkDependencies(it)
+              // Download and check all the things that this transaction depends on and verify it is contract-valid,
+              // even though it is missing signatures.
+              subProtocol(ResolveTransactionsProtocol(wtx, otherSide))
 
-              // This verifies that the transaction is contract-valid, even though it is missing signatures.
-              serviceHub.verifyTransaction(wtx.toLedgerTransaction(serviceHub.identityService))
-
-              if (wtx.outputs.sumCashBy(myKeyPair.public) != price)
-                  throw IllegalArgumentException("Transaction is not sending us the right amounnt of cash")
-
-              // There are all sorts of funny games a malicious secondary might play here, we should fix them:
-              //
-              // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
-              //   we're reusing keys! So don't reuse keys!
-              // - This tx may include output states that impose odd conditions on the movement of the cash,
-              //   once we implement state pairing.
-              //
-              // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
-              // express protocol state machines on top of the messaging layer.
+              if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
+                  throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
 
               return it
           }
       }
 
-That's pretty straightforward. We generate a session ID to identify what's happening on the seller side, fill out
+Let's break this down. We generate a session ID to identify what's happening on the seller side, fill out
 the initial protocol message, and then call ``sendAndReceive``. This function takes a few arguments:
 
 - The topic string that ensures the message is routed to the right bit of code in the other side's node.
 - The session IDs that ensure the messages don't get mixed up with other simultaneous trades.
 - The thing to send. It'll be serialised and sent automatically.
-- Finally a type argument, which is the kind of object we're expecting to receive from the other side.
+- Finally a type argument, which is the kind of object we're expecting to receive from the other side. If we get
+  back something else an exception is thrown.
 
-Once ``sendAndReceive`` is called, the call method will be suspended into a continuation. When it gets back we'll do a log
-message. The buyer is supposed to send us a transaction with all the right inputs/outputs/commands in return, with their
-cash put into the transaction and their signature on it authorising the movement of the cash.
+Once ``sendAndReceive`` is called, the call method will be suspended into a continuation and saved to persistent
+storage. If the node crashes or is restarted, the protocol will effectively continue as if nothing had happened. Your
+code may remain blocked inside such a call for seconds, minutes, hours or even days in the case of a protocol that
+needs human interaction!
 
 .. note:: There are a couple of rules you need to bear in mind when writing a class that will be used as a continuation.
    The first is that anything on the stack when the function is suspended will be stored into the heap and kept alive by
@@ -331,31 +302,51 @@ cash put into the transaction and their signature on it authorising the movement
    The second is that as well as being kept on the heap, objects reachable from the stack will be serialised. The state
    of the function call may be resurrected much later! Kryo doesn't require objects be marked as serialisable, but even so,
    doing things like creating threads from inside these calls would be a bad idea. They should only contain business
-   logic.
+   logic and only do I/O via the methods exposed by the protocol framework.
+
+   It's OK to keep references around to many large internal node services though: these will be serialised using a
+   special token that's recognised by the platform, and wired up to the right instance when the continuation is
+   loaded off disk again.
+
+The buyer is supposed to send us a transaction with all the right inputs/outputs/commands in response to the opening
+message, with their cash put into the transaction and their signature on it authorising the movement of the cash.
 
 You get back a simple wrapper class, ``UntrustworthyData<SignedTransaction>``, which is just a marker class that reminds
 us that the data came from a potentially malicious external source and may have been tampered with or be unexpected in
-other ways. It doesn't add any functionality, but acts as a reminder to "scrub" the data before use. Here, our scrubbing
-simply involves checking the signatures on it. Then we go ahead and check all the dependencies of this partial
-transaction for validity. Here's the code to do that:
+other ways. It doesn't add any functionality, but acts as a reminder to "scrub" the data before use.
+
+Our "scrubbing" has three parts:
+
+1. Check that the expected signatures are present and correct. At this point we expect our own signature to be missing,
+   because of course we didn't sign it yet, and also the signature of the notary because that must always come last.
+2. We resolve the transaction, which we will cover below.
+3. We verify that the transaction is paying us the demanded price.
+
+Subprotocols
+------------
+
+Protocols can be composed via nesting. Invoking a sub-protocol looks similar to an ordinary function call:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
       @Suspendable
-      private fun checkDependencies(stx: SignedTransaction) {
-          // Download and check all the transactions that this transaction depends on, but do not check this
-          // transaction itself.
-          val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
-          subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
+      private fun getNotarySignature(stx: SignedTransaction): DigitalSignature.LegallyIdentifiable {
+          progressTracker.currentStep = NOTARY
+          return subProtocol(NotaryProtocol.Client(stx))
       }
 
-This is simple enough: we mark the method as ``@Suspendable`` because we're going to invoke a sub-protocol, extract the
-IDs of the transactions the proposed transaction depends on, and then uses a protocol provided by the system to download
-and check them all. This protocol does a breadth-first search over the dependency graph, bottoming out at issuance
-transactions that don't have any inputs themselves. Once the node has audited the transaction history, all the dependencies
-are committed to the node's local database so they won't be checked again next time.
+In this code snippet we are using the ``NotaryProtocol.Client`` to request notarisation of the transaction.
+We simply create the protocol object via its constructor, and then pass it to the ``subProtocol`` method which
+returns the result of the protocol's execution directly. Behind the scenes all this is doing is wiring up progress
+tracking (discussed more below) and then running the objects ``call`` method. Because this little helper method can
+be on the stack when network IO takes place, we mark it as ``@Suspendable``.
+
+Going back to the previous code snippet, we use a subprotocol called ``ResolveTransactionsProtocol``. This is
+responsible for downloading and checking all the dependencies of a transaction, which in Corda are always retrievable
+from the party that sent you a transaction that uses them. This protocol returns a list of ``LedgerTransaction``
+objects, but we don't need them here so we just ignore the return value.
 
 .. note:: Transaction dependency resolution assumes that the peer you got the transaction from has all of the
    dependencies itself. It must do, otherwise it could not have convinced itself that the dependencies were themselves
@@ -375,24 +366,27 @@ Here's the rest of the code:
       open fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
 
       @Suspendable
-      open fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                              tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
-          val fullySigned = partialTX + tsaSig + ourSignature
-
+      private fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
+                                 notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
+          val fullySigned = partialTX + ourSignature + notarySignature
           logger.trace { "Built finished transaction, sending back to secondary!" }
-
-          send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(tsaSig, ourSignature))
+          send(otherSide, buyerSessionID, SignaturesFromSeller(ourSignature, notarySignature))
           return fullySigned
       }
 
-It's should be all pretty straightforward: here, ``txBits`` is the raw byte array representing the transaction.
+It's all pretty straightforward from now on. Here ``txBits`` is the raw byte array representing the serialised
+transaction, and we just use our private key to calculate a signature over it. As a reminder, in Corda signatures do
+not cover other signatures: just the core of the transaction data.
 
-In ``sendSignatures``, we take the two signatures we calculated, then add them to the partial transaction we were sent.
-We provide an overload for the + operator so signatures can be added to a SignedTransaction easily. Finally, we wrap the
+In ``sendSignatures``, we take the two signatures we obtained and add them to the partial transaction we were sent.
+There is an overload for the + operator so signatures can be added to a SignedTransaction easily. Finally, we wrap the
 two signatures in a simple wrapper message class and send it back. The send won't block waiting for an acknowledgement,
 but the underlying message queue software will retry delivery if the other side has gone away temporarily.
 
-.. warning:: This code is **not secure**. Other than not checking for all possible invalid constructions, if the
+You can also see that every protocol instance has a logger (using the SLF4J API) which you can use to log progress
+messages.
+
+.. warning:: This sample code is **not secure**. Other than not checking for all possible invalid constructions, if the
    seller stops before sending the finalised transaction to the buyer, the seller is left with a valid transaction
    but the buyer isn't, so they can't spend the asset they just purchased! This sort of thing will be fixed in a
    future version of the code.
@@ -411,24 +405,25 @@ OK, let's do the same for the buyer side:
           val tradeRequest = receiveAndValidateTradeRequest()
           val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
           val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+
           val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
-          logger.trace { "Got signatures from seller, verifying ... "}
-          val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
-          fullySigned.verify()
+          logger.trace { "Got signatures from seller, verifying ... " }
 
-          logger.trace { "Fully signed transaction was valid. Trade complete! :-)" }
+          val fullySigned = stx + signatures.sellerSig + signatures.notarySig
+          fullySigned.verifySignatures()
+
+          logger.trace { "Signatures received are valid. Trade complete! :-)" }
           return fullySigned
       }
 
       @Suspendable
-      open fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+      private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
           // Wait for a trade request to come in on our pre-provided session ID.
-          val maybeTradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
-
+          val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
           maybeTradeRequest.validate {
               // What is the seller trying to sell us?
-              val asset = it.assetForSale.state
+              val asset = it.assetForSale.state.data
               val assetTypeName = asset.javaClass.name
               logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
@@ -448,15 +443,16 @@ OK, let's do the same for the buyer side:
       }
 
       @Suspendable
-      open fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+      private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+          progressTracker.currentStep = SWAPPING_SIGNATURES
           logger.trace { "Sending partially signed transaction to seller" }
 
           // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-          return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate { it }
+          return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).validate { it }
       }
 
-      open fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
+      private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
           // Now sign the transaction with whatever keys we need to move the cash.
           for (k in cashSigningPubKeys) {
               val priv = serviceHub.keyManagementService.toPrivate(k)
@@ -466,50 +462,45 @@ OK, let's do the same for the buyer side:
           return ptx.toSignedTransaction(checkSufficientSignatures = false)
       }
 
-      open fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
-          val ptx = TransactionBuilder()
+      private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
+          val ptx = TransactionType.General.Builder(notary)
           // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
           val wallet = serviceHub.walletService.currentWallet
           val cashStates = wallet.statesOfType<Cash.State>()
           val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
           // Add inputs/outputs/a command for the movement of the asset.
-          ptx.addInputState(tradeRequest.assetForSale.ref)
+          ptx.addInputState(tradeRequest.assetForSale)
           // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
           // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
           // reveal who the owner actually is. The key management service is expected to derive a unique key from some
           // initial seed in order to provide privacy protection.
           val freshKey = serviceHub.keyManagementService.freshKey()
-          val (command, state) = tradeRequest.assetForSale.state.withNewOwner(freshKey.public)
-          ptx.addOutputState(state)
-          ptx.addCommand(command, tradeRequest.assetForSale.state.owner)
+          val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
+          ptx.addOutputState(state, tradeRequest.assetForSale.state.notary)
+          ptx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
           // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
           // to have one.
-          ptx.setTime(Instant.now(), timestampingAuthority, 30.seconds)
+          val currentTime = serviceHub.clock.instant()
+          ptx.setTime(currentTime, 30.seconds)
           return Pair(ptx, cashSigningPubKeys)
       }
 
-This code is longer but still fairly straightforward. Here are some things to pay attention to:
+This code is longer but no more complicated. Here are some things to pay attention to:
 
 1. We do some sanity checking on the received message to ensure we're being offered what we expected to be offered.
-2. We create a cash spend in the normal way, by using ``Cash().generateSpend``. See the contracts tutorial if this isn't
-   clear.
+2. We create a cash spend in the normal way, by using ``Cash().generateSpend``. See the contracts tutorial if this
+   part isn't clear.
 3. We access the *service hub* when we need it to access things that are transient and may change or be recreated
-   whilst a protocol is suspended, things like the wallet or the timestamping service. Remember that a protocol may
-   be suspended when it waits to receive a message across node or computer restarts, so objects representing a service
-   or data which may frequently change should be accessed 'just in time'.
+   whilst a protocol is suspended, things like the wallet or the network map.
 4. Finally, we send the unfinished, invalid transaction to the seller so they can sign it. They are expected to send
    back to us a ``SignaturesFromSeller``, which once we verify it, should be the final outcome of the trade.
 
 As you can see, the protocol logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
 
-.. warning:: When accessing things via the ``serviceHub`` field, avoid the temptation to stuff a reference into a local variable.
-   If you do this then next time your protocol waits to receive an object, the system will try and serialise all your
-   local variables and end up trying to serialise, e.g. the timestamping service, which doesn't make any conceptual
-   sense. The ``serviceHub`` field is defined by the ``ProtocolStateMachine`` superclass and is marked transient so
-   this problem doesn't occur. It's also restored for you when a protocol state machine is restored after a node
-   restart.
+.. warning:: In the current version of the platform, exceptions thrown during protocol execution are not propagated
+   back to the sender. A thorough error handling and exceptions framework will be in a future version of the platform.
 
 Progress tracking
 -----------------
@@ -662,3 +653,36 @@ directly to the ``a.services.recordTransaction`` method (note that this method d
 valid).
 
 And that's it: you can explore the documentation for the `MockNode API <api/com.r3corda.node.internal.testing/-mock-network/index.html>`_ here.
+
+Versioning
+----------
+
+Fibers involve persisting object-serialised stack frames to disk. Although we may do some R&D into in-place upgrades
+in future, for now the upgrade process for protocols is simple: you duplicate the code and rename it so it has a
+new set of class names. Old versions of the protocol can then drain out of the system whilst new versions are
+initiated. When enough time has passed that no old versions are still waiting for anything to happen, the previous
+copy of the code can be deleted.
+
+Whilst kind of ugly, this is a very simple approach that should suffice for now.
+
+.. warning:: Protocols are not meant to live for months or years, and by implication they are not meant to implement entire deal
+   lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single protocol - whilst
+   technically possible - would not be a good idea. The platform provides a job scheduler tool that can invoke
+   protocols for this reason (see ":doc:`event-scheduling`")
+
+Future features
+---------------
+
+The protocol framework is a key part of the platform and will be extended in major ways in future. Here are some of
+the features we have planned:
+
+* Automatic session ID management
+* Identity based addressing
+* Exposing progress trackers to local (inside the firewall) clients using message queues and/or WebSockets
+* Exception propagation and management, with a "protocol hospital" tool to manually provide solutions to unavoidable
+  problems (e.g. the other side doesn't know the trade)
+* Being able to interact with internal apps and tools via HTTP and similar
+* Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
+  For example to implement human transaction authorisations.
+* A standard library of protocols that can be easily sub-classed by local developers in order to integrate internal
+  reporting logic, or anything else that might be required as part of a communications lifecycle.

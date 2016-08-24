@@ -2,13 +2,13 @@ Data model
 ==========
 
 This article covers the data model: how *states*, *transactions* and *code contracts* interact with each other and
-how they are represented in the code. It doesn't attempt to give detailed design rationales or information on future
+how they are represented in software. It doesn't attempt to give detailed design rationales or information on future
 design elements: please refer to the R3 wiki for background information.
 
 Overview
 --------
 
-We begin with the idea of a global ledger. In our model, although the ledger is shared, it is not always the case that
+We begin with the idea of a global ledger. In our model although the ledger is shared, it is not always the case that
 transactions and ledger entries are globally visible. In cases where a set of transactions stays within a small subgroup of
 users it should be possible to keep the relevant data purely within that group.
 
@@ -22,12 +22,15 @@ States contain arbitrary data, but they always contain at minimum a hash of the 
 **contract code** file, which is a program expressed in JVM byte code that runs sandboxed inside a Java virtual machine.
 Contract code (or just "contracts" in the rest of this document) are globally shared pieces of business logic.
 
+.. note:: In the current code dynamic loading of contracts is not implemented, so states currently point at
+   statically created object instances. This will change in the near future.
+
 Contracts define a **verify function**, which is a pure function given the entire transaction as input. To be considered
 valid, the transaction must be **accepted** by the verify function of every contract pointed to by the input and output
 states.
 
 Beyond inputs and outputs, transactions may also contain **commands**, small data packets that
-the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
+the platform does not interpret itself but which can parameterise execution of the contracts. They can be thought of as
 arguments to the verify function. Each command has a list of **public keys** associated with it. The platform ensures
 that the transaction is signed by every key listed in the commands before the contracts start to execute. Thus, a verify
 function can trust that all listed keys have signed the transaction but is responsible for verifying that any keys required
@@ -35,10 +38,15 @@ for the transaction to be valid from the verify function's perspective are inclu
 may be random/identityless for privacy, or linked to a well known legal identity, for example via a
 *public key infrastructure* (PKI).
 
+.. note:: Linkage of keys with identities via a PKI is only partially implemented in the current code.
+
 Commands are always embedded inside a transaction. Sometimes, there's a larger piece of data that can be reused across
 many different transactions. For this use case, we have **attachments**. Every transaction can refer to zero or more
-attachments by hash. Attachments are always ZIP/JAR files, which may contain arbitrary content. Contract code can then
-access the attachments by opening them as a JarInputStream (this is temporary and will change later).
+attachments by hash. Attachments are always ZIP/JAR files, which may contain arbitrary content. These files are
+then exposed on the classpath and so can be opened by contract code in the same manner as any JAR resources
+would be loaded.
+
+.. note:: Attachments must be opened explicitly in the current code.
 
 Note that there is nothing that explicitly binds together specific inputs, outputs, commands or attachments. Instead
 it's up to the contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This
@@ -48,13 +56,23 @@ Transactions may sometimes need to provide a contract with data from the outside
 prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
 facts are called **oracles** and they provide facts to the ledger by signing transactions that contain commands they
 recognise, or by creating signed attachments. The commands contain the fact and the signature shows agreement to that fact.
-Time is also modelled as a fact, with the signature of a special kind of oracle called a **timestamping authority** (TSA).
-A TSA signs a transaction if a pre-defined timestamping command in it defines a after/before time window that includes
-"true time" (i.e. GPS time as calibrated to the US Naval Observatory). An oracle may prefer to generate a signed
-attachment if the fact it's creating is relatively static and may be referred to over and over again.
+
+Time is also modelled as a fact, with the signature of a special kind of service called a **notary**. A notary is
+a (very likely) decentralised service which fulfils the role that miners play in other blockchain systems:
+notaries ensure only one transaction can consume any given output. Additionally they may verify a **timestamping
+command** placed inside the transaction, which specifies a time window in which the transaction is considered
+valid for notarisation. The time window can be open ended (i.e. with a start but no end or vice versa). In this
+way transactions can be linked to the notary's clock.
+
+It is possible for a single Corda network to have multiple competing notaries. Each state points to the notary that
+controls it. Whilst a single transaction may only consume states if they are all controlled by the same notary,
+a special type of transaction is provided that moves a state (or set of states) from one notary to another.
+
+.. note:: Currently the platform code will not re-assign states to a single notary as needed for you, in case of
+   a mismatch. This is a future planned feature.
 
 As the same terminology often crops up in different distributed ledger designs, let's compare this to other
-distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
+systems you may be familiar with. You can find more detailed design rationales for why the platform
 differs from existing systems in `the R3 wiki <https://r3-cev.atlassian.net/wiki/display/AWG/Platform+Stream%3A+Corda>`_,
 but to summarise, the driving factors are:
 
@@ -62,7 +80,7 @@ but to summarise, the driving factors are:
 * Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)
 * No reliance on proof of work
 * Re-use of existing sandboxing virtual machines
-* Use of type safe GCd implementation languages.
+* Use of type safe GCd implementation languages
 * Simplified auditing
 
 Comparison with Bitcoin
@@ -77,8 +95,11 @@ Similarities:
   Given the same transaction, a contract's accept function always yields exactly the same result.
 * Bitcoin output scripts are parameterised by the input scripts in the spending transaction. This is somewhat similar
   to our notion of a *command*.
+* Bitcoin has a global distributed notary service; that's the famous block chain. However, there is only one. Whilst
+  there is a notion of a "side chain", this isn't integrated with the core Bitcoin data model and thus adds large
+  amounts of additional complexity meaning in practice side chains are not used.
 * Bitcoin transactions, like ours, refer to the states they consume by using a (txhash, index) pair. The Bitcoin
-  protocol calls these "outpoints". In our prototype code they are known as ``StateRefs`` but the concept is identical.
+  protocol calls these "outpoints". In our code they are known as ``StateRefs`` but the concept is identical.
 * Bitcoin transactions have an associated timestamp (the time at which they are mined).
 
 Differences:
@@ -92,8 +113,8 @@ Differences:
 * A Bitcoin script can only be given a fixed set of byte arrays as the input. This means there's no way for a contract
   to examine the structure of the entire transaction, which severely limits what contracts can do.
 * Our contracts are Turing-complete and can be written in any ordinary programming language that targets the JVM.
-* Our transactions and contracts have to get their time from an attached timestamp rather than a block chain. This is
-  important given that we are currently considering block-free conflict resolution algorithms.
+* Our transactions and contracts get their time from an attached timestamp rather than a block chain. This is
+  important given that we use block-free conflict resolution algorithms. The timestamp can be arbitrarily precise.
 * We use the term "contract" to refer to a bundle of business logic that may handle various different tasks, beyond
   transaction verification. For instance, currently our contracts also include code for creating valid transactions
   (this is often called "wallet code" in Bitcoin).
@@ -252,7 +273,6 @@ to "reshape" outputs to useful/standardised sizes, for example, and to send outp
 back to their issuers for reissuance to "sever" long privacy-breaching chains.
 
 Finally, it should be noted that some of the issues described here are not really "cons" of
-the UTXO model; they're just fundamental.
-If you used many different anonymous accounts to preserve some privacy and then needed to
-spend the contents of them all simultaneously, you'd hit the same problem, so it's not
+the UTXO model; they're just fundamental. If you used many different anonymous accounts to preserve some privacy
+and then needed to spend the contents of them all simultaneously, you'd hit the same problem, so it's not
 something that can be trivially fixed with data model changes.

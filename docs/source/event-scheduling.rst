@@ -7,7 +7,7 @@
 Event scheduling
 ================
 
-This article explains our experimental approach to modelling time based events in code. It explains how a contract
+This article explains our approach to modelling time based events in code. It explains how a contract
 state can expose an upcoming event and what action to take if the scheduled time for that event is reached.
 
 Introduction
@@ -28,7 +28,7 @@ due.  If a contract state is consumed in the UTXO model, then what *was* the nex
 and the next time sensitive event is determined by any successor contract state.
 
 Knowing when the next time sensitive event is due to occur is useful, but typically some *activity* is expected to take
-place when this event occurs.  We already have a model for business processes in the form of the protocol state machines,
+place when this event occurs.  We already have a model for business processes in the form of :doc:`protocols <protocol-state-machines>`,
 so in the platform we have introduced the concept of *scheduled activities* that can invoke protocol state machines
 at a scheduled time.  A contract state can optionally described the next scheduled activity for itself.  If it omits
 to do so, then nothing will be scheduled.
@@ -42,12 +42,11 @@ There are two main steps to implementing scheduled events:
   ``nextScheduledActivity`` to be implemented which returns an optional ``ScheduledActivity`` instance.
   ``ScheduledActivity`` captures what ``ProtocolLogic`` instance each node will run, to perform the activity, and when it
   will run is described by a ``java.time.Instant``.  Once your state implements this interface and is tracked by the
-  wallet, it can expect to be queried for the next activity when recorded via the ``ServiceHub.recordTransactions``
-  method during protocols execution.
+  wallet, it can expect to be queried for the next activity when committed to the wallet.
 * If nothing suitable exists, implement a ``ProtocolLogic`` to be executed by each node as the activity itself.
-  The important thing to remember is that each node that is party to the transaction, in the current implementation,
-  will execute the same ``ProtocolLogic`` so that needs to establish roles in the business process based on the contract
-  state and the node it is running on, and follow different but complementary paths through the business logic.
+  The important thing to remember is that in the current implementation, each node that is party to the transaction
+  will execute the same ``ProtocolLogic``, so it needs to establish roles in the business process based on the contract
+  state and the node it is running on. Each side will follow different but complementary paths through the business logic.
 
 .. note:: The scheduler's clock always operates in the UTC time zone for uniformity, so any time zone logic must be
    performed by the contract, using ``ZonedDateTime``.
@@ -58,12 +57,14 @@ handler to help with obtaining a unqiue and secure random session.  An example i
 The production and consumption of ``ContractStates`` is observed by the scheduler and the activities associated with
 any consumed states are unscheduled.  Any newly produced states are then queried via the ``nextScheduledActivity``
 method and if they do not return ``null`` then that activity is scheduled based on the content of the
-``ScheduledActivity`` object returned.
+``ScheduledActivity`` object returned. Be aware that this *only* happens if the wallet considers the state
+"relevant", for instance, because the owner of the node also owns that state. States that your node happens to
+encounter but which aren't related to yourself will not have any activities scheduled.
 
 An example
 ----------
 
-Let's take an example of the Interest Rate Swap fixings for our scheduled events.  The first task is to implement the
+Let's take an example of the interest rate swap fixings for our scheduled events.  The first task is to implement the
 ``nextScheduledActivity`` method on the ``State``.
 
 
@@ -75,8 +76,6 @@ Let's take an example of the Interest Rate Swap fixings for our scheduled events
                                            protocolLogicRefFactory: ProtocolLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
 
-            // This is perhaps not how we should determine the time point in the business day, but instead expect the
-            // schedule to detail some of these aspects.
             val (instant, duration) = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name,
                                                                                 source = floatingLeg.indexSource,
                                                                                 date = nextFixingOf.forDay)
@@ -91,9 +90,10 @@ business process and to take on those roles.  That ``ProtocolLogic`` will be han
 rate swap ``State`` in question, as well as a tolerance ``Duration`` of how long to wait after the activity is triggered
 for the interest rate before indicating an error.
 
-.. note:: The use of the factory to create a ``ProtocolLogicRef`` instance to embed in the ``ScheduledActivity``.  This is a
-   way to create a reference to the ``ProtocolLogic`` class and it's constructor parameters to instantiate that can be
-   checked against a per node whitelist of approved and allowable types as part of our overall security sandboxing.
+.. note:: Observe the use of the factory to create a ``ProtocolLogicRef`` instance to embed in the ``ScheduledActivity``.
+   This is a way to create a reference to the ``ProtocolLogic`` class and it's constructor parameters to instantiate
+   that can be checked against a per node whitelist of approved and allowable types as part of our overall
+   security sandboxing.
 
 As previously mentioned, we currently need a small network handler to assist with session setup until the work to
 automate that is complete.  See the interest rate swap specific implementation ``FixingSessionInitiationHandler`` which
