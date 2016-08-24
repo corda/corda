@@ -2,6 +2,8 @@
 // must also be in the default package. When using Kotlin there are a whole host of exceptions
 // trying to construct this from Capsule, so it is written in Java.
 
+import org.apache.commons.io.FilenameUtils;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
@@ -13,6 +15,9 @@ public class CordaCaplet extends Capsule {
         super(pred);
     }
 
+    /**
+     * Overriding the Caplet classpath generation via the intended interface in Capsule.
+     */
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T attribute(Map.Entry<String, T> attr) {
@@ -24,9 +29,8 @@ public class CordaCaplet extends Capsule {
         return super.attribute(attr);
     }
 
-    // TODO: If/when capsule fix the globbing issue (See: https://github.com/puniverse/capsule/issues/109)
-    //       then replace this with a simple glob
-    // TODO: Make directory configurable
+    // TODO: Make directory configurable via the capsule manifest.
+    // TODO: Add working directory variable to capsules string replacement variables.
     private List<Path> augmentClasspath(List<Path> classpath) {
         File dir = new File("plugins");
         if(!dir.exists()) {
@@ -35,7 +39,8 @@ public class CordaCaplet extends Capsule {
 
         File[] files = dir.listFiles();
         for (File file : files) {
-            if (file.isFile()) {
+            Boolean isJAR = FilenameUtils.getExtension(file.getName()).toLowerCase() == "jar";
+            if (file.isFile() && isJAR) {
                 classpath.add(file.toPath().toAbsolutePath());
             }
         }
