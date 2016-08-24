@@ -35,10 +35,10 @@ construction, where message handlers should be registered and threads started.
 Starting Nodes
 --------------
 
-To use an app you must also have a node server. To create a node server run the gradle createStandalone task.
+To use an app you must also have a node server. To create a node server run the gradle installTemplateNodes task.
 
-This will output the node JAR to ``build/libs/r3prototyping-x.y-SNAPSHOT-capsule.jar`` and several sample/standard
-node servers to ``build/standalone``. For now you can use the ``build/standalone/nodea`` configuration as a template.
+This will output the node JAR to ``build/libs/corda.jar`` and several sample/standard
+node servers to ``build/nodes``. For now you can use the ``build/nodes/nodea`` configuration as a template.
 
 Each node server must have a ``node.conf`` file in the same directory as the node JAR file. After first
 execution of the node server there will be many other configuration and persistence files created in this directory.
@@ -58,7 +58,7 @@ Starting your Node
 
 Now you have a node server with your Cordapp installed, you can run it by navigating to ``<node_dir>`` and running
 
-    java -jar r3prototyping-x.y-SNAPSHOT-capsule.jar
+    java -jar corda.jar
 
 The plugin should automatically be registered and the configuration file used.
 
