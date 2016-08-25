@@ -39,6 +39,10 @@ public class DeflaterOutputStream extends FilterOutputStream {
     write(buffer, 0, 1);
   }
 
+  public void write(byte[] b) throws IOException {
+    write(b, 0, b.length);
+  }
+
   public void write(byte[] b, int offset, int length) throws IOException {
     // error condition checking
     if (deflater.finished()) {
