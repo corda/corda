@@ -18,10 +18,8 @@ abstract class AbstractIssue<in S: ContractState, T: Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,
         val sumOrZero: List<S>.(token: Issued<T>) -> Amount<Issued<T>>
 ) : GroupClause<S, Issued<T>> {
-    override val ifMatched: MatchBehaviour
-        get() = MatchBehaviour.END
-    override val ifNotMatched: MatchBehaviour
-        get() = MatchBehaviour.CONTINUE
+    override val ifMatched = MatchBehaviour.END
+    override val ifNotMatched = MatchBehaviour.CONTINUE
 
     override fun verify(tx: TransactionForContract,
                         inputs: List<S>,

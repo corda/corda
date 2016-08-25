@@ -17,6 +17,8 @@ import java.util.*
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+// TODO: The generate functions aren't tested by these tests: add them.
+
 interface ICommercialPaperTestTemplate {
     fun getPaper(): ICommercialPaperState
     fun getIssueCommand(notary: Party): CommandData
@@ -32,8 +34,8 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
             TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Issue(notary)
-    override fun getRedeemCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Redeem(notary)
+    override fun getIssueCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Issue()
+    override fun getRedeemCommand(notary: Party): CommandData = JavaCommercialPaper.Commands.Redeem()
     override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
 }
 
@@ -45,8 +47,8 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
             maturityDate = TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue(notary)
-    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem(notary)
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaper.Commands.Issue()
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaper.Commands.Redeem()
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
 }
 
@@ -58,8 +60,8 @@ class KotlinCommercialPaperLegacyTest() : ICommercialPaperTestTemplate {
             maturityDate = TEST_TX_TIME + 7.days
     )
 
-    override fun getIssueCommand(notary: Party): CommandData = CommercialPaperLegacy.Commands.Issue(notary)
-    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaperLegacy.Commands.Redeem(notary)
+    override fun getIssueCommand(notary: Party): CommandData = CommercialPaperLegacy.Commands.Issue()
+    override fun getRedeemCommand(notary: Party): CommandData = CommercialPaperLegacy.Commands.Redeem()
     override fun getMoveCommand(): CommandData = CommercialPaperLegacy.Commands.Move()
 }
 

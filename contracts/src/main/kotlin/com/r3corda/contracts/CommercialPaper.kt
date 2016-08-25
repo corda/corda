@@ -5,7 +5,10 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.*
+import com.r3corda.core.contracts.clauses.GroupClause
+import com.r3corda.core.contracts.clauses.GroupClauseVerifier
+import com.r3corda.core.contracts.clauses.MatchBehaviour
+import com.r3corda.core.contracts.clauses.verifyClauses
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -108,7 +111,7 @@ class CommercialPaper : Contract {
                                 commands: Collection<AuthenticatedObject<CommandData>>,
                                 token: Issued<Terms>): Set<CommandData> {
                 val consumedCommands = super.verify(tx, inputs, outputs, commands, token)
-                val command = commands.requireSingleCommand<Commands.Issue>()
+                commands.requireSingleCommand<Commands.Issue>()
                 val timestamp = tx.timestamp
                 val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
 
@@ -170,8 +173,8 @@ class CommercialPaper : Contract {
 
     interface Commands : CommandData {
         class Move : TypeOnlyCommandData(), Commands
-        data class Redeem(val notary: Party) : Commands
-        data class Issue(val notary: Party, override val nonce: Long = random63BitValue()) : IssueCommand, Commands
+        class Redeem : TypeOnlyCommandData(), Commands
+        data class Issue(override val nonce: Long = random63BitValue()) : IssueCommand, Commands
     }
 
     /**
@@ -181,7 +184,7 @@ class CommercialPaper : Contract {
      */
     fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant, notary: Party): TransactionBuilder {
         val state = TransactionState(State(issuance, issuance.party.owningKey, faceValue, maturityDate), notary)
-        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(notary), issuance.party.owningKey))
+        return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
@@ -206,7 +209,7 @@ class CommercialPaper : Contract {
         val amount = paper.state.data.faceValue.let { amount -> Amount(amount.quantity, amount.token.product) }
         Cash().generateSpend(tx, amount, paper.state.data.owner, wallet)
         tx.addInputState(paper)
-        tx.addCommand(CommercialPaper.Commands.Redeem(paper.state.notary), paper.state.data.owner)
+        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.data.owner)
     }
 }
 

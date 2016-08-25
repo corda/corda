@@ -3,19 +3,17 @@ package com.r3corda.contracts;
 import com.google.common.collect.*;
 import com.r3corda.contracts.asset.*;
 import com.r3corda.core.contracts.*;
-import static com.r3corda.core.contracts.ContractsDSL.requireThat;
-
 import com.r3corda.core.contracts.Timestamp;
 import com.r3corda.core.contracts.TransactionForContract.*;
 import com.r3corda.core.contracts.clauses.*;
 import com.r3corda.core.crypto.*;
-import kotlin.Unit;
+import kotlin.*;
 import org.jetbrains.annotations.*;
 
 import java.security.*;
 import java.time.*;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.stream.*;
 
 import static com.r3corda.core.contracts.ContractsDSL.*;
 import static kotlin.collections.CollectionsKt.*;
@@ -26,10 +24,9 @@ import static kotlin.collections.CollectionsKt.*;
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  */
 public class JavaCommercialPaper implements Contract {
-    //public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
-    public static class State implements ContractState, ICommercialPaperState {
+    public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
         private PublicKey owner;
         private Amount<Issued<Currency>> faceValue;
@@ -54,6 +51,12 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
+        @NotNull
+        @Override
+        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
+            return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
+        }
+
         public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
             return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
         }
@@ -70,6 +73,7 @@ public class JavaCommercialPaper implements Contract {
             return issuance;
         }
 
+        @NotNull
         public PublicKey getOwner() {
             return owner;
         }
@@ -86,7 +90,6 @@ public class JavaCommercialPaper implements Contract {
         @Override
         public Contract getContract() {
             return JCP_PROGRAM_ID;
-            //return SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
         }
 
         @Override
@@ -258,7 +261,6 @@ public class JavaCommercialPaper implements Contract {
                                            @NotNull State token) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
-                Party notary = cmd.getValue().notary;
                 Timestamp timestampCommand = tx.getTimestamp();
                 Instant time = null == timestampCommand
                         ? null
@@ -285,35 +287,13 @@ public class JavaCommercialPaper implements Contract {
         }
 
         class Redeem implements Commands {
-            private final Party notary;
-
-            public  Redeem(Party setNotary) {
-                this.notary = setNotary;
-            }
-
             @Override
             public boolean equals(Object obj) { return obj instanceof Redeem; }
         }
 
         class Issue implements Commands {
-            private final Party notary;
-
-            public  Issue(Party setNotary) {
-                this.notary = setNotary;
-            }
-
             @Override
-            public boolean equals(Object obj) {
-                if (obj instanceof Issue) {
-                    Issue other = (Issue)obj;
-                    return notary.equals(other.notary);
-                } else {
-                    return false;
-                }
-            }
-
-            @Override
-            public int hashCode() { return notary.hashCode(); }
+            public boolean equals(Object obj) { return obj instanceof Issue; }
         }
     }
 
@@ -340,13 +320,13 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary);
-        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
+        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
         new Cash().generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), wallet, null);
         tx.addInputState(paper);
-        tx.addCommand(new Command(new Commands.Redeem(paper.getState().getNotary()), paper.getState().getData().getOwner()));
+        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
