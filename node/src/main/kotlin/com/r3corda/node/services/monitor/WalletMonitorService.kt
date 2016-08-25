@@ -173,7 +173,8 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
         // TODO: Have some way of restricting this to states the caller controls
         try {
             Cash().generateSpend(builder, Amount(req.pennies, req.tokenDef.product), req.owner,
-                    services.walletService.currentWallet.statesOfType<Cash.State>(),
+                    // TODO: Move cash state filtering by issuer down to the contract itself
+                    services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.amount.token == req.tokenDef },
                     setOf(req.tokenDef.issuer.party))
             .forEach {
                 val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
