@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Creates three nodes. A network map and notary node and two regular nodes that can be extended with cordapps.
+
 set -euo pipefail
 trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
 export CAPSULE_CACHE_DIR=cache
