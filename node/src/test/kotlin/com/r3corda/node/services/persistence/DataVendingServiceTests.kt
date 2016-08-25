@@ -41,12 +41,9 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction()
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
-        val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
+        DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
                 walletServiceNode.info, tx)
-
-        // Check it was accepted
         network.runNetwork()
-        notifyPsm.get(1, TimeUnit.SECONDS)
 
         // Check the transaction is in the receiving node
         val actual = walletServiceNode.services.walletService.currentWallet.states.singleOrNull()
@@ -73,14 +70,9 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction(false)
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
-        val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
+        DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
                 walletServiceNode.info, tx)
-
-        // Check it was not accepted
         network.runNetwork()
-        assertFailsWith<DataVending.Service.TransactionRejectedError> {
-            rootCauseExceptions { notifyPsm.get() }
-        }
 
         // Check the transaction is not in the receiving node
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)

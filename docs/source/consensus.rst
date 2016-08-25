@@ -98,9 +98,26 @@ To run one of these services the node has to simply specify either ``SimpleNotar
 Obtaining a signature
 ---------------------
 
-To obtain a signature from a notary use ``NotaryProtocol.Client``, passing in a ``WireTransaction``.
-The protocol will work out which notary needs to be called based on the input states and the timestamp command.
-For example, the following snippet can be used when writing a custom protocol:
+Once a transaction is built and ready to be finalised, normally you would call ``FinalityProtocol`` passing in a
+``SignedTransaction`` (including signatures from the participants) and a list of participants to notify. This requests a
+notary signature if needed, and then sends a copy of the notarised transaction to all participants for them to store.
+``FinalityProtocol`` delegates to ``NotaryProtocol.Client`` followed by ``BroadcastTransactionProtocol`` to do the
+actual work of notarising and broadcasting the transaction. For example:
+
+.. sourcecode:: kotlin
+
+    fun finaliseTransaction(serviceHub: ServiceHubInternal, ptx: TransactionBuilder, participants: Set<Party>)
+            : ListenableFuture<Unit> {
+        // We conclusively cannot have all the signatures, as the notary has not signed yet
+        val tx = ptx.toSignedTransaction(checkSufficientSignatures = false)
+        // The empty set would be the trigger events, which are not used here
+        val protocol = FinalityProtocol(tx, emptySet(), participants)
+        return serviceHub.startProtocol("protocol.finalisation", protocol)
+    }
+
+To manually obtain a signature from a notary you can call ``NotaryProtocol.Client`` directly. The protocol will work out
+which notary needs to be called based on the input states and the timestamp command. For example, the following snippet
+can be used when writing a custom protocol:
 
 .. sourcecode:: kotlin
 

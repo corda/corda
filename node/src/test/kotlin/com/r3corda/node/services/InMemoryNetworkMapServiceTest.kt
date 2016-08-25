@@ -114,7 +114,7 @@ class InMemoryNetworkMapServiceTest {
 
         // Confirm all nodes have registered themselves
         network.runNetwork()
-        var fetchPsm = registerNode.smm.add(NetworkMapService.FETCH_PROTOCOL_TOPIC, TestFetchPSM(mapServiceNode.info, false))
+        var fetchPsm = registerNode.services.startProtocol(NetworkMapService.FETCH_PROTOCOL_TOPIC, TestFetchPSM(mapServiceNode.info, false))
         network.runNetwork()
         assertEquals(2, fetchPsm.get()?.count())
 
@@ -123,12 +123,12 @@ class InMemoryNetworkMapServiceTest {
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val seq = 2L
         val reg = NodeRegistration(registerNode.info, seq, AddOrRemove.REMOVE, expires)
-        val registerPsm = registerNode.smm.add(NetworkMapService.REGISTER_PROTOCOL_TOPIC, TestRegisterPSM(mapServiceNode.info, reg, nodeKey.private))
+        val registerPsm = registerNode.services.startProtocol(NetworkMapService.REGISTER_PROTOCOL_TOPIC, TestRegisterPSM(mapServiceNode.info, reg, nodeKey.private))
         network.runNetwork()
         assertTrue(registerPsm.get().success)
 
         // Now only map service node should be registered
-        fetchPsm = registerNode.smm.add(NetworkMapService.FETCH_PROTOCOL_TOPIC, TestFetchPSM(mapServiceNode.info, false))
+        fetchPsm = registerNode.services.startProtocol(NetworkMapService.FETCH_PROTOCOL_TOPIC, TestFetchPSM(mapServiceNode.info, false))
         network.runNetwork()
         assertEquals(mapServiceNode.info, fetchPsm.get()?.filter { it.type == AddOrRemove.ADD }?.map { it.node }?.single())
     }
@@ -140,7 +140,7 @@ class InMemoryNetworkMapServiceTest {
 
         // Test subscribing to updates
         network.runNetwork()
-        val subscribePsm = registerNode.smm.add(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
+        val subscribePsm = registerNode.services.startProtocol(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
                 TestSubscribePSM(mapServiceNode.info, true))
         network.runNetwork()
         subscribePsm.get()
@@ -161,7 +161,7 @@ class InMemoryNetworkMapServiceTest {
 
         // Send in an acknowledgment and verify the count goes down
         val hash = SecureHash.sha256(wireReg.raw.bits)
-        val acknowledgePsm = registerNode.smm.add(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC,
+        val acknowledgePsm = registerNode.services.startProtocol(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC,
                 TestAcknowledgePSM(mapServiceNode.info, hash))
         network.runNetwork()
         acknowledgePsm.get()

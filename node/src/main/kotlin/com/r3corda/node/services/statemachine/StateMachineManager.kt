@@ -12,6 +12,7 @@ import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.serialization.*
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.trace
@@ -215,7 +216,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
      */
-    fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
+    fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
         val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
         // Need to add before iterating in case of immediate completion
         initFiber(fiber) {
@@ -244,7 +245,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
             if (e.cause !is ExecutionException)
                 throw e
         }
-        return fiber.resultFuture
+        return fiber
     }
 
     private fun updateCheckpoint(psm: ProtocolStateMachineImpl<*>,

@@ -182,7 +182,7 @@ private fun runSeller(node: Node, amount: Amount<Currency>, otherSide: Party) {
         tradeTX = node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).single().second
     } else {
         val seller = TraderDemoProtocolSeller(otherSide, amount)
-        tradeTX = node.smm.add("demo.seller", seller)
+        tradeTX = node.services.startProtocol("demo.seller", seller)
     }
 
     tradeTX.success {
@@ -217,7 +217,7 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
         // We use a simple scenario-specific wrapper protocol to make things happen.
         val otherSide = message.data.deserialize<Party>()
         val buyer = TraderDemoProtocolBuyer(otherSide, attachmentsPath, amount)
-        node.smm.add("demo.buyer", buyer)
+        node.services.startProtocol("demo.buyer", buyer)
     }
 }
 
