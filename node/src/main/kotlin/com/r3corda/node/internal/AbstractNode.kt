@@ -164,8 +164,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val storageServices = initialiseStorageService(dir)
         storage = storageServices.first
         checkpointStorage = storageServices.second
-        net = makeMessagingService()
         netMapCache = InMemoryNetworkMapCache()
+        net = makeMessagingService()
         wallet = makeWalletService()
 
         identity = makeIdentityService()

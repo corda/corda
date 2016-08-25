@@ -374,7 +374,7 @@ private fun runTrade(cliParams: CliParams.Trade): Int {
 
 private fun createRecipient(addr: String): SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
-    return ArtemisMessagingClient.makeRecipient(hostAndPort)
+    return ArtemisMessagingClient.makeNetworkMapAddress(hostAndPort)
 }
 
 private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient): Node {

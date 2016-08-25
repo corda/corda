@@ -140,7 +140,7 @@ fun main(args: Array<String>) {
         val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
         val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        NodeInfo(ArtemisMessagingClient.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
+        NodeInfo(ArtemisMessagingClient.makeNetworkMapAddress(theirNetAddr), party, setOf(NetworkMapService.Type))
     }
 
     // And now construct then start the node object. It takes a little while.

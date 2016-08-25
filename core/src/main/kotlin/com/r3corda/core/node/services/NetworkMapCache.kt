@@ -20,8 +20,8 @@ interface NetworkMapCache {
         val logger = LoggerFactory.getLogger(NetworkMapCache::class.java)
     }
 
-    enum class MapChangeType { Added, Removed }
-    data class MapChange(val node: NodeInfo, val type: MapChangeType )
+    enum class MapChangeType { Added, Removed, Modified }
+    data class MapChange(val node: NodeInfo, val prevNodeInfo: NodeInfo?, val type: MapChangeType )
 
     /** A list of nodes that advertise a network map service */
     val networkMapNodes: List<NodeInfo>

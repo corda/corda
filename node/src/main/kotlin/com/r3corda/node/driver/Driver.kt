@@ -63,9 +63,8 @@ interface DriverDSLExposedInterface {
      *
      * @param providedName name of the client, which will be used for creating its directory.
      * @param serverAddress the artemis server to connect to, for example a [Node].
-     * @param clientAddress the address of the client (this is not bound by the client!), defaults to [serverAddress] if null.
      */
-    fun startClient(providedName: String, serverAddress: HostAndPort, clientAddress: HostAndPort?): Future<ArtemisMessagingClient>
+    fun startClient(providedName: String, serverAddress: HostAndPort): Future<ArtemisMessagingClient>
     /**
      * Starts a local [ArtemisMessagingServer] of which there may only be one.
      */
@@ -75,13 +74,12 @@ interface DriverDSLExposedInterface {
 }
 
 fun DriverDSLExposedInterface.startClient(localServer: ArtemisMessagingServer) =
-        startClient("driver-local-server-client", localServer.myHostPort, localServer.myHostPort)
+        startClient("driver-local-server-client", localServer.myHostPort)
 
 fun DriverDSLExposedInterface.startClient(remoteNodeInfo: NodeInfo, providedName: String? = null) =
         startClient(
                 providedName = providedName ?: "${remoteNodeInfo.identity.name}-client",
-                serverAddress = (remoteNodeInfo.address as ArtemisMessagingComponent.Address).hostAndPort,
-                clientAddress = null
+                serverAddress = ArtemisMessagingComponent.toHostAndPort(remoteNodeInfo.address)
         )
 
 interface DriverDSLInternalInterface : DriverDSLExposedInterface {
@@ -224,6 +222,7 @@ class DriverDSL(
     private val networkMapName = "NetworkMapService"
     private val networkMapAddress = portAllocation.nextHostAndPort()
     private var networkMapNodeInfo: NodeInfo? = null
+    private val identity = generateKeyPair()
 
     class State {
         val registeredProcesses = LinkedList<Process>()
@@ -322,8 +321,7 @@ class DriverDSL(
 
     override fun startClient(
             providedName: String,
-            serverAddress: HostAndPort,
-            clientAddress: HostAndPort?
+            serverAddress: HostAndPort
     ): Future<ArtemisMessagingClient> {
 
         val nodeConfiguration = NodeConfigurationFromConfig(
@@ -339,8 +337,9 @@ class DriverDSL(
                 Paths.get(baseDirectory, providedName),
                 nodeConfiguration,
                 serverHostPort = serverAddress,
-                myHostPort = clientAddress ?: serverAddress,
-                executor = AffinityExecutor.ServiceAffinityExecutor(providedName, 1)
+                myIdentity = identity.public,
+                executor = AffinityExecutor.ServiceAffinityExecutor(providedName, 1),
+                persistentInbox = false // Do not create a permanent queue for our transient UI identity
         )
 
         return Executors.newSingleThreadExecutor().submit(Callable<ArtemisMessagingClient> {
@@ -368,7 +367,8 @@ class DriverDSL(
         val server = ArtemisMessagingServer(
                 Paths.get(baseDirectory, name),
                 config,
-                portAllocation.nextHostAndPort()
+                portAllocation.nextHostAndPort(),
+                networkMapCache
         )
         return Executors.newSingleThreadExecutor().submit(Callable<ArtemisMessagingServer> {
             server.configureWithDevSSLCertificate()
@@ -383,11 +383,11 @@ class DriverDSL(
 
     override fun start() {
         startNetworkMapService()
-        val networkMapClient = startClient("driver-$networkMapName-client", networkMapAddress, portAllocation.nextHostAndPort()).get()
+        val networkMapClient = startClient("driver-$networkMapName-client", networkMapAddress).get()
         // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
         // the network map service itself.
         val fakeNodeInfo = NodeInfo(
-                address = ArtemisMessagingClient.makeRecipient(networkMapAddress),
+                address = ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress),
                 identity = Party(
                         name = networkMapName,
                         owningKey = generateKeyPair().public

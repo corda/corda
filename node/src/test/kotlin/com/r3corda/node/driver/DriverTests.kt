@@ -4,7 +4,6 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
-import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import org.junit.Test
 
@@ -12,7 +11,7 @@ import org.junit.Test
 class DriverTests {
     companion object {
         fun nodeMustBeUp(networkMapCache: NetworkMapCache, nodeInfo: NodeInfo, nodeName: String) {
-            val address = nodeInfo.address as ArtemisMessagingComponent.Address
+            val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
             // Check that the node is registered in the network map
             poll("network map cache for $nodeName") {
                 networkMapCache.get().firstOrNull {
@@ -20,13 +19,13 @@ class DriverTests {
                 }
             }
             // Check that the port is bound
-            addressMustBeBound(address.hostAndPort)
+            addressMustBeBound(hostAndPort)
         }
 
         fun nodeMustBeDown(nodeInfo: NodeInfo) {
-            val address = nodeInfo.address as ArtemisMessagingComponent.Address
+            val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
             // Check that the port is bound
-            addressMustNotBeBound(address.hostAndPort)
+            addressMustNotBeBound(hostAndPort)
         }
     }
 

@@ -5,7 +5,6 @@ import com.r3corda.core.ThreadBox
 import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.opaque
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.node.internal.Node
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.utilities.AffinityExecutor
@@ -14,8 +13,8 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.security.PublicKey
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
@@ -31,14 +30,19 @@ import javax.annotation.concurrent.ThreadSafe
  * through into Artemis and from there, back through to senders.
  *
  * @param serverHostPort The address of the broker instance to connect to (might be running in the same process)
- * @param myHostPort What host and port to use as an address for incoming messages
+ * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
+ * that this is a NetworkMapService node which will be bound globally to the name "networkmap"
+ * @param executor An executor to run received message tasks upon.
+ * @param persistentInbox If true the inbox will be created persistent if not already created.
+ * If false the inbox queue will be transient, which is appropriate for UI clients for example.
  */
 @ThreadSafe
 class ArtemisMessagingClient(directory: Path,
                              config: NodeConfiguration,
                              val serverHostPort: HostAndPort,
-                             val myHostPort: HostAndPort,
-                             val executor: AffinityExecutor) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
+                             val myIdentity: PublicKey?,
+                             val executor: AffinityExecutor,
+                             val persistentInbox: Boolean = true) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<ArtemisMessagingClient>()
 
@@ -50,17 +54,19 @@ class ArtemisMessagingClient(directory: Path,
 
         val SESSION_ID_PROPERTY = "session-id"
 
-        /** Temp helper until network map is established. */
-        fun makeRecipient(hostAndPort: HostAndPort): SingleMessageRecipient = Address(hostAndPort)
-
-        fun makeRecipient(hostname: String) = makeRecipient(toHostAndPort(hostname))
-        fun toHostAndPort(hostname: String) = HostAndPort.fromString(hostname).withDefaultPort(Node.DEFAULT_PORT)
+        /**
+         * This should be the only way to generate an ArtemisAddress and that only of the remote NetworkMapService node.
+         * All other addresses come from the NetworkMapCache, or myAddress below.
+         * The node will populate with their own identity based address when they register with the NetworkMapService.
+         */
+        fun makeNetworkMapAddress(hostAndPort: HostAndPort): SingleMessageRecipient = NetworkMapAddress(hostAndPort)
     }
 
     private class InnerState {
         var started = false
         var running = false
-        val producers = HashMap<Address, ClientProducer>()
+        val knownQueues = mutableSetOf<SimpleString>()
+        var producer: ClientProducer? = null
         var consumer: ClientConsumer? = null
         var session: ClientSession? = null
         var clientFactory: ClientSessionFactory? = null
@@ -71,7 +77,10 @@ class ArtemisMessagingClient(directory: Path,
                        val topicSession: TopicSession,
                        val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
-    override val myAddress: SingleMessageRecipient = Address(myHostPort)
+    /**
+     * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
+     */
+    override val myAddress: SingleMessageRecipient = if (myIdentity != null) NodeAddress(myIdentity, serverHostPort) else NetworkMapAddress(serverHostPort)
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
@@ -94,14 +103,20 @@ class ArtemisMessagingClient(directory: Path,
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
             clientFactory = locator.createSessionFactory()
 
-            // Create a queue on which to receive messages and set up the handler.
-            val session = clientFactory!!.createSession()
+            // Create a session and configure to commit manually after each acknowledge. (N.B. ackBatchSize is in Bytes!!!)
+            val session = clientFactory!!.createSession(true, true, 1)
             this.session = session
 
-            val address = myHostPort.toString()
-            val queueName = myHostPort.toString()
-            session.createQueue(address, queueName, false)
+            // Create a queue on which to receive messages and set up the handler.
+            val queueName = toQueueName(myAddress)
+            val query = session.queueQuery(queueName)
+            if (!query.isExists) {
+                session.createQueue(queueName, queueName, persistentInbox)
+            }
+            knownQueues.add(queueName)
             consumer = session.createConsumer(queueName)
+            producer = session.createProducer()
+
             session.start()
         }
     }
@@ -166,6 +181,7 @@ class ArtemisMessagingClient(directory: Path,
             }
             val topic = message.getStringProperty(TOPIC_PROPERTY)
             val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
+            log.info("received message from: ${message.address} topic: $topic sessionID: $sessionID")
 
             val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
 
@@ -243,9 +259,10 @@ class ArtemisMessagingClient(directory: Path,
             shutdownLatch.await()
         }
         state.locked {
-            for (producer in producers.values) producer.close()
-            producers.clear()
-
+            producer?.close()
+            producer = null
+            // Ensure any trailing messages are committed to the journal
+            session!!.commit()
             // Closing the factory closes all the sessions it produced as well.
             clientFactory!!.close()
             clientFactory = null
@@ -253,9 +270,7 @@ class ArtemisMessagingClient(directory: Path,
     }
 
     override fun send(message: Message, target: MessageRecipients) {
-        if (target !is Address)
-            TODO("Only simple sends to single recipients are currently implemented")
-
+        val queueName = toQueueName(target)
         state.locked {
             val artemisMessage = session!!.createMessage(true).apply {
                 val sessionID = message.topicSession.sessionID
@@ -264,21 +279,20 @@ class ArtemisMessagingClient(directory: Path,
                 writeBodyBufferBytes(message.data)
             }
 
-            val producer = producers.getOrPut(target) {
-                if (target != myAddress)
-                    maybeCreateQueue(target.hostAndPort)
-                session!!.createProducer(target.hostAndPort.toString())
+            if (knownQueues.add(queueName)) {
+                maybeCreateQueue(queueName)
             }
-            producer.send(artemisMessage)
+            log.info("send to: $queueName topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID}")
+            producer!!.send(queueName, artemisMessage)
         }
     }
 
-    private fun maybeCreateQueue(hostAndPort: HostAndPort) {
+    private fun maybeCreateQueue(queueName: SimpleString) {
         state.alreadyLocked {
-            val name = hostAndPort.toString()
-            val queueQuery = session!!.queueQuery(SimpleString(name))
+            val queueQuery = session!!.queueQuery(queueName)
             if (!queueQuery.isExists) {
-                session!!.createQueue(name, name, true /* durable */)
+                log.info("create client queue $queueName")
+                session!!.createQueue(queueName, queueName, true /* durable */)
             }
         }
     }

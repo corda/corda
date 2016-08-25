@@ -98,13 +98,17 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     }
 
     override fun addNode(node: NodeInfo) {
-        registeredNodes[node.identity] = node
-        _changed.onNext(MapChange(node, MapChangeType.Added))
+        val oldValue = registeredNodes.put(node.identity, node)
+        if (oldValue == null) {
+            _changed.onNext(MapChange(node, oldValue, MapChangeType.Added))
+        } else if(oldValue != node) {
+            _changed.onNext(MapChange(node, oldValue, MapChangeType.Modified))
+        }
     }
 
     override fun removeNode(node: NodeInfo) {
-        registeredNodes.remove(node.identity)
-        _changed.onNext(MapChange(node, MapChangeType.Removed))
+        val oldValue = registeredNodes.remove(node.identity)
+        _changed.onNext(MapChange(node, oldValue, MapChangeType.Removed))
     }
 
     /**
