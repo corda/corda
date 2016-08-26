@@ -2,6 +2,7 @@ package com.r3corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
+import com.r3corda.core.crypto.AddressFormatException
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
@@ -117,7 +118,7 @@ class ArtemisMessagingServer(directory: Path,
     }
 
     private fun configureAndStartServer() {
-        val config = createArtemisConfig(directory, myHostPort).apply {
+        val config = createArtemisConfig(certificatePath, myHostPort).apply {
             securityRoles = mapOf(
                     "#" to setOf(Role("internal", true, true, true, true, true, true, true))
             )
@@ -128,18 +129,31 @@ class ArtemisMessagingServer(directory: Path,
         activeMQServer = ActiveMQServerImpl(config, securityManager).apply {
             // Throw any exceptions which are detected during startup
             registerActivationFailureListener { exception -> throw exception }
-            // Deploy bridge for a newly created queue
+
+            // Some types of queue might need special preparation on our side, like dialling back or preparing
+            // a lazily initialised subsystem.
             registerPostQueueCreationCallback { queueName ->
-                log.info("Queue created: $queueName")
-                if (queueName != NETWORK_MAP_ADDRESS) {
-                    val identity = tryParseKeyFromQueueName(queueName)
-                    if (identity != null) {
+                log.debug("Queue created: $queueName")
+                if (queueName.startsWith(PEERS_PREFIX) && queueName != NETWORK_MAP_ADDRESS) {
+                    try {
+                        val identity = parseKeyFromQueueName(queueName.toString())
                         val nodeInfo = networkMapCache.getNodeByPublicKey(identity)
                         if (nodeInfo != null) {
                             maybeDeployBridgeForAddress(queueName, nodeInfo.address)
+                        } else {
+                            log.error("Queue created for a peer that we don't know from the network map: $queueName")
                         }
+                    } catch (e: AddressFormatException) {
+                        log.error("Protocol violation: Could not parse queue name as Base 58: $queueName")
                     }
                 }
+            }
+
+            registerPostQueueDeletionCallback { address, qName ->
+                if (qName == address)
+                    log.debug("Queue deleted: $qName")
+                else
+                    log.debug("Queue deleted: $qName for $address")
             }
         }
         activeMQServer.start()
@@ -148,7 +162,6 @@ class ArtemisMessagingServer(directory: Path,
     private fun createArtemisConfig(directory: Path, hp: HostAndPort): Configuration {
         val config = ConfigurationImpl()
         setConfigDirectories(config, directory)
-        // We will be talking to our server purely in memory.
         config.acceptorConfigurations = setOf(
                 tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port)
         )
@@ -166,9 +179,9 @@ class ArtemisMessagingServer(directory: Path,
         return ActiveMQJAASSecurityManager(InVMLoginModule::class.java.name, securityConfig)
     }
 
-    fun connectorExists(hostAndPort: HostAndPort) = hostAndPort.toString() in activeMQServer.configuration.connectorConfigurations
+    private fun connectorExists(hostAndPort: HostAndPort) = hostAndPort.toString() in activeMQServer.configuration.connectorConfigurations
 
-    fun addConnector(hostAndPort: HostAndPort) = activeMQServer.configuration.addConnectorConfiguration(
+    private fun addConnector(hostAndPort: HostAndPort) = activeMQServer.configuration.addConnectorConfiguration(
             hostAndPort.toString(),
             tcpTransport(
                     ConnectionDirection.OUTBOUND,
@@ -177,37 +190,32 @@ class ArtemisMessagingServer(directory: Path,
             )
     )
 
-    fun bridgeExists(name: SimpleString) = activeMQServer.clusterManager.bridges.containsKey(name.toString())
+    private fun bridgeExists(name: SimpleString) = activeMQServer.clusterManager.bridges.containsKey(name.toString())
 
-    fun deployBridge(hostAndPort: HostAndPort, name: SimpleString) = activeMQServer.deployBridge(BridgeConfiguration().apply {
-        val nameStr = name.toString()
-        setName(nameStr)
-        queueName = nameStr
-        forwardingAddress = nameStr
-        staticConnectors = listOf(hostAndPort.toString())
-        confirmationWindowSize = 100000 // a guess
-    })
+    private fun deployBridge(hostAndPort: HostAndPort, name: SimpleString) {
+        activeMQServer.deployBridge(BridgeConfiguration().apply {
+            val nameStr = name.toString()
+            setName(nameStr)
+            queueName = nameStr
+            forwardingAddress = nameStr
+            staticConnectors = listOf(hostAndPort.toString())
+            confirmationWindowSize = 100000 // a guess
+        })
+    }
 
     /**
      * For every queue created we need to have a bridge deployed in case the address of the queue
-     * is that of a remote party
+     * is that of a remote party.
      */
-    private fun maybeDeployBridgeForAddress(name: SimpleString, address: SingleMessageRecipient) {
-        val hostAndPort = toHostAndPort(address)
-
-        if (hostAndPort == myHostPort) {
+    private fun maybeDeployBridgeForAddress(name: SimpleString, nodeInfo: SingleMessageRecipient) {
+        require(name.startsWith(PEERS_PREFIX))
+        val hostAndPort = toHostAndPort(nodeInfo)
+        if (hostAndPort == myHostPort)
             return
-        }
-
-        if (!connectorExists(hostAndPort)) {
-            log.info("add connector $hostAndPort")
+        if (!connectorExists(hostAndPort))
             addConnector(hostAndPort)
-        }
-
-        if (!bridgeExists(name)) {
-            log.info("add bridge $hostAndPort $name")
+        if (!bridgeExists(name))
             deployBridge(hostAndPort, name)
-        }
     }
 
     private fun maybeDestroyBridge(name: SimpleString) {

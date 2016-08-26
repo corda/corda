@@ -2,7 +2,9 @@ package com.r3corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
+import com.r3corda.core.div
 import com.r3corda.core.messaging.*
+import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.opaque
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -21,6 +23,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
 
+// TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
+
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
  * Artemis is a message queue broker and here we run a client connecting to the specified broker instance
@@ -29,6 +33,10 @@ import javax.annotation.concurrent.ThreadSafe
  * Message handlers are run on the provided [AffinityExecutor] synchronously, that is, the Artemis callback threads
  * are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given
  * executor through into Artemis and from there, back through to senders.
+ *
+ * An implementation of [CordaRPCOps] can be provided. If given, clients using the CordaMQClient RPC library can
+ * invoke methods on the provided implementation. There is more documentation on this in the docsite and the
+ * CordaRPCClient class.
  *
  * @param serverHostPort The address of the broker instance to connect to (might be running in the same process)
  * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
@@ -43,7 +51,9 @@ class NodeMessagingClient(directory: Path,
                           val serverHostPort: HostAndPort,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
-                          val persistentInbox: Boolean = true) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
+                          val persistentInbox: Boolean = true,
+                          private val rpcOps: CordaRPCOps? = null)
+: ArtemisMessagingComponent(directory / "certificates", config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
 
@@ -68,9 +78,12 @@ class NodeMessagingClient(directory: Path,
         var running = false
         val knownQueues = mutableSetOf<SimpleString>()
         var producer: ClientProducer? = null
-        var consumer: ClientConsumer? = null
+        var p2pConsumer: ClientConsumer? = null
         var session: ClientSession? = null
         var clientFactory: ClientSessionFactory? = null
+        // Consumer for inbound client RPC messages.
+        var rpcConsumer: ClientConsumer? = null
+        var rpcNotificationConsumer: ClientConsumer? = null
 
         // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
         var undeliveredMessages = listOf<Message>()
@@ -99,7 +112,7 @@ class NodeMessagingClient(directory: Path,
             started = true
 
             log.info("Connecting to server: $serverHostPort")
-            // Connect to our server.
+            // Connect to our server. TODO: This should use the in-VM transport.
             val tcpTransport = tcpTransport(ConnectionDirection.OUTBOUND, serverHostPort.hostText, serverHostPort.port)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
             clientFactory = locator.createSessionFactory()
@@ -107,30 +120,43 @@ class NodeMessagingClient(directory: Path,
             // Create a session and configure to commit manually after each acknowledge. (N.B. ackBatchSize is in Bytes!!!)
             val session = clientFactory!!.createSession(true, true, 1)
             this.session = session
+            session.start()
 
-            // Create a queue on which to receive messages and set up the handler.
+            // Create a general purpose producer.
+            producer = session.createProducer()
+
+            // Create a queue, consumer and producer for handling P2P network messages.
             val queueName = toQueueName(myAddress)
             val query = session.queueQuery(queueName)
             if (!query.isExists) {
                 session.createQueue(queueName, queueName, persistentInbox)
             }
             knownQueues.add(queueName)
-            consumer = session.createConsumer(queueName)
-            producer = session.createProducer()
+            p2pConsumer = session.createConsumer(queueName)
 
-            session.start()
+            // Create an RPC queue and consumer: this will service locally connected clients only (not via a
+            // bridge) and those clients must have authenticated. We could use a single consumer for everything
+            // and perhaps we should, but these queues are not worth persisting.
+            if (rpcOps != null) {
+                session.createTemporaryQueue(RPC_REQUESTS_QUEUE, RPC_REQUESTS_QUEUE)
+                session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
+                rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
+                rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
+            }
         }
     }
 
     private var shutdownLatch = CountDownLatch(1)
 
-    /** Starts the event loop: this method only returns once [stop] has been called. */
+    /** Starts the p2p event loop: this method only returns once [stop] has been called. */
     fun run() {
         val consumer = state.locked {
             check(started)
             check(!running) { "run can't be called twice" }
             running = true
-            consumer!!
+            // Optionally, start RPC dispatch.
+            dispatcher?.start(rpcConsumer!!, rpcNotificationConsumer!!, executor)
+            p2pConsumer!!
         }
 
         while (true) {
@@ -254,13 +280,13 @@ class NodeMessagingClient(directory: Path,
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(started)
 
-            val c = consumer ?: throw IllegalStateException("stop can't be called twice")
+            val c = p2pConsumer ?: throw IllegalStateException("stop can't be called twice")
             try {
                 c.close()
             } catch(e: ActiveMQObjectClosedException) {
                 // Ignore it: this can happen if the server has gone away before we do.
             }
-            consumer = null
+            p2pConsumer = null
             val prevRunning = running
             running = false
             prevRunning
@@ -272,6 +298,10 @@ class NodeMessagingClient(directory: Path,
         // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
         if (running) {
             state.locked {
+                rpcConsumer?.close()
+                rpcConsumer = null
+                rpcNotificationConsumer?.close()
+                rpcNotificationConsumer = null
                 producer?.close()
                 producer = null
                 // Ensure any trailing messages are committed to the journal
@@ -305,7 +335,7 @@ class NodeMessagingClient(directory: Path,
         state.alreadyLocked {
             val queueQuery = session!!.queueQuery(queueName)
             if (!queueQuery.isExists) {
-                log.info("create client queue $queueName")
+                log.info("Create fresh queue $queueName")
                 session!!.createQueue(queueName, queueName, true /* durable */)
             }
         }
@@ -346,6 +376,17 @@ class NodeMessagingClient(directory: Path,
         }
     }
 
-    override fun createMessage(topic: String, sessionID: Long, data: ByteArray): Message
-            = createMessage(TopicSession(topic, sessionID), data)
+    override fun createMessage(topic: String, sessionID: Long, data: ByteArray) = createMessage(TopicSession(topic, sessionID), data)
+
+    private fun createRPCDispatcher(ops: CordaRPCOps) = object : RPCDispatcher(ops) {
+        override fun send(bits: SerializedBytes<*>, toAddress: String) {
+            state.locked {
+                val msg = session!!.createMessage(false)
+                msg.writeBodyBufferBytes(bits.bits)
+                producer!!.send(toAddress, msg)
+            }
+        }
+    }
+
+    private val dispatcher = if (rpcOps != null) createRPCDispatcher(rpcOps) else null
 }

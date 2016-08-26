@@ -8,6 +8,8 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.newSecureRandom
 import org.slf4j.Logger
+import rx.Observable
+import rx.subjects.UnicastSubject
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.math.BigDecimal
@@ -262,4 +264,15 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
 
     // Monad
     fun <B> bind(function: (A) -> ErrorOr<B>) = value?.let(function) ?: ErrorOr.of(error!!)
+}
+
+/**
+ * Returns an observable that buffers events until subscribed.
+ *
+ * @see UnicastSubject
+ */
+fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
+    val subject = UnicastSubject.create<T>()
+    val subscription = subscribe(subject)
+    return subject.doOnUnsubscribe { subscription.unsubscribe() }
 }

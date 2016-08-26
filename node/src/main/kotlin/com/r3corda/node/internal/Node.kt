@@ -64,6 +64,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
            val messagingServerAddr: HostAndPort? = null) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
+        @JvmField
         val DEFAULT_PORT = 31337
     }
 
@@ -122,10 +123,11 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr, services.networkMapCache)
             p2pAddr
         }()
+        val ops = ServerRPCOps(services)
         if (networkMapService != null) {
-            return NodeMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread)
+            return NodeMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread, rpcOps = ops)
         } else {
-            return NodeMessagingClient(dir, configuration, serverAddr, null, serverThread)
+            return NodeMessagingClient(dir, configuration, serverAddr, null, serverThread, rpcOps = ops)
         }
     }
 

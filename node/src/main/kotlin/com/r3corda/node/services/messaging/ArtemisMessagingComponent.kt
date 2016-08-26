@@ -5,10 +5,12 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.parsePublicKeyBase58
 import com.r3corda.core.crypto.toBase58String
+import com.r3corda.core.div
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.core.use
+import com.r3corda.node.services.config.NodeSSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
@@ -16,21 +18,27 @@ import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactor
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.KeyStore
 import java.security.PublicKey
 
 /**
  * The base class for Artemis services that defines shared data structures and transport configuration
  *
- * @param directory A place where Artemis can stash its message journal and other files.
+ * @param certificatePath A place where Artemis can stash its message journal and other files.
  * @param config The config object is used to pass in the passwords for the certificate KeyStore and TrustStore
  */
-abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeConfiguration) : SingletonSerializeAsToken() {
-    private val keyStorePath = directory.resolve("certificates").resolve("sslkeystore.jks")
-    private val trustStorePath = directory.resolve("certificates").resolve("truststore.jks")
-
+abstract class ArtemisMessagingComponent(val certificatePath: Path, val config: NodeSSLConfiguration) : SingletonSerializeAsToken() {
+    val keyStorePath: Path = certificatePath / "sslkeystore.jks"
+    val trustStorePath: Path = certificatePath / "truststore.jks"
 
     companion object {
+        init {
+            System.setProperty("org.jboss.logging.provider", "slf4j")
+        }
+
         const val PEERS_PREFIX = "peers."
+        const val CLIENTS_PREFIX = "clients."
+        const val RPC_REQUESTS_QUEUE = "rpc.requests"
 
         @JvmStatic
         protected val NETWORK_MAP_ADDRESS = SimpleString(PEERS_PREFIX +"networkmap")
@@ -70,8 +78,12 @@ abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeCo
         override val queueName: SimpleString = NETWORK_MAP_ADDRESS
     }
 
-    // In future: can contain onion routing info, etc.
-    protected data class NodeAddress(val identity: PublicKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
+    /**
+     * This is the class used to implement [SingleMessageRecipient], for now. Note that in future this class
+     * may change or evolve and code that relies upon it being a simple host/port may not function correctly.
+     * For instance it may contain onion routing data.
+     */
+    data class NodeAddress(val identity: PublicKey, override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisAddress {
         override val queueName: SimpleString by lazy { SimpleString(PEERS_PREFIX+identity.toBase58String()) }
 
         override fun toString(): String {
@@ -79,18 +91,9 @@ abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeCo
         }
     }
 
-    protected fun tryParseKeyFromQueueName(queueName: SimpleString): PublicKey? {
-        val name = queueName.toString()
-        if(!name.startsWith(PEERS_PREFIX)) {
-            return null
-        }
-        val keyCode = name.substring(PEERS_PREFIX.length)
-        return try {
-            parsePublicKeyBase58(keyCode)
-        } catch (ex: Exception) {
-            null
-        }
-
+    protected fun parseKeyFromQueueName(name: String): PublicKey {
+        require(name.startsWith(PEERS_PREFIX))
+        return parsePublicKeyBase58(name.substring(PEERS_PREFIX.length))
     }
 
     protected enum class ConnectionDirection { INBOUND, OUTBOUND }
@@ -105,7 +108,21 @@ abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeCo
             "TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256",
             "TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256",
             "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
-            "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256")
+            "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256"
+    )
+
+    /**
+     * Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
+     * unfortunately Artemis tends to bury the exception when the password is wrong.
+     */
+    fun checkStorePasswords() {
+        keyStorePath.use {
+           KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
+        }
+        trustStorePath.use {
+           KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
+        }
+    }
 
     protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int) =
             TransportConfiguration(
@@ -144,11 +161,7 @@ abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeCo
      * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
      */
     fun configureWithDevSSLCertificate() {
-
-        val keyStorePath = directory.resolve("certificates").resolve("sslkeystore.jks")
-        val trustStorePath = directory.resolve("certificates").resolve("truststore.jks")
-
-        Files.createDirectories(directory.resolve("certificates"))
+        Files.createDirectories(certificatePath)
         if (!Files.exists(trustStorePath)) {
             Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
                     trustStorePath)

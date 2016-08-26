@@ -46,7 +46,6 @@ class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     data class Update(val consumed: Set<StateRef>, val produced: Set<StateAndRef<ContractState>>) {
-
         /**
          * Combine two updates into a single update with the combined inputs and outputs of the two updates but net
          * any outputs of the left-hand-side (this) that are consumed by the inputs of the right-hand-side (rhs).
@@ -60,6 +59,17 @@ class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
                     previouslyConsumed + (rhs.consumed - previouslyProduced),
                     rhs.produced + produced.filter { it.ref !in rhs.consumed })
             return combined
+        }
+
+        override fun toString(): String {
+            val sb = StringBuilder()
+            sb.appendln("${consumed.size} consumed, ${produced.size} produced")
+            sb.appendln("")
+            sb.appendln("Produced:")
+            produced.forEach {
+                sb.appendln("${it.ref}: ${it.state}")
+            }
+            return sb.toString()
         }
     }
 

@@ -1,10 +1,7 @@
 package com.r3corda.node.services.config
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
 import com.r3corda.node.serialization.NodeClock
@@ -25,12 +22,17 @@ import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaType
 
-interface NodeConfiguration {
+interface NodeSSLConfiguration {
+    val keyStorePassword: String
+    val trustStorePassword: String
+
+    // TODO: Move cert paths into this interface as well.
+}
+
+interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: String
     val exportJMXto: String
     val nearestCity: String
-    val keyStorePassword: String
-    val trustStorePassword: String
     val dataSourceProperties: Properties get() = Properties()
 
     companion object {

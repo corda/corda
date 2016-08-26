@@ -41,13 +41,6 @@ Read on to learn:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contracts
-
-   contract-catalogue
-   contract-irs
-
-.. toctree::
-   :maxdepth: 2
    :caption: Tutorials
 
    where-to-start
@@ -58,6 +51,19 @@ Read on to learn:
    oracles
    event-scheduling
    secure-coding-guidelines
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contracts
+
+   contract-catalogue
+   contract-irs
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Node API
+
+   clientrpc
 
 .. toctree::
    :maxdepth: 2

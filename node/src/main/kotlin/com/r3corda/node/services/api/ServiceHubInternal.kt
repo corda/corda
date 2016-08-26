@@ -8,7 +8,7 @@ import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 
-interface MessagingServiceInternal: MessagingService {
+interface MessagingServiceInternal : MessagingService {
     /**
      * Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
      * then this will block until all in-flight messages have finished being handled and acknowledged. If called

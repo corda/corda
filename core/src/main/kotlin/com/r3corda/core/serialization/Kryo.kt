@@ -409,7 +409,6 @@ class NoReferencesSerializer<T>(val baseSerializer: Serializer<T>) : Serializer<
  * Improvement to the builtin JavaSerializer by honouring the [Kryo.getReferences] setting.
  */
 object ReferencesAwareJavaSerializer : JavaSerializer() {
-
     override fun write(kryo: Kryo, output: Output, obj: Any) {
         if (kryo.references) {
             super.write(kryo, output, obj)
