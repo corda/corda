@@ -157,7 +157,7 @@ Let's unpack what this code does:
 - It defines a several classes nested inside the main ``TwoPartyTradeProtocol`` singleton. Some of the classes
   are simply protocol messages or exceptions. The other two represent the buyer and seller side of the protocol.
 - It defines the "trade topic", which is just a string that namespaces this protocol. The prefix "platform." is reserved
-  by Corda, but you can define your own protocols using standard Java-style reverse DNS notation.
+  by Corda, but you can define your own protocol namespaces using standard Java-style reverse DNS notation.
 
 Going through the data needed to become a seller, we have:
 
@@ -182,13 +182,13 @@ And for the buyer:
 
 Alright, so using this protocol shouldn't be too hard: in the simplest case we can just create a Buyer or Seller
 with the details of the trade, depending on who we are. We then have to start the protocol in some way. Just
-calling the ``call`` method ourselves won't work: instead we need to ask the framework to start the protocol for
+calling the ``call`` function ourselves won't work: instead we need to ask the framework to start the protocol for
 us. More on that in a moment.
 
-Suspendable methods
--------------------
+Suspendable functions
+---------------------
 
-The ``call`` method of the buyer/seller classes is marked with the ``@Suspendable`` annotation. What does this mean?
+The ``call`` function of the buyer/seller classes is marked with the ``@Suspendable`` annotation. What does this mean?
 
 As mentioned above, our protocol framework will at points suspend the code and serialise it to disk. For this to work,
 any methods on the call stack must have been pre-marked as ``@Suspendable`` so the bytecode rewriter knows to modify
@@ -213,7 +213,7 @@ see ":doc:`event-scheduling`" to learn more about this. Or they can be triggered
 be triggered directly via the Java-level node APIs from your app code.
 
 You request a protocol to be invoked by using the ``ServiceHub.invokeProtocolAsync`` method. This takes a
-Java reflection ``Class`` object that describes the protocol class to use (in this case, either Buyer or Seller).
+Java reflection ``Class`` object that describes the protocol class to use (in this case, either ``Buyer`` or ``Seller``).
 It also takes a set of arguments to pass to the constructor. Because it's possible for protocol invocations to
 be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
 protocol are checked against a whitelist, which can be extended by apps themselves at load time.
@@ -241,7 +241,7 @@ Let's implement the ``Seller.call`` method. This will be run when the protocol i
 
 Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it's
 valid. Then we sign with our own key and request a notary to assert with another signature that the
-timestamp in the transaction (if any) is valid and there are no double spends, and finally we send back both
+timestamp in the transaction (if any) is valid and there are no double spends, and send back both
 our signature and the notaries signature. Finally, we hand back to the code that invoked the protocol the
 finished transaction.
 

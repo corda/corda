@@ -19,7 +19,7 @@ Kotlin syntax works.
 Where to put your code
 ----------------------
 
-A Cordapp is a collection of contracts, state definitions, protocols and other ways to extend the server. To create
+A CorDapp is a collection of contracts, state definitions, protocols and other ways to extend the server. To create
 one you would just create a Java-style project as normal, with your choice of build system (Maven, Gradle, etc).
 Then add a dependency on ``com.r3corda:core:0.X`` where X is the milestone number you are depending on. The core
 module defines the base classes used in this tutorial.
@@ -250,7 +250,7 @@ Let's define a few commands now:
       }
 
 We define a simple grouping interface or static class, this gives us a type that all our commands have in common,
-then we go ahead and create three commands: Move, Redeem, Issue. ``TypeOnlyCommandData`` is a helpful utility
+then we go ahead and create three commands: ``Move``, ``Redeem``, ``Issue``. ``TypeOnlyCommandData`` is a helpful utility
 for the case when there's no data inside the command; only the existence matters. It defines equals and hashCode
 such that any instances always compare equal and hash to the same value.
 
@@ -519,7 +519,7 @@ If the command is a ``Redeem`` command, then the requirements are more complex:
 3. The commercial paper must *not* be propagated by this transaction: it must be deleted, by the group having no
    output state. This prevents the same CP being considered redeemable multiple times.
 
-To calculate how much cash is moving, we use the ``sumCashBy`` utility method. Again, this is an extension method,
+To calculate how much cash is moving, we use the ``sumCashBy`` utility function. Again, this is an extension function,
 so in Kotlin code it appears as if it was a method on the ``List<Cash.State>`` type even though JDK provides no such
 method. In Java we see its true nature: it is actually a static method named ``CashKt.sumCashBy``. This method simply
 returns an ``Amount`` object containing the sum of all the cash states in the transaction outputs that are owned by
@@ -603,7 +603,7 @@ The function we define creates a ``CommercialPaper.State`` object that mostly ju
 but it fills out the owner field of the state to be the same public key as the issuing party.
 
 The returned partial transaction has a ``Command`` object as a parameter. This is a container for any object
-that implements the ``CommandData`` interface, along with a key that is expected to sign this transaction. In this case,
+that implements the ``CommandData`` interface, along with a list of keys that are expected to sign this transaction. In this case,
 issuance requires that the issuing party sign, so we put the key of the party there.
 
 The ``TransactionBuilder`` has a convenience ``withItems`` method that takes a variable argument list. You can pass in
@@ -660,13 +660,13 @@ issuer (i.e. the caller) must gather cash from its wallet and send the face valu
 
 .. note:: This contract has no explicit concept of rollover.
 
-The *wallet* is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of cash states that are
+The *wallet* is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of states (such as cash) that are
 owned by the caller. Here, we use the wallet to update the partial transaction we are handed with a movement of cash
 from the issuer of the commercial paper to the current owner. If we don't have enough quantity of cash in our wallet,
-an exception is thrown. And then we add the paper itself as an input, but, not an output (as we wish to remove it
+an exception is thrown. Then we add the paper itself as an input, but, not an output (as we wish to remove it
 from the ledger). Finally, we add a Redeem command that should be signed by the owner of the commercial paper.
 
-.. warning:: The amount we pass to the ``generateSpend`` method has to be treated first with ``withoutIssuer``.
+.. warning:: The amount we pass to the ``generateSpend`` function has to be treated first with ``withoutIssuer``.
    This reflects the fact that the way we handle issuer constraints is still evolving; the commercial paper
    contract requires payment in the form of a currency issued by a specific party (e.g. the central bank,
    or the issuers own bank perhaps). But the wallet wants to assemble spend transactions using cash states from

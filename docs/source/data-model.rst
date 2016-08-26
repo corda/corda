@@ -113,7 +113,7 @@ Differences:
 * A Bitcoin script can only be given a fixed set of byte arrays as the input. This means there's no way for a contract
   to examine the structure of the entire transaction, which severely limits what contracts can do.
 * Our contracts are Turing-complete and can be written in any ordinary programming language that targets the JVM.
-* Our transactions and contracts get their time from an attached timestamp rather than a block chain. This is
+* Our transactions and contracts get their time from an attached timestamp rather than a block. This is
   important given that we use block-free conflict resolution algorithms. The timestamp can be arbitrarily precise.
 * We use the term "contract" to refer to a bundle of business logic that may handle various different tasks, beyond
   transaction verification. For instance, currently our contracts also include code for creating valid transactions

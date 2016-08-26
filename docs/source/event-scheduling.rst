@@ -90,10 +90,10 @@ business process and to take on those roles.  That ``ProtocolLogic`` will be han
 rate swap ``State`` in question, as well as a tolerance ``Duration`` of how long to wait after the activity is triggered
 for the interest rate before indicating an error.
 
-.. note:: Observe the use of the factory to create a ``ProtocolLogicRef`` instance to embed in the ``ScheduledActivity``.
-   This is a way to create a reference to the ``ProtocolLogic`` class and it's constructor parameters to instantiate
-   that can be checked against a per node whitelist of approved and allowable types as part of our overall
-   security sandboxing.
+.. note:: This is a way to create a reference to the ProtocolLogic class and its constructor parameters to
+   instantiate. The reference can be checked against a per-node whitelist of approved and allowable types as
+   part of our overall security sandboxing.
+
 
 As previously mentioned, we currently need a small network handler to assist with session setup until the work to
 automate that is complete.  See the interest rate swap specific implementation ``FixingSessionInitiationHandler`` which
