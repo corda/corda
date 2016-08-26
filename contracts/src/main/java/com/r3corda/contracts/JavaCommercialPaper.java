@@ -125,44 +125,14 @@ public class JavaCommercialPaper implements Contract {
         }
     }
 
-    public interface Clause {
-        abstract class AbstractGroup implements GroupClause<State, State> {
-            @NotNull
-            @Override
-            public MatchBehaviour getIfNotMatched() {
-                return MatchBehaviour.CONTINUE;
-            }
-
-            @NotNull
-            @Override
-            public MatchBehaviour getIfMatched() {
-                return MatchBehaviour.END;
-            }
-        }
-
-        class Group extends GroupClauseVerifier<State, State> {
-            @NotNull
-            @Override
-            public MatchBehaviour getIfMatched() {
-                return MatchBehaviour.END;
-            }
-
-            @NotNull
-            @Override
-            public MatchBehaviour getIfNotMatched() {
-                return MatchBehaviour.ERROR;
-            }
-
-            @NotNull
-            @Override
-            public List<GroupClause<State, State>> getClauses() {
-                final List<GroupClause<State, State>> clauses = new ArrayList<>();
-
-                clauses.add(new Clause.Redeem());
-                clauses.add(new Clause.Move());
-                clauses.add(new Clause.Issue());
-
-                return clauses;
+    public interface Clauses {
+        class Group extends GroupClauseVerifier<State, Commands, State> {
+            public Group() {
+                super(new AnyComposition<>(
+                        new Clauses.Redeem(),
+                        new Clauses.Move(),
+                        new Clauses.Issue()
+                ));
             }
 
             @NotNull
@@ -172,7 +142,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Move extends AbstractGroup {
+        class Move extends ConcreteClause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -181,11 +151,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 State input = single(inputs);
@@ -203,7 +173,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Redeem extends AbstractGroup {
+        class Redeem extends ConcreteClause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -212,11 +182,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
@@ -245,7 +215,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Issue extends AbstractGroup {
+        class Issue extends ConcreteClause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -254,11 +224,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
                 Timestamp timestampCommand = tx.getTimestamp();
@@ -298,16 +268,17 @@ public class JavaCommercialPaper implements Contract {
     }
 
     @NotNull
-    private Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
+    private List<AuthenticatedObject<Commands>> extractCommands(@NotNull TransactionForContract tx) {
         return tx.getCommands()
                 .stream()
                 .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
+                .map((AuthenticatedObject<CommandData> command) -> new AuthenticatedObject<>(command.getSigners(), command.getSigningParties(), (Commands) command.getValue()))
                 .collect(Collectors.toList());
     }
 
     @Override
     public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
-        ClauseVerifier.verifyClauses(tx, Collections.singletonList(new Clause.Group()), extractCommands(tx));
+        ClauseVerifier.verifyClause(tx, new Clauses.Group(), extractCommands(tx));
     }
 
     @NotNull

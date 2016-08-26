@@ -1,14 +1,12 @@
 package com.r3corda.contracts
 
 import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.FungibleAsset
 import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.GroupClause
-import com.r3corda.core.contracts.clauses.GroupClauseVerifier
-import com.r3corda.core.contracts.clauses.MatchBehaviour
-import com.r3corda.core.contracts.clauses.verifyClauses
+import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -52,10 +50,7 @@ class CommercialPaper : Contract {
         val maturityDate: Instant
     )
 
-    private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
-        = tx.commands.select<Commands>()
-
-    override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clauses.Group()), extractCommands(tx))
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
     data class State(
             val issuance: PartyAndReference,
@@ -82,25 +77,16 @@ class CommercialPaper : Contract {
     }
 
     interface Clauses {
-        class Group : GroupClauseVerifier<State, Issued<Terms>>() {
-            override val ifNotMatched = MatchBehaviour.ERROR
-            override val ifMatched = MatchBehaviour.END
-            override val clauses = listOf(
-                    Redeem(),
-                    Move(),
-                    Issue()
-            )
-
+        class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
+            AnyComposition(
+                Redeem(),
+                Move(),
+                Issue())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
-        abstract class AbstractGroupClause: GroupClause<State, Issued<Terms>> {
-            override val ifNotMatched = MatchBehaviour.CONTINUE
-            override val ifMatched = MatchBehaviour.END
-        }
-
-        class Issue : AbstractIssue<State, Terms>(
+        class Issue : AbstractIssue<State, Commands, Terms>(
                 { map { Amount(it.faceValue.quantity, it.token) }.sumOrThrow() },
                 { token -> map { Amount(it.faceValue.quantity, it.token) }.sumOrZero(token) }) {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
@@ -108,8 +94,8 @@ class CommercialPaper : Contract {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms>): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                token: Issued<Terms>?): Set<Commands> {
                 val consumedCommands = super.verify(tx, inputs, outputs, commands, token)
                 commands.requireSingleCommand<Commands.Issue>()
                 val timestamp = tx.timestamp
@@ -121,14 +107,14 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Move: AbstractGroupClause() {
+        class Move: ConcreteClause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Move::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms>): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: Issued<Terms>?): Set<Commands> {
                 val command = commands.requireSingleCommand<Commands.Move>()
                 val input = inputs.single()
                 requireThat {
@@ -141,15 +127,14 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Redeem(): AbstractGroupClause() {
-            override val requiredCommands: Set<Class<out CommandData>>
-                get() = setOf(Commands.Redeem::class.java)
+        class Redeem(): ConcreteClause<State, Commands, Issued<Terms>>() {
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms>): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: Issued<Terms>?): Set<Commands> {
                 // TODO: This should filter commands down to those with compatible subjects (underlying product and maturity date)
                 // before requiring a single command
                 val command = commands.requireSingleCommand<Commands.Redeem>()
@@ -172,7 +157,7 @@ class CommercialPaper : Contract {
     }
 
     interface Commands : CommandData {
-        class Move : TypeOnlyCommandData(), Commands
+        data class Move(override val contractHash: SecureHash? = null) : FungibleAsset.Commands.Move, Commands
         class Redeem : TypeOnlyCommandData(), Commands
         data class Issue(override val nonce: Long = random63BitValue()) : IssueCommand, Commands
     }

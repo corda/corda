@@ -1,22 +1,18 @@
 package com.r3corda.core.testing
 
-import com.r3corda.core.contracts.Contract
-import com.r3corda.core.contracts.LinearState
-import com.r3corda.core.contracts.UniqueIdentifier
-import com.r3corda.core.contracts.TransactionForContract
-import com.r3corda.core.contracts.clauses.verifyClauses
+import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.clauses.Clause
+import com.r3corda.core.contracts.clauses.verifyClause
 import com.r3corda.core.crypto.SecureHash
 import java.security.PublicKey
 
 class DummyLinearContract: Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("Test")
 
-    override fun verify(tx: TransactionForContract) {
-        verifyClauses(tx,
-                listOf(LinearState.ClauseVerifier(State::class.java)),
-                emptyList())
-    }
-
+    val clause: Clause<ContractState, CommandData, Unit> = LinearState.ClauseVerifier(State::class.java)
+    override fun verify(tx: TransactionForContract) = verifyClause(tx,
+            clause,
+            emptyList())
 
     class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
