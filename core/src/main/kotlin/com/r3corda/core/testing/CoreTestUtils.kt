@@ -86,9 +86,30 @@ inline fun <R> rootCauseExceptions(body: () -> R): R {
     }
 }
 
+/**
+ * Returns a free port.
+ *
+ * Unsafe for getting multiple ports!
+ * Use [getFreeLocalPorts] for getting multiple ports.
+ */
 fun freeLocalHostAndPort(): HostAndPort {
     val freePort = ServerSocket(0).use { it.localPort }
     return HostAndPort.fromParts("localhost", freePort)
+}
+
+/**
+ * Creates a specified number of ports for use by the Node.
+ *
+ * Unlikely, but in the time between running this function and handing the ports
+ * to the Node, some other process else could allocate the returned ports.
+ */
+fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
+    // Create a bunch of sockets up front.
+    val sockets = Array(numberToAlloc) { ServerSocket(0) }
+    val result = sockets.map { HostAndPort.fromParts(hostName, it.localPort) }
+    // Close sockets only once we've grabbed all the ports we need.
+    sockets.forEach(ServerSocket::close)
+    return result
 }
 
 /**
