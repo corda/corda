@@ -1,8 +1,12 @@
+import com.google.common.io.ByteStreams
 import org.gradle.api.*
-
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import java.nio.file.Files
+import java.nio.file.attribute.FileTime
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
 // Custom Gradle plugin that attempts to make the resulting jar file deterministic.
 // Ie. same contract definition should result when compiled in same jar file.

@@ -1,23 +1,3 @@
-import com.google.common.io.ByteStreams
-
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.FileTime
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath "com.google.guava:guava:19.0"
-    }
-}
-
 apply plugin: 'kotlin'
 apply plugin: CanonicalizerPlugin
 
