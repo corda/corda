@@ -1,63 +1,85 @@
 Data types
 ==========
 
-There is a large library of data types used in Corda transactions and contract state objects.
+Corda provides a large standard library of data types used in financial transactions and contract state objects.
+These provide a common language for states and contracts.
 
 Amount
 ------
 
-The ``Amount`` class is used to represent an amount of some fungible asset. It is a generic class which wraps around
-a type used to define the underlying product, generally represented by an ``Issued`` instance, or this can be a more
-complex type such as an obligation contract issuance definition (which in turn contains a token definition for whatever
-the obligation is to be settled in).
+The `Amount <api/com.r3corda.core.contracts/-amount/index.html>`_ class is used to represent an amount of some
+fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
+the *token*. For instance it can be the standard JDK type ``Currency``, or an ``Issued`` instance, or this can be
+a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
+for whatever the obligation is to be settled in).
 
 .. note:: Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
           and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
           £10 note can be exchanged for two £5 notes, or vice-versa.
 
-Where a contract refers directly to an amount of something, ``Amount`` should wrap ``Issued``, which in
-turn can refer to a ``Currency`` (GBP, USD, CHF, etc.), or any other class. Future work in this area will include
-introducing classes to represent non-currency things (such as commodities) that Issued can wrap. For more
-complex amounts, ``Amount`` can wrap other types, for example to represent a number of Obligation contracts to be
-delivered (themselves referring to a currency), an ``Amount`` such as the following would used:
+Here are some examples:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
+      // A quantity of some specific currency like pounds, euros, dollars etc.
+      Amount<Currency>
+      // A quantity of currency that is issued by a specific issuer, for instance central bank vs other bank dollars
+      Amount<Issued<Currency>>
+      // A quantity of obligations to deliver currency of any issuer.
       Amount<Obligation.State<Currency>>
+
+``Amount`` represents quantities as integers. For currencies the quantity represents pennies, cents or whatever
+else the smallest integer amount for that currency is. You cannot use ``Amount`` to represent negative quantities
+or fractional quantities: if you wish to do this then you must use a different type e.g. ``BigDecimal``. ``Amount``
+defines methods to do addition and subtraction and these methods verify that the tokens on both sides of the operator
+are equal (these are operator overloads in Kotlin and can be used as regular methods from Java). There are also
+methods to do multiplication and division by integer amounts.
 
 State
 -----
 
 A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
-the details of the contract (see :doc:`data-model` for further detail). States essentially convert the generic template
-(code and legal prose) into a specific instance. In a ``WireTransaction``, outputs are provided as ``TransactionState``
-implementations, while the inputs are references to the outputs of a previous transaction. These references are then
-stored as ``StateRef`` objects, which are converted to ``StateAndRef`` on demand.
+the details of a specific deal or asset (see :doc:`data-model` for further detail). In relational database terms
+a state is like a row in a database. A reference to a state in the ledger (whether it has been consumed or not)
+is represented with a ``StateRef`` object. If the state ref has been looked up from storage, you will have a
+``StateAndRef`` which is simply a ``StateRef`` plus the data.
 
-The ``TransactionState`` is a container for a ``ContractState`` (the custom data used by a contract program) and additional
-platform-level state information, such as the *notary* pointer (see :doc:`consensus`).
+The ``ContractState`` type is an interface that all states must implement. A ``TransactionState`` is a simple
+container for a ``ContractState`` (the custom data used by a contract program) and additional platform-level state
+information, such as the *notary* pointer (see :doc:`consensus`).
 
-A number of interfaces then extend ``ContractState``, representing standardised functionality for states:
+A number of interfaces then extend ``ContractState``, representing standardised functionality for common kinds
+of state:
 
   ``OwnableState``
-    A state which has an owner (represented as a ``PublicKey``, discussed later). Exposes the owner and a function for
-    replacing the owner.
+    A state which has an owner (represented as a ``PublicKey``, discussed later). Exposes the owner and a function
+    for replacing the owner e.g. when an asset is sold.
 
   ``LinearState``
-    A state which links back to its previous state, creating a thread of states over time. Intended to simplify tracking
-    state versions.
+    A state which links back to its previous state, creating a thread of states over time. A linear state is
+    useful when modelling an indivisible/non-fungible thing like a specific deal, or an asset that can't be
+    split (like a rare piece of art).
 
   ``DealState``
-    A state representing an agreement between two or more parties. Intended to simplify implementing generic protocols
-    that manipulate many agreement types.
+    A LinearState representing an agreement between two or more parties. Intended to simplify implementing generic
+    protocols that manipulate many agreement types.
 
   ``FixableDealState``
     A deal state, with further functions exposed to support fixing of interest rates.
 
-Things (such as attachments) which are identified by their hash should implement the ``NamedByHash`` interface,
-which standardises how the ID is extracted.
+NamedByHash and UniqueIdentifier
+--------------------------------
+
+Things which are identified by their hash, like transactions and attachments, should implement the ``NamedByHash``
+interface which standardises how the ID is extracted. Note that a hash is *not* a globally unique identifier: it
+is always a derivative summary of the contents of the underlying data. Sometimes this isn't what you want:
+two deals that have exactly the same parameters and which are made simultaneously but which are logically different
+can't be identified by hash because their contents would be identical. Instead you would use  ``UniqueIdentifier``.
+This is a combination of a (Java) ``UUID`` representing a globally unique 128 bit random number, and an arbitrary
+string which can be paired with it. For instance the string may represent an existing "weak" (not guaranteed unique)
+identifier for convenience purposes.
 
 FungibleAssets and Cash
 -----------------------
@@ -76,6 +98,9 @@ in place of the attachments themselves (see also :doc:`data-model`). Once signed
 ``LedgerTransaction``, which involves verifying the signatures and associating them to the relevant command(s), and
 resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
 ``AuthenticatedObject`` type.
+
+.. note:: A ``LedgerTransaction`` has not necessarily had its contracts be run, and thus could be contract-invalid
+   (but not signature-invalid). You can use the ``verify`` method as shown below to run the contracts.
 
 When constructing a new transaction from scratch, you use ``TransactionBuilder``, which is a mutable transaction that
 can be signed once modification of the internals is complete. It is typical for contract classes to expose helper
@@ -105,12 +130,20 @@ write your tests using the :doc:`domain specific language for writing tests <tut
 Party and PublicKey
 -------------------
 
-Identities of parties involved in signing a transaction can be represented simply by their ``PublicKey``, or by further
-information (such as name) using the ``Party`` class. An ``AuthenticatedObject`` contains a list of the public keys
-for signatures present on the transaction, as well as list of parties for those public keys (where known).
+Entities using the network are called *parties*. Parties can sign structures using keys, and a party may have many
+keys under their control.
 
-.. note:: These types are provisional and are likely to change in future, for example to add additional information to
-          ``Party``.
+Parties may sometimes be identified pseudonomously, for example, in a transaction sent to your node as part of a
+chain of custody it is important you can convince yourself of the transaction's validity, but equally important that
+you don't learn anything about who was involved in that transaction. In these cases a public key may be present
+without any identifying information about who owns it.
+
+Identities of parties involved in signing a transaction can be represented simply by a ``PublicKey``, or by further
+information (such as name) using the ``Party`` class. An ``AuthenticatedObject`` represents an object (like a command)
+that has been signed by a set of parties.
+
+.. note:: These types are provisional and will change significantly in future as the identity framework becomes more
+   fleshed out.
 
 Date support
 ------------
@@ -126,3 +159,12 @@ Calculating the rollover of a deadline based on working days requires informatio
 bank holidays). The ``BusinessCalendar`` class models these calendars of business holidays; currently it loads these
 from files on disk, but in future this is likely to involve reference data oracles in order to ensure consensus on the
 dates used.
+
+Cryptography & maths support
+----------------------------
+
+The ``SecureHash`` class represents a secure hash of unknown algorithm. We currently define only a single subclass,
+``SecureHash.SHA256``. There are utility methods to create them, parse them and so on.
+
+We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
+splines. These can be found in the `maths package <api/com.r3corda.core.math/index.html>`_.

@@ -10,12 +10,8 @@ Writing oracle services
 This article covers *oracles*: network services that link the ledger to the outside world by providing facts that
 affect the validity of transactions.
 
-The current prototype includes two oracles:
-
-1. A timestamping service
-2. An interest rate fixing service
-
-We will examine the similarities and differences in their design, whilst covering how the oracle concept works.
+The current prototype includes an example oracle that provides an interest rate fixing service. It is used by the
+IRS trading demo app.
 
 Introduction
 ------------
@@ -53,10 +49,12 @@ When a fact is encoded in a command, it is embedded in the transaction itself. T
 the entire transaction. The oracle's signature is valid only for that transaction, and thus even if a fact (like a
 stock price) does not change, every transaction that incorporates that fact must go back to the oracle for signing.
 
-When a fact is encoded as an attachment, it is a separate object to the transaction which is referred to by hash.
+When a fact is encoded as an attachment, it is a separate object to the transaction and is referred to by hash.
 Nodes download attachments from peers at the same time as they download transactions, unless of course the node has
 already seen that attachment, in which case it won't fetch it again. Contracts have access to the contents of
-attachments and attachments can be digitally signed (in future).
+attachments when they run.
+
+.. note:: Currently attachments do not support digital signing, but this is a planned feature.
 
 As you can see, both approaches share a few things: they both allow arbitrary binary data to be provided to transactions
 (and thus contracts). The primary difference is whether the data is a freely reusable, standalone object or whether it's
@@ -74,79 +72,34 @@ Here's a quick way to decide which approach makes more sense for your data sourc
 * Is your data *intended for human consumption*, like a PDF of legal prose, or an Excel spreadsheet? If yes, use an
   attachment.
 
-Asserting continuously varying data that is publicly known
-----------------------------------------------------------
+Asserting continuously varying data
+-----------------------------------
 
-Let's look at the timestamping oracle that can be found in the ``TimestamperService`` class. This is an example of
-an oracle that uses a command because the current time is a constantly changing fact that everybody knows.
+.. note:: A future version of the platform will include a complete tutorial on implementing this type of oracle.
 
-The most obvious way to implement such a service would be:
+Let's look at the interest rates oracle that can be found in the ``NodeInterestRates`` file. This is an example of
+an oracle that uses a command because the current interest rate fix is a constantly changing fact.
 
-1. The creator of the transaction that depends on the time reads their local clock
-2. They insert a command with that time into the transaction
-3. They then send it to the oracle for signing.
+The obvious way to implement such a service is like this:
 
-But this approach has a problem. There will never be exact clock synchronisation between the party creating the
-transaction and the oracle. This is not only due to physics, network latencies etc but because between inserting the
-command and getting the oracle to sign there may be many other steps, like sending the transaction to other parties
-involved in the trade as well, or even requesting human signoff. Thus the time observed by the oracle may be quite
-different to the time observed in step 1. This problem can occur any time an oracle attests to a constantly changing
-value.
+1. The creator of the transaction that depends on the interest rate sends it to the oracle.
+2. The oracle inserts a command with the rate and signs the transaction.
+3. The oracle sends it back.
 
-.. note:: It is assumed that "true time" for a timestamping oracle means GPS/NaviStar time as defined by the atomic
-   clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.
+But this has a problem - it would mean that the oracle has to be the first entity to sign the transaction, which might impose
+ordering constraints we don't want to deal with (being able to get all parties to sign in parallel is a very nice thing).
+So the way we actually implement it is like this:
 
-We fix it by including explicit tolerances in the command, which is defined like this:
-
-.. sourcecode:: kotlin
-
-   data class TimestampCommand(val after: Instant?, val before: Instant?) : CommandData
-       init {
-           if (after == null && before == null)
-               throw IllegalArgumentException("At least one of before/after must be specified")
-           if (after != null && before != null)
-               check(after <= before)
-       }
-   }
-
-This defines a class that has two optional fields: before and after, along with a constructor that imposes a couple
-more constraints that cannot be expressed in the type system, namely, that "after" actually is temporally after
-"before", and that at least one bound must be present. A timestamp command that doesn't contain anything is illegal.
-
-Thus we express that the *true value* of the fact "the current time" is actually unknowable. Even when both before and
-after times are included, the transaction could have occurred at any point between those two timestamps. In this case
-"occurrence" could mean the execution date, the value date, the trade date etc ... the oracle doesn't care what precise
-meaning the timestamp has to the contract.
-
-By creating a range that can be either closed or open at one end, we allow all of the following facts to be modelled:
-
-* This transaction occurred at some point after the given time (e.g. after a maturity event)
-* This transaction occurred at any time before the given time (e.g. before a bankruptcy event)
-* This transaction occurred at some point roughly around the given time (e.g. on a specific day)
+1. The creator of the transaction that depends on the interest rate asks for the current rate. They can abort at this point
+   if they want to.
+2. They insert a command with that rate and the time it was obtained into the transaction.
+3. They then send it to the oracle for signing, along with everyone else in parallel. The oracle checks that the command
+   has correct data for the asserted time, and signs if so.
 
 This same technique can be adapted to other types of oracle.
 
-Asserting occasionally varying data that is not publicly known
---------------------------------------------------------------
-
-Sometimes you may want a fact that changes, but is not entirely continuous. Additionally the exact value may not be
-public, or may only be semi-public (e.g. easily available to some entities on the network but not all). An example of
-this would be a LIBOR interest rate fix.
-
-In this case, the following design can be used. The oracle service provides a query API which returns the current value,
-and a signing service that signs a transaction if the data in the command matches the answer being returned by the
-query API. Probably the query response contains some sort of timestamp as well, so the service can recognise values
-that were true in the past but no longer are (this is arguably a part of the fact being asserted).
-
-Because the signature covers the transaction, and transactions may end up being forwarded anywhere, the fact itself
-is independently checkable. However, this approach can be useful when the data itself costs money, because the act
-of issuing the signature in the first place can be charged for (e.g. by requiring the submission of a fresh
-``Cash.State`` that has been re-assigned to a key owned by the oracle service). Because the signature covers the
-*transaction* and not only the *fact*, this allows for a kind of weak pseudo-DRM over data feeds. Whilst a smart
-contract could in theory include a transaction parsing and signature checking library, writing a contract in this way
-would be conclusive evidence of intent to disobey the rules of the service (*res ipsa loquitur*). In an environment
-where parties are legally identifiable, usage of such a contract would by itself be sufficient to trigger some sort of
-punishment.
+The oracle consists of a core class that implements the query/sign operations (for easy unit testing), and then a separate
+class that binds it to the network layer.
 
 Here is an extract from the ``NodeService.Oracle`` class and supporting types:
 
@@ -167,20 +120,15 @@ Here is an extract from the ``NodeService.Oracle`` class and supporting types:
 Because the fix contains a timestamp (the ``forDay`` field), there can be an arbitrary delay between a fix being
 requested via ``query`` and the signature being requested via ``sign``.
 
-Implementing oracles in the framework
--------------------------------------
+Pay-per-play oracles
+--------------------
 
-Implementation involves the following steps:
-
-1. Defining a high level oracle class, that exposes the basic API operations.
-2. Defining a lower level service class, that binds network messages to the API.
-3. Defining a protocol using the :doc:`protocol-state-machines` framework to make it easy for a client to interact
-   with the oracle.
-4. Constructing it (when advertised) in ``AbstractNode``.
-
-An example of how to do this can be found in the ``NodeInterestRates.Oracle``, ``NodeInterestRates.Service`` and
-``RateFixProtocol`` classes.
-
-The exact details of how this code works will change in future, so for now consulting the protocols tutorial and the
-code for the server-side oracles implementation will have to suffice. There will be more detail added once the
-platform APIs have settled down.
+Because the signature covers the transaction, and transactions may end up being forwarded anywhere, the fact itself
+is independently checkable. However, this approach can still be useful when the data itself costs money, because the act
+of issuing the signature in the first place can be charged for (e.g. by requiring the submission of a fresh
+``Cash.State`` that has been re-assigned to a key owned by the oracle service). Because the signature covers the
+*transaction* and not only the *fact*, this allows for a kind of weak pseudo-DRM over data feeds. Whilst a smart
+contract could in theory include a transaction parsing and signature checking library, writing a contract in this way
+would be conclusive evidence of intent to disobey the rules of the service (*res ipsa loquitur*). In an environment
+where parties are legally identifiable, usage of such a contract would by itself be sufficient to trigger some sort of
+punishment.

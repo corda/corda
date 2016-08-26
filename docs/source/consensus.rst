@@ -14,7 +14,7 @@ This article presents an initial model for addressing the **uniqueness** problem
 Notary
 ------
 
-We introduce the concept of a **Notary**, which is an authority responsible for attesting that for a given transaction, it had not signed another transaction consuming any of its input states.
+We introduce the concept of a **notary**, which is an authority responsible for attesting that for a given transaction, it had not signed another transaction consuming any of its input states.
 The data model is extended so that every **state** has an appointed notary:
 
 .. sourcecode:: kotlin
@@ -67,22 +67,52 @@ This is an obvious privacy leak.
 
 Our platform is flexible and we currently support both validating and non-validating notary implementations -- a party can select which one to use based on its own privacy requirements.
 
-.. note:: In the non-validating model the "denial of state" attack is partially alleviated by requiring the calling party to authenticate and storing its identity for the request.
-The conflict information returned by the Notary specifies the consuming transaction id along with the identity of the party that had requested the commit.
-   If the conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states of the conflicting invalid transaction are "un-committed" (to be covered by legal process).
+.. note:: In the non-validating model the "denial of state" attack is partially alleviated by requiring the calling
+   party to authenticate and storing its identity for the request. The conflict information returned by the notary
+   specifies the consuming transaction ID along with the identity of the party that had requested the commit. If the
+   conflicting transaction is valid, the current one gets aborted; if not – a dispute can be raised and the input states
+   of the conflicting invalid transaction are "un-committed" (to be covered by legal process).
 
-.. note:: At present all notaries can see the entire contents of a transaction, but we have a separate piece of work to replace the parts of the transaction it does not require knowing about with hashes (only input references, timestamp information, overall transaction ID and the necessary digests of the rest of the transaction to prove that the referenced inputs/timestamps really do form part of the stated transaction ID should be visible).
+.. note:: At present all notaries can see the entire contents of a transaction, but we have a separate piece of work to
+   replace the parts of the transaction it does not require knowing about with hashes (only input references, timestamp
+   information, overall transaction ID and the necessary digests of the rest of the transaction to prove that the
+   referenced inputs/timestamps really do form part of the stated transaction ID should be visible).
 
 Timestamping
 ------------
 
-In this model the notary also acts as a **Timestamping Authority**, verifying the transaction timestamp command.
+In this model the notary also acts as a *timestamping authority*, verifying the transaction timestamp command.
 
 For a timestamp to be meaningful, its implications must be binding on the party requesting it.
 A party can obtain a timestamp signature in order to prove that some event happened before/on/or after a particular point in time.
 However, if the party is not also compelled to commit to the associated transaction, it has a choice of whether or not to reveal this fact until some point in the future.
 As a result, we need to ensure that the notary either has to also sign the transaction within some time tolerance,
 or perform timestamping *and* notarisation at the same time, which is the chosen behaviour for this model.
+
+There will never be exact clock synchronisation between the party creating the transaction and the notary.
+This is not only due to physics, network latencies etc but because between inserting the command and getting the
+notary to sign there may be many other steps, like sending the transaction to other parties involved in the trade
+as well, or even requesting human signoff. Thus the time observed by the notary may be quite different to the
+time observed in step 1.
+
+For this reason, times in transactions are specified as time *windows*, not absolute times. Time windows can be
+open-ended, i.e. specify only one of "before" and "after" or they can be fully bounded. If a time window needs to
+be converted to an absolute time for e.g. display purposes, there is a utility method on ``Timestamp`` to
+calculate the mid point - but in a distributed system there can never be "true time", only an approximation of it.
+
+In this way we express that the *true value* of the fact "the current time" is actually unknowable. Even when both before and
+after times are included, the transaction could have occurred at any point between those two timestamps. Here
+"occurrence" could mean the execution date, the value date, the trade date etc ... the notary doesn't care what precise
+meaning the timestamp has to the contract.
+
+By creating a range that can be either closed or open at one end, we allow all of the following facts to be modelled:
+
+* This transaction occurred at some point after the given time (e.g. after a maturity event)
+* This transaction occurred at any time before the given time (e.g. before a bankruptcy event)
+* This transaction occurred at some point roughly around the given time (e.g. on a specific day)
+
+.. note:: It is assumed that the time feed for a notary is GPS/NaviStar time as defined by the atomic
+   clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.
 
 Running a Notary Service
 ------------------------
@@ -92,8 +122,6 @@ At present we have two basic implementations that store committed input states i
 - ``SimpleNotaryService`` -- commits the provided transaction without any validation
 
 - ``ValidatingNotaryService`` -- retrieves and validates the whole transaction history (including the given transaction) before committing
-
-To run one of these services the node has to simply specify either ``SimpleNotaryService.Type`` or ``ValidatingNotaryService.Type`` in its ``advertisedServices`` set, and the correct type will be initialised.
 
 Obtaining a signature
 ---------------------
@@ -162,3 +190,5 @@ The protocol will:
 3. Obtain the *old* notary signature
 
 4. Record and distribute the final transaction to the participants so that everyone possesses the new state
+
+.. note:: Eventually this will be handled automatically on demand.

@@ -95,7 +95,6 @@ object TwoPartyTradeProtocol {
             // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
             val ourSignature = signWithOurKey(partialTX)
             val notarySignature = getNotarySignature(partialTX)
-
             return sendSignatures(partialTX, ourSignature, notarySignature)
         }
 
