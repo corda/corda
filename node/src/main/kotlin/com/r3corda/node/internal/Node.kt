@@ -9,6 +9,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
@@ -17,11 +18,12 @@ import com.r3corda.node.servlets.Config
 import com.r3corda.node.servlets.DataUploadServlet
 import com.r3corda.node.servlets.ResponseFilter
 import com.r3corda.node.utilities.AffinityExecutor
-import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
@@ -117,9 +119,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         }()
         if (networkMapService != null) {
             return ArtemisMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread)
-        }
-        else
-        {
+        } else {
             return ArtemisMessagingClient(dir, configuration, serverAddr, null, serverThread)
         }
     }
@@ -141,8 +141,6 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-        val server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port))
-
         val handlerCollection = HandlerCollection()
 
         // Export JMX monitoring statistics and data over REST/JSON.
@@ -158,6 +156,35 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
         // API, data upload and download to services (attachments, rates oracles etc)
         handlerCollection.addHandler(buildServletContextHandler())
+
+        val server = Server()
+
+        if (configuration is FullNodeConfiguration && configuration.useHTTPS) {
+            val httpsConfiguration = HttpConfiguration()
+            httpsConfiguration.outputBufferSize = 32768
+            httpsConfiguration.addCustomizer(SecureRequestCustomizer())
+            val sslContextFactory = SslContextFactory()
+            val keyStorePath = dir.resolve("certificates").resolve("sslkeystore.jks")
+            val trustStorePath = dir.resolve("certificates").resolve("truststore.jks")
+            sslContextFactory.setKeyStorePath(keyStorePath.toString())
+            sslContextFactory.setKeyStorePassword(configuration.keyStorePassword)
+            sslContextFactory.setKeyManagerPassword(configuration.keyStorePassword)
+            sslContextFactory.setTrustStorePath(trustStorePath.toString())
+            sslContextFactory.setTrustStorePassword(configuration.trustStorePassword)
+            sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
+            sslContextFactory.setIncludeProtocols("TLSv1.2")
+            sslContextFactory.setExcludeCipherSuites(".*NULL.*", ".*RC4.*", ".*MD5.*", ".*DES.*", ".*DSS.*")
+            sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
+            val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
+            sslConnector.port = webServerAddr.port
+            server.connectors = arrayOf<Connector>(sslConnector)
+        } else {
+            val httpConfiguration = HttpConfiguration()
+            httpConfiguration.outputBufferSize = 32768
+            val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
+            httpConnector.port = webServerAddr.port
+            server.connectors = arrayOf<Connector>(httpConnector)
+        }
 
         server.handler = handlerCollection
         server.start()
