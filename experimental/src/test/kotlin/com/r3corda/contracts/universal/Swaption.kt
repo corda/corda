@@ -14,7 +14,7 @@ import java.math.BigDecimal
 class Swaption {
 
     val notional = 10.M * USD
-    val coupon = 1.5
+    val coupon = BigDecimal.valueOf(1.5)
 
     val dreary_contract =
             (wileECoyote or roadRunner).may {
@@ -101,5 +101,4 @@ class Swaption {
             }
         }
     }
-
 }

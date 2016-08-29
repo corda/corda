@@ -58,4 +58,12 @@ data class RollOut(val startDate: String, val endDate: String, val frequency: Fr
 
 // Continuation of roll out
 // May only be used inside template for RollOut
-class Continuation : Arrangement
+class Continuation() : Arrangement {
+    override fun hashCode(): Int {
+        return 1
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Continuation
+    }
+}

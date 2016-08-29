@@ -1,8 +1,6 @@
 package com.r3corda.contracts.universal
 
 import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.DUMMY_NOTARY_KEY
-import com.r3corda.core.testing.TEST_TX_TIME
 import com.r3corda.core.testing.transaction
 import org.junit.Test
 import java.time.Instant

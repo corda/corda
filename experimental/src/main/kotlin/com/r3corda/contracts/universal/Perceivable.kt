@@ -1,9 +1,11 @@
 package com.r3corda.contracts.universal
 
 import com.r3corda.core.contracts.Amount
+import com.r3corda.core.contracts.Tenor
 import java.math.BigDecimal
 import java.text.DateFormat
 import java.time.Instant
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -67,10 +69,12 @@ enum class Operation {
     PLUS, MINUS, TIMES, DIV
 }
 
+data class UnaryPlus<T>(val arg: Perceivable<T>) : Perceivable<T>
+
 data class PerceivableOperation<T>(val left: Perceivable<T>, val op: Operation, val right: Perceivable<T>) : Perceivable<T>
 
 operator fun Perceivable<BigDecimal>.plus(n: BigDecimal) = PerceivableOperation(this, Operation.PLUS, const(n))
-fun Perceivable<BigDecimal>.plus() = PerceivableOperation(this, Operation.PLUS, const(BigDecimal(0))) // todo
+fun<T> Perceivable<T>.plus() = UnaryPlus(this)
 operator fun Perceivable<BigDecimal>.minus(n: BigDecimal) = PerceivableOperation(this, Operation.MINUS, const(n))
 operator fun Perceivable<BigDecimal>.plus(n: Double) = PerceivableOperation(this, Operation.PLUS, const(BigDecimal(n)))
 operator fun Perceivable<BigDecimal>.minus(n: Double) = PerceivableOperation(this, Operation.MINUS, const(BigDecimal(n)))
@@ -89,3 +93,35 @@ data class ScaleAmount<T>(val left: Perceivable<BigDecimal>, val right: Perceiva
 
 operator fun Perceivable<BigDecimal>.times(n: Amount<Currency>) = ScaleAmount(this, const(n))
         //PerceivableOperation(this, Operation.TIMES, const(BigDecimal(n)))
+
+
+class DummyPerceivable<T> : Perceivable<T>
+
+data class Interest(val amount: Perceivable<Amount<Currency>>, val dayCountConvention: String,
+               val interest: Perceivable<BigDecimal>, val start: String, val end: String) : Perceivable<Amount<Currency>>
+
+
+// observable of type T
+// example:
+val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
+
+
+fun libor(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun libor(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
+
+fun interest(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> = Interest(Const(amount), dayCountConvention, Const(interest), start, end)
+
+fun interest(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> =
+        Interest(Const(amount), dayCountConvention, interest, start, end)
+
+fun interest(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
+
+fun interest(@Suppress("UNUSED_PARAMETER") rate: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
+
+class Fixing(val source: String, val date: LocalDate, val tenor: Tenor) : Perceivable<BigDecimal>
+
+fun fix(source: String, date: LocalDate, tenor: Tenor): Perceivable<BigDecimal> = Fixing(source, date, tenor)
