@@ -12,13 +12,17 @@ import kotlin.reflect.KProperty
 
 /**
  * This file defines a global [Models] store and delegates to inject event streams/sinks. Note that all streams here
- * are global to the app.
+ * are global.
  *
- * This allows us to decouple UI logic from stream initialisation and provides us with a central place to inspect data flows.
- * It also allows detecting of looping logic by constructing a stream dependency graph TODO do this
+ * This allows decoupling of UI logic from stream initialisation and provides us with a central place to inspect data
+ * flows. It also allows detecting of looping logic by constructing a stream dependency graph TODO do this.
  *
- * Usage: In your piece of UI use the [stream] and [sink] delegates to access external streams. If you have a reusable
- * stream put it in a Model. See [NetworkModel] for an example
+ * General rule of thumb: A stream/observable should be a model if it may be reused several times.
+ *
+ * Usage:
+ *  // Inject service -> client stream
+ *  private val serviceToClient: EventStream<ServiceToClientEvent> by stream(WalletMonitorModel::serviceToClient)
+ *
  */
 
 inline fun <reified M : Any, T> stream(noinline streamProperty: (M) -> EventStream<T>) =
@@ -40,7 +44,7 @@ inline fun <reified M : Any, T> observableList(noinline observableListProperty: 
         TrackedDelegate.ObservableListDelegate(M::class, observableListProperty)
 
 inline fun <reified M : Any, T> observableListReadOnly(noinline observableListProperty: (M) -> ObservableList<out T>) =
-        TrackedDelegate.ObservableListDelegateReadOnly(M::class, observableListProperty)
+        TrackedDelegate.ObservableListReadOnlyDelegate(M::class, observableListProperty)
 
 object Models {
     private val modelStore = HashMap<KClass<*>, Any>()
@@ -68,35 +72,34 @@ sealed class TrackedDelegate<M : Any>(val klass: KClass<M>) {
             return streamProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-
     class Sink<M : Any, T> (klass: KClass<M>, val sinkProperty: (M) -> EventSink<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): EventSink<T> {
             return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class ObservableValueDelegate<M : Any, T>(klass: KClass<M>, val sinkProperty: (M) -> ObservableValue<T>) : TrackedDelegate<M>(klass) {
+    class ObservableValueDelegate<M : Any, T>(klass: KClass<M>, val observableValueProperty: (M) -> ObservableValue<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): ObservableValue<T> {
-            return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return observableValueProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class WritableValueDelegate<M : Any, T>(klass: KClass<M>, val sinkProperty: (M) -> WritableValue<T>) : TrackedDelegate<M>(klass) {
+    class WritableValueDelegate<M : Any, T>(klass: KClass<M>, val writableValueProperty: (M) -> WritableValue<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): WritableValue<T> {
-            return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return writableValueProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class ObservableListDelegate<M : Any, T>(klass: KClass<M>, val sinkProperty: (M) -> ObservableList<T>) : TrackedDelegate<M>(klass) {
+    class ObservableListDelegate<M : Any, T>(klass: KClass<M>, val observableListProperty: (M) -> ObservableList<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): ObservableList<T> {
-            return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return observableListProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class ObservableListDelegateReadOnly<M : Any, T>(klass: KClass<M>, val sinkProperty: (M) -> ObservableList<out T>) : TrackedDelegate<M>(klass) {
+    class ObservableListReadOnlyDelegate<M : Any, T>(klass: KClass<M>, val observableListReadOnlyProperty: (M) -> ObservableList<out T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): ObservableList<out T> {
-            return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return observableListReadOnlyProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class ObjectPropertyDelegate<M : Any, T>(klass: KClass<M>, val sinkProperty: (M) -> ObjectProperty<T>) : TrackedDelegate<M>(klass) {
+    class ObjectPropertyDelegate<M : Any, T>(klass: KClass<M>, val objectPropertyProperty: (M) -> ObjectProperty<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): ObjectProperty<T> {
-            return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return objectPropertyProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
 }

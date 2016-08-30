@@ -58,6 +58,9 @@ data class TransactionCreateStateWritable(
         override val lastUpdate: SimpleObjectProperty<Instant>
 ) : TransactionCreateState
 
+/**
+ * This model provides an observable list of states relating to the creation of a transaction not yet on ledger.
+ */
 class TransactionCreateStateModel {
 
     private val serviceToClient: EventStream<ServiceToClientEvent> by stream(WalletMonitorModel::serviceToClient)
