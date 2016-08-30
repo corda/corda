@@ -64,9 +64,10 @@ fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
  */
 fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) {
     val finishFuture = SettableFuture<Unit>()
-    val lockedState = ThreadBox(object { var state = ExpectComposeState.fromExpectCompose(expectCompose()) })
+    val stateLock = object {}
+    var state = ExpectComposeState.fromExpectCompose(expectCompose())
     subscribe { event ->
-        lockedState.locked {
+        synchronized(stateLock) {
             if (state is ExpectComposeState.Finished) {
                 log.warn("Got event $event, but was expecting no further events")
                 return@subscribe
@@ -109,7 +110,7 @@ internal data class Expect<E, T : E>(
         val expectClosure: (T) -> Unit
 )
 
-private sealed class ExpectComposeState<E : Any>{
+private sealed class ExpectComposeState<E : Any> {
     class Finished<E : Any> : ExpectComposeState<E>()
     class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>()
     class Sequential<E : Any>(
@@ -118,8 +119,7 @@ private sealed class ExpectComposeState<E : Any>{
             val state: ExpectComposeState<E>
     ) : ExpectComposeState<E>()
     class Parallel<E : Any>(
-            val parallel:
-            ExpectCompose.Parallel<E>,
+            val parallel: ExpectCompose.Parallel<E>,
             val states: List<ExpectComposeState<E>>
     ) : ExpectComposeState<E>()
 
