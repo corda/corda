@@ -18,6 +18,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental.iml" group="experimental" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental_main.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental_main.iml" group="experimental" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/experimental/experimental_test.iml" filepath="$PROJECT_DIR$/.idea/modules/experimental/experimental_test.iml" group="experimental" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer.iml" group="explorer" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer_main.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer_main.iml" group="explorer" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/explorer/explorer_test.iml" filepath="$PROJECT_DIR$/.idea/modules/explorer/explorer_test.iml" group="explorer" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" group="contracts/isolated" />

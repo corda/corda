@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Accordion?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox styleClass="view" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <StackPane alignment="CENTER_RIGHT">
+         <children>
+            <TextField promptText="Filter transactions by originator, contract type..." styleClass="search">
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+               <padding>
+                  <Insets bottom="5.0" left="30.0" right="5.0" top="5.0" />
+               </padding>
+               <StackPane.margin>
+                  <Insets bottom="5.0" top="5.0" />
+               </StackPane.margin>
+            </TextField>
+            <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
+               <image>
+                  <Image url="@../../images/clear_inactive.png" />
+               </image>
+               <StackPane.margin>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </StackPane.margin>
+            </ImageView>
+         </children>
+      </StackPane>
+      <SplitPane dividerPositions="0.5" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
+         <items>
+            <TableView fx:id="TransactionViewTable" prefHeight="200.0" prefWidth="200.0">
+              <columns>
+                <TableColumn fx:id="TransactionViewTransactionId" prefWidth="187.0" text="Transaction ID" />
+                <TableColumn fx:id="TransactionViewOriginator" prefWidth="174.0" text="Originator" />
+                  <TableColumn fx:id="TransactionViewTransactionStatus" prefWidth="75.0" text="Transaction status" />
+                  <TableColumn fx:id="TransactionViewStatusUpdated" prefWidth="75.0" text="Status updated" />
+                  <TableColumn fx:id="TransactionViewCommandTypes" prefWidth="75.0" text="Command type(s)" />
+                  <TableColumn fx:id="TransactionViewTotalValueEquiv" prefWidth="75.0" styleClass="monetary-value" text="Total value (USD equiv)" />
+              </columns>
+               <columnResizePolicy>
+                  <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+               </columnResizePolicy>
+            </TableView>
+            <Accordion>
+              <panes>
+                <TitledPane text="Transaction details">
+                     <content>
+                        <AnchorPane>
+                           <children>
+                              <Label layoutX="5.0" layoutY="5.0" text="Transaction ID" />
+                              <Label layoutX="97.0" layoutY="5.0" text="IC-3902-29090-32091" AnchorPane.leftAnchor="95.0" AnchorPane.rightAnchor="15.0" />
+                              <Label layoutX="5.0" layoutY="33.0" text="Originator" />
+                              <Label layoutX="97.0" layoutY="33.0" prefHeight="16.0" text="C03102 HSBC GROUP PLC" AnchorPane.leftAnchor="95.0" AnchorPane.rightAnchor="15.0" />
+                              <Label layoutX="5.0" layoutY="49.0" prefHeight="26.0" prefWidth="78.0" text="Date/time originated" wrapText="true" />
+                              <Label layoutX="97.0" layoutY="49.0" text="2019-05-24  11:47 UTC" AnchorPane.leftAnchor="95.0" AnchorPane.rightAnchor="15.0" />
+                              <Label layoutX="5.0" layoutY="90.0" text="Current status" />
+                              <Label layoutX="104.0" layoutY="90.0" prefHeight="16.0" text="01800 - EXCEPTION - UNSPECIFIED NETWORK ERROR" AnchorPane.leftAnchor="95.0" AnchorPane.rightAnchor="15.0" />
+                           </children>
+                        </AnchorPane>
+                     </content></TitledPane>
+                <TitledPane text="Contract states">
+                     <content>
+                        <SplitPane dividerPositions="0.5" prefHeight="160.0" prefWidth="200.0">
+                           <items>
+                              <VBox prefHeight="200.0" prefWidth="100.0">
+                                 <children>
+                                    <Label text="Inputs: 23">
+                                       <padding>
+                                          <Insets bottom="5.0" top="5.0" />
+                                       </padding></Label>
+                                    <TableView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                                      <columns>
+                                        <TableColumn prefWidth="75.0" text="ID" />
+                                        <TableColumn prefWidth="75.0" text="Type" />
+                                          <TableColumn prefWidth="75.0" text="Owner" />
+                                          <TableColumn prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
+                                          <TableColumn prefWidth="75.0" text="Amount">
+                                             <styleClass>
+                                                <String fx:value="second-column" />
+                                                <String fx:value="monetary-value" />
+                                             </styleClass>
+                                          </TableColumn>
+                                          <TableColumn prefWidth="75.0" text="USD Equiv" />
+                                      </columns>
+                                       <columnResizePolicy>
+                                          <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                       </columnResizePolicy>
+                                    </TableView>
+                                 </children>
+                              </VBox>
+                              <VBox prefHeight="200.0" prefWidth="100.0">
+                                 <children>
+                                    <Label text="Outputs: 24">
+                                       <VBox.margin>
+                                          <Insets top="5.0" />
+                                       </VBox.margin>
+                                       <padding>
+                                          <Insets bottom="5.0" />
+                                       </padding></Label>
+                                    <TableView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                                       <columns>
+                                          <TableColumn prefWidth="75.0" text="ID" />
+                                          <TableColumn prefWidth="75.0" text="Type" />
+                                          <TableColumn prefWidth="75.0" text="Owner" />
+                                          <TableColumn prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
+                                          <TableColumn prefWidth="75.0" text="Amount">
+                                             <styleClass>
+                                                <String fx:value="second-column" />
+                                                <String fx:value="monetary-value" />
+                                             </styleClass>
+                                          </TableColumn>
+                                          <TableColumn prefWidth="75.0" text="USD Equiv" />
+                                       </columns>
+                                       <columnResizePolicy>
+                                          <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                       </columnResizePolicy>
+                                    </TableView>
+                                 </children>
+                              </VBox>
+                           </items>
+                        </SplitPane>
+                     </content>
+                  </TitledPane>
+                  <TitledPane prefHeight="200.0" prefWidth="200.0" text="Signatures (3/4)">
+                     <content>
+                        <TableView prefHeight="200.0" prefWidth="200.0">
+                          <columns>
+                            <TableColumn prefWidth="305.0" text="Signatory" />
+                            <TableColumn prefWidth="221.0" text="Status" />
+                              <TableColumn prefWidth="271.0" text="Status updated" />
+                          </columns>
+                        </TableView>
+                     </content>
+                  </TitledPane>
+                  <TitledPane prefHeight="54.0" prefWidth="722.0" text="Attachments (3)">
+                     <content>
+                        <TableView prefHeight="200.0" prefWidth="200.0">
+                          <columns>
+                            <TableColumn prefWidth="136.0" text="File name" />
+                            <TableColumn minWidth="8.0" prefWidth="172.0" text="Size" />
+                              <TableColumn prefWidth="218.0" text="Date modified" />
+                          </columns>
+                        </TableView>
+                     </content></TitledPane>
+              </panes>
+            </Accordion>
+         </items>
+      </SplitPane>
+      <Label text="133 matching transaction(s)" />
+   </children>
+</VBox>

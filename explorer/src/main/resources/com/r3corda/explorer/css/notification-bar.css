@@ -1,0 +1,42 @@
+.notification-bar {
+    -fx-background-color: linear-gradient(to bottom, black, darkslategray);
+}
+
+.notification-bar > .notification-bar-item {
+    -fx-padding: 10;
+}
+
+.notification-bar > .notification-bar-item > Label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13;
+}
+
+.notification-bar > .notification-bar-item > .progress-bar > .bar {
+    -fx-padding: 8;
+}
+
+.notification-bar > .notification-bar-item > .progress-bar > .track {
+    -fx-opacity: 0.0;
+}
+
+.notification-bar > .notification-bar-item > .button {
+    -fx-base: orange;
+    -fx-font-weight: bold;
+    -fx-font-size: 12;
+    -fx-text-fill: white;
+    -fx-background-insets: 1;
+    -fx-background-radius: 5;
+}
+
+.thin-progress-bar > .bar {
+    -fx-padding: 8;
+}
+
+.thin-progress-bar > .track {
+    -fx-background-color: #bce7f5;
+    -fx-background-insets: 3 3 4 3;
+    /*-fx-background-radius: 0.583em; *//* 7 */
+    -fx-background-radius: 2;
+    -fx-padding: 8;
+}

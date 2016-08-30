@@ -1,0 +1,74 @@
+group 'com.r3corda'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.0.3'
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+sourceCompatibility = 1.8
+
+applicationDefaultJvmArgs = ["-javaagent:${rootProject.configurations.quasar.singleFile}"]
+mainClassName = 'com.r3corda.explorer.Main'
+
+sourceSets {
+    main {
+        resources {
+            srcDir "../config/dev"
+        }
+    }
+    test {
+        resources {
+            srcDir "../config/test"
+        }
+    }
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
+    compile 'no.tornado:tornadofx:1.5.1'
+
+    // Corda Core: Data structures and basic types needed to work with Corda.
+    compile project(':core')
+    compile project(':client')
+    compile project(':node')
+    compile project(':contracts')
+
+    // FontAwesomeFX: The "FontAwesome" icon library.
+    compile 'de.jensd:fontawesomefx-fontawesome:4.6.1-2'
+
+    // ReactFX: Functional reactive UI programming.
+    compile 'org.reactfx:reactfx:2.0-M5'
+    compile 'org.fxmisc.easybind:easybind:1.0.3'
+
+    // JFXtras: useful widgets including a calendar control.
+    compile 'org.jfxtras:jfxtras-agenda:8.0-r5'
+    compile 'org.jfxtras:jfxtras-font-roboto:8.0-r5'
+}

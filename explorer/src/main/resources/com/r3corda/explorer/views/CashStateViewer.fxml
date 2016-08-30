@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<HBox spacing="5.0" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <VBox HBox.hgrow="SOMETIMES">
+         <children>
+            <Label text="State ID" VBox.vgrow="ALWAYS" />
+            <Label text="Issuer" />
+            <Label text="Originated" wrapText="true" />
+            <Label text="Amount" wrapText="true" />
+            <Label fx:id="EquivLabel" text="USD" wrapText="true" />
+         </children>
+      </VBox>
+      <VBox HBox.hgrow="ALWAYS">
+         <children>
+            <Label fx:id="StateIdValueLabel" text="39043-329090-390091" />
+            <Label fx:id="IssuerValueLabel" styleClass="counterparty" text="C-03820 HSBC GROUP PLC" />
+            <Label fx:id="OriginatedValueLabel" text="2018-04-27 11:34 UTC" />
+            <Label fx:id="AmountValueLabel" text="GBP 0.00" wrapText="true" />
+            <Label fx:id="EquivValueLabel" text="0.00" wrapText="true" />
+         </children>
+      </VBox>
+   </children>
+</HBox>

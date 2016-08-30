@@ -1,0 +1,143 @@
+.root {
+    -fx-font-family: "Roboto Light", sans-serif;
+    -fx-font-size: 12pt;
+    /* Setting the background colour explicitly is required for a correct fade/blur animation. */
+    -fx-background-color: white;
+}
+
+.sidebar {
+    -fx-background-color: #494949;
+}
+
+.sidebar-right-shadow {
+    -fx-background-color: linear-gradient(to left, #1c1c1c, #494949);
+    -fx-border-color: black;
+    -fx-border-width: 0 0.1em 0 0;
+    -fx-padding: 0 0.2em 0 0.2em;
+}
+
+.sidebar-button {
+    -fx-base: transparent;
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-graphic-text-gap: 1em;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, black, 6, 0.0, 0, 0);
+}
+
+.sidebar-button:selected {
+    -fx-background-color: grey;
+}
+
+.sidebar-icon {
+    -fx-font-size: 25pt;
+}
+
+.modal-window {
+    -fx-background-color: white;
+    -fx-background-radius: 5;
+    -fx-effect: dropshadow(three-pass-box, black, 10, 0.0, 0, 0);
+}
+
+.modal-window > .title-bar {
+    -fx-background-radius: 5 5 0 0;
+    -fx-background-color: #3c777b;
+    -fx-alignment: center-left;
+}
+
+.modal-window > .title-bar > Button {
+    -fx-base: transparent;
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+}
+
+.modal-window > .title-bar > Button:hover {
+    -fx-base: #3c777b;
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-text-fill: white;
+}
+
+.modal-window > .title-bar > Label {
+    -fx-text-fill: white;
+    -fx-font-size: 120%;
+}
+
+.large-font {
+    -fx-font-size: 200%;
+}
+
+/********************************************************************************************************************
+ *
+ * Buttons
+ *
+ */
+
+.flat-button {
+    -fx-background-color: white;
+    -fx-padding: 0 0 0 0;
+    -fx-font-size: 10pt;
+}
+
+.flat-button:hover {
+    -fx-underline: true;
+    -fx-cursor: hand;
+}
+
+.flat-button:focused {
+    -fx-font-weight: bold;
+}
+
+.fat-buttons {
+    -fx-spacing: 15.0;
+}
+
+.fat-buttons Button {
+    -fx-padding: 10 15 10 15;
+    -fx-min-width: 100;
+    -fx-font-weight: bold;
+    -fx-base: whitesmoke;
+}
+
+.fat-buttons Button:default {
+    -fx-base: orange;
+    -fx-text-fill: white;
+}
+
+.fat-buttons Button:cancel {
+    -fx-background-color: white;
+    -fx-background-insets: 1;
+    -fx-border-color: lightgray;
+    -fx-border-radius: 3;
+    -fx-text-fill: black;
+}
+
+.fat-buttons Button:cancel:hover {
+    -fx-base: white;
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-text-fill: black;
+}
+
+/** take out the focus ring */
+.no-focus-button:focused {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-background-radius: 3px, 3px, 2px, 1px;
+}
+
+.blue-button {
+    -fx-base: lightblue;
+    -fx-text-fill: darkslategrey;
+}
+
+.blue-button:disabled {
+    -fx-text-fill: white;
+}
+
+.green-button {
+    -fx-base: #62c462;
+    -fx-text-fill: darkslategrey;
+}
+
+.green-button:disabled {
+    -fx-text-fill: white;
+}
