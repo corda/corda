@@ -457,14 +457,16 @@ class DriverDSL(
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
+
+            val debugPortArg: String = if(debugPort != null)
+                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
+            else
+                ""
+            
             val javaArgs = listOf(path) +
-                    listOf("-Dname=$legalName", "-javaagent:$quasarJarPath",
+                    listOf("-Dname=$legalName", "-javaagent:$quasarJarPath", debugPortArg,
                             "-cp", classpath, className) +
-                    cliParams.toCliArguments() +
-                    if (debugPort != null)
-                        listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
-                    else
-                        listOf()
+                    cliParams.toCliArguments()
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
