@@ -13,12 +13,12 @@ import rx.Observable
  * The only restriction on [parallel] is that we should be able to discriminate which branch to take based on the
  * arrived event's type. If this is ambiguous the first matching piece of DSL will be run.
 
- * [sequence]s and [parallel]s can be nested arbitrarily
+ * [sequence]s and [parallel]s can be nested arbitrarily.
  *
  * Example usage:
  *
- * val stream: Observable<SomeEvent> = (..)
- * stream.expectEvents(
+ * val stream: EventStream<SomeEvent> = (..)
+ * stream.expectEvents {
  *   sequence(
  *     expect { event: SomeEvent.A -> require(event.isOk()) },
  *     parallel(
@@ -26,7 +26,7 @@ import rx.Observable
  *       expect { event.SomeEvent.C -> }
  *     )
  *   )
- * )
+ * }
  *
  * The above will test our expectation that the stream should first emit an A, and then a B and C in unspecified order.
  */
