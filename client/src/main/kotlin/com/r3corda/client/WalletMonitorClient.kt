@@ -9,10 +9,10 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.services.monitor.*
-import org.reactfx.EventSink
-import org.reactfx.EventStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Observable
+import rx.Observer
 
 /**
  * Worked example of a client which communicates with the wallet monitor service.
@@ -23,8 +23,8 @@ private val log: Logger = LoggerFactory.getLogger("WalletMonitorClient")
 class WalletMonitorClient(
         val net: MessagingService,
         val node: NodeInfo,
-        val outEvents: EventStream<ClientToServiceCommand>,
-        val inEvents: EventSink<ServiceToClientEvent>
+        val outEvents: Observable<ClientToServiceCommand>,
+        val inEvents: Observer<ServiceToClientEvent>
 ) {
     private val sessionID = random63BitValue()
 
@@ -43,7 +43,7 @@ class WalletMonitorClient(
 
         net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
             val event = msg.data.deserialize<ServiceToClientEvent>()
-            inEvents.push(event)
+            inEvents.onNext(event)
         }
 
         val req = RegisterRequest(net.myAddress, sessionID)
