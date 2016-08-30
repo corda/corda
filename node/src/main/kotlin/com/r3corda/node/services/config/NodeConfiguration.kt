@@ -103,6 +103,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val keyStorePassword: String by conf
     override val trustStorePassword: String by conf
     override val dataSourceProperties: Properties by conf
+    val useHTTPS: Boolean by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
     val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
