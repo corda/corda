@@ -13,9 +13,6 @@ so far. We have:
 The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.
 
-.. note:: Corda is developed on MacOS and works best on UNIX systems. Both demos are easily run on Windows but
-   you won't get the nice coloured output.
-
 Trader demo
 -----------
 
