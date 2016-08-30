@@ -5,6 +5,7 @@ import com.r3corda.core.ThreadBox
 import org.reactfx.EventStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.Observable
 
 /**
  * This file defines a simple DSL for testing non-deterministic sequence of events arriving on an [EventStream].
@@ -61,7 +62,7 @@ fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
  * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subset of events).
  * @param expectCompose The DSL we expect to match against the stream of events.
  */
-fun <E : Any> EventStream<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) {
+fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) {
     val finishFuture = SettableFuture<Unit>()
     val lockedState = ThreadBox(object { var state = ExpectComposeState.fromExpectCompose(expectCompose()) })
     subscribe { event ->

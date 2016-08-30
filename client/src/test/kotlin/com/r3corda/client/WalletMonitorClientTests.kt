@@ -11,9 +11,9 @@ import com.r3corda.node.services.monitor.TransactionBuildResult
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
 import org.junit.Test
-import org.reactfx.EventSource
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import rx.subjects.PublishSubject
 import kotlin.test.fail
 
 val log: Logger = LoggerFactory.getLogger(WalletMonitorServiceTests::class.java)
@@ -33,13 +33,13 @@ class WalletMonitorServiceTests {
             log.info("Alice is ${aliceNode.identity}")
             log.info("Notary is ${notaryNode.identity}")
 
-            val aliceInStream = EventSource<ServiceToClientEvent>()
-            val aliceOutStream = EventSource<ClientToServiceCommand>()
+            val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
+            val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
             val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
             require(aliceMonitorClient.register().get())
 
-            aliceOutStream.push(ClientToServiceCommand.IssueCash(
+            aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
                     amount = Amount(100, USD),
                     issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                     recipient = aliceNode.identity,
@@ -82,114 +82,116 @@ class WalletMonitorServiceTests {
             log.info("Alice is ${aliceNode.identity}")
             log.info("Notary is ${notaryNode.identity}")
 
-            val aliceInStream = EventSource<ServiceToClientEvent>()
-            val aliceOutStream = EventSource<ClientToServiceCommand>()
+            val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
+            val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
             val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
             require(aliceMonitorClient.register().get())
 
-            aliceOutStream.push(ClientToServiceCommand.IssueCash(
+            aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
                     amount = Amount(100, USD),
                     issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                     recipient = aliceNode.identity,
                     notary = notaryNode.identity
             ))
 
-            aliceOutStream.push(ClientToServiceCommand.PayCash(
+            aliceOutStream.onNext(ClientToServiceCommand.PayCash(
                     amount = Amount(100, Issued(PartyAndReference(aliceNode.identity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                     recipient = aliceNode.identity
             ))
 
-            aliceInStream.expectEvents(sequence(
-                    // ISSUE
-                    parallel(
-                            sequence(
-                                    expect { add: ServiceToClientEvent.StateMachine ->
-                                        require(add.addOrRemove == AddOrRemove.ADD)
-                                    },
-                                    expect { remove: ServiceToClientEvent.StateMachine ->
-                                        require(remove.addOrRemove == AddOrRemove.REMOVE)
-                                    }
-                            ),
-                            expect { tx: ServiceToClientEvent.Transaction ->
-                                require(tx.transaction.tx.inputs.isEmpty())
-                                require(tx.transaction.tx.outputs.size == 1)
-                                val signaturePubKeys = tx.transaction.sigs.map { it.by }.toSet()
-                                // Only Alice signed
-                                require(signaturePubKeys.size == 1)
-                                require(signaturePubKeys.contains(aliceNode.identity.owningKey))
-                            },
-                            expect { build: ServiceToClientEvent.TransactionBuild ->
-                                val state = build.state
-                                when (state) {
-                                    is TransactionBuildResult.ProtocolStarted -> {
-                                    }
-                                    is TransactionBuildResult.Failed -> fail(state.message)
-                                }
-                            },
-                            expect { output: ServiceToClientEvent.OutputState ->
-                                require(output.consumed.size == 0)
-                                require(output.produced.size == 1)
-                            }
-                    ),
-
-                    // MOVE
-                    parallel(
-                            sequence(
-                                    expect { add: ServiceToClientEvent.StateMachine ->
-                                        require(add.addOrRemove == AddOrRemove.ADD)
-                                    },
-                                    expect { add: ServiceToClientEvent.StateMachine ->
-                                        require(add.addOrRemove == AddOrRemove.REMOVE)
-                                    }
-                            ),
-                            expect { tx: ServiceToClientEvent.Transaction ->
-                                require(tx.transaction.tx.inputs.size == 1)
-                                require(tx.transaction.tx.outputs.size == 1)
-                                val signaturePubKeys = tx.transaction.sigs.map { it.by }.toSet()
-                                // Alice and Notary signed
-                                require(signaturePubKeys.size == 2)
-                                require(signaturePubKeys.contains(aliceNode.identity.owningKey))
-                                require(signaturePubKeys.contains(notaryNode.identity.owningKey))
-                            },
-                            sequence(
-                                    expect { build: ServiceToClientEvent.TransactionBuild ->
-                                        val state = build.state
-                                        when (state) {
-                                            is TransactionBuildResult.ProtocolStarted -> {
-                                                log.info("${state.message}")
-                                            }
-                                            is TransactionBuildResult.Failed -> fail(state.message)
+            aliceInStream.expectEvents {
+                sequence(
+                        // ISSUE
+                        parallel(
+                                sequence(
+                                        expect { add: ServiceToClientEvent.StateMachine ->
+                                            require(add.addOrRemove == AddOrRemove.ADD)
+                                        },
+                                        expect { remove: ServiceToClientEvent.StateMachine ->
+                                            require(remove.addOrRemove == AddOrRemove.REMOVE)
                                         }
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Requesting signature by notary service
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Structural step change in child of Requesting signature by notary service
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Requesting signature by notary service
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Validating response from Notary service
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Done
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Broadcasting transaction to participants
-                                    },
-                                    expect { build: ServiceToClientEvent.Progress ->
-                                        // Done
+                                ),
+                                expect { tx: ServiceToClientEvent.Transaction ->
+                                    require(tx.transaction.tx.inputs.isEmpty())
+                                    require(tx.transaction.tx.outputs.size == 1)
+                                    val signaturePubKeys = tx.transaction.sigs.map { it.by }.toSet()
+                                    // Only Alice signed
+                                    require(signaturePubKeys.size == 1)
+                                    require(signaturePubKeys.contains(aliceNode.identity.owningKey))
+                                },
+                                expect { build: ServiceToClientEvent.TransactionBuild ->
+                                    val state = build.state
+                                    when (state) {
+                                        is TransactionBuildResult.ProtocolStarted -> {
+                                        }
+                                        is TransactionBuildResult.Failed -> fail(state.message)
                                     }
-                            ),
-                            expect { output: ServiceToClientEvent.OutputState ->
-                                require(output.consumed.size == 1)
-                                require(output.produced.size == 1)
-                            }
-                    )
-            ))
+                                },
+                                expect { output: ServiceToClientEvent.OutputState ->
+                                    require(output.consumed.size == 0)
+                                    require(output.produced.size == 1)
+                                }
+                        ),
+
+                        // MOVE
+                        parallel(
+                                sequence(
+                                        expect { add: ServiceToClientEvent.StateMachine ->
+                                            require(add.addOrRemove == AddOrRemove.ADD)
+                                        },
+                                        expect { add: ServiceToClientEvent.StateMachine ->
+                                            require(add.addOrRemove == AddOrRemove.REMOVE)
+                                        }
+                                ),
+                                expect { tx: ServiceToClientEvent.Transaction ->
+                                    require(tx.transaction.tx.inputs.size == 1)
+                                    require(tx.transaction.tx.outputs.size == 1)
+                                    val signaturePubKeys = tx.transaction.sigs.map { it.by }.toSet()
+                                    // Alice and Notary signed
+                                    require(signaturePubKeys.size == 2)
+                                    require(signaturePubKeys.contains(aliceNode.identity.owningKey))
+                                    require(signaturePubKeys.contains(notaryNode.identity.owningKey))
+                                },
+                                sequence(
+                                        expect { build: ServiceToClientEvent.TransactionBuild ->
+                                            val state = build.state
+                                            when (state) {
+                                                is TransactionBuildResult.ProtocolStarted -> {
+                                                    log.info("${state.message}")
+                                                }
+                                                is TransactionBuildResult.Failed -> fail(state.message)
+                                            }
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Requesting signature by notary service
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Structural step change in child of Requesting signature by notary service
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Requesting signature by notary service
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Validating response from Notary service
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Done
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Broadcasting transaction to participants
+                                        },
+                                        expect { build: ServiceToClientEvent.Progress ->
+                                            // Done
+                                        }
+                                ),
+                                expect { output: ServiceToClientEvent.OutputState ->
+                                    require(output.consumed.size == 1)
+                                    require(output.produced.size == 1)
+                                }
+                        )
+                )
+            }
         }
     }
 
@@ -206,68 +208,70 @@ class WalletMonitorServiceTests {
             log.info("Alice is ${aliceNode.identity}")
             log.info("Notary is ${notaryNode.identity}")
 
-            val aliceInStream = EventSource<ServiceToClientEvent>()
-            val aliceOutStream = EventSource<ClientToServiceCommand>()
+            val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
+            val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
             val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
             require(aliceMonitorClient.register().get())
 
-            aliceOutStream.push(ClientToServiceCommand.IssueCash(
+            aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
                     amount = Amount(100, USD),
                     issueRef = OpaqueBytes(ByteArray(1, { 1 })),
                     recipient = aliceNode.identity,
                     notary = notaryNode.identity
             ))
 
-            aliceOutStream.push(ClientToServiceCommand.IssueCash(
+            aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
                     amount = Amount(100, USD),
                     issueRef = OpaqueBytes(ByteArray(1, { 2 })),
                     recipient = aliceNode.identity,
                     notary = notaryNode.identity
             ))
 
-            aliceOutStream.push(ClientToServiceCommand.PayCash(
+            aliceOutStream.onNext(ClientToServiceCommand.PayCash(
                     amount = Amount(200, Issued(PartyAndReference(aliceNode.identity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
                     recipient = aliceNode.identity
             ))
 
-            aliceInStream.expectEvents(sequence(
-                    // ISSUE 1
-                    parallel(
-                            sequence(
-                                    expect { add: ServiceToClientEvent.StateMachine ->
-                                        require(add.addOrRemove == AddOrRemove.ADD)
-                                    },
-                                    expect { remove: ServiceToClientEvent.StateMachine ->
-                                        require(remove.addOrRemove == AddOrRemove.REMOVE)
-                                    }
-                            ),
-                            expect { tx: ServiceToClientEvent.Transaction -> },
-                            expect { build: ServiceToClientEvent.TransactionBuild -> },
-                            expect { output: ServiceToClientEvent.OutputState -> }
-                    ),
+            aliceInStream.expectEvents {
+                sequence(
+                        // ISSUE 1
+                        parallel(
+                                sequence(
+                                        expect { add: ServiceToClientEvent.StateMachine ->
+                                            require(add.addOrRemove == AddOrRemove.ADD)
+                                        },
+                                        expect { remove: ServiceToClientEvent.StateMachine ->
+                                            require(remove.addOrRemove == AddOrRemove.REMOVE)
+                                        }
+                                ),
+                                expect { tx: ServiceToClientEvent.Transaction -> },
+                                expect { build: ServiceToClientEvent.TransactionBuild -> },
+                                expect { output: ServiceToClientEvent.OutputState -> }
+                        ),
 
-                    // ISSUE 2
-                    parallel(
-                            sequence(
-                                    expect { add: ServiceToClientEvent.StateMachine ->
-                                        require(add.addOrRemove == AddOrRemove.ADD)
-                                    },
-                                    expect { remove: ServiceToClientEvent.StateMachine ->
-                                        require(remove.addOrRemove == AddOrRemove.REMOVE)
-                                    }
-                            ),
-                            expect { tx: ServiceToClientEvent.Transaction -> },
-                            expect { build: ServiceToClientEvent.TransactionBuild -> },
-                            expect { output: ServiceToClientEvent.OutputState -> }
-                    ),
+                        // ISSUE 2
+                        parallel(
+                                sequence(
+                                        expect { add: ServiceToClientEvent.StateMachine ->
+                                            require(add.addOrRemove == AddOrRemove.ADD)
+                                        },
+                                        expect { remove: ServiceToClientEvent.StateMachine ->
+                                            require(remove.addOrRemove == AddOrRemove.REMOVE)
+                                        }
+                                ),
+                                expect { tx: ServiceToClientEvent.Transaction -> },
+                                expect { build: ServiceToClientEvent.TransactionBuild -> },
+                                expect { output: ServiceToClientEvent.OutputState -> }
+                        ),
 
-                    // MOVE, should fail
-                    expect { build: ServiceToClientEvent.TransactionBuild ->
-                        val state = build.state
-                        require(state is TransactionBuildResult.Failed)
-                    }
-            ))
+                        // MOVE, should fail
+                        expect { build: ServiceToClientEvent.TransactionBuild ->
+                            val state = build.state
+                            require(state is TransactionBuildResult.Failed)
+                        }
+                )
+            }
         }
     }
 }
