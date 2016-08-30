@@ -1,4 +1,4 @@
-package com.r3corda.core.testing.utilities
+package com.r3corda.testing
 
 import java.text.SimpleDateFormat
 import java.util.*

@@ -1,13 +1,13 @@
 package com.r3corda.core.testing
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.testing.utilities.*
+import com.r3corda.testing.*
 import kotlin.test.assertEquals
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class IRSDemoTest {
+class IRSDemoTest: IntegrationTestCategory {
     @Test fun `runs IRS demo`() {
         val nodeAddrA = freeLocalHostAndPort()
         val apiAddrA = freeLocalHostAndPort()

@@ -14,8 +14,10 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
+import com.r3corda.core.utilities.TEST_TX_TIME
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.InMemoryMessagingNetwork
@@ -24,6 +26,7 @@ import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.protocols.TwoPartyTradeProtocol
+import com.r3corda.testing.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before

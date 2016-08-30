@@ -7,7 +7,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper

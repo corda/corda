@@ -5,15 +5,12 @@ import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.USD
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.core.testing.rootCauseExceptions
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.MEGA_CORP
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 /**
  * Tests for the data vending service.

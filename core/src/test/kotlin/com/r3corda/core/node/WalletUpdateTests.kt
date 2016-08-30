@@ -3,7 +3,7 @@ package com.r3corda.core.node
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.Wallet
-import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import org.junit.Test
 import java.security.PublicKey
 import kotlin.test.assertEquals

@@ -4,10 +4,13 @@ import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.LedgerTransaction
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.contracts.toLedgerTransaction
-import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
 import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.*
 import org.junit.Before
 import java.time.Instant
 import java.time.ZoneOffset

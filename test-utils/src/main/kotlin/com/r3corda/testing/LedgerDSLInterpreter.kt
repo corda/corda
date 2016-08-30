@@ -1,7 +1,8 @@
-package com.r3corda.core.testing
+package com.r3corda.testing
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import java.io.InputStream
 
 /**
@@ -134,7 +135,7 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
      */
     @JvmOverloads
     fun unverifiedTransaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
-                    dsl: TransactionDSL<TransactionDSLInterpreter>.() -> Unit) =
+                              dsl: TransactionDSL<TransactionDSLInterpreter>.() -> Unit) =
             _unverifiedTransaction(label, transactionBuilder, dsl)
 
     /**

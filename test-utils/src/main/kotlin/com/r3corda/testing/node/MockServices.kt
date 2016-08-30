@@ -1,4 +1,4 @@
-package com.r3corda.core.node.services.testing
+package com.r3corda.testing.node
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Attachment
@@ -12,9 +12,9 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.core.testing.MINI_CORP
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.testing.MEGA_CORP
+import com.r3corda.testing.MINI_CORP
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.ByteArrayInputStream

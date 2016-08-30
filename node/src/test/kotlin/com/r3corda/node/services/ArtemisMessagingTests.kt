@@ -4,12 +4,12 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.testing.freeLocalHostAndPort
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.testing.freeLocalHostAndPort
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Rule

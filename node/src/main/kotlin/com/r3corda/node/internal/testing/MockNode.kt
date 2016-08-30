@@ -9,10 +9,10 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.WalletService
-import com.r3corda.core.node.services.testing.MockIdentityService
-import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
-import com.r3corda.core.testing.DUMMY_NOTARY_KEY
+import com.r3corda.testing.node.MockIdentityService
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import com.r3corda.core.testing.InMemoryWalletService
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.api.MessagingServiceInternal

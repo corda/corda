@@ -1,10 +1,15 @@
 package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.testing.LedgerDSL
+import com.r3corda.testing.TestLedgerDSLInterpreter
+import com.r3corda.testing.TestTransactionDSLInterpreter
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.*
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate

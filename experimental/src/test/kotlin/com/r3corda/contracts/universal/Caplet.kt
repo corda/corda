@@ -3,8 +3,8 @@ package com.r3corda.contracts.universal
 import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.FixOf
 import com.r3corda.core.contracts.Tenor
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.transaction
+import com.r3corda.testing.*
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.Instant

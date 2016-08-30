@@ -2,9 +2,9 @@ package com.r3corda.node.services
 
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.UniquenessException
-import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.core.testing.generateStateRef
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
+import com.r3corda.testing.MEGA_CORP
+import com.r3corda.testing.generateStateRef
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

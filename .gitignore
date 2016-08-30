@@ -16,6 +16,7 @@ tags
 /core/build
 /experimental/build
 /docs/build/doctrees
+/test-utils/build
 
 # gradle's buildSrc build/
 /buildSrc/build/

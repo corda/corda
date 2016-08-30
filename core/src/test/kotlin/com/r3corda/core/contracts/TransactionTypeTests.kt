@@ -2,7 +2,9 @@ package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.testing.*
 import org.junit.Test
 import kotlin.test.assertFailsWith
 

@@ -3,7 +3,9 @@ package com.r3corda.contracts
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_PUBKEY_1
+import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.testing.*
 import org.junit.Test
 import java.time.LocalDate
 import java.util.*

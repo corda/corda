@@ -12,7 +12,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import java.security.PublicKey
 import java.util.*
 

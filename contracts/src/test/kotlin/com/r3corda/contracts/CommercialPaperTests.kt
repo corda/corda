@@ -6,9 +6,13 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
-import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.core.utilities.DUMMY_PUBKEY_1
+import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized

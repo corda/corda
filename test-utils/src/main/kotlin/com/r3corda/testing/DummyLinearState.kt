@@ -1,4 +1,4 @@
-package com.r3corda.core.testing
+package com.r3corda.testing
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.Clause
