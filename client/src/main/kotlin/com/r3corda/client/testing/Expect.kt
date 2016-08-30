@@ -32,40 +32,83 @@ import org.slf4j.LoggerFactory
  * The above will test our expectation that the stream should first emit an A, and then a B and C in unspecified order.
  */
 
-val log: Logger = LoggerFactory.getLogger("Expect")
+private val log: Logger = LoggerFactory.getLogger("Expect")
 
-sealed class ExpectCompose<out E> {
-    class Single<E>(val expect: Expect<E, E>) : ExpectCompose<E>()
-    class Sequential<E>(val sequence: List<ExpectCompose<E>>) : ExpectCompose<E>()
-    class Parallel<E>(val parallel: List<ExpectCompose<E>>) : ExpectCompose<E>()
+/**
+ * Expect an event of type [T] and run [expectClosure] on it
+ */
+inline fun <E : Any, reified T : E> expect(noinline expectClosure: (T) -> Unit) = expect(T::class.java, expectClosure)
+fun <E : Any, T : E> expect(klass: Class<T>, expectClosure: (T) -> Unit): ExpectCompose<E> {
+    return ExpectCompose.Single(Expect(klass, expectClosure))
 }
 
-data class Expect<E, T : E>(
+/**
+ * Tests that events arrive in the specified order.
+ *
+ * @param expectations The pieces of DSL that should run sequentially when events arrive.
+ */
+fun <E> sequence(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Sequential(listOf(*expectations))
+
+/**
+ * Tests that events arrive in unspecified order.
+ *
+ * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
+ */
+fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
+
+/**
+ * Run the specified DSL against the event stream.
+ * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subset of events).
+ * @param expectCompose The DSL we expect to match against the stream of events.
+ */
+fun <E : Any> EventStream<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) {
+    val finishFuture = SettableFuture<Unit>()
+    val lockedState = ThreadBox(object { var state = ExpectComposeState.fromExpectCompose(expectCompose()) })
+    subscribe { event ->
+        lockedState.locked {
+            if (state is ExpectComposeState.Finished) {
+                log.warn("Got event $event, but was expecting no further events")
+                return@subscribe
+            }
+            val next = state.nextState(event)
+            log.info("$event :: ${state.getExpectedEvents()} -> ${next?.second?.getExpectedEvents()}")
+            if (next == null) {
+                val expectedStates = state.getExpectedEvents()
+                val message = "Got $event, expected one of $expectedStates"
+                if (isStrict) {
+                    finishFuture.setException(Exception(message))
+                    state = ExpectComposeState.Finished()
+                } else {
+                    log.warn("$message, discarding event as isStrict=false")
+                }
+            } else {
+                state = next.second
+                try {
+                    next.first()
+                } catch (exception: Exception) {
+                    finishFuture.setException(exception)
+                }
+                if (state is ExpectComposeState.Finished) {
+                    finishFuture.set(Unit)
+                }
+            }
+        }
+    }
+    finishFuture.get()
+}
+
+sealed class ExpectCompose<out E> {
+    internal class Single<E>(val expect: Expect<E, E>) : ExpectCompose<E>()
+    internal class Sequential<E>(val sequence: List<ExpectCompose<E>>) : ExpectCompose<E>()
+    internal class Parallel<E>(val parallel: List<ExpectCompose<E>>) : ExpectCompose<E>()
+}
+
+internal data class Expect<E, T : E>(
         val clazz: Class<T>,
         val expectClosure: (T) -> Unit
 )
 
-inline fun <E : Any, reified T : E> expect(noinline expectClosure: (T) -> Unit): ExpectCompose<E> {
-    return ExpectCompose.Single(Expect(T::class.java, expectClosure))
-}
-
-/**
- * Tests that events arrive in the specified order
- *
- * @param expects The pieces of DSL that should run sequentially when events arrive
- */
-fun <E> sequence(vararg expects: ExpectCompose<E>) =
-        ExpectCompose.Sequential(listOf(*expects))
-
-/**
- * Tests that events arrive in unspecified order
- *
- * @param expects The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive
- */
-fun <E> parallel(vararg expects: ExpectCompose<E>) =
-        ExpectCompose.Parallel(listOf(*expects))
-
-sealed class ExpectComposeState<E : Any>{
+private sealed class ExpectComposeState<E : Any>{
     class Finished<E : Any> : ExpectComposeState<E>()
     class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>()
     class Sequential<E : Any>(
@@ -159,38 +202,3 @@ sealed class ExpectComposeState<E : Any>{
         }
     }
 }
-
-fun <E : Any> EventStream<E>.expectEvents(expectCompose: ExpectCompose<E>) {
-    val finishFuture = SettableFuture<Unit>()
-    val lockedState = ThreadBox(object { var state = ExpectComposeState.fromExpectCompose(expectCompose) })
-    subscribe { event ->
-        lockedState.locked {
-            if (state is ExpectComposeState.Finished) {
-                log.warn("Got event $event, but was expecting no further events")
-                return@subscribe
-            }
-            val next = state.nextState(event)
-            log.info("$event :: ${state.getExpectedEvents()} -> ${next?.second?.getExpectedEvents()}")
-            if (next == null) {
-                val expectedStates = state.getExpectedEvents()
-                finishFuture.setException(Exception(
-                        "Got $event, expected one of $expectedStates"
-                ))
-                state = ExpectComposeState.Finished()
-            } else {
-                state = next.second
-                try {
-                    next.first()
-                } catch (exception: Exception) {
-                    finishFuture.setException(exception)
-                }
-                if (state is ExpectComposeState.Finished) {
-                    finishFuture.set(Unit)
-                }
-            }
-        }
-    }
-    finishFuture.get()
-}
-
-
