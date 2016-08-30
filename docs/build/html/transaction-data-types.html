@@ -93,20 +93,23 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Data types</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#amount">Amount</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#state">State</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#namedbyhash-and-uniqueidentifier">NamedByHash and UniqueIdentifier</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#fungibleassets-and-cash">FungibleAssets and Cash</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#transaction-lifecycle-types">Transaction lifecycle types</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#party-and-publickey">Party and PublicKey</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#date-support">Date support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cryptography-maths-support">Cryptography &amp; maths support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
@@ -173,57 +176,78 @@
             
   <div class="section" id="data-types">
 <h1>Data types<a class="headerlink" href="#data-types" title="Permalink to this headline">¶</a></h1>
-<p>There is a large library of data types used in Corda transactions and contract state objects.</p>
+<p>Corda provides a large standard library of data types used in financial transactions and contract state objects.
+These provide a common language for states and contracts.</p>
 <div class="section" id="amount">
 <h2>Amount<a class="headerlink" href="#amount" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal"><span class="pre">Amount</span></code> class is used to represent an amount of some fungible asset. It is a generic class which wraps around
-a type used to define the underlying product, generally represented by an <code class="docutils literal"><span class="pre">Issued</span></code> instance, or this can be a more
-complex type such as an obligation contract issuance definition (which in turn contains a token definition for whatever
-the obligation is to be settled in).</p>
+<p>The <a class="reference external" href="api/com.r3corda.core.contracts/-amount/index.html">Amount</a> class is used to represent an amount of some
+fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
+the <em>token</em>. For instance it can be the standard JDK type <code class="docutils literal"><span class="pre">Currency</span></code>, or an <code class="docutils literal"><span class="pre">Issued</span></code> instance, or this can be
+a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
+for whatever the obligation is to be settled in).</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
 and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and a
 £10 note can be exchanged for two £5 notes, or vice-versa.</p>
 </div>
-<p>Where a contract refers directly to an amount of something, <code class="docutils literal"><span class="pre">Amount</span></code> should wrap <code class="docutils literal"><span class="pre">Issued</span></code>, which in
-turn can refer to a <code class="docutils literal"><span class="pre">Currency</span></code> (GBP, USD, CHF, etc.), or any other class. Future work in this area will include
-introducing classes to represent non-currency things (such as commodities) that Issued can wrap. For more
-complex amounts, <code class="docutils literal"><span class="pre">Amount</span></code> can wrap other types, for example to represent a number of Obligation contracts to be
-delivered (themselves referring to a currency), an <code class="docutils literal"><span class="pre">Amount</span></code> such as the following would used:</p>
+<p>Here are some examples:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">Amount</span><span class="p">&lt;</span><span class="n">Obligation</span><span class="p">.</span><span class="n">State</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;&gt;</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// A quantity of some specific currency like pounds, euros, dollars etc.</span>
+<span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;</span>
+<span class="c1">// A quantity of currency that is issued by a specific issuer, for instance central bank vs other bank dollars</span>
+<span class="n">Amount</span><span class="p">&lt;</span><span class="n">Issued</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;&gt;</span>
+<span class="c1">// A quantity of obligations to deliver currency of any issuer.</span>
+<span class="n">Amount</span><span class="p">&lt;</span><span class="n">Obligation</span><span class="p">.</span><span class="n">State</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;&gt;</span>
 </pre></div>
 </div>
 </div>
+<p><code class="docutils literal"><span class="pre">Amount</span></code> represents quantities as integers. For currencies the quantity represents pennies, cents or whatever
+else the smallest integer amount for that currency is. You cannot use <code class="docutils literal"><span class="pre">Amount</span></code> to represent negative quantities
+or fractional quantities: if you wish to do this then you must use a different type e.g. <code class="docutils literal"><span class="pre">BigDecimal</span></code>. <code class="docutils literal"><span class="pre">Amount</span></code>
+defines methods to do addition and subtraction and these methods verify that the tokens on both sides of the operator
+are equal (these are operator overloads in Kotlin and can be used as regular methods from Java). There are also
+methods to do multiplication and division by integer amounts.</p>
 </div>
 <div class="section" id="state">
 <h2>State<a class="headerlink" href="#state" title="Permalink to this headline">¶</a></h2>
 <p>A Corda contract is composed of three parts; the executable code, the legal prose, and the state objects that represent
-the details of the contract (see <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a> for further detail). States essentially convert the generic template
-(code and legal prose) into a specific instance. In a <code class="docutils literal"><span class="pre">WireTransaction</span></code>, outputs are provided as <code class="docutils literal"><span class="pre">TransactionState</span></code>
-implementations, while the inputs are references to the outputs of a previous transaction. These references are then
-stored as <code class="docutils literal"><span class="pre">StateRef</span></code> objects, which are converted to <code class="docutils literal"><span class="pre">StateAndRef</span></code> on demand.</p>
-<p>The <code class="docutils literal"><span class="pre">TransactionState</span></code> is a container for a <code class="docutils literal"><span class="pre">ContractState</span></code> (the custom data used by a contract program) and additional
-platform-level state information, such as the <em>notary</em> pointer (see <a class="reference internal" href="consensus.html"><span class="doc">Consensus model</span></a>).</p>
-<p>A number of interfaces then extend <code class="docutils literal"><span class="pre">ContractState</span></code>, representing standardised functionality for states:</p>
+the details of a specific deal or asset (see <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a> for further detail). In relational database terms
+a state is like a row in a database. A reference to a state in the ledger (whether it has been consumed or not)
+is represented with a <code class="docutils literal"><span class="pre">StateRef</span></code> object. If the state ref has been looked up from storage, you will have a
+<code class="docutils literal"><span class="pre">StateAndRef</span></code> which is simply a <code class="docutils literal"><span class="pre">StateRef</span></code> plus the data.</p>
+<p>The <code class="docutils literal"><span class="pre">ContractState</span></code> type is an interface that all states must implement. A <code class="docutils literal"><span class="pre">TransactionState</span></code> is a simple
+container for a <code class="docutils literal"><span class="pre">ContractState</span></code> (the custom data used by a contract program) and additional platform-level state
+information, such as the <em>notary</em> pointer (see <a class="reference internal" href="consensus.html"><span class="doc">Consensus model</span></a>).</p>
+<p>A number of interfaces then extend <code class="docutils literal"><span class="pre">ContractState</span></code>, representing standardised functionality for common kinds
+of state:</p>
 <blockquote>
 <div><dl class="docutils">
 <dt><code class="docutils literal"><span class="pre">OwnableState</span></code></dt>
-<dd>A state which has an owner (represented as a <code class="docutils literal"><span class="pre">PublicKey</span></code>, discussed later). Exposes the owner and a function for
-replacing the owner.</dd>
+<dd>A state which has an owner (represented as a <code class="docutils literal"><span class="pre">PublicKey</span></code>, discussed later). Exposes the owner and a function
+for replacing the owner e.g. when an asset is sold.</dd>
 <dt><code class="docutils literal"><span class="pre">LinearState</span></code></dt>
-<dd>A state which links back to its previous state, creating a thread of states over time. Intended to simplify tracking
-state versions.</dd>
+<dd>A state which links back to its previous state, creating a thread of states over time. A linear state is
+useful when modelling an indivisible/non-fungible thing like a specific deal, or an asset that can&#8217;t be
+split (like a rare piece of art).</dd>
 <dt><code class="docutils literal"><span class="pre">DealState</span></code></dt>
-<dd>A state representing an agreement between two or more parties. Intended to simplify implementing generic protocols
-that manipulate many agreement types.</dd>
+<dd>A LinearState representing an agreement between two or more parties. Intended to simplify implementing generic
+protocols that manipulate many agreement types.</dd>
 <dt><code class="docutils literal"><span class="pre">FixableDealState</span></code></dt>
 <dd>A deal state, with further functions exposed to support fixing of interest rates.</dd>
 </dl>
 </div></blockquote>
-<p>Things (such as attachments) which are identified by their hash should implement the <code class="docutils literal"><span class="pre">NamedByHash</span></code> interface,
-which standardises how the ID is extracted.</p>
+</div>
+<div class="section" id="namedbyhash-and-uniqueidentifier">
+<h2>NamedByHash and UniqueIdentifier<a class="headerlink" href="#namedbyhash-and-uniqueidentifier" title="Permalink to this headline">¶</a></h2>
+<p>Things which are identified by their hash, like transactions and attachments, should implement the <code class="docutils literal"><span class="pre">NamedByHash</span></code>
+interface which standardises how the ID is extracted. Note that a hash is <em>not</em> a globally unique identifier: it
+is always a derivative summary of the contents of the underlying data. Sometimes this isn&#8217;t what you want:
+two deals that have exactly the same parameters and which are made simultaneously but which are logically different
+can&#8217;t be identified by hash because their contents would be identical. Instead you would use  <code class="docutils literal"><span class="pre">UniqueIdentifier</span></code>.
+This is a combination of a (Java) <code class="docutils literal"><span class="pre">UUID</span></code> representing a globally unique 128 bit random number, and an arbitrary
+string which can be paired with it. For instance the string may represent an existing &#8220;weak&#8221; (not guaranteed unique)
+identifier for convenience purposes.</p>
 </div>
 <div class="section" id="fungibleassets-and-cash">
 <h2>FungibleAssets and Cash<a class="headerlink" href="#fungibleassets-and-cash" title="Permalink to this headline">¶</a></h2>
@@ -240,6 +264,11 @@ in place of the attachments themselves (see also <a class="reference internal" h
 <code class="docutils literal"><span class="pre">LedgerTransaction</span></code>, which involves verifying the signatures and associating them to the relevant command(s), and
 resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
 <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> type.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A <code class="docutils literal"><span class="pre">LedgerTransaction</span></code> has not necessarily had its contracts be run, and thus could be contract-invalid
+(but not signature-invalid). You can use the <code class="docutils literal"><span class="pre">verify</span></code> method as shown below to run the contracts.</p>
+</div>
 <p>When constructing a new transaction from scratch, you use <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>, which is a mutable transaction that
 can be signed once modification of the internals is complete. It is typical for contract classes to expose helper
 methods that can contribute to a <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>.</p>
@@ -264,13 +293,19 @@ write your tests using the <a class="reference internal" href="tutorial-test-dsl
 </div>
 <div class="section" id="party-and-publickey">
 <h2>Party and PublicKey<a class="headerlink" href="#party-and-publickey" title="Permalink to this headline">¶</a></h2>
-<p>Identities of parties involved in signing a transaction can be represented simply by their <code class="docutils literal"><span class="pre">PublicKey</span></code>, or by further
-information (such as name) using the <code class="docutils literal"><span class="pre">Party</span></code> class. An <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> contains a list of the public keys
-for signatures present on the transaction, as well as list of parties for those public keys (where known).</p>
+<p>Entities using the network are called <em>parties</em>. Parties can sign structures using keys, and a party may have many
+keys under their control.</p>
+<p>Parties may sometimes be identified pseudonomously, for example, in a transaction sent to your node as part of a
+chain of custody it is important you can convince yourself of the transaction&#8217;s validity, but equally important that
+you don&#8217;t learn anything about who was involved in that transaction. In these cases a public key may be present
+without any identifying information about who owns it.</p>
+<p>Identities of parties involved in signing a transaction can be represented simply by a <code class="docutils literal"><span class="pre">PublicKey</span></code>, or by further
+information (such as name) using the <code class="docutils literal"><span class="pre">Party</span></code> class. An <code class="docutils literal"><span class="pre">AuthenticatedObject</span></code> represents an object (like a command)
+that has been signed by a set of parties.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">These types are provisional and are likely to change in future, for example to add additional information to
-<code class="docutils literal"><span class="pre">Party</span></code>.</p>
+<p class="last">These types are provisional and will change significantly in future as the identity framework becomes more
+fleshed out.</p>
 </div>
 </div>
 <div class="section" id="date-support">
@@ -285,6 +320,13 @@ into account bank holidays or other events that modify normal working days.</p>
 bank holidays). The <code class="docutils literal"><span class="pre">BusinessCalendar</span></code> class models these calendars of business holidays; currently it loads these
 from files on disk, but in future this is likely to involve reference data oracles in order to ensure consensus on the
 dates used.</p>
+</div>
+<div class="section" id="cryptography-maths-support">
+<h2>Cryptography &amp; maths support<a class="headerlink" href="#cryptography-maths-support" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">SecureHash</span></code> class represents a secure hash of unknown algorithm. We currently define only a single subclass,
+<code class="docutils literal"><span class="pre">SecureHash.SHA256</span></code>. There are utility methods to create them, parse them and so on.</p>
+<p>We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
+splines. These can be found in the <a class="reference external" href="api/com.r3corda.core.math/index.html">maths package</a>.</p>
 </div>
 </div>
 

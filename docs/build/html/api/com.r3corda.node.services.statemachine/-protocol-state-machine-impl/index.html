@@ -47,6 +47,14 @@ For any given flow there is only one PSM, even if that protocol invokes subproto
 </tr>
 <tr>
 <td>
+<a href="machine-id.html">machineId</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">machineId</span><span class="symbol">: </span><span class="identifier">Long</span></code><p>Unique ID for the deserialized instance protocol state machine. This is NOT maintained across a state machine
+being serialized and then deserialized.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="result-future.html">resultFuture</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">resultFuture</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span></code><p>This future will complete when the call method returns.</p>

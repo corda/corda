@@ -21,6 +21,14 @@ protocols.</p>
 </tr>
 <tr>
 <td>
+<a href="-broadcast-transaction-protocol/index.html">BroadcastTransactionProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BroadcastTransactionProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
+<a href="-finality-protocol/index.html">FinalityProtocol</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-direct-request-message/index.html">DirectRequestMessage</a></td>
 <td>
 <code><span class="keyword">interface </span><span class="identifier">DirectRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a></code><p>A message which specifies reply destination as a specific endpoint such as a monitoring client. This is of particular
@@ -49,6 +57,13 @@ attachments are saved to local storage automatically.</p>
 <a href="-fetch-transactions-protocol/index.html">FetchTransactionsProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FetchTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-finality-protocol/index.html">FinalityProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FinalityProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
 </td>
 </tr>
 <tr>

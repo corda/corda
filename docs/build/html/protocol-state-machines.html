@@ -93,12 +93,13 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
@@ -111,12 +112,15 @@
 <li class="toctree-l2"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#theory">Theory</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#a-two-party-trading-protocol">A two party trading protocol</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#suspendable-methods">Suspendable methods</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#the-state-machine-manager">The state machine manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#suspendable-functions">Suspendable functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-your-protocol">Starting your protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#implementing-the-seller">Implementing the seller</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subprotocols">Subprotocols</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#implementing-the-buyer">Implementing the buyer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#progress-tracking">Progress tracking</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#unit-testing">Unit testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#versioning">Versioning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#future-features">Future features</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
@@ -258,24 +262,18 @@ represents an atomic asset swap.</p>
 <p>We start by defining a wrapper that namespaces the protocol code, two functions to start either the buy or sell side
 of the protocol, and two classes that will contain the protocol definition. We also pick what data will be used by
 each side.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The code samples in this tutorial are only available in Kotlin, but you can use any JVM language to
+write them and the approach is the same.</p>
+</div>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">object</span> <span class="nc">TwoPartyTradeProtocol</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">TRADE_TOPIC</span> <span class="p">=</span> <span class="s">&quot;platform.trade&quot;</span>
+    <span class="k">val</span> <span class="py">TOPIC</span> <span class="p">=</span> <span class="s">&quot;platform.trade&quot;</span>
 
-    <span class="k">fun</span> <span class="nf">runSeller</span><span class="p">(</span><span class="n">smm</span><span class="p">:</span> <span class="n">StateMachineManager</span><span class="p">,</span> <span class="n">timestampingAuthority</span><span class="p">:</span> <span class="n">LegallyIdentifiableNode</span><span class="p">,</span>
-                  <span class="n">otherSide</span><span class="p">:</span> <span class="n">SingleMessageRecipient</span><span class="p">,</span> <span class="n">assetToSell</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">OwnableState</span><span class="p">&gt;,</span> <span class="n">price</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
-                  <span class="n">myKeyPair</span><span class="p">:</span> <span class="n">KeyPair</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">:</span> <span class="n">Long</span><span class="p">):</span> <span class="n">ListenableFuture</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;</span> <span class="p">{</span>
-        <span class="k">val</span> <span class="py">seller</span> <span class="p">=</span> <span class="n">Seller</span><span class="p">(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">timestampingAuthority</span><span class="p">,</span> <span class="n">assetToSell</span><span class="p">,</span> <span class="n">price</span><span class="p">,</span> <span class="n">myKeyPair</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">)</span>
-        <span class="n">smm</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;$TRADE_TOPIC.seller&quot;</span><span class="p">,</span> <span class="n">seller</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">seller</span><span class="p">.</span><span class="n">resultFuture</span>
-    <span class="p">}</span>
-
-    <span class="k">fun</span> <span class="nf">runBuyer</span><span class="p">(</span><span class="n">smm</span><span class="p">:</span> <span class="n">StateMachineManager</span><span class="p">,</span> <span class="n">timestampingAuthority</span><span class="p">:</span> <span class="n">LegallyIdentifiableNode</span><span class="p">,</span>
-                 <span class="n">otherSide</span><span class="p">:</span> <span class="n">SingleMessageRecipient</span><span class="p">,</span> <span class="n">acceptablePrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">typeToBuy</span><span class="p">:</span> <span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">OwnableState</span><span class="p">&gt;,</span>
-                 <span class="n">sessionID</span><span class="p">:</span> <span class="n">Long</span><span class="p">):</span> <span class="n">ListenableFuture</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;</span> <span class="p">{</span>
-        <span class="k">val</span> <span class="py">buyer</span> <span class="p">=</span> <span class="n">Buyer</span><span class="p">(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">timestampingAuthority</span><span class="p">.</span><span class="n">identity</span><span class="p">,</span> <span class="n">acceptablePrice</span><span class="p">,</span> <span class="n">typeToBuy</span><span class="p">,</span> <span class="n">sessionID</span><span class="p">)</span>
-        <span class="n">smm</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;$TRADE_TOPIC.buyer&quot;</span><span class="p">,</span> <span class="n">buyer</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">buyer</span><span class="p">.</span><span class="n">resultFuture</span>
+    <span class="k">class</span> <span class="nc">UnacceptablePriceException</span><span class="p">(</span><span class="k">val</span> <span class="py">givenPrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">(</span><span class="s">&quot;Unacceptable price: $givenPrice&quot;</span><span class="p">)</span>
+    <span class="k">class</span> <span class="nc">AssetMismatchException</span><span class="p">(</span><span class="k">val</span> <span class="py">expectedTypeName</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">typeName</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">override</span> <span class="k">fun</span> <span class="nf">toString</span><span class="p">()</span> <span class="p">=</span> <span class="s">&quot;The submitted asset didn&#39;t match the expected type: $expectedTypeName vs $typeName&quot;</span>
     <span class="p">}</span>
 
     <span class="c1">// This object is serialised to the network and is the first protocol message the seller sends to the buyer.</span>
@@ -288,28 +286,24 @@ each side.</p>
 
     <span class="k">class</span> <span class="nc">SignaturesFromSeller</span><span class="p">(</span><span class="k">val</span> <span class="py">timestampAuthoritySig</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span> <span class="k">val</span> <span class="py">sellerSig</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">)</span>
 
-    <span class="k">class</span> <span class="nc">Seller</span><span class="p">(</span><span class="k">val</span> <span class="py">otherSide</span><span class="p">:</span> <span class="n">SingleMessageRecipient</span><span class="p">,</span>
-                 <span class="k">val</span> <span class="py">timestampingAuthority</span><span class="p">:</span> <span class="n">LegallyIdentifiableNode</span><span class="p">,</span>
-                 <span class="k">val</span> <span class="py">assetToSell</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">OwnableState</span><span class="p">&gt;,</span>
-                 <span class="k">val</span> <span class="py">price</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
-                 <span class="k">val</span> <span class="py">myKeyPair</span><span class="p">:</span> <span class="n">KeyPair</span><span class="p">,</span>
-                 <span class="k">val</span> <span class="py">buyerSessionID</span><span class="p">:</span> <span class="n">Long</span><span class="p">)</span> <span class="p">:</span> <span class="n">ProtocolLogic</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;()</span> <span class="p">{</span>
+    <span class="k">open</span> <span class="k">class</span> <span class="nc">Seller</span><span class="p">(</span><span class="k">val</span> <span class="py">otherSide</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                      <span class="k">val</span> <span class="py">notaryNode</span><span class="p">:</span> <span class="n">NodeInfo</span><span class="p">,</span>
+                      <span class="k">val</span> <span class="py">assetToSell</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">OwnableState</span><span class="p">&gt;,</span>
+                      <span class="k">val</span> <span class="py">price</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;,</span>
+                      <span class="k">val</span> <span class="py">myKeyPair</span><span class="p">:</span> <span class="n">KeyPair</span><span class="p">,</span>
+                      <span class="k">val</span> <span class="py">buyerSessionID</span><span class="p">:</span> <span class="n">Long</span><span class="p">,</span>
+                      <span class="k">override</span> <span class="k">val</span> <span class="py">progressTracker</span><span class="p">:</span> <span class="n">ProgressTracker</span> <span class="p">=</span> <span class="n">Seller</span><span class="p">.</span><span class="n">tracker</span><span class="p">())</span> <span class="p">:</span> <span class="n">ProtocolLogic</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;()</span> <span class="p">{</span>
         <span class="n">@Suspendable</span>
         <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
             <span class="n">TODO</span><span class="p">()</span>
         <span class="p">}</span>
     <span class="p">}</span>
 
-    <span class="k">class</span> <span class="nc">UnacceptablePriceException</span><span class="p">(</span><span class="k">val</span> <span class="py">givenPrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span>
-    <span class="k">class</span> <span class="nc">AssetMismatchException</span><span class="p">(</span><span class="k">val</span> <span class="py">expectedTypeName</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">typeName</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span> <span class="p">{</span>
-        <span class="k">override</span> <span class="k">fun</span> <span class="nf">toString</span><span class="p">()</span> <span class="p">=</span> <span class="s">&quot;The submitted asset didn&#39;t match the expected type: $expectedTypeName vs $typeName&quot;</span>
-    <span class="p">}</span>
-
-    <span class="k">class</span> <span class="nc">Buyer</span><span class="p">(</span><span class="k">val</span> <span class="py">otherSide</span><span class="p">:</span> <span class="n">SingleMessageRecipient</span><span class="p">,</span>
-                <span class="k">val</span> <span class="py">timestampingAuthority</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
-                <span class="k">val</span> <span class="py">acceptablePrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
-                <span class="k">val</span> <span class="py">typeToBuy</span><span class="p">:</span> <span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">OwnableState</span><span class="p">&gt;,</span>
-                <span class="k">val</span> <span class="py">sessionID</span><span class="p">:</span> <span class="n">Long</span><span class="p">)</span> <span class="p">:</span> <span class="n">ProtocolLogic</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;()</span> <span class="p">{</span>
+    <span class="k">open</span> <span class="k">class</span> <span class="nc">Buyer</span><span class="p">(</span><span class="k">val</span> <span class="py">otherSide</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                     <span class="k">val</span> <span class="py">notary</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                     <span class="k">val</span> <span class="py">acceptablePrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;,</span>
+                     <span class="k">val</span> <span class="py">typeToBuy</span><span class="p">:</span> <span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">OwnableState</span><span class="p">&gt;,</span>
+                     <span class="k">val</span> <span class="py">sessionID</span><span class="p">:</span> <span class="n">Long</span><span class="p">)</span> <span class="p">:</span> <span class="n">ProtocolLogic</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;()</span> <span class="p">{</span>
         <span class="n">@Suspendable</span>
         <span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
             <span class="n">TODO</span><span class="p">()</span>
@@ -321,51 +315,42 @@ each side.</p>
 </div>
 <p>Let&#8217;s unpack what this code does:</p>
 <ul class="simple">
-<li>It defines a several classes nested inside the main <code class="docutils literal"><span class="pre">TwoPartyTradeProtocol</span></code> singleton, and a couple of methods, one
-to run the buyer side of the protocol and one to run the seller side. Some of the classes are simply protocol messages.</li>
+<li>It defines a several classes nested inside the main <code class="docutils literal"><span class="pre">TwoPartyTradeProtocol</span></code> singleton. Some of the classes
+are simply protocol messages or exceptions. The other two represent the buyer and seller side of the protocol.</li>
 <li>It defines the &#8220;trade topic&#8221;, which is just a string that namespaces this protocol. The prefix &#8220;platform.&#8221; is reserved
-by the DLG, but you can define your own protocols using standard Java-style reverse DNS notation.</li>
-<li>The <code class="docutils literal"><span class="pre">runBuyer</span></code> and <code class="docutils literal"><span class="pre">runSeller</span></code> methods take a number of parameters that specialise the protocol for this run,
-use them to construct a <code class="docutils literal"><span class="pre">Buyer</span></code> or <code class="docutils literal"><span class="pre">Seller</span></code> object respectively, and then add the new instances to the
-<code class="docutils literal"><span class="pre">StateMachineManager</span></code>. The purpose of this class is described below. The <code class="docutils literal"><span class="pre">smm.add</span></code> method takes a logger name as
-the first parameter, this is just a standard JDK logging identifier string, and the instance to add.</li>
+by Corda, but you can define your own protocol namespaces using standard Java-style reverse DNS notation.</li>
 </ul>
 <p>Going through the data needed to become a seller, we have:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">timestampingAuthority:</span> <span class="pre">LegallyIdentifiableNode</span></code> - a reference to a node on the P2P network that acts as a trusted
-timestamper. The use of timestamping is described in <a class="reference internal" href="data-model.html"><span class="doc">Data model</span></a>.</li>
 <li><code class="docutils literal"><span class="pre">otherSide:</span> <span class="pre">SingleMessageRecipient</span></code> - the network address of the node with which you are trading.</li>
+<li><code class="docutils literal"><span class="pre">notaryNode:</span> <span class="pre">NodeInfo</span></code> - the entry in the network map for the chosen notary. See &#8220;<a class="reference internal" href="consensus.html"><span class="doc">Consensus model</span></a>&#8221; for more
+information on notaries.</li>
 <li><code class="docutils literal"><span class="pre">assetToSell:</span> <span class="pre">StateAndRef&lt;OwnableState&gt;</span></code> - a pointer to the ledger entry that represents the thing being sold.</li>
-<li><code class="docutils literal"><span class="pre">price:</span> <span class="pre">Amount</span></code> - the agreed on price that the asset is being sold for.</li>
+<li><code class="docutils literal"><span class="pre">price:</span> <span class="pre">Amount&lt;Currency&gt;</span></code> - the agreed on price that the asset is being sold for (without an issuer constraint).</li>
 <li><code class="docutils literal"><span class="pre">myKeyPair:</span> <span class="pre">KeyPair</span></code> - the key pair that controls the asset being sold. It will be used to sign the transaction.</li>
 <li><code class="docutils literal"><span class="pre">buyerSessionID:</span> <span class="pre">Long</span></code> - a unique number that identifies this trade to the buyer. It is expected that the buyer
-knows that the trade is going to take place and has sent you such a number already. (This field may go away in a future
-iteration of the framework)</li>
+knows that the trade is going to take place and has sent you such a number already.</li>
 </ul>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">Session IDs keep different traffic streams separated, so for security they must be large and random enough
-to be unguessable. 63 bits is good enough.</p>
+<p class="last">Session IDs will be automatically handled in a future version of the framework.</p>
 </div>
 <p>And for the buyer:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">acceptablePrice:</span> <span class="pre">Amount</span></code> - the price that was agreed upon out of band. If the seller specifies a price less than
-or equal to this, then the trade will go ahead.</li>
+<li><code class="docutils literal"><span class="pre">acceptablePrice:</span> <span class="pre">Amount&lt;Currency&gt;</span></code> - the price that was agreed upon out of band. If the seller specifies
+a price less than or equal to this, then the trade will go ahead.</li>
 <li><code class="docutils literal"><span class="pre">typeToBuy:</span> <span class="pre">Class&lt;out</span> <span class="pre">OwnableState&gt;</span></code> - the type of state that is being purchased. This is used to check that the
 sell side of the protocol isn&#8217;t trying to sell us the wrong thing, whether by accident or on purpose.</li>
 <li><code class="docutils literal"><span class="pre">sessionID:</span> <span class="pre">Long</span></code> - the session ID that was handed to the seller in order to start the protocol.</li>
 </ul>
-<p>The run methods return a <code class="docutils literal"><span class="pre">ListenableFuture</span></code> that will complete when the protocol has finished.</p>
-<p>Alright, so using this protocol shouldn&#8217;t be too hard: in the simplest case we can just pass in the details of the trade
-to either runBuyer or runSeller, depending on who we are, and then call <code class="docutils literal"><span class="pre">.get()</span></code> on resulting object to
-block the calling thread until the protocol has finished. Or we could register a callback on the returned future that
-will be invoked when it&#8217;s done, where we could e.g. update a user interface.</p>
-<p>Finally, we define a couple of exceptions, and two classes that will be used as a protocol message called
-<code class="docutils literal"><span class="pre">SellerTradeInfo</span></code> and <code class="docutils literal"><span class="pre">SignaturesFromSeller</span></code>.</p>
+<p>Alright, so using this protocol shouldn&#8217;t be too hard: in the simplest case we can just create a Buyer or Seller
+with the details of the trade, depending on who we are. We then have to start the protocol in some way. Just
+calling the <code class="docutils literal"><span class="pre">call</span></code> function ourselves won&#8217;t work: instead we need to ask the framework to start the protocol for
+us. More on that in a moment.</p>
 </div>
-<div class="section" id="suspendable-methods">
-<h2>Suspendable methods<a class="headerlink" href="#suspendable-methods" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal"><span class="pre">call</span></code> method of the buyer/seller classes is marked with the <code class="docutils literal"><span class="pre">&#64;Suspendable</span></code> annotation. What does this mean?</p>
+<div class="section" id="suspendable-functions">
+<h2>Suspendable functions<a class="headerlink" href="#suspendable-functions" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">call</span></code> function of the buyer/seller classes is marked with the <code class="docutils literal"><span class="pre">&#64;Suspendable</span></code> annotation. What does this mean?</p>
 <p>As mentioned above, our protocol framework will at points suspend the code and serialise it to disk. For this to work,
 any methods on the call stack must have been pre-marked as <code class="docutils literal"><span class="pre">&#64;Suspendable</span></code> so the bytecode rewriter knows to modify
 the underlying code to support this new feature. A protocol is suspended when calling either <code class="docutils literal"><span class="pre">receive</span></code>, <code class="docutils literal"><span class="pre">send</span></code> or
@@ -375,85 +360,73 @@ get a useful error message telling you which methods you didn&#8217;t mark. The 
 and try again.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">A future version of Java is likely to remove this pre-marking requirement completely.</p>
+<p class="last">Java 9 is likely to remove this pre-marking requirement completely.</p>
 </div>
 </div>
-<div class="section" id="the-state-machine-manager">
-<h2>The state machine manager<a class="headerlink" href="#the-state-machine-manager" title="Permalink to this headline">¶</a></h2>
-<p>The SMM is a class responsible for taking care of all running protocols in a node. It knows how to register handlers
-with a <code class="docutils literal"><span class="pre">MessagingService</span></code> and iterate the right state machine when messages arrive. It provides the
-send/receive/sendAndReceive calls that let the code request network interaction and it will store a serialised copy of
-each state machine before it&#8217;s suspended to wait for the network.</p>
-<p>To get a <code class="docutils literal"><span class="pre">StateMachineManager</span></code>, you currently have to build one by passing in a <code class="docutils literal"><span class="pre">ServiceHub</span></code> and a thread or thread
-pool which it can use. This will change in future so don&#8217;t worry about the details of this too much: just check the
-unit tests to see how it&#8217;s done.</p>
+<div class="section" id="starting-your-protocol">
+<h2>Starting your protocol<a class="headerlink" href="#starting-your-protocol" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal"><span class="pre">StateMachineManager</span></code> is the class responsible for taking care of all running protocols in a node. It knows
+how to register handlers with the messaging system (see &#8220;<a class="reference internal" href="messaging.html"><span class="doc">Networking and messaging</span></a>&#8221;) and iterate the right state machine
+when messages arrive. It provides the send/receive/sendAndReceive calls that let the code request network
+interaction and it will save/restore serialised versions of the fiber at the right times.</p>
+<p>Protocols can be invoked in several ways. For instance, they can be triggered by scheduled events,
+see &#8220;<a class="reference internal" href="event-scheduling.html"><span class="doc">Event scheduling</span></a>&#8221; to learn more about this. Or they can be triggered via the HTTP API. Or they can
+be triggered directly via the Java-level node APIs from your app code.</p>
+<p>You request a protocol to be invoked by using the <code class="docutils literal"><span class="pre">ServiceHub.invokeProtocolAsync</span></code> method. This takes a
+Java reflection <code class="docutils literal"><span class="pre">Class</span></code> object that describes the protocol class to use (in this case, either <code class="docutils literal"><span class="pre">Buyer</span></code> or <code class="docutils literal"><span class="pre">Seller</span></code>).
+It also takes a set of arguments to pass to the constructor. Because it&#8217;s possible for protocol invocations to
+be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
+protocol are checked against a whitelist, which can be extended by apps themselves at load time.</p>
+<p>The process of starting a protocol returns a <code class="docutils literal"><span class="pre">ListenableFuture</span></code> that you can use to either block waiting for
+the result, or register a callback that will be invoked when the result is ready.</p>
 </div>
 <div class="section" id="implementing-the-seller">
 <h2>Implementing the seller<a class="headerlink" href="#implementing-the-seller" title="Permalink to this headline">¶</a></h2>
-<p>Let&#8217;s implement the <code class="docutils literal"><span class="pre">Seller.call</span></code> method. This will be invoked by the platform when the protocol is started by the
-<code class="docutils literal"><span class="pre">StateMachineManager</span></code>.</p>
+<p>Let&#8217;s implement the <code class="docutils literal"><span class="pre">Seller.call</span></code> method. This will be run when the protocol is invoked.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
-
-<span class="c1">// These two steps could be done in parallel, in theory. Our framework doesn&#39;t support that yet though.</span>
-<span class="k">val</span> <span class="py">ourSignature</span> <span class="p">=</span> <span class="n">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
-<span class="k">val</span> <span class="py">tsaSig</span> <span class="p">=</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">TimestampingProtocol</span><span class="p">(</span><span class="n">timestampingAuthority</span><span class="p">,</span> <span class="n">partialTX</span><span class="p">.</span><span class="n">txBits</span><span class="p">))</span>
-
-<span class="k">val</span> <span class="py">stx</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">,</span> <span class="n">tsaSig</span><span class="p">)</span>
-
-<span class="k">return</span> <span class="n">stx</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
+<span class="k">override</span> <span class="k">fun</span> <span class="nf">call</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
+    <span class="k">val</span> <span class="py">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">receiveAndCheckProposedTransaction</span><span class="p">()</span>
+    <span class="k">val</span> <span class="py">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span> <span class="p">=</span> <span class="n">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">notarySignature</span> <span class="p">=</span> <span class="n">getNotarySignature</span><span class="p">(</span><span class="n">partialTX</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">result</span><span class="p">:</span> <span class="n">SignedTransaction</span> <span class="p">=</span> <span class="n">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div>
 <p>Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it&#8217;s
-valid. Then we sign with our own key, request a timestamping authority to assert with another signature that the
-timestamp in the transaction (if any) is valid, and finally we send back both our signature and the TSA&#8217;s signature.
-Finally, we hand back to the code that invoked the protocol the finished transaction in a couple of different forms.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last"><code class="docutils literal"><span class="pre">ProtocolLogic</span></code> classes can be composed together. Here, we see the use of the <code class="docutils literal"><span class="pre">subProtocol</span></code> method, which
-is given an instance of <code class="docutils literal"><span class="pre">TimestampingProtocol</span></code>. This protocol will run to completion and yield a result, almost
-as if it&#8217;s a regular method call. In fact, under the hood, all the <code class="docutils literal"><span class="pre">subProtocol</span></code> method does is pass the current
-fiber object into the newly created object and then run <code class="docutils literal"><span class="pre">call()</span></code> on it ... so it basically _is_ just a method call.
-This is where we can see the benefits of using continuations/fibers as a programming model.</p>
-</div>
+valid. Then we sign with our own key and request a notary to assert with another signature that the
+timestamp in the transaction (if any) is valid and there are no double spends, and send back both
+our signature and the notaries signature. Finally, we hand back to the code that invoked the protocol the
+finished transaction.</p>
 <p>Let&#8217;s fill out the <code class="docutils literal"><span class="pre">receiveAndCheckProposedTransaction()</span></code> method.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
-<span class="k">open</span> <span class="k">fun</span> <span class="nf">receiveAndCheckProposedTransaction</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
+<span class="k">private</span> <span class="k">fun</span> <span class="nf">receiveAndCheckProposedTransaction</span><span class="p">():</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">sessionID</span> <span class="p">=</span> <span class="n">random63BitValue</span><span class="p">()</span>
 
     <span class="c1">// Make the first message we&#39;ll send to kick off the protocol.</span>
     <span class="k">val</span> <span class="py">hello</span> <span class="p">=</span> <span class="n">SellerTradeInfo</span><span class="p">(</span><span class="n">assetToSell</span><span class="p">,</span> <span class="n">price</span><span class="p">,</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">,</span> <span class="n">sessionID</span><span class="p">)</span>
 
-    <span class="k">val</span> <span class="py">maybeSTX</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;(</span><span class="n">TRADE_TOPIC</span><span class="p">,</span> <span class="n">otherSide</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">,</span> <span class="n">sessionID</span><span class="p">,</span> <span class="n">hello</span><span class="p">)</span>
+    <span class="k">val</span> <span class="py">maybeSTX</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">,</span> <span class="n">sessionID</span><span class="p">,</span> <span class="n">hello</span><span class="p">)</span>
 
     <span class="n">maybeSTX</span><span class="p">.</span><span class="n">validate</span> <span class="p">{</span>
         <span class="c1">// Check that the tx proposed by the buyer is valid.</span>
-        <span class="k">val</span> <span class="py">missingSigs</span> <span class="p">=</span> <span class="n">it</span><span class="p">.</span><span class="n">verify</span><span class="p">(</span><span class="n">throwIfSignaturesAreMissing</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">missingSigs</span> <span class="p">!=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">,</span> <span class="n">timestampingAuthority</span><span class="p">.</span><span class="n">identity</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
-            <span class="k">throw</span> <span class="n">SignatureException</span><span class="p">(</span><span class="s">&quot;The set of missing signatures is not as expected: $missingSigs&quot;</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">missingSigs</span><span class="p">:</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">PublicKey</span><span class="p">&gt;</span> <span class="p">=</span> <span class="n">it</span><span class="p">.</span><span class="n">verifySignatures</span><span class="p">(</span><span class="n">throwIfSignaturesAreMissing</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
+        <span class="k">val</span> <span class="py">expected</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">,</span> <span class="n">notaryNode</span><span class="p">.</span><span class="n">identity</span><span class="p">.</span><span class="n">owningKey</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">missingSigs</span> <span class="p">!=</span> <span class="n">expected</span><span class="p">)</span>
+            <span class="k">throw</span> <span class="n">SignatureException</span><span class="p">(</span><span class="s">&quot;The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs ${expected.toStringsShort()}&quot;</span><span class="p">)</span>
 
         <span class="k">val</span> <span class="py">wtx</span><span class="p">:</span> <span class="n">WireTransaction</span> <span class="p">=</span> <span class="n">it</span><span class="p">.</span><span class="n">tx</span>
         <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Received partially signed transaction: ${it.id}&quot;</span> <span class="p">}</span>
 
-        <span class="n">checkDependencies</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+        <span class="c1">// Download and check all the things that this transaction depends on and verify it is contract-valid,</span>
+        <span class="c1">// even though it is missing signatures.</span>
+        <span class="n">subProtocol</span><span class="p">(</span><span class="n">ResolveTransactionsProtocol</span><span class="p">(</span><span class="n">wtx</span><span class="p">,</span> <span class="n">otherSide</span><span class="p">))</span>
 
-        <span class="c1">// This verifies that the transaction is contract-valid, even though it is missing signatures.</span>
-        <span class="n">serviceHub</span><span class="p">.</span><span class="n">verifyTransaction</span><span class="p">(</span><span class="n">wtx</span><span class="p">.</span><span class="n">toLedgerTransaction</span><span class="p">(</span><span class="n">serviceHub</span><span class="p">.</span><span class="n">identityService</span><span class="p">))</span>
-
-        <span class="k">if</span> <span class="p">(</span><span class="n">wtx</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">sumCashBy</span><span class="p">(</span><span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">)</span> <span class="p">!=</span> <span class="n">price</span><span class="p">)</span>
-            <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Transaction is not sending us the right amounnt of cash&quot;</span><span class="p">)</span>
-
-        <span class="c1">// There are all sorts of funny games a malicious secondary might play here, we should fix them:</span>
-        <span class="c1">//</span>
-        <span class="c1">// - This tx may attempt to send some assets we aren&#39;t intending to sell to the secondary, if</span>
-        <span class="c1">//   we&#39;re reusing keys! So don&#39;t reuse keys!</span>
-        <span class="c1">// - This tx may include output states that impose odd conditions on the movement of the cash,</span>
-        <span class="c1">//   once we implement state pairing.</span>
-        <span class="c1">//</span>
-        <span class="c1">// but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to</span>
-        <span class="c1">// express protocol state machines on top of the messaging layer.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">wtx</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">map</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="k">data</span> <span class="p">}.</span><span class="n">sumCashBy</span><span class="p">(</span><span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">).</span><span class="n">withoutIssuer</span><span class="p">()</span> <span class="p">!=</span> <span class="n">price</span><span class="p">)</span>
+            <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Transaction is not sending us the right amount of cash&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">it</span>
     <span class="p">}</span>
@@ -461,48 +434,66 @@ This is where we can see the benefits of using continuations/fibers as a program
 </pre></div>
 </div>
 </div>
-<p>That&#8217;s pretty straightforward. We generate a session ID to identify what&#8217;s happening on the seller side, fill out
+<p>Let&#8217;s break this down. We generate a session ID to identify what&#8217;s happening on the seller side, fill out
 the initial protocol message, and then call <code class="docutils literal"><span class="pre">sendAndReceive</span></code>. This function takes a few arguments:</p>
 <ul class="simple">
 <li>The topic string that ensures the message is routed to the right bit of code in the other side&#8217;s node.</li>
 <li>The session IDs that ensure the messages don&#8217;t get mixed up with other simultaneous trades.</li>
 <li>The thing to send. It&#8217;ll be serialised and sent automatically.</li>
-<li>Finally a type argument, which is the kind of object we&#8217;re expecting to receive from the other side.</li>
+<li>Finally a type argument, which is the kind of object we&#8217;re expecting to receive from the other side. If we get
+back something else an exception is thrown.</li>
 </ul>
-<p>Once <code class="docutils literal"><span class="pre">sendAndReceive</span></code> is called, the call method will be suspended into a continuation. When it gets back we&#8217;ll do a log
-message. The buyer is supposed to send us a transaction with all the right inputs/outputs/commands in return, with their
-cash put into the transaction and their signature on it authorising the movement of the cash.</p>
+<p>Once <code class="docutils literal"><span class="pre">sendAndReceive</span></code> is called, the call method will be suspended into a continuation and saved to persistent
+storage. If the node crashes or is restarted, the protocol will effectively continue as if nothing had happened. Your
+code may remain blocked inside such a call for seconds, minutes, hours or even days in the case of a protocol that
+needs human interaction!</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p>There are a couple of rules you need to bear in mind when writing a class that will be used as a continuation.
 The first is that anything on the stack when the function is suspended will be stored into the heap and kept alive by
 the garbage collector. So try to avoid keeping enormous data structures alive unless you really have to.</p>
-<p class="last">The second is that as well as being kept on the heap, objects reachable from the stack will be serialised. The state
+<p>The second is that as well as being kept on the heap, objects reachable from the stack will be serialised. The state
 of the function call may be resurrected much later! Kryo doesn&#8217;t require objects be marked as serialisable, but even so,
 doing things like creating threads from inside these calls would be a bad idea. They should only contain business
-logic.</p>
+logic and only do I/O via the methods exposed by the protocol framework.</p>
+<p class="last">It&#8217;s OK to keep references around to many large internal node services though: these will be serialised using a
+special token that&#8217;s recognised by the platform, and wired up to the right instance when the continuation is
+loaded off disk again.</p>
 </div>
+<p>The buyer is supposed to send us a transaction with all the right inputs/outputs/commands in response to the opening
+message, with their cash put into the transaction and their signature on it authorising the movement of the cash.</p>
 <p>You get back a simple wrapper class, <code class="docutils literal"><span class="pre">UntrustworthyData&lt;SignedTransaction&gt;</span></code>, which is just a marker class that reminds
 us that the data came from a potentially malicious external source and may have been tampered with or be unexpected in
-other ways. It doesn&#8217;t add any functionality, but acts as a reminder to &#8220;scrub&#8221; the data before use. Here, our scrubbing
-simply involves checking the signatures on it. Then we go ahead and check all the dependencies of this partial
-transaction for validity. Here&#8217;s the code to do that:</p>
+other ways. It doesn&#8217;t add any functionality, but acts as a reminder to &#8220;scrub&#8221; the data before use.</p>
+<p>Our &#8220;scrubbing&#8221; has three parts:</p>
+<ol class="arabic simple">
+<li>Check that the expected signatures are present and correct. At this point we expect our own signature to be missing,
+because of course we didn&#8217;t sign it yet, and also the signature of the notary because that must always come last.</li>
+<li>We resolve the transaction, which we will cover below.</li>
+<li>We verify that the transaction is paying us the demanded price.</li>
+</ol>
+</div>
+<div class="section" id="subprotocols">
+<h2>Subprotocols<a class="headerlink" href="#subprotocols" title="Permalink to this headline">¶</a></h2>
+<p>Protocols can be composed via nesting. Invoking a sub-protocol looks similar to an ordinary function call:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="n">@Suspendable</span>
-<span class="k">private</span> <span class="k">fun</span> <span class="nf">checkDependencies</span><span class="p">(</span><span class="n">stx</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Download and check all the transactions that this transaction depends on, but do not check this</span>
-    <span class="c1">// transaction itself.</span>
-    <span class="k">val</span> <span class="py">dependencyTxIDs</span> <span class="p">=</span> <span class="n">stx</span><span class="p">.</span><span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">map</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">txhash</span> <span class="p">}.</span><span class="n">toSet</span><span class="p">()</span>
-    <span class="n">subProtocol</span><span class="p">(</span><span class="n">ResolveTransactionsProtocol</span><span class="p">(</span><span class="n">dependencyTxIDs</span><span class="p">,</span> <span class="n">otherSide</span><span class="p">))</span>
+<span class="k">private</span> <span class="k">fun</span> <span class="nf">getNotarySignature</span><span class="p">(</span><span class="n">stx</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">):</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span> <span class="p">{</span>
+    <span class="n">progressTracker</span><span class="p">.</span><span class="n">currentStep</span> <span class="p">=</span> <span class="n">NOTARY</span>
+    <span class="k">return</span> <span class="n">subProtocol</span><span class="p">(</span><span class="n">NotaryProtocol</span><span class="p">.</span><span class="n">Client</span><span class="p">(</span><span class="n">stx</span><span class="p">))</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </div>
-<p>This is simple enough: we mark the method as <code class="docutils literal"><span class="pre">&#64;Suspendable</span></code> because we&#8217;re going to invoke a sub-protocol, extract the
-IDs of the transactions the proposed transaction depends on, and then uses a protocol provided by the system to download
-and check them all. This protocol does a breadth-first search over the dependency graph, bottoming out at issuance
-transactions that don&#8217;t have any inputs themselves. Once the node has audited the transaction history, all the dependencies
-are committed to the node&#8217;s local database so they won&#8217;t be checked again next time.</p>
+<p>In this code snippet we are using the <code class="docutils literal"><span class="pre">NotaryProtocol.Client</span></code> to request notarisation of the transaction.
+We simply create the protocol object via its constructor, and then pass it to the <code class="docutils literal"><span class="pre">subProtocol</span></code> method which
+returns the result of the protocol&#8217;s execution directly. Behind the scenes all this is doing is wiring up progress
+tracking (discussed more below) and then running the objects <code class="docutils literal"><span class="pre">call</span></code> method. Because this little helper method can
+be on the stack when network IO takes place, we mark it as <code class="docutils literal"><span class="pre">&#64;Suspendable</span></code>.</p>
+<p>Going back to the previous code snippet, we use a subprotocol called <code class="docutils literal"><span class="pre">ResolveTransactionsProtocol</span></code>. This is
+responsible for downloading and checking all the dependencies of a transaction, which in Corda are always retrievable
+from the party that sent you a transaction that uses them. This protocol returns a list of <code class="docutils literal"><span class="pre">LedgerTransaction</span></code>
+objects, but we don&#8217;t need them here so we just ignore the return value.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Transaction dependency resolution assumes that the peer you got the transaction from has all of the
@@ -518,26 +509,28 @@ well (but having handled the fact that some signatures are missing ourselves).</
 <div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">open</span> <span class="k">fun</span> <span class="nf">signWithOurKey</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">)</span> <span class="p">=</span> <span class="n">myKeyPair</span><span class="p">.</span><span class="n">signWithECDSA</span><span class="p">(</span><span class="n">partialTX</span><span class="p">.</span><span class="n">txBits</span><span class="p">)</span>
 
 <span class="n">@Suspendable</span>
-<span class="k">open</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
-                        <span class="n">tsaSig</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">):</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">fullySigned</span> <span class="p">=</span> <span class="n">partialTX</span> <span class="p">+</span> <span class="n">tsaSig</span> <span class="p">+</span> <span class="n">ourSignature</span>
-
+<span class="k">private</span> <span class="k">fun</span> <span class="nf">sendSignatures</span><span class="p">(</span><span class="n">partialTX</span><span class="p">:</span> <span class="n">SignedTransaction</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">WithKey</span><span class="p">,</span>
+                           <span class="n">notarySignature</span><span class="p">:</span> <span class="n">DigitalSignature</span><span class="p">.</span><span class="n">LegallyIdentifiable</span><span class="p">):</span> <span class="n">SignedTransaction</span> <span class="p">{</span>
+    <span class="k">val</span> <span class="py">fullySigned</span> <span class="p">=</span> <span class="n">partialTX</span> <span class="p">+</span> <span class="n">ourSignature</span> <span class="p">+</span> <span class="n">notarySignature</span>
     <span class="n">logger</span><span class="p">.</span><span class="n">trace</span> <span class="p">{</span> <span class="s">&quot;Built finished transaction, sending back to secondary!&quot;</span> <span class="p">}</span>
-
-    <span class="n">send</span><span class="p">(</span><span class="n">TRADE_TOPIC</span><span class="p">,</span> <span class="n">otherSide</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">,</span> <span class="n">SignaturesFromSeller</span><span class="p">(</span><span class="n">tsaSig</span><span class="p">,</span> <span class="n">ourSignature</span><span class="p">))</span>
+    <span class="n">send</span><span class="p">(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">,</span> <span class="n">SignaturesFromSeller</span><span class="p">(</span><span class="n">ourSignature</span><span class="p">,</span> <span class="n">notarySignature</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">fullySigned</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </div>
-<p>It&#8217;s should be all pretty straightforward: here, <code class="docutils literal"><span class="pre">txBits</span></code> is the raw byte array representing the transaction.</p>
-<p>In <code class="docutils literal"><span class="pre">sendSignatures</span></code>, we take the two signatures we calculated, then add them to the partial transaction we were sent.
-We provide an overload for the + operator so signatures can be added to a SignedTransaction easily. Finally, we wrap the
+<p>It&#8217;s all pretty straightforward from now on. Here <code class="docutils literal"><span class="pre">txBits</span></code> is the raw byte array representing the serialised
+transaction, and we just use our private key to calculate a signature over it. As a reminder, in Corda signatures do
+not cover other signatures: just the core of the transaction data.</p>
+<p>In <code class="docutils literal"><span class="pre">sendSignatures</span></code>, we take the two signatures we obtained and add them to the partial transaction we were sent.
+There is an overload for the + operator so signatures can be added to a SignedTransaction easily. Finally, we wrap the
 two signatures in a simple wrapper message class and send it back. The send won&#8217;t block waiting for an acknowledgement,
 but the underlying message queue software will retry delivery if the other side has gone away temporarily.</p>
+<p>You can also see that every protocol instance has a logger (using the SLF4J API) which you can use to log progress
+messages.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">This code is <strong>not secure</strong>. Other than not checking for all possible invalid constructions, if the
+<p class="last">This sample code is <strong>not secure</strong>. Other than not checking for all possible invalid constructions, if the
 seller stops before sending the finalised transaction to the buyer, the seller is left with a valid transaction
 but the buyer isn&#8217;t, so they can&#8217;t spend the asset they just purchased! This sort of thing will be fixed in a
 future version of the code.</p>
@@ -552,24 +545,25 @@ override fun call(): SignedTransaction {
     val tradeRequest = receiveAndValidateTradeRequest()
     val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
     val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+
     val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
 
-    logger.trace { &quot;Got signatures from seller, verifying ... &quot;}
-    val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
-    fullySigned.verify()
+    logger.trace { &quot;Got signatures from seller, verifying ... &quot; }
 
-    logger.trace { &quot;Fully signed transaction was valid. Trade complete! :-)&quot; }
+    val fullySigned = stx + signatures.sellerSig + signatures.notarySig
+    fullySigned.verifySignatures()
+
+    logger.trace { &quot;Signatures received are valid. Trade complete! :-)&quot; }
     return fullySigned
 }
 
 @Suspendable
-open fun receiveAndValidateTradeRequest(): SellerTradeInfo {
+private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
     // Wait for a trade request to come in on our pre-provided session ID.
-    val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(TRADE_TOPIC, sessionID)
-
+    val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(sessionID)
     maybeTradeRequest.validate {
         // What is the seller trying to sell us?
-        val asset = it.assetForSale.state
+        val asset = it.assetForSale.state.data
         val assetTypeName = asset.javaClass.name
         logger.trace { &quot;Got trade request for a $assetTypeName: ${it.assetForSale}&quot; }
 
@@ -589,15 +583,16 @@ open fun receiveAndValidateTradeRequest(): SellerTradeInfo {
 }
 
 @Suspendable
-open fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+    progressTracker.currentStep = SWAPPING_SIGNATURES
     logger.trace { &quot;Sending partially signed transaction to seller&quot; }
 
     // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-    return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate { it }
+    return sendAndReceive&lt;SignaturesFromSeller&gt;(otherSide, theirSessionID, sessionID, stx).validate { it }
 }
 
-open fun signWithOurKeys(cashSigningPubKeys: List&lt;PublicKey&gt;, ptx: TransactionBuilder): SignedTransaction {
+private fun signWithOurKeys(cashSigningPubKeys: List&lt;PublicKey&gt;, ptx: TransactionBuilder): SignedTransaction {
     // Now sign the transaction with whatever keys we need to move the cash.
     for (k in cashSigningPubKeys) {
         val priv = serviceHub.keyManagementService.toPrivate(k)
@@ -607,40 +602,39 @@ open fun signWithOurKeys(cashSigningPubKeys: List&lt;PublicKey&gt;, ptx: Transac
     return ptx.toSignedTransaction(checkSufficientSignatures = false)
 }
 
-open fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair&lt;TransactionBuilder, List&lt;PublicKey&gt;&gt; {
-    val ptx = TransactionBuilder()
+private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair&lt;TransactionBuilder, List&lt;PublicKey&gt;&gt; {
+    val ptx = TransactionType.General.Builder(notary)
     // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
     val wallet = serviceHub.walletService.currentWallet
     val cashStates = wallet.statesOfType&lt;Cash.State&gt;()
     val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
     // Add inputs/outputs/a command for the movement of the asset.
-    ptx.addInputState(tradeRequest.assetForSale.ref)
+    ptx.addInputState(tradeRequest.assetForSale)
     // Just pick some new public key for now. This won&#39;t be linked with our identity in any way, which is what
     // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
     // reveal who the owner actually is. The key management service is expected to derive a unique key from some
     // initial seed in order to provide privacy protection.
     val freshKey = serviceHub.keyManagementService.freshKey()
-    val (command, state) = tradeRequest.assetForSale.state.withNewOwner(freshKey.public)
-    ptx.addOutputState(state)
-    ptx.addCommand(command, tradeRequest.assetForSale.state.owner)
+    val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
+    ptx.addOutputState(state, tradeRequest.assetForSale.state.notary)
+    ptx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 
     // And add a request for timestamping: it may be that none of the contracts need this! But it can&#39;t hurt
     // to have one.
-    ptx.setTime(Instant.now(), timestampingAuthority, 30.seconds)
+    val currentTime = serviceHub.clock.instant()
+    ptx.setTime(currentTime, 30.seconds)
     return Pair(ptx, cashSigningPubKeys)
 }
 </pre></div>
 </div>
 </div>
-<p>This code is longer but still fairly straightforward. Here are some things to pay attention to:</p>
+<p>This code is longer but no more complicated. Here are some things to pay attention to:</p>
 <ol class="arabic simple">
 <li>We do some sanity checking on the received message to ensure we&#8217;re being offered what we expected to be offered.</li>
-<li>We create a cash spend in the normal way, by using <code class="docutils literal"><span class="pre">Cash().generateSpend</span></code>. See the contracts tutorial if this isn&#8217;t
-clear.</li>
+<li>We create a cash spend in the normal way, by using <code class="docutils literal"><span class="pre">Cash().generateSpend</span></code>. See the contracts tutorial if this
+part isn&#8217;t clear.</li>
 <li>We access the <em>service hub</em> when we need it to access things that are transient and may change or be recreated
-whilst a protocol is suspended, things like the wallet or the timestamping service. Remember that a protocol may
-be suspended when it waits to receive a message across node or computer restarts, so objects representing a service
-or data which may frequently change should be accessed &#8216;just in time&#8217;.</li>
+whilst a protocol is suspended, things like the wallet or the network map.</li>
 <li>Finally, we send the unfinished, invalid transaction to the seller so they can sign it. They are expected to send
 back to us a <code class="docutils literal"><span class="pre">SignaturesFromSeller</span></code>, which once we verify it, should be the final outcome of the trade.</li>
 </ol>
@@ -648,12 +642,8 @@ back to us a <code class="docutils literal"><span class="pre">SignaturesFromSell
 the fact that it takes minimal resources and can survive node restarts.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">When accessing things via the <code class="docutils literal"><span class="pre">serviceHub</span></code> field, avoid the temptation to stuff a reference into a local variable.
-If you do this then next time your protocol waits to receive an object, the system will try and serialise all your
-local variables and end up trying to serialise, e.g. the timestamping service, which doesn&#8217;t make any conceptual
-sense. The <code class="docutils literal"><span class="pre">serviceHub</span></code> field is defined by the <code class="docutils literal"><span class="pre">ProtocolStateMachine</span></code> superclass and is marked transient so
-this problem doesn&#8217;t occur. It&#8217;s also restored for you when a protocol state machine is restored after a node
-restart.</p>
+<p class="last">In the current version of the platform, exceptions thrown during protocol execution are not propagated
+back to the sender. A thorough error handling and exceptions framework will be in a future version of the platform.</p>
 </div>
 </div>
 <div class="section" id="progress-tracking">
@@ -786,6 +776,39 @@ it re-assigns ownership instead. The chain of two transactions is finally commit
 directly to the <code class="docutils literal"><span class="pre">a.services.recordTransaction</span></code> method (note that this method doesn&#8217;t check the transactions are
 valid).</p>
 <p>And that&#8217;s it: you can explore the documentation for the <a class="reference external" href="api/com.r3corda.node.internal.testing/-mock-network/index.html">MockNode API</a> here.</p>
+</div>
+<div class="section" id="versioning">
+<h2>Versioning<a class="headerlink" href="#versioning" title="Permalink to this headline">¶</a></h2>
+<p>Fibers involve persisting object-serialised stack frames to disk. Although we may do some R&amp;D into in-place upgrades
+in future, for now the upgrade process for protocols is simple: you duplicate the code and rename it so it has a
+new set of class names. Old versions of the protocol can then drain out of the system whilst new versions are
+initiated. When enough time has passed that no old versions are still waiting for anything to happen, the previous
+copy of the code can be deleted.</p>
+<p>Whilst kind of ugly, this is a very simple approach that should suffice for now.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Protocols are not meant to live for months or years, and by implication they are not meant to implement entire deal
+lifecycles. For instance, implementing the entire life cycle of an interest rate swap as a single protocol - whilst
+technically possible - would not be a good idea. The platform provides a job scheduler tool that can invoke
+protocols for this reason (see &#8220;<a class="reference internal" href="event-scheduling.html"><span class="doc">Event scheduling</span></a>&#8221;)</p>
+</div>
+</div>
+<div class="section" id="future-features">
+<h2>Future features<a class="headerlink" href="#future-features" title="Permalink to this headline">¶</a></h2>
+<p>The protocol framework is a key part of the platform and will be extended in major ways in future. Here are some of
+the features we have planned:</p>
+<ul class="simple">
+<li>Automatic session ID management</li>
+<li>Identity based addressing</li>
+<li>Exposing progress trackers to local (inside the firewall) clients using message queues and/or WebSockets</li>
+<li>Exception propagation and management, with a &#8220;protocol hospital&#8221; tool to manually provide solutions to unavoidable
+problems (e.g. the other side doesn&#8217;t know the trade)</li>
+<li>Being able to interact with internal apps and tools via HTTP and similar</li>
+<li>Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
+For example to implement human transaction authorisations.</li>
+<li>A standard library of protocols that can be easily sub-classed by local developers in order to integrate internal
+reporting logic, or anything else that might be required as part of a communications lifecycle.</li>
+</ul>
 </div>
 </div>
 

@@ -20,23 +20,6 @@ such the hash of a piece of data can be seen as a type of password allowing acce
 <br/>
 <br/>
 <br/>
-<h3>Types</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="-notify-tx-request-message/index.html">NotifyTxRequestMessage</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NotifyTxRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.protocols/-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="-notify-tx-response-message/index.html">NotifyTxResponseMessage</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NotifyTxResponseMessage</span></code></td>
-</tr>
-</tbody>
-</table>
 <h3>Exceptions</h3>
 <table>
 <tbody>
@@ -117,13 +100,6 @@ acknowledgement response with no content, use <a href="#">com.r3corda.core.messa
 <tbody>
 <tr>
 <td>
-<a href="-n-o-t-i-f-y_-t-x_-p-r-o-t-o-c-o-l_-t-o-p-i-c.html">NOTIFY_TX_PROTOCOL_TOPIC</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">NOTIFY_TX_PROTOCOL_TOPIC</span><span class="symbol">: </span><span class="identifier">String</span></code><p>Topic for messages notifying a node of a new transaction</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="logger.html">logger</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
@@ -137,7 +113,8 @@ acknowledgement response with no content, use <a href="#">com.r3corda.core.messa
 <td>
 <a href="notify.html">notify</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/myIdentity">myIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/transaction">transaction</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">notify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/myIdentity">myIdentity</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.persistence.DataVending.Service.Companion$notify(com.r3corda.core.messaging.MessagingService, com.r3corda.core.crypto.Party, com.r3corda.core.node.NodeInfo, com.r3corda.core.contracts.SignedTransaction)/transaction">transaction</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Notify a node of a transaction. Normally any notarisation required would happen before this is called.</p>
+</td>
 </tr>
 </tbody>
 </table>

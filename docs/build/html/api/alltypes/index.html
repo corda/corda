@@ -117,6 +117,13 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.core.contracts.clauses/-all-composition/index.html">com.r3corda.core.contracts.clauses.AllComposition</a></td>
+<td>
+<p>Compose a number of clauses, such that all of the clauses must run for verification to pass.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.messaging/-all-possible-recipients.html">com.r3corda.core.messaging.AllPossibleRecipients</a></td>
 <td>
 <p>A special base class for the set of all possible recipients, without having to identify who they all are.</p>
@@ -135,6 +142,13 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 <p>Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
 representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
 amount used in whatever underlying thing the amount represents.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-any-composition/index.html">com.r3corda.core.contracts.clauses.AnyComposition</a></td>
+<td>
+<p>Compose a number of clauses, such that any number of the clauses can run.</p>
 </td>
 </tr>
 <tr>
@@ -240,6 +254,14 @@ Bilateral states are used in close-out netting.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.protocols/-broadcast-transaction-protocol/index.html">com.r3corda.protocols.BroadcastTransactionProtocol</a></td>
+<td>
+<p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
+<a href="../com.r3corda.protocols/-finality-protocol/index.html">FinalityProtocol</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-business-calendar/index.html">com.r3corda.core.contracts.BusinessCalendar</a></td>
 <td>
 <p>A business calendar performs date calculations that take into account national holidays and weekends. This is a
@@ -300,7 +322,6 @@ the same transaction.</p>
 <td>
 <a href="../com.r3corda.core.contracts.clauses/-clause/index.html">com.r3corda.core.contracts.clauses.Clause</a></td>
 <td>
-<p>A clause that can be matched as part of execution of a contract.</p>
 </td>
 </tr>
 <tr>
@@ -318,7 +339,7 @@ the same transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.node.services.monitor/-client-to-service-command/index.html">com.r3corda.node.services.monitor.ClientToServiceCommand</a></td>
+<a href="../com.r3corda.core.contracts/-client-to-service-command/index.html">com.r3corda.core.contracts.ClientToServiceCommand</a></td>
 <td>
 <p>A command from the monitoring client, to the node.</p>
 </td>
@@ -371,6 +392,8 @@ the same transaction.</p>
 <td>
 <a href="../com.r3corda.core.contracts/-commodity/index.html">com.r3corda.core.contracts.Commodity</a></td>
 <td>
+<p>Class representing a commodity, as an equivalent to the <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a> class. This exists purely to enable the
+<a href="#">CommodityContract</a> contract, and is likely to change in future.</p>
 </td>
 </tr>
 <tr>
@@ -382,6 +405,21 @@ contract is intentionally similar to the <a href="../com.r3corda.contracts.asset
 differences are in representation of the underlying commodity. Issuer in this context means the party who has the
 commodity, or is otherwise responsible for delivering the commodity on demand, and the deposit reference is use for
 internal accounting by the issuer (it might be, for example, a warehouse and/or location within a warehouse).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-composite-clause/index.html">com.r3corda.core.contracts.clauses.CompositeClause</a></td>
+<td>
+<p>Abstract supertype for clauses which compose other clauses together in some logical manner.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-concrete-clause/index.html">com.r3corda.core.contracts.clauses.ConcreteClause</a></td>
+<td>
+<p>Abstract supertype for clauses which provide their own verification logic, rather than delegating to subclauses.
+By default these clauses are always matched (they have no required commands).</p>
 </td>
 </tr>
 <tr>
@@ -727,6 +765,20 @@ attachments are saved to local storage automatically.</p>
 </tr>
 <tr>
 <td>
+<a href="../com.r3corda.protocols/-finality-protocol/index.html">com.r3corda.protocols.FinalityProtocol</a></td>
+<td>
+<p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../com.r3corda.core.contracts.clauses/-first-composition/index.html">com.r3corda.core.contracts.clauses.FirstComposition</a></td>
+<td>
+<p>Compose a number of clauses, such that the first match is run, and it errors if none is run.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../com.r3corda.core.contracts/-fix/index.html">com.r3corda.core.contracts.Fix</a></td>
 <td>
 <p>A <a href="../com.r3corda.core.contracts/-fix/index.html">Fix</a> represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx.</p>
@@ -812,19 +864,7 @@ container), shares of the same class in a specific company are fungible and coun
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts.clauses/-group-clause.html">com.r3corda.core.contracts.clauses.GroupClause</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.contracts.clauses/-group-clause-verifier/index.html">com.r3corda.core.contracts.clauses.GroupClauseVerifier</a></td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts.clauses/-group-verify/index.html">com.r3corda.core.contracts.clauses.GroupVerify</a></td>
 <td>
 </td>
 </tr>
@@ -946,14 +986,6 @@ states relevant to us into a database and once such a wallet is implemented, thi
 <td>
 <a href="../com.r3corda.contracts/kotlin.-int/index.html">kotlin.Int</a> (extensions in package com.r3corda.contracts)</td>
 <td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts.clauses/-interceptor-clause/index.html">com.r3corda.core.contracts.clauses.InterceptorClause</a></td>
-<td>
-<p>A clause which intercepts calls to a wrapped clause, and passes them through verification
-only from a pre-clause. This is similar to an inceptor in aspect orientated programming.</p>
 </td>
 </tr>
 <tr>
@@ -1130,12 +1162,6 @@ with the commands from the wire, and verified/looked up.</p>
 <tr>
 <td>
 <a href="../com.r3corda.core/kotlin.-long/index.html">kotlin.Long</a> (extensions in package com.r3corda.core)</td>
-<td>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts.clauses/-match-behaviour/index.html">com.r3corda.core.contracts.clauses.MatchBehaviour</a></td>
 <td>
 </td>
 </tr>
@@ -2024,23 +2050,9 @@ contained within.</p>
 </tr>
 <tr>
 <td>
-<a href="../com.r3corda.core.contracts.clauses/-single-clause/index.html">com.r3corda.core.contracts.clauses.SingleClause</a></td>
-<td>
-<p>A single verifiable clause. By default always matches, continues to the next clause when matched and errors
-if not matched.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../com.r3corda.core.messaging/-single-message-recipient.html">com.r3corda.core.messaging.SingleMessageRecipient</a></td>
 <td>
 <p>A base class for the case of point-to-point messages</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../com.r3corda.core.contracts.clauses/-single-verify/index.html">com.r3corda.core.contracts.clauses.SingleVerify</a></td>
-<td>
 </td>
 </tr>
 <tr>
@@ -2084,7 +2096,7 @@ Points at which polynomial pieces connect are known as <emph>knots</emph>.</p>
 <td>
 <a href="../com.r3corda.node.services.statemachine/-state-machine-manager/index.html">com.r3corda.node.services.statemachine.StateMachineManager</a></td>
 <td>
-<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="#">ProtocolStateMachine</a> objects.
+<p>A StateMachineManager is responsible for coordination and persistence of multiple <a href="../com.r3corda.core.protocols/-protocol-state-machine/index.html">ProtocolStateMachine</a> objects.
 Each such object represents an instantiation of a (two-party) protocol that has reached a particular point.</p>
 </td>
 </tr>

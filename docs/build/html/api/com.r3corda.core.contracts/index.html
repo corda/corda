@@ -61,6 +61,13 @@ no staff are around to handle problems.</p>
 </tr>
 <tr>
 <td>
+<a href="-client-to-service-command/index.html">ClientToServiceCommand</a></td>
+<td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">ClientToServiceCommand</span></code><p>A command from the monitoring client, to the node.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-command/index.html">Command</a></td>
 <td>
 <code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Command</span></code><p>Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes</p>
@@ -77,7 +84,9 @@ no staff are around to handle problems.</p>
 <td>
 <a href="-commodity/index.html">Commodity</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Commodity</span></code></td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Commodity</span></code><p>Class representing a commodity, as an equivalent to the <a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html">Currency</a> class. This exists purely to enable the
+<a href="#">CommodityContract</a> contract, and is likely to change in future.</p>
+</td>
 </tr>
 <tr>
 <td>

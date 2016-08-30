@@ -22,15 +22,27 @@
 <tbody>
 <tr>
 <td>
-<a href="-address/index.html">Address</a></td>
+<a href="-artemis-address/index.html">ArtemisAddress</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Address</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a></code></td>
+<code><span class="keyword">interface </span><span class="identifier">ArtemisAddress</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="-connection-direction/index.html">ConnectionDirection</a></td>
 <td>
 <code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">ConnectionDirection</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-network-map-address/index.html">NetworkMapAddress</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NetworkMapAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><a href="-artemis-address/index.html"><span class="identifier">ArtemisAddress</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-node-address/index.html">NodeAddress</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NodeAddress</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><a href="-artemis-address/index.html"><span class="identifier">ArtemisAddress</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -80,6 +92,12 @@ the CA certs in Node resources. Then provision KeyStores into certificates folde
 <td>
 <code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
+<tr>
+<td>
+<a href="try-parse-key-from-queue-name.html">tryParseKeyFromQueueName</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tryParseKeyFromQueueName</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tryParseKeyFromQueueName()/queueName">queueName</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">?</span></code></td>
+</tr>
 </tbody>
 </table>
 <h3>Inherited Functions</h3>
@@ -90,6 +108,38 @@ the CA certs in Node resources. Then provision KeyStores into certificates folde
 <a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-n-e-t-w-o-r-k_-m-a-p_-a-d-d-r-e-s-s.html">NETWORK_MAP_ADDRESS</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">NETWORK_MAP_ADDRESS</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-p-e-e-r-s_-p-r-e-f-i-x.html">PEERS_PREFIX</a></td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">PEERS_PREFIX</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Companion Object Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="to-queue-name.html">toQueueName</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">toQueueName</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent.Companion$toQueueName(com.r3corda.core.messaging.MessageRecipients)/target">target</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Assuming the passed in target address is actually an ArtemisAddress will extract the queue name used.
+For now the queue name is the Base58 version of the nodes identity.
+This should only be used in the internals of the messaging services to keep addressing opaque for the future.
+N.B. Marked as JvmStatic to allow use in the inherited classes.</p>
+</td>
 </tr>
 </tbody>
 </table>

@@ -7,7 +7,7 @@
 <a href="../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href=".">Cash</a><br/>
 <br/>
 <h1>Cash</h1>
-<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-on-ledger-asset/index.html"><span class="identifier">OnLedgerAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">Cash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-on-ledger-asset/index.html"><span class="identifier">OnLedgerAsset</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span></code><br/>
 <p>A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
 input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
 (a blend of issuer+depositRef) and you couldnt merge outputs of two colours together, but you COULD put them in
@@ -65,15 +65,9 @@ the same transaction.</p>
 <tbody>
 <tr>
 <td>
-<a href="clauses.html">clauses</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">clauses</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="conserve-clause.html">conserveClause</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">conserveClause</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html"><span class="identifier">AbstractConserveAmount</span></a><span class="symbol">&lt;</span><a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">conserveClause</span><span class="symbol">: </span><a href="../../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html"><span class="identifier">AbstractConserveAmount</span></a><span class="symbol">&lt;</span><a href="-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -100,7 +94,7 @@ when sending out "change" from spending/exiting.</p>
 <td>
 <a href="extract-commands.html">extractCommands</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">extractCommands</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$extractCommands(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="../-fungible-asset/-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">extractCommands</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$extractCommands(kotlin.collections.Collection((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -128,16 +122,11 @@ when sending out "change" from spending/exiting.</p>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">generateMoveCommand</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-commands/-move/index.html"><span class="identifier">Move</span></a></code></td>
 </tr>
-</tbody>
-</table>
-<h3>Inherited Functions</h3>
-<table>
-<tbody>
 <tr>
 <td>
-<a href="../-on-ledger-asset/verify.html">verify</a></td>
+<a href="verify.html">verify</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.OnLedgerAsset$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.asset.Cash$verify(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Takes an object that represents a state transition, and ensures the inputs/outputs/commands make sense.
 Must throw an exception if theres a problem that should prevent state transition. Takes a single object
 rather than an argument so that additional data can be added without breaking binary compatibility with
 existing contract code.</p>

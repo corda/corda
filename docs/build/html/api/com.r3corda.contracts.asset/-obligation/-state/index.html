@@ -79,7 +79,8 @@ is only intended for use by the issuer, and is not intended to be meaningful to 
 <td>
 <a href="exit-keys.html">exitKeys</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount</p>
+<code><span class="keyword">val </span><span class="identifier">exitKeys</span><span class="symbol">: </span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
+owner to sign, some (i.e. cash) also require the issuer.</p>
 </td>
 </tr>
 <tr>

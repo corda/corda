@@ -10,14 +10,18 @@ Writing a contract using clauses
 This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
 already completed ":doc:`tutorial-contract`".
 
-Clauses are essentially micro-contracts which contain independent verification logic, and are composed together to form
-a contract. With appropriate design, they can be made to be reusable, for example issuing contract state objects is
-generally the same for all fungible contracts, so a single issuance clause can be shared. This cuts down on scope for
-error, and improves consistency of behaviour.
+Clauses are essentially micro-contracts which contain independent verification logic, and can be logically composed
+together to form a contract. Clauses are designed to enable re-use of common logic, for example issuing state objects
+is generally the same for all fungible contracts, so a common issuance clause can be inherited for each contract's
+issue clause. This cuts down on scope for error, and improves consistency of behaviour. By splitting verification logic
+into smaller chunks, they can also be readily tested in isolation.
 
-Clauses can be composed of subclauses, either to combine clauses in different ways, or to apply specialised clauses.
-In the case of commercial paper, we have a ``Group`` outermost clause, which will contain the ``Issue``, ``Move`` and
-``Redeem`` clauses. The result is a contract that looks something like this:
+Clauses can be composed of subclauses, for example the ``AllClause`` or ``AnyClause`` clauses take list of clauses
+that they delegate to. Clauses can also change the scope of states and commands being verified, for example grouping
+together fungible state objects and running a clause against each distinct group.
+
+The commercial paper contract has a ``Group`` outermost clause, which contains the ``Issue``, ``Move`` and ``Redeem``
+clauses. The result is a contract that looks something like this:
 
     1. Group input and output states together, and then apply the following clauses on each group:
         a. If an ``Issue`` command is present, run appropriate tests and end processing this group.
@@ -27,11 +31,12 @@ In the case of commercial paper, we have a ``Group`` outermost clause, which wil
 Commercial paper class
 ----------------------
 
-To use the clause verification logic, the contract needs to call the ``verifyClauses()`` function, passing in the transaction,
-a list of clauses to verify, and a collection of commands the clauses are expected to handle all of. This list of
-commands is important because ``verifyClauses()`` checks that none of the commands are left unprocessed at the end, and
-raises an error if they are. The following examples are trimmed to the modified class definition and added elements, for
-brevity:
+To use the clause verification logic, the contract needs to call the ``verifyClause`` function, passing in the
+transaction, a clause to verify, and a collection of commands the clauses are expected to handle all of. This list of
+commands is important because ``verifyClause`` checks that none of the commands are left unprocessed at the end, and
+raises an error if they are. The top level clause would normally be a composite clause (such as ``AnyComposition``,
+``AllComposition``, etc.) which contains further clauses. The following examples are trimmed to the modified class
+definition and added elements, for brevity:
 
 .. container:: codeset
 
@@ -40,10 +45,7 @@ brevity:
       class CommercialPaper : Contract {
           override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
-          private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
-              = tx.commands.select<Commands>()
-
-          override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clauses.Group()), extractCommands(tx))
+          override fun verify(tx: TransactionForContract) = verifyClause(tx, Clauses.Group(), tx.commands.select<Commands>())
 
    .. sourcecode:: java
 
@@ -54,52 +56,39 @@ brevity:
           }
 
           @Override
-          public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
-              return tx.getCommands()
-                      .stream()
-                      .filter((AuthenticatedObject<CommandData> command) -> { return command.getValue() instanceof Commands; })
-                      .collect(Collectors.toList());
-          }
-
-          @Override
           public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
-              ClauseVerifier.verifyClauses(tx, Collections.singletonList(new Clause.Group()), extractCommands(tx));
+              ClauseVerifier.verifyClause(tx, new Clauses.Group(), extractCommands(tx));
           }
 
 Clauses
 -------
 
 We'll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
-grouping of input/output states later. The inner clauses need to implement the ``GroupClause`` interface, which defines
-the verify() function, and properties (``ifMatched``, ``ifNotMatched`` and ``requiredCommands``) defining how the clause
-is processed. These properties specify the command(s) which must be present in order for the clause to be matched,
-and what to do after processing the clause depending on whether it was matched or not.
+grouping of input/output states later. The clauses must implement the ``Clause`` interface, which defines
+the ``verify`` function, and the ``requiredCommands`` property used to determine the conditions under which a clause
+is triggered. Normally clauses would extend ``ConcreteClause`` which provides defaults suitable for a clause which
+verifies transactions, rather than delegating to other clauses.
 
-The ``verify()`` functions defined in the ``SingleClause`` and ``GroupClause`` interfaces is similar to the conventional
-``Contract`` verification function, although it adds new parameters and returns the set of commands which it has processed.
-Normally this returned set is identical to the commands matched in order to trigger the clause, however in some cases the
-clause may process optional commands which it needs to report that it has handled, or may by designed to only process
-the first (or otherwise) matched command.
+The ``verify`` function defined in the ``Clause`` interface is similar to the conventional ``Contract`` verification
+function, although it adds new parameters and returns the set of commands which it has processed. Normally this returned
+set is identical to the ``requiredCommands`` used to trigger the clause, however in some cases the clause may process
+further optional commands which it needs to report that it has handled.
 
-The Move clause for the commercial paper contract is relatively simple, so lets start there:
+The ``Move`` clause for the commercial paper contract is relatively simple, so we will start there:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-        class Move: GroupClause<State, Issued<Terms>> {
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.CONTINUE
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
+        class Move: ConcreteClause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(Commands.Move::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: Issued<Terms>): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: Issued<Terms>?): Set<Commands> {
                 val command = commands.requireSingleCommand<Commands.Move>()
                 val input = inputs.single()
                 requireThat {
@@ -114,140 +103,79 @@ The Move clause for the commercial paper contract is relatively simple, so lets 
 
    .. sourcecode:: java
 
-        public class Move implements GroupClause<State, State> {
-            @Override
-            public MatchBehaviour getIfNotMatched() {
-                return MatchBehaviour.CONTINUE;
-            }
-
-            @Override
-            public MatchBehaviour getIfMatched() {
-                return MatchBehaviour.END;
-            }
-
+        class Move extends ConcreteClause<State, Commands, State> {
+            @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
                 return Collections.singleton(Commands.Move.class);
             }
 
+            @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
-                AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), JavaCommercialPaper.Commands.Move.class);
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
+                AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 State input = single(inputs);
 
-                requireThat(require -> {
-                    require.by("the transaction is signed by the owner of the CP", cmd.getSigners().contains(input.getOwner()));
-                    require.by("the state is propagated", outputs.size() == 1);
-                    return Unit.INSTANCE;
-                });
+                if (!cmd.getSigners().contains(input.getOwner()))
+                    throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+
+                // Check the output CP state is the same as the input state, ignoring the owner field.
+                if (outputs.size() != 1) {
+                    throw new IllegalStateException("the state is propagated");
+                }
                 // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                 // the input ignoring the owner field due to the grouping.
                 return Collections.singleton(cmd.getValue());
             }
         }
 
-The post-processing ``MatchBehaviour`` options are:
-    * CONTINUE
-    * END
-    * ERROR
-
-In this case we process commands against each group, until the first matching clause is found, so we ``END`` on a match
-and ``CONTINUE`` otherwise. ``ERROR`` can be used as a part of a clause which must always/never be matched.  By default
-clauses are always matched (``requiredCommands`` is an empty set), execution continues after a clause is matched, and an
-error is raised if a clause is not matched.
-
 Group Clause
 ------------
 
 We need to wrap the move clause (as well as the issue and redeem clauses - see the relevant contract code for their
-full specifications) in an outer clause. For this we extend the standard ``GroupClauseVerifier`` and specify how to
-group input/output states, as well as the clauses to run on each group.
+full specifications) in an outer clause that understands how to group contract states and objects. For this we extend
+the standard ``GroupClauseVerifier`` and specify how to group input/output states, as well as the top-level to run on
+each group. As with the top level clause on a contract, this is normally a composite clause that delegates to subclauses.
 
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-        class Group : GroupClauseVerifier<State, Issued<Terms>>() {
-            override val ifNotMatched: MatchBehaviour
-                get() = MatchBehaviour.ERROR
-            override val ifMatched: MatchBehaviour
-                get() = MatchBehaviour.END
-            override val clauses: List<GroupClause<State, Issued<Terms>>>
-                get() = listOf(
-                        Clause.Redeem(),
-                        Clause.Move(),
-                        Clause.Issue()
-                )
-
-            override fun extractGroups(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
+        class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
+            AnyComposition(
+                Redeem(),
+                Move(),
+                Issue())) {
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
 
    .. sourcecode:: java
 
-        public class Group extends GroupClauseVerifier<State, State> {
-            @Override
-            public MatchBehaviour getIfMatched() {
-                return MatchBehaviour.END;
+        class Group extends GroupClauseVerifier<State, Commands, State> {
+            public Group() {
+                super(new AnyComposition<>(
+                    new Clauses.Redeem(),
+                    new Clauses.Move(),
+                    new Clauses.Issue()
+                ));
             }
 
+            @NotNull
             @Override
-            public MatchBehaviour getIfNotMatched() {
-                return MatchBehaviour.ERROR;
-            }
-
-            @Override
-            public List<com.r3corda.core.contracts.clauses.GroupClause<State, State>> getClauses() {
-                final List<GroupClause<State, State>> clauses = new ArrayList<>();
-
-                clauses.add(new Clause.Redeem());
-                clauses.add(new Clause.Move());
-                clauses.add(new Clause.Issue());
-
-                return clauses;
-            }
-
-            @Override
-            public List<InOutGroup<State, State>> extractGroups(@NotNull TransactionForContract tx) {
+            public List<InOutGroup<State, State>> groupStates(@NotNull TransactionForContract tx) {
                 return tx.groupStates(State.class, State::withoutOwner);
             }
         }
 
-We then pass this clause into the outer ``ClauseVerifier`` contract by returning it from the ``clauses`` property. We
-also implement the ``extractCommands()`` function, which filters commands on the transaction down to the set the
-contained clauses must handle (any unmatched commands at the end of clause verification results in an exception to be
-thrown).
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        override val clauses: List<SingleClause>
-            get() = listOf(Clauses.Group())
-
-        override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
-            = tx.commands.select<Commands>()
-
-   .. sourcecode:: java
-
-        @Override
-        public List<SingleClause> getClauses() {
-            return Collections.singletonList(new Clause.Group());
-        }
-
-        @Override
-        public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
-            return tx.getCommands()
-                    .stream()
-                    .filter((AuthenticatedObject<CommandData> command) -> { return command.getValue() instanceof Commands; })
-                    .collect(Collectors.toList());
-        }
+For the ``CommercialPaper`` contract, this is the top level clause for the contract, and is passed directly into
+``verifyClause`` (see the example code at the top of this tutorial).
 
 Summary
 -------
@@ -256,3 +184,11 @@ In summary the top level contract ``CommercialPaper`` specifies a single groupin
 ``CommercialPaper.Clauses.Group`` which in turn specifies ``GroupClause`` implementations for each type of command
 (``Redeem``, ``Move`` and ``Issue``). This reflects the flow of verification: In order to verify a ``CommercialPaper``
 we first group states, check which commands are specified, and run command-specific verification logic accordingly.
+
+Debugging
+---------
+
+Debugging clauses which have been composed together can be complicated due to the difficulty in knowing which clauses
+have been matched, whether specific clauses failed to match or passed verification, etc. There is "trace" level
+logging code in the clause verifier which evaluates which clauses will be matched and logs them, before actually
+performing the validation. To enable this, ensure trace level logging is enabled on the ``Clause`` interface.
