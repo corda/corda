@@ -5,19 +5,19 @@ import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.node.services.monitor.ServiceToClientEvent
-import org.reactfx.EventSink
-import org.reactfx.EventSource
-import org.reactfx.EventStream
+import rx.Observable
+import rx.Observer
+import rx.subjects.PublishSubject
 
 /**
  * This model exposes raw event streams to and from the [WalletMonitorService] through a [WalletMonitorClient]
  */
 class WalletMonitorModel {
-    private val clientToServiceSource = EventSource<ClientToServiceCommand>()
-    val clientToService: EventSink<ClientToServiceCommand> = clientToServiceSource
+    private val clientToServiceSource = PublishSubject.create<ClientToServiceCommand>()
+    val clientToService: Observer<ClientToServiceCommand> = clientToServiceSource
 
-    private val serviceToClientSource = EventSource<ServiceToClientEvent>()
-    val serviceToClient: EventStream<ServiceToClientEvent> = serviceToClientSource
+    private val serviceToClientSource = PublishSubject.create<ServiceToClientEvent>()
+    val serviceToClient: Observable<ServiceToClientEvent> = serviceToClientSource
 
     /**
      * Register for updates to/from a given wallet.

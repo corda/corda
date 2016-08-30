@@ -9,6 +9,7 @@ import com.r3corda.node.services.monitor.ServiceToClientEvent
 import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.removeIf
 import org.reactfx.EventStream
+import rx.Observable
 
 class StatesDiff<out T : ContractState>(
         val added: Collection<StateAndRef<T>>,
@@ -19,8 +20,8 @@ class StatesDiff<out T : ContractState>(
  * This model exposes the list of owned contract states.
  */
 class ContractStateModel {
-    private val serviceToClient: EventStream<ServiceToClientEvent> by stream(WalletMonitorModel::serviceToClient)
-    private val outputStates = serviceToClient.filter(ServiceToClientEvent.OutputState::class.java)
+    private val serviceToClient: Observable<ServiceToClientEvent> by observable(WalletMonitorModel::serviceToClient)
+    private val outputStates = serviceToClient.ofType(ServiceToClientEvent.OutputState::class.java)
 
     val contractStatesDiff = outputStates.map { StatesDiff(it.produced, it.consumed) }
     // We filter the diff first rather than the complete contract state list.

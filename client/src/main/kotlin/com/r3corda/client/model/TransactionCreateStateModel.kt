@@ -8,9 +8,9 @@ import com.r3corda.node.utilities.AddOrRemove
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
-import org.reactfx.EventStream
+import rx.Observable
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 sealed class TransactionCreateStatus() {
     class Started(val message: String?) : TransactionCreateStatus()
@@ -63,7 +63,7 @@ data class TransactionCreateStateWritable(
  */
 class TransactionCreateStateModel {
 
-    private val serviceToClient: EventStream<ServiceToClientEvent> by stream(WalletMonitorModel::serviceToClient)
+    private val serviceToClient: Observable<ServiceToClientEvent> by observable(WalletMonitorModel::serviceToClient)
 
     /**
      * Aggregation of updates to transactions. We use the observable list as the only container and do linear search for

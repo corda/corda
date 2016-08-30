@@ -6,6 +6,8 @@ import javafx.beans.value.WritableValue
 import javafx.collections.ObservableList
 import org.reactfx.EventSink
 import org.reactfx.EventStream
+import rx.Observable
+import rx.Observer
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -20,16 +22,22 @@ import kotlin.reflect.KProperty
  * General rule of thumb: A stream/observable should be a model if it may be reused several times.
  *
  * Usage:
- *  // Inject service -> client stream
- *  private val serviceToClient: EventStream<ServiceToClientEvent> by stream(WalletMonitorModel::serviceToClient)
+ *  // Inject service -> client event stream
+ *  private val serviceToClient: EventStream<ServiceToClientEvent> by eventStream(WalletMonitorModel::serviceToClient)
  *
  */
 
-inline fun <reified M : Any, T> stream(noinline streamProperty: (M) -> EventStream<T>) =
-        TrackedDelegate.Stream(M::class, streamProperty)
+inline fun <reified M : Any, T> observable(noinline observableProperty: (M) -> Observable<T>) =
+        TrackedDelegate.ObservableDelegate(M::class, observableProperty)
 
-inline fun <reified M : Any, T> sink(noinline sinkProperty: (M) -> EventSink<T>) =
-        TrackedDelegate.Sink(M::class, sinkProperty)
+inline fun <reified M : Any, T> observer(noinline observerProperty: (M) -> Observer<T>) =
+        TrackedDelegate.ObserverDelegate(M::class, observerProperty)
+
+inline fun <reified M : Any, T> eventStream(noinline streamProperty: (M) -> EventStream<T>) =
+        TrackedDelegate.EventStreamDelegate(M::class, streamProperty)
+
+inline fun <reified M : Any, T> eventSink(noinline sinkProperty: (M) -> EventSink<T>) =
+        TrackedDelegate.EventSinkDelegate(M::class, sinkProperty)
 
 inline fun <reified M : Any, T> observableValue(noinline observableValueProperty: (M) -> ObservableValue<T>) =
         TrackedDelegate.ObservableValueDelegate(M::class, observableValueProperty)
@@ -67,14 +75,24 @@ object Models {
 sealed class TrackedDelegate<M : Any>(val klass: KClass<M>) {
     init { Models.initModel(klass) }
 
-    class Stream<M : Any, T> (klass: KClass<M>, val streamProperty: (M) -> EventStream<T>) : TrackedDelegate<M>(klass) {
-        operator fun getValue(thisRef: Any, property: KProperty<*>): EventStream<T> {
-            return streamProperty(Models.get(klass, thisRef.javaClass.kotlin))
+    class ObservableDelegate<M : Any, T> (klass: KClass<M>, val eventStreamProperty: (M) -> Observable<T>) : TrackedDelegate<M>(klass) {
+        operator fun getValue(thisRef: Any, property: KProperty<*>): Observable<T> {
+            return eventStreamProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class Sink<M : Any, T> (klass: KClass<M>, val sinkProperty: (M) -> EventSink<T>) : TrackedDelegate<M>(klass) {
-        operator fun getValue(thisRef: Any, property: KProperty<*>): EventSink<T> {
-            return sinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
+    class ObserverDelegate<M : Any, T> (klass: KClass<M>, val eventStreamProperty: (M) -> Observer<T>) : TrackedDelegate<M>(klass) {
+        operator fun getValue(thisRef: Any, property: KProperty<*>): Observer<T> {
+            return eventStreamProperty(Models.get(klass, thisRef.javaClass.kotlin))
+        }
+    }
+    class EventStreamDelegate<M : Any, T> (klass: KClass<M>, val eventStreamProperty: (M) -> org.reactfx.EventStream<T>) : TrackedDelegate<M>(klass) {
+        operator fun getValue(thisRef: Any, property: KProperty<*>): org.reactfx.EventStream<T> {
+            return eventStreamProperty(Models.get(klass, thisRef.javaClass.kotlin))
+        }
+    }
+    class EventSinkDelegate<M : Any, T> (klass: KClass<M>, val eventSinkProperty: (M) -> org.reactfx.EventSink<T>) : TrackedDelegate<M>(klass) {
+        operator fun getValue(thisRef: Any, property: KProperty<*>): org.reactfx.EventSink<T> {
+            return eventSinkProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
     class ObservableValueDelegate<M : Any, T>(klass: KClass<M>, val observableValueProperty: (M) -> ObservableValue<T>) : TrackedDelegate<M>(klass) {
