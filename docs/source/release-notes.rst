@@ -3,6 +3,32 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 3
+-----------
+
+* More work on preparing for the testnet:
+
+    * Corda is now a standalone app server that loads "CorDapps" into itself as plugins. Whilst the existing IRS
+      and trader demos still exist for now, these will soon be removed and there will only be a single Corda node
+      program. Note that the node is a single, standalone jar file that is easy to execute.
+    * Significant work done on making the node persist its wallet data to a SQL backend, with more on the way.
+    * Upgrades and refactorings of the core transaction types in preparation for the incoming sandboxing work.
+
+* The Clauses API that seeks to make writing smart contracts easier has gone through another design iteration,
+  with the result that clauses are now cleaner and more composable.
+* Improvements to the protocol API for finalising transactions (notarising, transmitting and storing).
+* Lots of work done on an MQ based client API.
+* Improvements to the developer site:
+
+    * The developer site has been re-read from start to finish and refreshed for M3 so there should be no obsolete
+      texts or references anywhere.
+    * The Corda non-technical white paper is now a part of the developer site and git repository. The LaTeX source is
+      also provided so if you spot any issues with it, you can send us patches.
+
+* Further R&D work by Sofus Mortensen in the experimental module on a new 'universal' contract language.
+* SSL for the REST API and webapp server can now be configured.
+
+
 Milestone 2
 -----------
 
