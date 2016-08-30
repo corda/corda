@@ -1,22 +1,27 @@
 package com.r3corda.explorer
 
 import com.r3corda.client.WalletMonitorClient
-import com.r3corda.client.mock.*
-import com.r3corda.client.model.*
-import com.r3corda.core.contracts.*
+import com.r3corda.client.mock.EventGenerator
+import com.r3corda.client.mock.Generator
+import com.r3corda.client.mock.oneOf
+import com.r3corda.client.model.Models
+import com.r3corda.client.model.WalletMonitorModel
+import com.r3corda.client.model.observer
+import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.node.driver.PortAllocation
-import com.r3corda.node.services.monitor.ServiceToClientEvent
 import com.r3corda.node.driver.driver
 import com.r3corda.node.driver.startClient
+import com.r3corda.node.services.monitor.ServiceToClientEvent
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import javafx.stage.Stage
-import org.reactfx.EventSource
+import rx.Observer
+import rx.subjects.PublishSubject
 import tornadofx.App
 import java.util.*
 
 class Main : App() {
     override val primaryView = MainWindow::class
-    val aliceOutStream: org.reactfx.EventSink<ClientToServiceCommand> by sink(WalletMonitorModel::clientToService)
+    val aliceOutStream: Observer<ClientToServiceCommand> by observer(WalletMonitorModel::clientToService)
 
     override fun start(stage: Stage) {
 
@@ -45,8 +50,8 @@ class Main : App() {
 
                 Models.get<WalletMonitorModel>(Main::class).register(aliceClient, aliceNode)
 
-                val bobInStream = EventSource<ServiceToClientEvent>()
-                val bobOutStream = EventSource<ClientToServiceCommand>()
+                val bobInStream = PublishSubject.create<ServiceToClientEvent>()
+                val bobOutStream = PublishSubject.create<ClientToServiceCommand>()
 
                 val bobClient = startClient(bobNode).get()
                 val bobMonitorClient = WalletMonitorClient(bobClient, bobNode, bobOutStream, bobInStream)
@@ -61,7 +66,7 @@ class Main : App() {
                     )
 
                     eventGenerator.clientToServiceCommandGenerator.combine(Generator.oneOf(listOf(aliceOutStream, bobOutStream))) {
-                        command, stream -> stream.push(command)
+                        command, stream -> stream.onNext(command)
                     }.generate(Random())
                 }
 
