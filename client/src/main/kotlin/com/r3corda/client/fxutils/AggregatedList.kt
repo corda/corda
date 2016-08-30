@@ -7,8 +7,28 @@ import javafx.collections.transformation.TransformationList
 import kotlin.comparisons.compareValues
 
 /**
- * [AggregatedList] provides an [ObservableList] that is an aggregate of the underlying list based on key [K].
- * Internally it uses a sorted list TODO think of a more efficient representation
+ * Given an [ObservableList]<[E]>s and a grouping key [K], [AggregatedList] groups the elements by the key into a fresh
+ * [ObservableList] for each group and exposes the groups as an observable list of [A]s by calling [assemble] on each group.
+ *
+ * Changes done to elements of the input list are reflected in the observable list  of the respective group, whereas
+ * additions/removals of elements in the underlying list are reflected in the exposed [ObservableList]<[A]> by
+ * adding/deleting aggregations as expected.
+ *
+ * The ordering of the exposed list is based on the [hashCode] of keys.
+ *
+ * Example:
+ *   val statesGroupedByCurrency = AggregatedList(states, { state -> state.currency }) { currency, group ->
+ *     object {
+ *       val currency = currency
+ *       val states = group
+ *     }
+ *   }
+ *
+ * The above creates an observable list of (currency, statesOfCurrency) pairs.
+ *
+ * @param list The underlying list.
+ * @param toKey Function to extract the key from an element.
+ * @param assemble Function to assemble the aggregation into the exposed [A].
  */
 class AggregatedList<A, E, K : Any>(
         list: ObservableList<out E>,

@@ -10,6 +10,9 @@ import org.fxmisc.easybind.EasyBind
 import java.util.*
 import java.util.stream.Collectors
 
+/**
+ * Utility bindings for the [Amount] type, similar in spirit to [Bindings]
+ */
 class AmountBindings {
     companion object {
         fun <T> sum(amounts: ObservableList<Amount<T>>, token: T) = EasyBind.map(

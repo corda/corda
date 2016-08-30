@@ -7,9 +7,18 @@ import javafx.collections.ObservableList
 import javafx.collections.ObservableListBase
 
 /**
- * [ChosenList] is essentially a monadic join of an [ObservableValue] of an [ObservableList] into an [ObservableList].
- * Whenever the underlying [ObservableValue] changes the exposed list changes to the new value. Changes to the list are
- * simply propagated.
+ * [ChosenList] manages an [ObservableList] that may be changed by the wrapping [ObservableValue]. Whenever the underlying
+ * [ObservableValue] changes the exposed list changes to the new value. Changes to the list are simply propagated.
+ *
+ * Example:
+ *   val filteredStates = ChosenList(EasyBind.map(filterCriteriaType) { type ->
+ *     when (type) {
+ *       is (ByCurrency) -> statesFilteredByCurrency
+ *       is (ByIssuer) -> statesFilteredByIssuer
+ *     }
+ *   })
+ *
+ * The above will create a list that chooses and delegates to the appropriate filtered list based on the type of filter.
  */
 class ChosenList<E>(
         private val chosenListObservable: ObservableValue<ObservableList<E>>
