@@ -94,6 +94,6 @@ val durationGenerator = generator { random, status ->
 }
 
 val timestampGenerator = generator { random, status ->
-    Timestamp(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
+    Timestamp(instantGenerator.generate(random, status), durationGenerator.generate(random, status))
 }
 
