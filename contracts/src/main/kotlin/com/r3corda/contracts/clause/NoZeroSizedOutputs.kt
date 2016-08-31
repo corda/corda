@@ -2,13 +2,13 @@ package com.r3corda.contracts.clause
 
 import com.r3corda.contracts.asset.FungibleAsset
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.ConcreteClause
+import com.r3corda.core.contracts.clauses.Clause
 
 /**
  * Clause for fungible asset contracts, which enforces that no output state should have
  * a balance of zero.
  */
-open class NoZeroSizedOutputs<in S : FungibleAsset<T>, C : CommandData, T : Any> : ConcreteClause<S, C, Issued<T>>() {
+open class NoZeroSizedOutputs<in S : FungibleAsset<T>, C : CommandData, T : Any> : Clause<S, C, Issued<T>>() {
     override fun verify(tx: TransactionForContract,
                         inputs: List<S>,
                         outputs: List<S>,

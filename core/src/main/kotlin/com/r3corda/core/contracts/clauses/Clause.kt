@@ -7,22 +7,28 @@ import com.r3corda.core.contracts.TransactionForContract
 import com.r3corda.core.utilities.loggerFor
 
 /**
+ * A clause of a contract, containing a chunk of verification logic. That logic may be delegated to other clauses, or
+ * provided directly by this clause.
+ *
  * @param S the type of contract state this clause operates on.
  * @param C a common supertype of commands this clause operates on.
  * @param K the type of the grouping key for states this clause operates on. Use [Unit] if not applicable.
+ *
+ * @see CompositeClause
  */
-interface Clause<in S : ContractState, C: CommandData, in K : Any> {
+abstract class Clause<in S : ContractState, C : CommandData, in K : Any> {
     companion object {
         val log = loggerFor<Clause<*, *, *>>()
     }
 
     /** Determine whether this clause runs or not */
-    val requiredCommands: Set<Class<out CommandData>>
+    open val requiredCommands: Set<Class<out CommandData>> = emptySet()
 
     /**
      * Determine the subclauses which will be verified as a result of verifying this clause.
      */
-    fun getExecutionPath(commands: List<AuthenticatedObject<C>>): List<Clause<*, *, *>>
+    open fun getExecutionPath(commands: List<AuthenticatedObject<C>>): List<Clause<*, *, *>>
+            = listOf(this)
 
     /**
      * Verify the transaction matches the conditions from this clause. For example, a "no zero amount output" clause
@@ -45,11 +51,11 @@ interface Clause<in S : ContractState, C: CommandData, in K : Any> {
      * commands that were not required (for example the Exit command for fungible assets is optional).
      */
     @Throws(IllegalStateException::class)
-    fun verify(tx: TransactionForContract,
-               inputs: List<S>,
-               outputs: List<S>,
-               commands: List<AuthenticatedObject<C>>,
-               groupingKey: K?): Set<C>
+    abstract fun verify(tx: TransactionForContract,
+                        inputs: List<S>,
+                        outputs: List<S>,
+                        commands: List<AuthenticatedObject<C>>,
+                        groupingKey: K?): Set<C>
 }
 
 /**

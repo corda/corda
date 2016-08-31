@@ -107,7 +107,7 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Move: ConcreteClause<State, Commands, Issued<Terms>>() {
+        class Move: Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Move::class.java)
 
             override fun verify(tx: TransactionForContract,
@@ -127,7 +127,7 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Redeem(): ConcreteClause<State, Commands, Issued<Terms>>() {
+        class Redeem(): Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
 
             override fun verify(tx: TransactionForContract,

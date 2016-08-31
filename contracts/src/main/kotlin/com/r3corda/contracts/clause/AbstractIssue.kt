@@ -1,7 +1,7 @@
 package com.r3corda.contracts.clause
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.ConcreteClause
+import com.r3corda.core.contracts.clauses.Clause
 
 /**
  * Standard issue clause for contracts that issue fungible assets.
@@ -16,7 +16,7 @@ import com.r3corda.core.contracts.clauses.ConcreteClause
 abstract class AbstractIssue<in S: ContractState, C: CommandData, T: Any>(
         val sum: List<S>.() -> Amount<Issued<T>>,
         val sumOrZero: List<S>.(token: Issued<T>) -> Amount<Issued<T>>
-) : ConcreteClause<S, C, Issued<T>>() {
+) : Clause<S, C, Issued<T>>() {
     override fun verify(tx: TransactionForContract,
                         inputs: List<S>,
                         outputs: List<S>,

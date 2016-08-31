@@ -12,7 +12,7 @@ class VerifyClausesTests {
     /** Very simple check that the function doesn't error when given any clause */
     @Test
     fun minimal() {
-        val clause = object : ConcreteClause<ContractState, CommandData, Unit>() {
+        val clause = object : Clause<ContractState, CommandData, Unit>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>,
@@ -24,7 +24,7 @@ class VerifyClausesTests {
 
     @Test
     fun errorSuperfluousCommands() {
-        val clause = object : ConcreteClause<ContractState, CommandData, Unit>() {
+        val clause = object : Clause<ContractState, CommandData, Unit>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>,
