@@ -2,7 +2,7 @@ package com.r3corda.core.testing
 
 import com.google.common.base.Throwables
 import com.r3corda.core.utilities.LogHelper
-import com.r3corda.testing.node.IRSSimulation
+import com.r3corda.simulation.IRSSimulation
 import org.junit.Test
 
 class IRSSimulationTest {

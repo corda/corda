@@ -1,4 +1,4 @@
-package com.r3corda.testing.node
+package com.r3corda.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -14,6 +14,10 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.testing.node.TestClock
+import com.r3corda.testing.node.setTo
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -41,7 +45,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     // This puts together a mock network of SimulatedNodes.
 
-    open class SimulatedNode(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, mockNet: MockNetwork, networkMapAddress: NodeInfo?,
+    open class SimulatedNode(dir: Path, config: NodeConfiguration, mockNet: MockNetwork, networkMapAddress: NodeInfo?,
                              advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?) : MockNetwork.MockNode(dir, config, mockNet, networkMapAddress, advertisedServices, id, keyPair) {
         override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
     }
@@ -49,7 +53,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     inner class BankFactory : MockNetwork.Factory {
         var counter = 0
 
-        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             val letter = 'A' + counter
             val city = bankLocations[counter++ % bankLocations.size]

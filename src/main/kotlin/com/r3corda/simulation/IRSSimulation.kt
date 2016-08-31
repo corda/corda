@@ -1,4 +1,4 @@
-package com.r3corda.testing.node
+package com.r3corda.simulation
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.util.concurrent.FutureCallback
@@ -15,6 +15,8 @@ import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.success
 import com.r3corda.protocols.TwoPartyDealProtocol
+import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.testing.node.MockIdentityService
 import java.security.KeyPair
 import java.time.LocalDate
 import java.util.*

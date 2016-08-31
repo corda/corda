@@ -11,6 +11,7 @@ import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.services.config.NodeConfiguration
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,18 +49,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /** Allows customisation of how nodes are created. */
     interface Factory {
-        fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+        fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                    advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNode
     }
 
     object DefaultFactory : Factory {
-        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNode {
             return MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair)
         }
     }
 
-    open class MockNode(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
+    open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
                         advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : com.r3corda.node.internal.AbstractNode(dir, config, networkMapAddr, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: com.r3corda.node.utilities.AffinityExecutor =
@@ -113,7 +114,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val path = filesystem.getPath("/nodes/$id")
         if (newNode)
             Files.createDirectories(path.resolve("attachments"))
-        val config = object : com.r3corda.node.services.config.NodeConfiguration {
+        val config = object : NodeConfiguration {
             override val myLegalName: String = legalName ?: "Mock Company $id"
             override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
