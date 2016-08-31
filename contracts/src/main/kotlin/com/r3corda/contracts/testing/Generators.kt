@@ -29,7 +29,6 @@ class ContractStateGenerator : Generator<ContractState>(ContractState::class.jav
 
 class MoveGenerator : Generator<Cash.Commands.Move>(Cash.Commands.Move::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Cash.Commands.Move {
-        // TODO generate null as well
         return Cash.Commands.Move(SecureHashGenerator().generate(random, status))
     }
 }
@@ -63,19 +62,11 @@ class CommandGenerator : Generator<Command>(Command::class.java) {
 
 class WiredTransactionGenerator: Generator<WireTransaction>(WireTransaction::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): WireTransaction {
-        val inputsGenerator = ArrayListGenerator()
-        inputsGenerator.addComponentGenerators(listOf(StateRefGenerator()))
-        val attachmentsGenerator = ArrayListGenerator()
-        attachmentsGenerator.addComponentGenerators(listOf(SecureHashGenerator()))
-        val outputsGenerator = ArrayListGenerator()
-        outputsGenerator.addComponentGenerators(listOf(TransactionStateGenerator(ContractStateGenerator())))
-        val commandsGenerator = ArrayListGenerator()
-        commandsGenerator.addComponentGenerators(listOf(CommandGenerator()))
-        val commands = commandsGenerator.generate(random, status) as ArrayList<Command> + listOf(CommandGenerator().generate(random, status))
+        val commands = CommandGenerator().generateList(random, status) + listOf(CommandGenerator().generate(random, status))
         return WireTransaction(
-                inputs = inputsGenerator.generate(random, status) as ArrayList<StateRef>,
-                attachments = attachmentsGenerator.generate(random, status) as ArrayList<SecureHash>,
-                outputs = outputsGenerator.generate(random, status) as ArrayList<TransactionState<ContractState>>,
+                inputs = StateRefGenerator().generateList(random, status),
+                attachments = SecureHashGenerator().generateList(random, status),
+                outputs = TransactionStateGenerator(ContractStateGenerator()).generateList(random, status),
                 commands = commands,
                 notary = PartyGenerator().generate(random, status),
                 signers = commands.flatMap { it.signers },

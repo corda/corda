@@ -25,6 +25,13 @@ import java.util.*
  * TODO Split this into several files
  */
 
+fun <A> Generator<A>.generateList(random: SourceOfRandomness, status: GenerationStatus): List<A> {
+    val arrayGenerator = ArrayListGenerator()
+    arrayGenerator.addComponentGenerators(listOf(this))
+    @Suppress("UNCHECKED_CAST")
+    return arrayGenerator.generate(random, status) as List<A>
+}
+
 class PrivateKeyGenerator: Generator<EdDSAPrivateKey>(EdDSAPrivateKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): EdDSAPrivateKey {
         val seed = random.nextBytes(32)
