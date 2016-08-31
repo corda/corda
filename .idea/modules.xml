@@ -24,6 +24,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_integrationTest.iml" group="r3prototyping" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" group="r3prototyping" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_test.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_test.iml" group="r3prototyping" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" group="test-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" group="test-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" group="test-utils" />
     </modules>
   </component>
 </project>

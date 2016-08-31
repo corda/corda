@@ -1,9 +1,10 @@
-package com.r3corda.core.testing
+package com.r3corda.testing
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.seconds
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant

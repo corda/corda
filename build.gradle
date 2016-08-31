@@ -118,6 +118,7 @@ dependencies {
     // Integration test helpers
     integrationTestCompile 'junit:junit:4.12'
     integrationTestCompile 'org.assertj:assertj-core:${assertj_version}'
+    integrationTestCompile project(':test-utils')
 }
 
 // Package up the demo programs.

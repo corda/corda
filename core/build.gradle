@@ -40,6 +40,7 @@ dependencies {
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testCompile project(":node")
+    testCompile project(":test-utils")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"

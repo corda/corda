@@ -1,20 +1,21 @@
 @file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
 @file:JvmName("CoreTestUtils")
-package com.r3corda.core.testing
+package com.r3corda.testing
 
 import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
+import com.r3corda.testing.*
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.TransactionBuilder
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.testing.MockIdentityService
-import com.r3corda.core.node.services.testing.MockServices
-import java.math.BigInteger
+import com.r3corda.testing.node.MockIdentityService
+import com.r3corda.testing.node.MockServices
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import java.net.ServerSocket
 import java.security.KeyPair
 import java.security.PublicKey
-import java.time.Instant
 
 /**
  *  JAVA INTEROP
@@ -34,9 +35,6 @@ import java.time.Instant
  *   - The Int.DOLLARS syntax doesn't work from Java.  Use the DOLLARS(int) function instead.
  */
 
-// A dummy time at which we will be pretending test transactions are created.
-val TEST_TX_TIME: Instant get() = Instant.parse("2015-04-17T12:00:00.00Z")
-
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
@@ -46,12 +44,6 @@ val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
 
 val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
 val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
-
-val DUMMY_PUBKEY_1: PublicKey get() = DummyPublicKey("x1")
-val DUMMY_PUBKEY_2: PublicKey get() = DummyPublicKey("x2")
-
-val DUMMY_KEY_1: KeyPair by lazy { generateKeyPair() }
-val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
 
 val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
 val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
@@ -67,9 +59,6 @@ val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
-
-val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
-val DUMMY_NOTARY: Party get() = Party("Notary Service", DUMMY_NOTARY_KEY.public)
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 

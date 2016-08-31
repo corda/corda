@@ -1,10 +1,10 @@
 package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.newSecureRandom
-import com.r3corda.core.node.services.testing.MockTransactionStorage
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.DUMMY_NOTARY_KEY
-import com.r3corda.core.testing.MEGA_CORP_KEY
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.testing.node.MockTransactionStorage
+import com.r3corda.testing.MEGA_CORP_KEY
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals

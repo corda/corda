@@ -12,7 +12,7 @@ import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.UniqueIdentifier
 import com.r3corda.core.failure
 import com.r3corda.core.node.services.linearHeadsOfType
-import com.r3corda.core.node.services.testing.MockIdentityService
+import com.r3corda.testing.node.MockIdentityService
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.success
 import com.r3corda.node.services.network.InMemoryMessagingNetwork

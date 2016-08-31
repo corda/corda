@@ -4,4 +4,5 @@ include 'contracts:isolated'
 include 'core'
 include 'node'
 include 'experimental'
+include 'test-utils'
 

@@ -6,7 +6,7 @@ import com.pholser.junit.quickcheck.generator.GenerationStatus
 import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
-import com.r3corda.core.node.services.testing.MockIdentityService
+import com.r3corda.testing.node.MockIdentityService
 import com.r3corda.node.utilities.JsonSupport
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey

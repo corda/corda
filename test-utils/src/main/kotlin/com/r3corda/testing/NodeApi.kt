@@ -1,4 +1,4 @@
-package com.r3corda.core.testing.utilities
+package com.r3corda.testing
 
 import com.google.common.net.HostAndPort
 import java.io.IOException

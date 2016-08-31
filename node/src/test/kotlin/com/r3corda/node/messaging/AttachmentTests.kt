@@ -6,7 +6,6 @@ import com.r3corda.core.crypto.sha256
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.core.testing.rootCauseExceptions
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
@@ -14,6 +13,7 @@ import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.FetchAttachmentsProtocol
 import com.r3corda.protocols.FetchDataProtocol
+import com.r3corda.testing.rootCauseExceptions
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream

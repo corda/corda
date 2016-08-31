@@ -21,4 +21,5 @@ dependencies {
     compile project(':contracts')
 
     testCompile 'junit:junit:4.12'
+    compile project(':test-utils')
 }

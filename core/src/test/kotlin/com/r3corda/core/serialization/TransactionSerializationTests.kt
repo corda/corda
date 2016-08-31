@@ -3,7 +3,8 @@ package com.r3corda.core.serialization
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.seconds
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.*
+import com.r3corda.testing.*
 import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey

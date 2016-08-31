@@ -5,9 +5,9 @@ import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.node.services.WalletService
-import com.r3corda.core.node.services.testing.MockServices
-import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
-import com.r3corda.core.testing.DUMMY_NOTARY
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.node.makeTestDataSourceProperties
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.configureDatabase

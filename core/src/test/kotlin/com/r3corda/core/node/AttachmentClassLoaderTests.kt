@@ -4,10 +4,10 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.AttachmentStorage
-import com.r3corda.core.node.services.testing.MockAttachmentStorage
 import com.r3corda.core.serialization.*
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.MEGA_CORP
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.testing.node.MockAttachmentStorage
+import com.r3corda.testing.MEGA_CORP
 import org.apache.commons.io.IOUtils
 import org.junit.Assert
 import org.junit.Test

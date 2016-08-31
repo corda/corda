@@ -34,6 +34,7 @@ sourceSets {
 
 dependencies {
     compile project(':contracts')
+    compile project(':test-utils')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 

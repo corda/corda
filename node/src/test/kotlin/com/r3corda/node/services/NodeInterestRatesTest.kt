@@ -11,14 +11,14 @@ import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.`with notary`
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
-import com.r3corda.core.testing.ALICE_PUBKEY
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.core.testing.MEGA_CORP_KEY
+import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.protocols.RatesFixProtocol
+import com.r3corda.testing.ALICE_PUBKEY
+import com.r3corda.testing.MEGA_CORP
+import com.r3corda.testing.MEGA_CORP_KEY
 import org.junit.Assert
 import org.junit.Test
 import java.time.Clock

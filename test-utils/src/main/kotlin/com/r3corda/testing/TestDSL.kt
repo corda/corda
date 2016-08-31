@@ -1,9 +1,10 @@
-package com.r3corda.core.testing
+package com.r3corda.testing
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey
