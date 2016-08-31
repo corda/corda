@@ -1,4 +1,4 @@
-package com.r3corda.node.internal.testing
+package com.r3corda.testing.node
 
 import com.r3corda.core.serialization.SerializeAsToken
 import com.r3corda.core.serialization.SerializeAsTokenContext
@@ -15,7 +15,7 @@ import javax.annotation.concurrent.ThreadSafe
  * A [Clock] that can have the time advanced for use in testing.
  */
 @ThreadSafe
-class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableClock(), SerializeAsToken {
+class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : com.r3corda.node.utilities.MutableClock(), SerializeAsToken {
 
     private val token = SingletonSerializationToken(this)
 

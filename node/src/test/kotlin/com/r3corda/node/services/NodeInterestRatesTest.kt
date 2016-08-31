@@ -13,7 +13,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.protocols.RatesFixProtocol
 import com.r3corda.testing.ALICE_PUBKEY

@@ -1,4 +1,4 @@
-package com.r3corda.node.services.network
+package com.r3corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
 import com.r3corda.core.crypto.DummyPublicKey
@@ -12,7 +12,7 @@ import rx.subjects.PublishSubject
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache() : InMemoryNetworkMapCache() {
+class MockNetworkMapCache() : com.r3corda.node.services.network.InMemoryNetworkMapCache() {
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     data class MockAddress(val id: String): SingleMessageRecipient

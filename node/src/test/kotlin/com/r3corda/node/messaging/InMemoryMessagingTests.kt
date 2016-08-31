@@ -5,7 +5,7 @@ package com.r3corda.node.messaging
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.TopicStringValidator
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.util.*

@@ -1,4 +1,4 @@
-package com.r3corda.node.services.network
+package com.r3corda.testing.node
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -12,7 +12,7 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.MessagingServiceBuilder
 import com.r3corda.node.services.api.MessagingServiceInternal
-import com.r3corda.node.services.network.InMemoryMessagingNetwork.InMemoryMessaging
+import com.r3corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -80,7 +80,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * executor.
      */
     @Synchronized
-    fun createNode(manuallyPumped: Boolean): Pair<Handle, MessagingServiceBuilder<InMemoryMessaging>> {
+    fun createNode(manuallyPumped: Boolean): Pair<Handle, com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
         val builder = createNodeWithID(manuallyPumped, counter) as Builder
         counter++
@@ -95,7 +95,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * @param id the numeric ID to use, e.g. set to whatever ID the node used last time.
      * @param description text string that identifies this node for message logging (if is enabled) or null to autogenerate.
      */
-    fun createNodeWithID(manuallyPumped: Boolean, id: Int, description: String? = null): MessagingServiceBuilder<InMemoryMessaging> {
+    fun createNodeWithID(manuallyPumped: Boolean, id: Int, description: String? = null): com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
         return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"))
     }
 
@@ -136,7 +136,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
         messageReceiveQueues.clear()
     }
 
-    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : MessagingServiceBuilder<InMemoryMessaging> {
+    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
         override fun start(): ListenableFuture<InMemoryMessaging> {
             synchronized(this@InMemoryMessagingNetwork) {
                 val node = InMemoryMessaging(manuallyPumped, id)
@@ -200,7 +200,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * An instance can be obtained by creating a builder and then using the start method.
      */
     @ThreadSafe
-    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), MessagingServiceInternal {
+    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), com.r3corda.node.services.api.MessagingServiceInternal {
         inner class Handler(val executor: Executor?, val topicSession: TopicSession,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
