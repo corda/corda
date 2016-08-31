@@ -7,6 +7,7 @@ import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
+import com.r3corda.core.crypto.NullSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.testing.*
 import java.util.*
@@ -81,7 +82,7 @@ class SignedTransactionGenerator: Generator<SignedTransaction>(SignedTransaction
         val wireTransaction = WiredTransactionGenerator().generate(random, status)
         return SignedTransaction(
                 txBits = wireTransaction.serialized,
-                sigs = wireTransaction.signers.map { DigitalSignature.WithKey(it, random.nextBytes(16)) }
+                sigs = listOf(NullSignature)
         )
     }
 }

@@ -6,15 +6,10 @@ import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.crypto.ed25519Curve
+import com.r3corda.core.crypto.*
 import com.r3corda.core.serialization.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
+import java.security.PrivateKey
+import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -32,18 +27,15 @@ fun <A> Generator<A>.generateList(random: SourceOfRandomness, status: Generation
     return arrayGenerator.generate(random, status) as List<A>
 }
 
-class PrivateKeyGenerator: Generator<EdDSAPrivateKey>(EdDSAPrivateKey::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): EdDSAPrivateKey {
-        val seed = random.nextBytes(32)
-        val privateKeySpec = EdDSAPrivateKeySpec(seed, ed25519Curve)
-        return EdDSAPrivateKey(privateKeySpec)
+class PrivateKeyGenerator: Generator<PrivateKey>(PrivateKey::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PrivateKey {
+        return entropyToKeyPair(random.nextBigInteger(32)).private
     }
 }
 
-class PublicKeyGenerator: Generator<EdDSAPublicKey>(EdDSAPublicKey::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): EdDSAPublicKey {
-        val privateKey = PrivateKeyGenerator().generate(random, status)
-        return EdDSAPublicKey(EdDSAPublicKeySpec(privateKey.a, ed25519Curve))
+class PublicKeyGenerator: Generator<PublicKey>(PublicKey::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKey {
+        return entropyToKeyPair(random.nextBigInteger(32)).public
     }
 }
 
