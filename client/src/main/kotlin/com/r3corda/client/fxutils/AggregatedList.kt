@@ -7,10 +7,10 @@ import javafx.collections.transformation.TransformationList
 import kotlin.comparisons.compareValues
 
 /**
- * Given an [ObservableList]<[E]>s and a grouping key [K], [AggregatedList] groups the elements by the key into a fresh
- * [ObservableList] for each group and exposes the groups as an observable list of [A]s by calling [assemble] on each group.
+ * Given an [ObservableList]<[E]> and a grouping key [K], [AggregatedList] groups the elements by the key into a fresh
+ * [ObservableList]<[E]> for each group and exposes the groups as an observable list of [A]s by calling [assemble] on each.
  *
- * Changes done to elements of the input list are reflected in the observable list  of the respective group, whereas
+ * Changes done to elements of the input list are reflected in the observable list of the respective group, whereas
  * additions/removals of elements in the underlying list are reflected in the exposed [ObservableList]<[A]> by
  * adding/deleting aggregations as expected.
  *
@@ -26,6 +26,9 @@ import kotlin.comparisons.compareValues
  *
  * The above creates an observable list of (currency, statesOfCurrency) pairs.
  *
+ * Note that update events to the source list are discarded, assuming the key of elements does not change.
+ * TODO Should we handle this case? It requires additional bookkeeping of sourceIndex->(aggregationIndex, groupIndex)
+ *
  * @param list The underlying list.
  * @param toKey Function to extract the key from an element.
  * @param assemble Function to assemble the aggregation into the exposed [A].
@@ -37,12 +40,12 @@ class AggregatedList<A, E, K : Any>(
 ) : TransformationList<A, E>(list) {
 
     private class AggregationGroup<E, out A>(
-            val key: Int,
+            val keyHashCode: Int,
             val value: A,
             val elements: ObservableList<E>
     )
 
-    // Invariant: sorted by K
+    // Invariant: sorted by K.hashCode()
     private val aggregationList = mutableListOf<AggregationGroup<E, A>>()
 
     init {
@@ -90,7 +93,7 @@ class AggregatedList<A, E, K : Any>(
         val keyHashCode = key.hashCode()
 
         val index = aggregationList.binarySearch(
-                comparison = { group -> compareValues(keyHashCode, group.key.hashCode()) }
+                comparison = { group -> compareValues(keyHashCode, group.keyHashCode.hashCode()) }
         )
         if (index < 0) {
             throw IllegalStateException("Removed element $removedItem does not map to an existing aggregation")
@@ -108,14 +111,14 @@ class AggregatedList<A, E, K : Any>(
         val key = toKey(addedItem)
         val keyHashCode = key.hashCode()
         val index = aggregationList.binarySearch(
-                comparison = { group -> compareValues(keyHashCode, group.key.hashCode()) }
+                comparison = { group -> compareValues(keyHashCode, group.keyHashCode.hashCode()) }
         )
         if (index < 0) {
             // New aggregation
             val observableGroupElements = FXCollections.observableArrayList<E>()
             observableGroupElements.add(addedItem)
             val aggregationGroup = AggregationGroup(
-                    key = keyHashCode,
+                    keyHashCode = keyHashCode,
                     value = assemble(key, observableGroupElements),
                     elements = observableGroupElements
             )
