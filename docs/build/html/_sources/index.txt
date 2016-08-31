@@ -1,8 +1,7 @@
 Welcome to the Corda repository!
 ================================
 
-.. warning:: This build of the docs is from the *master branch*, not a milestone release. It may not reflect the
-   current state of the code.
+.. note:: This docsite is for the M3 release.
 
 This documentation describes Corda, a proposed architecture for distributed ledgers, the vision for which is outlined in the `Corda Introductory Whitepaper`_.
 

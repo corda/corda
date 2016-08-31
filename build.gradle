@@ -48,7 +48,7 @@ allprojects {
 
     // Our version: bump this on release.
     group 'com.r3corda'
-    version '0.3-SNAPSHOT'
+    version '0.3'
 }
 
 repositories {
