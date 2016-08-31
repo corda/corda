@@ -37,6 +37,7 @@ Read on to learn:
    creating-a-cordapp
    running-the-demos
    node-administration
+   corda-configuration-files
 
 .. toctree::
    :maxdepth: 2

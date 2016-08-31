@@ -99,10 +99,12 @@
 <li class="toctree-l2"><a class="reference internal" href="#starting-nodes">Starting Nodes</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installing-apps">Installing Apps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#starting-your-node">Starting your Node</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#debugging-your-node">Debugging your Node</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
@@ -202,11 +204,15 @@ construction, where message handlers should be registered and threads started.</
 <p>To use an app you must also have a node server. To create a node server run the gradle installTemplateNodes task.</p>
 <p>This will output the node JAR to <code class="docutils literal"><span class="pre">build/libs/corda.jar</span></code> and several sample/standard
 node setups to <code class="docutils literal"><span class="pre">build/nodes</span></code>. For now you can use the <code class="docutils literal"><span class="pre">build/nodes/nodea</span></code> configuration as a template.</p>
-<p>Each node server must have a <code class="docutils literal"><span class="pre">node.conf</span></code> file in the same directory as the node JAR file. After first
-execution of the node server there will be many other configuration and persistence files created in this directory.</p>
+<p>Each node server by default must have a <code class="docutils literal"><span class="pre">node.conf</span></code> file in the current working directory. After first
+execution of the node server there will be many other configuration and persistence files created in a node workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden using <code class="docutils literal"><span class="pre">--base-directory=&lt;workspace&gt;</span></code>.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Outside of development environments do not store your node directories in the build folder.</p>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Also note that the bootstrapping process of the <code class="docutils literal"><span class="pre">corda.jar</span></code> unpacks the Corda dependencies into a temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before starting the process to control this location.</p>
 </div>
 </div>
 <div class="section" id="installing-apps">
@@ -228,6 +234,15 @@ case the <code class="docutils literal"><span class="pre">node_dir</span></code>
 <p class="first admonition-title">Warning</p>
 <p class="last">If your working directory is not <code class="docutils literal"><span class="pre">&lt;node_dir&gt;</span></code> your plugins and configuration will not be used.</p>
 </div>
+<p>The configuration file and workspace paths can be overidden on the command line e.g.</p>
+<p><code class="docutils literal"><span class="pre">java</span> <span class="pre">-jar</span> <span class="pre">corda.jar</span> <span class="pre">--config-file=test.conf</span> <span class="pre">--base-directory=/opt/r3corda/nodes/test</span></code>.</p>
+<p>Otherwise the workspace folder for the node is created based upon the <code class="docutils literal"><span class="pre">basedir</span></code> property in the <code class="docutils literal"><span class="pre">node.conf</span></code> file and if this is relative it is applied relative to the current working path.</p>
+</div>
+<div class="section" id="debugging-your-node">
+<h2>Debugging your Node<a class="headerlink" href="#debugging-your-node" title="Permalink to this headline">¶</a></h2>
+<p>To enable remote debugging of the corda process use a command line such as:</p>
+<p><code class="docutils literal"><span class="pre">java</span> <span class="pre">-Dcapsule.jvm.args=&quot;-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005&quot;</span> <span class="pre">-jar</span> <span class="pre">corda.jar</span></code></p>
+<p>This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.</p>
 </div>
 </div>
 

@@ -36,10 +36,12 @@ To use an app you must also have a node server. To create a node server run the 
 This will output the node JAR to ``build/libs/corda.jar`` and several sample/standard
 node setups to ``build/nodes``. For now you can use the ``build/nodes/nodea`` configuration as a template.
 
-Each node server must have a ``node.conf`` file in the same directory as the node JAR file. After first
-execution of the node server there will be many other configuration and persistence files created in this directory.
+Each node server by default must have a ``node.conf`` file in the current working directory. After first
+execution of the node server there will be many other configuration and persistence files created in a node workspace directory. This is specified as the basedir property of the node.conf file, or else can be overidden using ``--base-directory=<workspace>``.
 
 .. note:: Outside of development environments do not store your node directories in the build folder.
+
+.. warning:: Also note that the bootstrapping process of the ``corda.jar`` unpacks the Corda dependencies into a temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before starting the process to control this location.
 
 Installing Apps
 ------------------
@@ -59,6 +61,21 @@ Now you have a node server with your app installed, you can run it by navigating
 The plugin should automatically be registered and the configuration file used.
 
 .. warning:: If your working directory is not ``<node_dir>`` your plugins and configuration will not be used.
+
+The configuration file and workspace paths can be overidden on the command line e.g.
+
+``java -jar corda.jar --config-file=test.conf --base-directory=/opt/r3corda/nodes/test``.
+
+Otherwise the workspace folder for the node is created based upon the ``basedir`` property in the ``node.conf`` file and if this is relative it is applied relative to the current working path.
+
+Debugging your Node
+------------------
+
+To enable remote debugging of the corda process use a command line such as:
+
+``java -Dcapsule.jvm.args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" -jar corda.jar``
+
+This command line will start the debugger on port 5005 and pause the process awaiting debugger attachment.
 
 .. _CordaPluginRegistry: api/com.r3corda.core.node/-corda-plugin-registry/index.html
 .. _ServiceHubInternal: api/com.r3corda.node.services.api/-service-hub-internal/index.html
