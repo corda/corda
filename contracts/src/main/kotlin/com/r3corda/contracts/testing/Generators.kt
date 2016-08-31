@@ -16,73 +16,55 @@ import java.util.*
  * This file contains generators for quickcheck style testing. The idea is that we can write random instance generators
  * for each type we have in the code and test against those instead of predefined mock data. This style of testing can
  * catch corner case bugs and test algebraic properties of the code, for example deserialize(serialize(generatedThing)) == generatedThing
- *
- * TODO add combinators for easier Generator writing
  */
-class ContractStateGenerator : Generator<ContractState>(ContractState::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): ContractState {
-        return Cash.State(
-                amount = AmountGenerator(IssuedGenerator(CurrencyGenerator())).generate(random, status),
-                owner = PublicKeyGenerator().generate(random, status)
-        )
-    }
+val contractStateGenerator = generator { random, status ->
+    Cash.State(
+            amount = amountGenerator(issuedGenerator(currencyGenerator)).generate(random, status),
+            owner = publicKeyGenerator.generate(random, status)
+    )
 }
 
-class MoveGenerator : Generator<Cash.Commands.Move>(Cash.Commands.Move::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Cash.Commands.Move {
-        return Cash.Commands.Move(SecureHashGenerator().generate(random, status))
-    }
+val moveGenerator = generator { random, status ->
+    Cash.Commands.Move(secureHashGenerator.generate(random, status))
 }
 
-class IssueGenerator : Generator<Cash.Commands.Issue>(Cash.Commands.Issue::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Cash.Commands.Issue {
-        return Cash.Commands.Issue(random.nextLong())
-    }
+val issueGenerator = generator { random, status ->
+    Cash.Commands.Issue(random.nextLong())
 }
 
-class ExitGenerator : Generator<Cash.Commands.Exit>(Cash.Commands.Exit::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Cash.Commands.Exit {
-        return Cash.Commands.Exit(AmountGenerator(IssuedGenerator(CurrencyGenerator())).generate(random, status))
-    }
+val exitGenerator = generator { random, status ->
+    Cash.Commands.Exit(amountGenerator(issuedGenerator(currencyGenerator)).generate(random, status))
 }
 
-class CommandDataGenerator : Generator<CommandData>(CommandData::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): CommandData {
-        val generators = listOf(MoveGenerator(), IssueGenerator(), ExitGenerator())
-        return generators[random.nextInt(0, generators.size - 1)].generate(random, status)
-    }
+val commandDataGenerator = generator { random, status ->
+    val generators = listOf(moveGenerator, issueGenerator, exitGenerator)
+    generators[random.nextInt(0, generators.size - 1)].generate(random, status)
 }
 
-class CommandGenerator : Generator<Command>(Command::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command {
-        val signersGenerator = ArrayListGenerator()
-        signersGenerator.addComponentGenerators(listOf(PublicKeyGenerator()))
-        return Command(CommandDataGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
-    }
+val commandGenerator = generator { random, status ->
+    val signersGenerator = ArrayListGenerator()
+    signersGenerator.addComponentGenerators(listOf(publicKeyGenerator))
+    Command(commandDataGenerator.generate(random, status), publicKeyGenerator.generate(random, status))
 }
 
-class WiredTransactionGenerator: Generator<WireTransaction>(WireTransaction::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): WireTransaction {
-        val commands = CommandGenerator().generateList(random, status) + listOf(CommandGenerator().generate(random, status))
-        return WireTransaction(
-                inputs = StateRefGenerator().generateList(random, status),
-                attachments = SecureHashGenerator().generateList(random, status),
-                outputs = TransactionStateGenerator(ContractStateGenerator()).generateList(random, status),
-                commands = commands,
-                notary = PartyGenerator().generate(random, status),
-                signers = commands.flatMap { it.signers },
-                type = TransactionType.General(),
-                timestamp = TimestampGenerator().generate(random, status)
-        )
-    }
+val wiredTransactionGenerator = generator { random, status ->
+    val commands = commandGenerator.generateList(random, status) + listOf(commandGenerator.generate(random, status))
+    WireTransaction(
+            inputs = stateRefGenerator.generateList(random, status),
+            attachments = secureHashGenerator.generateList(random, status),
+            outputs = transactionStateGenerator(contractStateGenerator).generateList(random, status),
+            commands = commands,
+            notary = partyGenerator.generate(random, status),
+            signers = commands.flatMap { it.signers },
+            type = TransactionType.General(),
+            timestamp = timestampGenerator.generate(random, status)
+    )
 }
 
-class SignedTransactionGenerator: Generator<SignedTransaction>(SignedTransaction::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): SignedTransaction {
-        val wireTransaction = WiredTransactionGenerator().generate(random, status)
-        return SignedTransaction(
-                txBits = wireTransaction.serialized,
-                sigs = listOf(NullSignature)
-        )
-    }
+val signedTransactionGenerator = generator { random, status ->
+    val wireTransaction = wiredTransactionGenerator.generate(random, status)
+    SignedTransaction(
+            txBits = wireTransaction.serialized,
+            sigs = listOf(NullSignature)
+    )
 }

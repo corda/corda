@@ -3,6 +3,8 @@ package com.r3corda.core.testing
 import com.pholser.junit.quickcheck.generator.GenerationStatus
 import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator
+import com.pholser.junit.quickcheck.generator.java.time.DurationGenerator
+import com.pholser.junit.quickcheck.generator.java.time.InstantGenerator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.r3corda.core.contracts.*
@@ -27,84 +29,71 @@ fun <A> Generator<A>.generateList(random: SourceOfRandomness, status: Generation
     return arrayGenerator.generate(random, status) as List<A>
 }
 
-class PrivateKeyGenerator: Generator<PrivateKey>(PrivateKey::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PrivateKey {
-        return entropyToKeyPair(random.nextBigInteger(32)).private
+
+inline fun <reified B : Any> generator(
+        crossinline generatorFunction: (SourceOfRandomness, GenerationStatus) -> B
+): Generator<B> {
+    return object : Generator<B>(B::class.java) {
+        override fun generate(random: SourceOfRandomness, status: GenerationStatus) = generatorFunction(random, status)
     }
 }
 
-class PublicKeyGenerator: Generator<PublicKey>(PublicKey::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKey {
-        return entropyToKeyPair(random.nextBigInteger(32)).public
-    }
+val privateKeyGenerator = generator { random, status ->
+    entropyToKeyPair(random.nextBigInteger(32)).private
+}
+class PrivateKeyGenerator : Generator<PrivateKey>(PrivateKey::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus) = privateKeyGenerator.generate(random, status)
 }
 
-class PartyGenerator: Generator<Party>(Party::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
-    }
+val publicKeyGenerator = generator { random, status ->
+    entropyToKeyPair(random.nextBigInteger(32)).public
+}
+class PublicKeyGenerator : Generator<PublicKey>(PublicKey::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus) = publicKeyGenerator.generate(random, status)
 }
 
-class PartyAndReferenceGenerator: Generator<PartyAndReference>(PartyAndReference::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): PartyAndReference {
-        return PartyAndReference(PartyGenerator().generate(random, status), OpaqueBytes(random.nextBytes(16)))
-    }
+val partyGenerator = generator { random, status ->
+    Party(StringGenerator().generate(random, status), publicKeyGenerator.generate(random, status))
 }
 
-class SecureHashGenerator: Generator<SecureHash>(SecureHash::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): SecureHash {
-        return SecureHash.Companion.sha256(random.nextBytes(16))
-    }
+val partyAndReferenceGenerator = generator { random, status ->
+    PartyAndReference(partyGenerator.generate(random, status), OpaqueBytes(random.nextBytes(16)))
 }
 
-class StateRefGenerator: Generator<StateRef>(StateRef::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): StateRef {
-        return StateRef(SecureHash.Companion.sha256(random.nextBytes(16)), random.nextInt(0, 10))
-    }
+val secureHashGenerator = generator { random, status ->
+    SecureHash.Companion.sha256(random.nextBytes(16))
 }
 
-class TransactionStateGenerator<T : ContractState>(val stateGenerator: Generator<T>) : Generator<TransactionState<T>>(TransactionState::class.java as Class<TransactionState<T>>) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): TransactionState<T> {
-        return TransactionState(stateGenerator.generate(random, status), PartyGenerator().generate(random, status))
-    }
+val stateRefGenerator = generator { random, status ->
+    StateRef(SecureHash.Companion.sha256(random.nextBytes(16)), random.nextInt(0, 10))
 }
 
-class IssuedGenerator<T>(val productGenerator: Generator<T>) : Generator<Issued<T>>(Issued::class.java as Class<Issued<T>>) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Issued<T> {
-        return Issued(PartyAndReferenceGenerator().generate(random, status), productGenerator.generate(random, status))
-    }
+fun <T : ContractState> transactionStateGenerator(stateGenerator: Generator<T>) = generator { random, status ->
+    TransactionState(stateGenerator.generate(random, status), partyGenerator.generate(random, status))
 }
 
-class AmountGenerator<T>(val tokenGenerator: Generator<T>) : Generator<Amount<T>>(Amount::class.java as Class<Amount<T>>) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Amount<T> {
-        return Amount(random.nextLong(0, 1000000), tokenGenerator.generate(random, status))
-    }
+fun <T> issuedGenerator(productGenerator: Generator<T>) = generator { random, status ->
+    Issued(partyAndReferenceGenerator.generate(random, status), productGenerator.generate(random, status))
 }
 
-class CurrencyGenerator() : Generator<Currency>(Currency::class.java) {
-    companion object {
-        val currencies = Currency.getAvailableCurrencies().toList()
-    }
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Currency {
-        return currencies[random.nextInt(0, currencies.size - 1)]
-    }
+fun <T> amountGenerator(tokenGenerator: Generator<T>) = generator { random, status ->
+    Amount(random.nextLong(0, 1000000), tokenGenerator.generate(random, status))
 }
 
-class InstantGenerator : Generator<Instant>(Instant::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Instant {
-        return Instant.ofEpochMilli(random.nextLong(0, 1000000))
-    }
+private val currencies = Currency.getAvailableCurrencies().toList()
+val currencyGenerator = generator { random, status ->
+    currencies[random.nextInt(0, currencies.size - 1)]
 }
 
-class DurationGenerator : Generator<Duration>(Duration::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Duration {
-        return Duration.ofMillis(random.nextLong(0, 1000000))
-    }
+val instantGenerator = generator { random, status ->
+    Instant.ofEpochMilli(random.nextLong(0, 1000000))
 }
 
-class TimestampGenerator : Generator<Timestamp>(Timestamp::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Timestamp {
-        return Timestamp(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
-    }
+val durationGenerator = generator { random, status ->
+    Duration.ofMillis(random.nextLong(0, 1000000))
+}
+
+val timestampGenerator = generator { random, status ->
+    Timestamp(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
 }
 
