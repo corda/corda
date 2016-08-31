@@ -10,7 +10,8 @@ Milestone 3
 
     * Corda is now a standalone app server that loads "CorDapps" into itself as plugins. Whilst the existing IRS
       and trader demos still exist for now, these will soon be removed and there will only be a single Corda node
-      program. Note that the node is a single, standalone jar file that is easy to execute.
+      program. Note that the node is a single, standalone jar file that is easier to execute than the demos.
+    * Project Vega (shared SIMM modelling for derivative portfolios) has already been converted to be a CorDapp.
     * Significant work done on making the node persist its wallet data to a SQL backend, with more on the way.
     * Upgrades and refactorings of the core transaction types in preparation for the incoming sandboxing work.
 
@@ -24,6 +25,7 @@ Milestone 3
       texts or references anywhere.
     * The Corda non-technical white paper is now a part of the developer site and git repository. The LaTeX source is
       also provided so if you spot any issues with it, you can send us patches.
+    * There is a new section on how to write CorDapps.
 
 * Further R&D work by Sofus Mortensen in the experimental module on a new 'universal' contract language.
 * SSL for the REST API and webapp server can now be configured.
@@ -34,7 +36,7 @@ Milestone 2
 
 * Big improvements to the interest rate swap app:
 
-    * A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
+    * A new web app demonstrating the IRS contract has been added. This can x``be used as an example for how to interact with
       the Corda API from the web.
     * Simplifications to the way the demo is used from the command line.
     * :doc:`Detailed documentation on how the contract works and can be used <contract-irs>` has been written.
