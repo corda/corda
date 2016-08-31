@@ -127,7 +127,10 @@ public class JavaCommercialPaper implements Contract {
 
     public interface Clauses {
         class Group extends GroupClauseVerifier<State, Commands, State> {
-            public Group() {
+            // This complains because we're passing generic types into a varargs, but it is valid so we suppress the
+            // warning.
+            @SuppressWarnings("unchecked")
+            Group() {
                 super(new AnyComposition<>(
                         new Clauses.Redeem(),
                         new Clauses.Move(),
