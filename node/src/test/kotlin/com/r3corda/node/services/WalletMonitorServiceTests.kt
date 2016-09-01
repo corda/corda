@@ -184,12 +184,15 @@ class WalletMonitorServiceTests {
 
         val recipient = monitorServiceNode.services.storageService.myLegalIdentity
 
-        registerNode.net.send(registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID, ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress,
-                ClientToServiceCommand.IssueCash(Amount(quantity, GBP), OpaqueBytes.of(0), recipient, recipient)).serialize().bits), monitorServiceNode.net.myAddress)
-        val outEvent = ClientToServiceCommand.PayCash(Amount(quantity, Issued(recipient.ref(0), GBP)), recipient)
-        val message = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
-                ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, outEvent).serialize().bits)
-        registerNode.net.send(message, monitorServiceNode.net.myAddress)
+        // Tell the monitoring service node to issue some cash so we can spend it later
+        val issueCommand = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), OpaqueBytes.of(0), recipient, recipient)
+        val issueMessage = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
+                ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, issueCommand).serialize().bits)
+        registerNode.net.send(issueMessage, monitorServiceNode.net.myAddress)
+        val payCommand = ClientToServiceCommand.PayCash(Amount(quantity, Issued(recipient.ref(0), GBP)), recipient)
+        val payMessage = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
+                ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, payCommand).serialize().bits)
+        registerNode.net.send(payMessage, monitorServiceNode.net.myAddress)
         network.runNetwork()
 
         events.expectEvents(isStrict = false) {
