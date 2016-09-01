@@ -177,7 +177,13 @@ class CashViewer : View() {
         class Selected(val node: ViewerNode) : ViewerNodeSelection()
     }
 
-    val selectedViewerNode = SimpleObjectProperty<ViewerNodeSelection>(ViewerNodeSelection.None)
+    val selectedViewerNode = Bindings.createObjectBinding({
+        if (cashViewerTable.selectionModel.selectedItems.size == 0) {
+            ViewerNodeSelection.None
+        } else {
+            ViewerNodeSelection.Selected(cashViewerTable.selectionModel.selectedItems[0].value)
+        }
+    }, arrayOf(cashViewerTable.selectionModel.selectedItems))
 
     data class StateRow (
         val originated: LocalDateTime,
@@ -259,19 +265,6 @@ class CashViewer : View() {
         searchCancelImageView.setOnMouseClicked { event: MouseEvent ->
             if (event.button == MouseButton.PRIMARY) {
                 searchCriteriaTextField.text = ""
-            }
-        }
-
-        cashViewerTable.setOnMouseClicked { event: MouseEvent ->
-            if (event.button == MouseButton.PRIMARY) {
-                val selected = cashViewerTable.selectedItem
-                selectedViewerNode.set(
-                        if (selected == null) {
-                            ViewerNodeSelection.None
-                        } else {
-                            ViewerNodeSelection.Selected(selected)
-                        }
-                )
             }
         }
 
