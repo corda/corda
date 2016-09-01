@@ -51,7 +51,8 @@ open class NetClause<C: CommandData, P> : Clause<ContractState, C, Unit>() {
                         outputs: List<ContractState>,
                         commands: List<AuthenticatedObject<C>>,
                         groupingKey: Unit?): Set<C> {
-        val command = commands.requireSingleCommand<Obligation.Commands.Net>()
+        val matchedCommands: List<AuthenticatedObject<C>> = commands.filter { it.value is NetCommand }
+        val command = matchedCommands.requireSingleCommand<Obligation.Commands.Net>()
         val groups = when (command.value.type) {
             NetType.CLOSE_OUT -> tx.groupStates { it: Obligation.State<P> -> it.bilateralNetState }
             NetType.PAYMENT -> tx.groupStates { it: Obligation.State<P> -> it.multilateralNetState }
@@ -59,7 +60,7 @@ open class NetClause<C: CommandData, P> : Clause<ContractState, C, Unit>() {
         for ((groupInputs, groupOutputs, key) in groups) {
             verifyNetCommand(groupInputs, groupOutputs, command, key)
         }
-        return setOf(command.value as C)
+        return matchedCommands.map { it.value }.toSet()
     }
 
     /**
@@ -68,7 +69,7 @@ open class NetClause<C: CommandData, P> : Clause<ContractState, C, Unit>() {
     @VisibleForTesting
     fun verifyNetCommand(inputs: List<Obligation.State<P>>,
                          outputs: List<Obligation.State<P>>,
-                         command: AuthenticatedObject<Obligation.Commands.Net>,
+                         command: AuthenticatedObject<NetCommand>,
                          netState: NetState<P>) {
         val template = netState.template
         // Create two maps of balances from obligors to beneficiaries, one for input states, the other for output states.

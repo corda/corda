@@ -325,7 +325,7 @@ class Obligation<P> : Contract {
          * Net two or more obligation states together in a close-out netting style. Limited to bilateral netting
          * as only the beneficiary (not the obligor) needs to sign.
          */
-        data class Net(val type: NetType) : Commands
+        data class Net(override val type: NetType) : NetCommand, Commands
 
         /**
          * A command stating that a debt has been moved, optionally to fulfil another contract.

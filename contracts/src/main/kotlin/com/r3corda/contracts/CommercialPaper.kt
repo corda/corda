@@ -95,8 +95,8 @@ class CommercialPaper : Contract {
                                 inputs: List<State>,
                                 outputs: List<State>,
                                 commands: List<AuthenticatedObject<Commands>>,
-                                token: Issued<Terms>?): Set<Commands> {
-                val consumedCommands = super.verify(tx, inputs, outputs, commands, token)
+                                groupingKey: Issued<Terms>?): Set<Commands> {
+                val consumedCommands = super.verify(tx, inputs, outputs, commands, groupingKey)
                 commands.requireSingleCommand<Commands.Issue>()
                 val timestamp = tx.timestamp
                 val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")

@@ -355,6 +355,12 @@ interface MoveCommand : CommandData {
     val contractHash: SecureHash?
 }
 
+/** A common netting command for contracts whose states can be netted. */
+interface NetCommand : CommandData {
+    /** The type of netting to apply, see [NetType] for options. */
+    val type: NetType
+}
+
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
         val signers: List<PublicKey>,
