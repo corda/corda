@@ -48,6 +48,8 @@ dependencies {
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
+
+    testCompile project(':test-utils')
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
