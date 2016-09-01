@@ -1,14 +1,12 @@
 package com.r3corda.client.testing
 
 import co.paralleluniverse.strands.SettableFuture
-import com.r3corda.core.ThreadBox
-import org.reactfx.EventStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
 
 /**
- * This file defines a simple DSL for testing non-deterministic sequence of events arriving on an [EventStream].
+ * This file defines a simple DSL for testing non-deterministic sequence of events arriving on an [Observable].
  *
  * [sequence] is used to impose ordering invariants on the stream, whereas [parallel] allows events to arrive in any order.
  *
@@ -58,7 +56,16 @@ fun <E> sequence(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
 fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
 
 /**
+ * Tests that N events of the same type arrive
+ *
+ * @param number The number of events expected.
+ * @param expectation The piece of DSL to run on each event, with the index of the event passed in.
+ */
+inline fun <E> repeat(number: Int, expectation: (Int) -> ExpectCompose<E>) = sequence(*Array(number) { expectation(it) })
+
+/**
  * Run the specified DSL against the event stream.
+ *
  * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subset of events).
  * @param expectCompose The DSL we expect to match against the stream of events.
  */

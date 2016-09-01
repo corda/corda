@@ -163,26 +163,8 @@ class WalletMonitorServiceTests {
                                                 is TransactionBuildResult.Failed -> fail(state.message)
                                             }
                                         },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Requesting signature by notary service
-                                        },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Structural step change in child of Requesting signature by notary service
-                                        },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Requesting signature by notary service
-                                        },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Validating response from Notary service
-                                        },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Done
-                                        },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Broadcasting transaction to participants
-                                        },
-                                        expect { build: ServiceToClientEvent.Progress ->
-                                            // Done
+                                        repeat(7) {
+                                            expect { build: ServiceToClientEvent.Progress -> }
                                         }
                                 ),
                                 expect { output: ServiceToClientEvent.OutputState ->
