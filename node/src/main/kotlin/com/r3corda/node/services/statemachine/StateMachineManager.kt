@@ -125,38 +125,25 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         val fiber = deserializeFiber(checkpoint.serialisedFiber)
         initFiber(fiber, { checkpoint })
 
-        when (checkpoint.request) {
-            is FiberRequest.ExpectingResponse<*> -> {
-                val topic = checkpoint.request.receiveTopicSession
-                val awaitingPayloadType = checkpoint.request.responseType
-                fiber.logger.info("Restored ${fiber.logic} - it was previously waiting for message of type ${awaitingPayloadType.name} on topic $topic")
-                iterateOnResponse(fiber, awaitingPayloadType, checkpoint.serialisedFiber, checkpoint.request) {
-                    try {
-                        Fiber.unparkDeserialized(fiber, scheduler)
-                    } catch (e: Throwable) {
-                        logError(e, it, topic, fiber)
-                    }
-                }
-            }
-            is FiberRequest.NotExpectingResponse -> restoreNotExpectingResponse(fiber, checkpoint.request)
-            null -> restoreNotExpectingResponse(fiber)
-            else -> throw IllegalStateException("Unknown fiber request type " + checkpoint.request)
-        }
-    }
-
-    /**
-     * Restore a Fiber which was not expecting a response (either because it hasn't asked for one, such as a new
-     * Fiber, or because the detail it needed has arrived).
-     */
-    private fun restoreNotExpectingResponse(fiber: ProtocolStateMachineImpl<*>, request: FiberRequest? = null) {
-        val payload = request?.payload
-        fiber.logger.info("Restored ${fiber.logic} - it was not waiting on any message; received payload: ${payload.toString().abbreviate(50)}")
-        executor.executeASAP {
-            iterateStateMachine(fiber, payload) {
+        if (checkpoint.request is ReceiveRequest<*>) {
+            val topicSession = checkpoint.request.receiveTopicSession
+            fiber.logger.info("Restored ${fiber.logic} - it was previously waiting for message of type ${checkpoint.request.receiveType.name} on $topicSession")
+            iterateOnResponse(fiber, checkpoint.serialisedFiber, checkpoint.request) {
                 try {
                     Fiber.unparkDeserialized(fiber, scheduler)
                 } catch (e: Throwable) {
-                    logError(e, it, null, fiber)
+                    logError(e, it, topicSession, fiber)
+                }
+            }
+        } else {
+            fiber.logger.info("Restored ${fiber.logic} - it was not waiting on any message; received payload: ${checkpoint.receivedPayload.toString().abbreviate(50)}")
+            executor.executeASAP {
+                iterateStateMachine(fiber, checkpoint.receivedPayload) {
+                    try {
+                        Fiber.unparkDeserialized(fiber, scheduler)
+                    } catch (e: Throwable) {
+                        logError(e, it, null, fiber)
+                    }
                 }
             }
         }
@@ -220,7 +207,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
         // Need to add before iterating in case of immediate completion
         initFiber(fiber) {
-            val checkpoint = Checkpoint(serializeFiber(fiber), null)
+            val checkpoint = Checkpoint(serializeFiber(fiber), null, null)
             checkpointStorage.addCheckpoint(checkpoint)
             checkpoint
         }
@@ -250,8 +237,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     private fun updateCheckpoint(psm: ProtocolStateMachineImpl<*>,
                                  serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
-                                 request: FiberRequest) {
-        val newCheckpoint = Checkpoint(serialisedFiber, request)
+                                 request: ProtocolIORequest?,
+                                 receivedPayload: Any?) {
+        val newCheckpoint = Checkpoint(serialisedFiber, request, receivedPayload)
         val previousCheckpoint = stateMachines.put(psm, newCheckpoint)
         if (previousCheckpoint != null) {
             checkpointStorage.removeCheckpoint(previousCheckpoint)
@@ -269,47 +257,48 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         resumeAction(receivedPayload)
     }
 
-    private fun onNextSuspend(psm: ProtocolStateMachineImpl<*>, request: FiberRequest) {
+    private fun onNextSuspend(psm: ProtocolStateMachineImpl<*>, request: ProtocolIORequest) {
         // We have a request to do something: send, receive, or send-and-receive.
-        when (request) {
-            is FiberRequest.ExpectingResponse<*> -> {
-                // Prepare a listener on the network that runs in the background thread when we receive a message.
-                checkpointOnExpectingResponse(psm, request)
+        if (request is ReceiveRequest<*>) {
+            // Prepare a listener on the network that runs in the background thread when we receive a message.
+            prepareToReceiveForRequest(psm, request)
+        }
+        if (request is SendRequest) {
+            performSendRequest(psm, request)
+        }
+    }
+
+    private fun prepareToReceiveForRequest(psm: ProtocolStateMachineImpl<*>, request: ReceiveRequest<*>) {
+        executor.checkOnThread()
+        val queueID = request.receiveTopicSession
+        val serialisedFiber = serializeFiber(psm)
+        updateCheckpoint(psm, serialisedFiber, request, null)
+        psm.logger.trace { "Preparing to receive message of type ${request.receiveType.name} on queue $queueID" }
+        iterateOnResponse(psm, serialisedFiber, request) {
+            try {
+                Fiber.unpark(psm, QUASAR_UNBLOCKER)
+            } catch(e: Throwable) {
+                logError(e, it, queueID, psm)
             }
         }
-        // If a non-null payload to send was provided, send it now.
-        val queueID = TopicSession(request.topic, request.sessionIDForSend)
-        request.payload?.let {
-            psm.logger.trace { "Sending message of type ${it.javaClass.name} using queue $queueID to ${request.destination} (${it.toString().abbreviate(50)})" }
-            val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination!!.name)
-            if (node == null) {
-                throw IllegalArgumentException("Don't know about ${request.destination} but trying to send a message of type ${it.javaClass.name} on $queueID (${it.toString().abbreviate(50)})", request.stackTraceInCaseOfProblems)
-            }
-            serviceHub.networkService.send(queueID, it, node.address)
-        }
-        if (request is FiberRequest.NotExpectingResponse) {
+    }
+
+    private fun performSendRequest(psm: ProtocolStateMachineImpl<*>, request: SendRequest) {
+        val topicSession = TopicSession(request.topic, request.sendSessionID)
+        val payload = request.payload
+        psm.logger.trace { "Sending message of type ${payload.javaClass.name} using queue $topicSession to ${request.destination} (${payload.toString().abbreviate(50)})" }
+        val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination.name) ?:
+                throw IllegalArgumentException("Don't know about ${request.destination} but trying to send a message of type ${payload.javaClass.name} on $topicSession (${payload.toString().abbreviate(50)})", request.stackTraceInCaseOfProblems)
+        serviceHub.networkService.send(topicSession, payload, node.address)
+
+        if (request is SendOnly) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
             iterateStateMachine(psm, null) {
                 try {
                     Fiber.unpark(psm, QUASAR_UNBLOCKER)
                 } catch(e: Throwable) {
-                    logError(e, request.payload, queueID, psm)
+                    logError(e, request.payload, topicSession, psm)
                 }
-            }
-        }
-    }
-
-    private fun checkpointOnExpectingResponse(psm: ProtocolStateMachineImpl<*>, request: FiberRequest.ExpectingResponse<*>) {
-        executor.checkOnThread()
-        val queueID = request.receiveTopicSession
-        val serialisedFiber = serializeFiber(psm)
-        updateCheckpoint(psm, serialisedFiber, request)
-        psm.logger.trace { "Preparing to receive message of type ${request.responseType.name} on queue $queueID" }
-        iterateOnResponse(psm, request.responseType, serialisedFiber, request) {
-            try {
-                Fiber.unpark(psm, QUASAR_UNBLOCKER)
-            } catch(e: Throwable) {
-                logError(e, it, queueID, psm)
             }
         }
     }
@@ -319,12 +308,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
      * received.
      */
     private fun iterateOnResponse(psm: ProtocolStateMachineImpl<*>,
-                                  responseType: Class<*>,
                                   serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
-                                  request: FiberRequest.ExpectingResponse<*>,
+                                  request: ReceiveRequest<*>,
                                   resumeAction: (Any?) -> Unit) {
-        val topic = request.receiveTopicSession
-        serviceHub.networkService.runOnNextMessage(topic, executor) { netMsg ->
+        val topicSession = request.receiveTopicSession
+        serviceHub.networkService.runOnNextMessage(topicSession, executor) { netMsg ->
             // Assertion to ensure we don't execute on the wrong thread.
             executor.checkOnThread()
             // TODO: This is insecure: we should not deserialise whatever we find and *then* check.
@@ -334,13 +322,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
             // at the last moment when we do the downcast. However this would make protocol code harder to read and
             // make it more difficult to migrate to a more explicit serialisation scheme later.
             val payload = netMsg.data.deserialize<Any>()
-            check(responseType.isInstance(payload)) { "Expected message of type ${responseType.name} but got ${payload.javaClass.name}" }
+            check(request.receiveType.isInstance(payload)) { "Expected message of type ${request.receiveType.name} but got ${payload.javaClass.name}" }
             // Update the fiber's checkpoint so that it's no longer waiting on a response, but rather has the received payload
-            updateCheckpoint(psm, serialisedFiber, request)
-            psm.logger.trace { "Received message of type ${payload.javaClass.name} on topic ${request.topic}.${request.sessionIDForReceive} (${payload.toString().abbreviate(50)})" }
+            updateCheckpoint(psm, serialisedFiber, null, payload)
+            psm.logger.trace { "Received message of type ${payload.javaClass.name} on $topicSession (${payload.toString().abbreviate(50)})" }
             iterateStateMachine(psm, payload, resumeAction)
         }
     }
 }
-
-class StackSnapshot : Throwable("This is a stack trace to help identify the source of the underlying problem")

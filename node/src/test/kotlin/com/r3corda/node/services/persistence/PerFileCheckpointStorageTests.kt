@@ -3,10 +3,8 @@ package com.r3corda.node.services.persistence
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.primitives.Ints
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.node.services.api.Checkpoint
-import com.r3corda.node.services.statemachine.FiberRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
@@ -94,8 +92,6 @@ class PerFileCheckpointStorageTests {
     }
 
     private var checkpointCount = 1
-    private val request = FiberRequest.ExpectingResponse("topic", null, random63BitValue(), random63BitValue(), null,
-            kotlin.String::class.java)
-    private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)), request)
+    private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)), null, null)
 
 }
