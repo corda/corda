@@ -61,8 +61,10 @@ dependencies {
     compile "org.fusesource.jansi:jansi:1.13"
 
     // GraphStream: For visualisation
-    compile "org.graphstream:gs-core:1.3"
-    compile "org.graphstream:gs-ui:1.3"
+    testCompile "org.graphstream:gs-core:1.3"
+    testCompile("org.graphstream:gs-ui:1.3") {
+        exclude group: "bouncycastle"
+    }
     compile("com.intellij:forms_rt:7.0.3") {
         exclude group: "asm"
     }
