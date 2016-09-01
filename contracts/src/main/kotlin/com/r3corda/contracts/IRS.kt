@@ -454,7 +454,7 @@ class InterestRateSwap() : Contract {
          * Common superclass for IRS contract clauses, which defines behaviour on match/no-match, and provides
          * helper functions for the clauses.
          */
-        abstract class AbstractIRSClause : ConcreteClause<State, Commands, UniqueIdentifier>() {
+        abstract class AbstractIRSClause : Clause<State, Commands, UniqueIdentifier>() {
             // These functions may make more sense to use for basket types, but for now let's leave them here
             fun checkLegDates(legs: List<CommonLeg>) {
                 requireThat {
@@ -502,7 +502,7 @@ class InterestRateSwap() : Contract {
                 = tx.groupStates() { state -> state.linearId }
         }
 
-        class Timestamped : ConcreteClause<ContractState, Commands, Unit>() {
+        class Timestamped : Clause<ContractState, Commands, Unit>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>,

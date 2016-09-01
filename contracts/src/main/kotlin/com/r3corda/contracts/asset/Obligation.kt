@@ -90,7 +90,7 @@ class Obligation<P> : Contract {
         /**
          * Obligation-specific clause for changing the lifecycle of one or more states.
          */
-        class SetLifecycle<P> : ConcreteClause<State<P>, Commands, Issued<Terms<P>>>() {
+        class SetLifecycle<P> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.SetLifecycle::class.java)
 
             override fun verify(tx: TransactionForContract,
@@ -110,7 +110,7 @@ class Obligation<P> : Contract {
          * Obligation-specific clause for settling an outstanding obligation by witnessing
          * change of ownership of other states to fulfil
          */
-        class Settle<P> : ConcreteClause<State<P>, Commands, Issued<Terms<P>>>() {
+        class Settle<P> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Settle::class.java)
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State<P>>,
@@ -199,7 +199,7 @@ class Obligation<P> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<S: ContractState, C: CommandData, T: Any, P> : ConcreteClause<S, C, T>() {
+        class VerifyLifecycle<S: ContractState, C: CommandData, T: Any, P> : Clause<S, C, T>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<S>,
                                 outputs: List<S>,

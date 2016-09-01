@@ -142,7 +142,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Move extends ConcreteClause<State, Commands, State> {
+        class Move extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -173,7 +173,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Redeem extends ConcreteClause<State, Commands, State> {
+        class Redeem extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -215,7 +215,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Issue extends ConcreteClause<State, Commands, State> {
+        class Issue extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {

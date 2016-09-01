@@ -1,6 +1,5 @@
 package com.r3corda.core.contracts
 
-import com.r3corda.core.contracts.clauses.ConcreteClause
 import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -218,7 +217,7 @@ interface LinearState: ContractState {
     /**
      * Standard clause to verify the LinearState safety properties.
      */
-    class ClauseVerifier<S : LinearState>(val stateClass: Class<S>) : ConcreteClause<ContractState, CommandData, Unit>() {
+    class ClauseVerifier<S : LinearState>(val stateClass: Class<S>) : Clause<ContractState, CommandData, Unit>() {
         override fun verify(tx: TransactionForContract,
                             inputs: List<ContractState>,
                             outputs: List<ContractState>,

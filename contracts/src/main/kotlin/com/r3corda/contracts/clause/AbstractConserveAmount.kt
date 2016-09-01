@@ -5,7 +5,7 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumFungibleOrNull
 import com.r3corda.contracts.asset.sumFungibleOrZero
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.ConcreteClause
+import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
 import java.security.PublicKey
 import java.util.*
@@ -15,7 +15,7 @@ import java.util.*
  * Move command is provided, and errors if absent. Must be the last clause under a grouping clause;
  * errors on no-match, ends on match.
  */
-abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T : Any> : ConcreteClause<S, C, Issued<T>>() {
+abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T : Any> : Clause<S, C, Issued<T>>() {
     /**
      * Gather assets from the given list of states, sufficient to match or exceed the given amount.
      *

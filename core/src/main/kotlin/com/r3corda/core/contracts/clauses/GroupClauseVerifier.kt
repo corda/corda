@@ -6,7 +6,7 @@ import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.TransactionForContract
 import java.util.*
 
-abstract class GroupClauseVerifier<S : ContractState, C : CommandData, K : Any>(val clause: Clause<S, C, K>) : ConcreteClause<ContractState, C, Unit>() {
+abstract class GroupClauseVerifier<S : ContractState, C : CommandData, K : Any>(val clause: Clause<S, C, K>) : Clause<ContractState, C, Unit>() {
     abstract fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<S, K>>
 
     override fun getExecutionPath(commands: List<AuthenticatedObject<C>>): List<Clause<*, *, *>>
