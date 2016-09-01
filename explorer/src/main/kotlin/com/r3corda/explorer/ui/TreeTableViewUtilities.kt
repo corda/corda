@@ -47,3 +47,11 @@ fun <S, T> Formatter<T>.toTreeTableCellFactory() = Callback<TreeTableColumn<S, T
         }
     }
 }
+
+fun <S> TreeTableView<S>.singleRowSelection() = Bindings.createObjectBinding({
+    if (selectionModel.selectedItems.size == 0) {
+        SingleRowSelection.None<S>()
+    } else {
+        SingleRowSelection.Selected(selectionModel.selectedItems[0].value)
+    }
+}, arrayOf(selectionModel.selectedItems))

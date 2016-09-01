@@ -47,3 +47,10 @@ fun <S, T> Formatter<T>.toTableCellFactory() = Callback<TableColumn<S, T?>, Tabl
     }
 }
 
+fun <S> TableView<S>.singleRowSelection() = Bindings.createObjectBinding({
+    if (selectionModel.selectedItems.size == 0) {
+        SingleRowSelection.None<S>()
+    } else {
+        SingleRowSelection.Selected(selectionModel.selectedItems[0])
+    }
+}, arrayOf(selectionModel.selectedItems))

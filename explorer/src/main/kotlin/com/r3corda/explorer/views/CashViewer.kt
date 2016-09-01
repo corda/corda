@@ -14,7 +14,9 @@ import com.r3corda.explorer.formatters.AmountFormatter
 import com.r3corda.explorer.formatters.NumberFormatter
 import com.r3corda.explorer.model.ReportingCurrencyModel
 import com.r3corda.explorer.model.SettingsModel
+import com.r3corda.explorer.ui.SingleRowSelection
 import com.r3corda.explorer.ui.setColumnPrefWidthPolicy
+import com.r3corda.explorer.ui.singleRowSelection
 import com.r3corda.explorer.ui.toTreeTableCellFactory
 import javafx.beans.binding.Bindings
 import javafx.beans.property.ReadOnlyObjectWrapper
@@ -172,18 +174,7 @@ class CashViewer : View() {
                 treeItem
             }
 
-    sealed class ViewerNodeSelection {
-        object None : ViewerNodeSelection()
-        class Selected(val node: ViewerNode) : ViewerNodeSelection()
-    }
-
-    val selectedViewerNode = Bindings.createObjectBinding({
-        if (cashViewerTable.selectionModel.selectedItems.size == 0) {
-            ViewerNodeSelection.None
-        } else {
-            ViewerNodeSelection.Selected(cashViewerTable.selectionModel.selectedItems[0].value)
-        }
-    }, arrayOf(cashViewerTable.selectionModel.selectedItems))
+    val selectedViewerNode = cashViewerTable.singleRowSelection()
 
     data class StateRow (
         val originated: LocalDateTime,
@@ -221,10 +212,10 @@ class CashViewer : View() {
     }
 
     private val noSelectionStates = FXCollections.observableArrayList<StateAndRef<Cash.State>>()
-    private val selectedViewerNodeStates = ChosenList(EasyBind.map(selectedViewerNode) { selection ->
+    private val selectedViewerNodeStates = ChosenList<StateAndRef<Cash.State>>(EasyBind.map(selectedViewerNode) { selection ->
         when (selection) {
-            CashViewer.ViewerNodeSelection.None -> noSelectionStates
-            is CashViewer.ViewerNodeSelection.Selected ->
+            is SingleRowSelection.None -> noSelectionStates
+            is SingleRowSelection.Selected ->
                 when (selection.node) {
                     CashViewer.ViewerNode.Root -> noSelectionStates
                     is CashViewer.ViewerNode.IssuerNode -> selection.node.states
@@ -236,8 +227,8 @@ class CashViewer : View() {
     private val noSelectionSumEquiv = EasyBind.map(reportingCurrency) { Amount(0, it) }
     private val selectedViewerNodeSumEquiv = EasyBind.monadic(selectedViewerNode).flatMap { selection ->
         when (selection) {
-            ViewerNodeSelection.None -> noSelectionSumEquiv
-            is ViewerNodeSelection.Selected ->
+            is SingleRowSelection.None -> noSelectionSumEquiv
+            is SingleRowSelection.Selected ->
                 when (selection.node) {
                     ViewerNode.Root -> noSelectionSumEquiv
                     is ViewerNode.IssuerNode -> selection.node.sumEquivAmount
@@ -252,10 +243,10 @@ class CashViewer : View() {
 
     private val onlyLeftPaneShown = FXCollections.observableArrayList<Node>(leftPane)
     private val bothPanesShown = FXCollections.observableArrayList<Node>(leftPane, rightPane)
-    private val panesShown = ChosenList(EasyBind.map(selectedViewerNode) {
+    private val panesShown = ChosenList<Node>(EasyBind.map(selectedViewerNode) {
         when (it) {
-            CashViewer.ViewerNodeSelection.None -> onlyLeftPaneShown
-            is CashViewer.ViewerNodeSelection.Selected -> bothPanesShown
+            is SingleRowSelection.None -> onlyLeftPaneShown
+            is SingleRowSelection.Selected -> bothPanesShown
         }
     })
 
@@ -271,7 +262,7 @@ class CashViewer : View() {
         Bindings.bindContent(topSplitPane.items, panesShown)
 
         rightPane.visibleProperty().bind(EasyBind.map(selectedViewerNode) {
-            it != ViewerNodeSelection.None
+            it !is SingleRowSelection.None
         })
 
         totalPositionsLabel.textProperty().bind(Bindings.createStringBinding({

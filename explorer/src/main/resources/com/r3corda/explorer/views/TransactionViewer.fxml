@@ -32,7 +32,7 @@
             </TextField>
             <ImageView fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
                <image>
-                  <Image url="@../../images/clear_inactive.png" />
+                  <Image url="@../../../../../../../../../internal/explorer/src/main/resources/images/clear_inactive.png" />
                </image>
                <StackPane.margin>
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
@@ -156,6 +156,16 @@
                           </columns>
                         </TableView>
                      </content></TitledPane>
+                  <TitledPane animated="false" text="Low level events">
+                    <content>
+                        <TableView fx:id="LowLevelEventsTable">
+                          <columns>
+                            <TableColumn fx:id="LowLevelEventsTimestamp" prefWidth="102.0" text="Timestamp" />
+                            <TableColumn fx:id="LowLevelEventsEvent" prefWidth="138.0" text="Event" />
+                          </columns>
+                        </TableView>
+                    </content>
+                  </TitledPane>
               </panes>
             </Accordion>
          </items>

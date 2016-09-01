@@ -1,5 +1,6 @@
 package com.r3corda.explorer.views
 
+import com.r3corda.client.fxutils.ChosenList
 import com.r3corda.client.model.*
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.Amount
@@ -8,10 +9,15 @@ import com.r3corda.core.contracts.withoutIssuer
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.explorer.formatters.AmountFormatter
 import com.r3corda.explorer.model.ReportingCurrencyModel
+import com.r3corda.explorer.ui.SingleRowSelection
 import com.r3corda.explorer.ui.setColumnPrefWidthPolicy
+import com.r3corda.explorer.ui.singleRowSelection
 import com.r3corda.explorer.ui.toTableCellFactory
+import com.r3corda.node.services.monitor.ServiceToClientEvent
 import javafx.beans.binding.Bindings
+import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.geometry.Insets
 import javafx.scene.control.Label
@@ -31,6 +37,7 @@ import java.util.*
 class TransactionViewer: View() {
     override val root: VBox by fxml()
 
+    // Top half (transactions table)
     private val transactionViewTable: TableView<ViewerNode> by fxid("TransactionViewTable")
     private val transactionViewTransactionId: TableColumn<ViewerNode, String> by fxid("TransactionViewTransactionId")
     private val transactionViewOriginator: TableColumn<ViewerNode, String> by fxid("TransactionViewOriginator")
@@ -38,6 +45,11 @@ class TransactionViewer: View() {
     private val transactionViewStatusUpdated: TableColumn<ViewerNode, Instant> by fxid("TransactionViewStatusUpdated")
     private val transactionViewCommandTypes: TableColumn<ViewerNode, String> by fxid("TransactionViewCommandTypes")
     private val transactionViewTotalValueEquiv: TableColumn<ViewerNode, Amount<Currency>> by fxid("TransactionViewTotalValueEquiv")
+
+    // Bottom half (details)
+    private val lowLevelEventsTable: TableView<ServiceToClientEvent> by fxid("LowLevelEventsTable")
+    private val lowLevelEventsTimestamp: TableColumn<ServiceToClientEvent, Instant> by fxid("LowLevelEventsTimestamp")
+    private val lowLevelEventsEvent: TableColumn<ServiceToClientEvent, ServiceToClientEvent> by fxid("LowLevelEventsEvent")
 
     private val gatheredTransactionDataList: ObservableList<out GatheredTransactionData>
             by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
@@ -51,7 +63,8 @@ class TransactionViewer: View() {
             val statusUpdated: ObservableValue<Instant>,
             val commandTypes: ObservableValue<Collection<Class<CommandData>>>,
             val viewTotalValueEquiv: ObservableValue<Amount<Currency>?>,
-            val transaction: ObservableValue<SignedTransaction?>
+            val transaction: ObservableValue<SignedTransaction?>,
+            val allEvents: ObservableList<out ServiceToClientEvent>
     )
 
     private val viewerNodes = EasyBind.map(gatheredTransactionDataList) {
@@ -78,7 +91,8 @@ class TransactionViewer: View() {
                 viewTotalValueEquiv = EasyBind.combine(reportingExchange, it.transaction) { exchange, transaction ->
                     transaction?.let { calculateTotalEquiv(exchange.first, exchange.second, transaction) }
                 },
-                transaction = it.transaction
+                transaction = it.transaction,
+                allEvents = it.allEvents
         )
     }
 
@@ -92,7 +106,18 @@ class TransactionViewer: View() {
         )
     }
 
+    private val selectedViewerNode = transactionViewTable.singleRowSelection()
+
+    private val noLowLevelEvents = FXCollections.emptyObservableList<ServiceToClientEvent>()
+    private val lowLevelEvents = ChosenList(EasyBind.map(selectedViewerNode) {
+        when (it) {
+            is SingleRowSelection.None -> noLowLevelEvents
+            is SingleRowSelection.Selected -> it.node.allEvents
+        }
+    })
+
     init {
+        // Transaction table
         Bindings.bindContent(transactionViewTable.items, viewerNodes)
 
         transactionViewTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
@@ -146,5 +171,13 @@ class TransactionViewer: View() {
         }
         transactionViewTotalValueEquiv.setCellValueFactory<ViewerNode, Amount<Currency>> { it.value.viewTotalValueEquiv }
         transactionViewTotalValueEquiv.cellFactory = AmountFormatter.comma.toTableCellFactory()
+
+        // Low level events
+        Bindings.bindContent(lowLevelEventsTable.items, lowLevelEvents)
+        lowLevelEventsTimestamp.setCellValueFactory { ReadOnlyObjectWrapper(it.value.time) }
+        lowLevelEventsEvent.setCellValueFactory { ReadOnlyObjectWrapper(it.value) }
+        lowLevelEventsTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
+            Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / lowLevelEventsTable.columns.size).toInt()
+        }
     }
 }
