@@ -1,4 +1,4 @@
-package com.r3corda.client.testing
+package com.r3corda.testing
 
 import co.paralleluniverse.strands.SettableFuture
 import org.slf4j.Logger
