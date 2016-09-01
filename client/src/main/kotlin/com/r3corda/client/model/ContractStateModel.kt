@@ -8,7 +8,6 @@ import com.r3corda.client.fxutils.foldToObservableList
 import com.r3corda.node.services.monitor.ServiceToClientEvent
 import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.removeIf
-import org.reactfx.EventStream
 import rx.Observable
 
 class StatesDiff<out T : ContractState>(

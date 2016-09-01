@@ -110,7 +110,7 @@ sealed class TrackedDelegate<M : Any>(val klass: KClass<M>) {
             return observableListProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class ObservableListReadOnlyDelegate<M : Any, T>(klass: KClass<M>, val observableListReadOnlyProperty: (M) -> ObservableList<out T>) : TrackedDelegate<M>(klass) {
+    class ObservableListReadOnlyDelegate<M : Any, out T>(klass: KClass<M>, val observableListReadOnlyProperty: (M) -> ObservableList<out T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): ObservableList<out T> {
             return observableListReadOnlyProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }

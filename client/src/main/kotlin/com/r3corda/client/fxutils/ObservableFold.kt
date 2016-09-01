@@ -8,10 +8,10 @@ import javafx.collections.ObservableList
 import rx.Observable
 
 /**
- * Simple utilities for converting an [rx.Observable] into an [ObservableValue]/[ObservableList]
+ * Simple utilities for converting an [rx.Observable] into a javafx [ObservableValue]/[ObservableList]
  */
 
-fun <A, B> Observable<A>.foldToObservable(initial: B, folderFun: (A, B) -> B): ObservableValue<B> {
+fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> B): ObservableValue<B> {
     val result = SimpleObjectProperty<B>(initial)
     subscribe {
         Platform.runLater {
