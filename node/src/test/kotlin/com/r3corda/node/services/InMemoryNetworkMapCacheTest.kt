@@ -1,6 +1,6 @@
 package com.r3corda.node.services
 
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 

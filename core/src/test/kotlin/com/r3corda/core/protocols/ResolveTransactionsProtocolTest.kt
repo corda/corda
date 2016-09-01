@@ -7,7 +7,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.opaque
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.protocols.ResolveTransactionsProtocol
 import com.r3corda.testing.*
 import org.junit.After

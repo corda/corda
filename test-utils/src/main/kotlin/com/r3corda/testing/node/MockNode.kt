@@ -1,6 +1,5 @@
-package com.r3corda.node.internal.testing
+package com.r3corda.testing.node
 
-import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.crypto.Party
@@ -9,18 +8,10 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.WalletService
-import com.r3corda.testing.node.MockIdentityService
-import com.r3corda.testing.node.makeTestDataSourceProperties
 import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.node.internal.AbstractNode
-import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
-import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.utilities.AffinityExecutor
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,7 +34,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var counter = 0
-    val filesystem = Jimfs.newFileSystem(Configuration.unix())
+    val filesystem = com.google.common.jimfs.Jimfs.newFileSystem(com.google.common.jimfs.Configuration.unix())
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
 
     val identities = ArrayList<Party>()
@@ -70,18 +61,18 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: NodeInfo?,
-                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(dir, config, networkMapAddr, advertisedServices, TestClock()) {
+                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : com.r3corda.node.internal.AbstractNode(dir, config, networkMapAddr, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
-        override val serverThread: AffinityExecutor =
+        override val serverThread: com.r3corda.node.utilities.AffinityExecutor =
                 if (mockNet.threadPerNode)
-                    AffinityExecutor.ServiceAffinityExecutor("Mock node thread", 1)
+                    com.r3corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor("Mock node thread", 1)
                 else
-                    AffinityExecutor.SAME_THREAD
+                    com.r3corda.node.utilities.AffinityExecutor.Companion.SAME_THREAD
 
         // We only need to override the messaging service here, as currently everything that hits disk does so
         // through the java.nio API which we are already mocking via Jimfs.
 
-        override fun makeMessagingService(): MessagingServiceInternal {
+        override fun makeMessagingService(): com.r3corda.node.services.api.MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
             return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName).start().get()
         }
@@ -169,7 +160,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, false, NetworkMapService.Type, SimpleNotaryService.Type),
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, false, com.r3corda.node.services.network.NetworkMapService.Type, com.r3corda.node.services.transactions.SimpleNotaryService.Type),
                 createNode(nodes[0].info, -1, nodeFactory, true, null)
         )
     }
@@ -186,9 +177,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      */
     fun createSomeNodes(numPartyNodes: Int = 2, nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = DUMMY_NOTARY_KEY): BasketOfNodes {
         require(nodes.isEmpty())
-        val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = NetworkMapService.Type)
+        val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = com.r3corda.node.services.network.NetworkMapService.Type)
         val notaryNode = createNode(mapNode.info, nodeFactory = nodeFactory, keyPair = notaryKeyPair,
-                advertisedServices = SimpleNotaryService.Type)
+                advertisedServices = com.r3corda.node.services.transactions.SimpleNotaryService.Type)
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapNode.info)
@@ -197,7 +188,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
-        return createNode(null, -1, defaultFactory, true, legalName, keyPair, false, NetworkMapService.Type, SimpleNotaryService.Type)
+        return createNode(null, -1, defaultFactory, true, legalName, keyPair, false, com.r3corda.node.services.network.NetworkMapService.Type, com.r3corda.node.services.transactions.SimpleNotaryService.Type)
     }
 
     fun createPartyNode(networkMapAddr: NodeInfo, legalName: String? = null, keyPair: KeyPair? = null): MockNode {

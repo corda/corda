@@ -5,7 +5,7 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NodeRegistration

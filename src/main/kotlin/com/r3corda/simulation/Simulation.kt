@@ -1,4 +1,4 @@
-package com.r3corda.node.internal.testing
+package com.r3corda.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -11,10 +11,13 @@ import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.testing.node.TestClock
+import com.r3corda.testing.node.setTo
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -54,7 +57,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             val letter = 'A' + counter
             val city = bankLocations[counter++ % bankLocations.size]
-            val cfg = object : NodeConfiguration {
+            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
                 // TODO: Set this back to "Bank of $city" after video day.
                 override val myLegalName: String = "Bank $letter"
                 override val exportJMXto: String = ""
@@ -72,10 +75,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val bankFactory = BankFactory()
 
     object NetworkMapNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
+        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork,
                             networkMapAddr: NodeInfo?, advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(NetworkMapService.Type))
-            val cfg = object : NodeConfiguration {
+            require(advertisedServices.contains(com.r3corda.node.services.network.NetworkMapService.Type))
+            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
                 override val myLegalName: String = "Network coordination center"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Amsterdam"
@@ -88,10 +91,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object NotaryNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(SimpleNotaryService.Type))
-            val cfg = object : NodeConfiguration {
+            require(advertisedServices.contains(com.r3corda.node.services.transactions.SimpleNotaryService.Type))
+            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
                 override val myLegalName: String = "Notary Service"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Zurich"
@@ -103,10 +106,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RatesOracleFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(NodeInterestRates.Type))
-            val cfg = object : NodeConfiguration {
+            require(advertisedServices.contains(com.r3corda.node.services.clientapi.NodeInterestRates.Type))
+            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
                 override val myLegalName: String = "Rates Service Provider"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Madrid"
@@ -117,7 +120,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
-                    findService<NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
+                    findService<com.r3corda.node.services.clientapi.NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
                     return this
                 }
             }
@@ -125,9 +128,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RegulatorFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            val cfg = object : NodeConfiguration {
+            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
                 override val myLegalName: String = "Regulator A"
                 override val exportJMXto: String = ""
                 override val nearestCity: String = "Paris"
@@ -147,12 +150,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val network = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
     val networkMap: SimulatedNode
-            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
+            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = com.r3corda.node.services.network.NetworkMapService.Type) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(networkMap.info, nodeFactory = NotaryNodeFactory, advertisedServices = SimpleNotaryService.Type) as SimulatedNode
+            = network.createNode(networkMap.info, nodeFactory = NotaryNodeFactory, advertisedServices = com.r3corda.node.services.transactions.SimpleNotaryService.Type) as SimulatedNode
     val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = network.createNode(networkMap.info, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
+            = network.createNode(networkMap.info, start = false, nodeFactory = RatesOracleFactory, advertisedServices = com.r3corda.node.services.clientapi.NodeInterestRates.Type) as SimulatedNode
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
@@ -226,7 +229,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showProgressFor(nodes: List<SimulatedNode>) {
         nodes.forEach { node ->
-            node.smm.changes.filter { it.second == AddOrRemove.ADD }.first().subscribe {
+            node.smm.changes.filter { it.second == com.r3corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
                 linkProtocolProgress(node, it.first)
             }
         }
@@ -245,7 +248,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showConsensusFor(nodes: List<SimulatedNode>) {
         val node = nodes.first()
-        node.smm.changes.filter { it.second == AddOrRemove.ADD }.first().subscribe {
+        node.smm.changes.filter { it.second == com.r3corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
             linkConsensus(nodes, it.first)
         }
     }

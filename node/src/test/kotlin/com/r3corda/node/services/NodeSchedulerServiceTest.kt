@@ -11,9 +11,9 @@ import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.DUMMY_NOTARY
-import com.r3corda.node.internal.testing.TestClock
+import com.r3corda.testing.node.TestClock
 import com.r3corda.node.services.events.NodeSchedulerService
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AffinityExecutor

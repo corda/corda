@@ -18,9 +18,9 @@ import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.TEST_TX_TIME
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl

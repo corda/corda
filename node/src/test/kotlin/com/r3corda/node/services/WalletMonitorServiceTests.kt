@@ -16,7 +16,7 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.monitor.*
 import org.junit.Before
 import org.junit.Test

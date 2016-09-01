@@ -1,4 +1,4 @@
-package com.r3corda.node.internal.testing
+package com.r3corda.simulation
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.util.concurrent.FutureCallback
@@ -12,12 +12,11 @@ import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.UniqueIdentifier
 import com.r3corda.core.failure
 import com.r3corda.core.node.services.linearHeadsOfType
-import com.r3corda.testing.node.MockIdentityService
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.success
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
-import com.r3corda.node.utilities.JsonSupport
 import com.r3corda.protocols.TwoPartyDealProtocol
+import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.testing.node.MockIdentityService
 import java.security.KeyPair
 import java.time.LocalDate
 import java.util.*
@@ -27,7 +26,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
-    val om = JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
+    val om = com.r3corda.node.utilities.JsonSupport.createDefaultMapper(MockIdentityService(network.identities))
 
     init {
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()
@@ -80,7 +79,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.walletService.linearHeadsOfType<InterestRateSwap.State>()
+        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.walletService.linearHeadsOfType<com.r3corda.contracts.InterestRateSwap.State>()
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
@@ -118,7 +117,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // We load the IRS afresh each time because the leg parts of the structure aren't data classes so they don't
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
-        val irs = om.readValue<InterestRateSwap.State>(javaClass.getResource("trade.json"))
+        val irs = om.readValue<com.r3corda.contracts.InterestRateSwap.State>(javaClass.getResource("trade.json"))
         irs.fixedLeg.fixedRatePayer = node1.info.identity
         irs.floatingLeg.floatingRatePayer = node2.info.identity
 

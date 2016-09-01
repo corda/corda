@@ -102,6 +102,8 @@ mainClassName = 'com.r3corda.demos.TraderDemoKt'
 
 dependencies {
     compile project(':node')
+    // TODO: Demos should not depend on test code, but only use production APIs
+    compile project(':test-utils')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"

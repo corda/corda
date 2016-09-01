@@ -1,4 +1,4 @@
-package com.r3corda.node.internal.testing
+package com.r3corda.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -12,8 +12,8 @@ import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.days
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
 import com.r3corda.protocols.TwoPartyTradeProtocol
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import java.time.Instant
 
 /**

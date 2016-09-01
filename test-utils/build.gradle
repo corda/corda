@@ -1,4 +1,5 @@
 apply plugin: 'kotlin'
+apply plugin: QuasarPlugin
 
 repositories {
     mavenLocal()
@@ -20,7 +21,9 @@ configurations {
 }
 
 dependencies {
+    compile project(':contracts')
     compile project(':core')
+    compile project(':node')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -38,3 +41,5 @@ dependencies {
     // Unit testing helpers.
     compile 'junit:junit:4.12'
 }
+
+quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')

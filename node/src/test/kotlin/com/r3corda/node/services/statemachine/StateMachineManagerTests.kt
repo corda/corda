@@ -7,7 +7,7 @@ import com.r3corda.node.services.MockServiceHubInternal
 import com.r3corda.node.services.api.Checkpoint
 import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.MessagingServiceInternal
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.utilities.AffinityExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After

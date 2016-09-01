@@ -8,7 +8,7 @@ import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.node.services.network.MockNetworkMapCache
+import com.r3corda.testing.node.MockNetworkMapCache
 import java.util.concurrent.TimeUnit
 
 
