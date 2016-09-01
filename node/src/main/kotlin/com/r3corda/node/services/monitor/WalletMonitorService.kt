@@ -201,7 +201,7 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun issueCash(req: ClientToServiceCommand.IssueCash): TransactionBuildResult {
-        val builder: TransactionBuilder = TransactionType.General.Builder(notary = req.notary)
+        val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
         val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
         Cash().generateIssue(builder, req.amount.issuedBy(issuer), req.recipient.owningKey, req.notary)
         builder.signWith(services.storageService.myLegalIdentityKey)
