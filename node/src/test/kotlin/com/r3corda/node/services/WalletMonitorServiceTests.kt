@@ -15,11 +15,16 @@ import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.monitor.*
+import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.testing.*
 import org.junit.Before
 import org.junit.Test
+import rx.subjects.PublishSubject
+import rx.subjects.ReplaySubject
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.test.*
@@ -117,11 +122,11 @@ class WalletMonitorServiceTests {
         val (monitorServiceNode, registerNode) = network.createTwoNodes()
         val sessionID = authenticate(monitorServiceNode, registerNode)
         val quantity = 1000L
-        val events = Collections.synchronizedList(ArrayList<ServiceToClientEvent>())
+        val events = ReplaySubject.create<ServiceToClientEvent>()
         val ref = OpaqueBytes(ByteArray(1) {1})
 
-        registerNode.net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC + ".0") { msg, reg ->
-            events.add(msg.data.deserialize<ServiceToClientEvent>())
+        registerNode.net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
+            events.onNext(msg.data.deserialize<ServiceToClientEvent>())
         }
 
         // Check the monitoring service wallet is empty
@@ -140,21 +145,29 @@ class WalletMonitorServiceTests {
                 recipient.owningKey)
 
         // Check we've received a response
-        events.forEach { event ->
-            when (event) {
-                is ServiceToClientEvent.TransactionBuild -> {
-                    // Check the returned event is correct
-                    val tx = (event.state as TransactionBuildResult.ProtocolStarted).transaction
-                    assertNotNull(tx)
-                    assertEquals(expectedState, tx!!.tx.outputs.single().data)
-                }
-                is ServiceToClientEvent.OutputState -> {
-                    // Check the generated state is correct
-                    val actual = event.produced.single().state.data
-                    assertEquals(expectedState, actual)
-                }
-                else -> fail("Unexpected in event ${event}")
-            }
+        events.expectEvents {
+            parallel(
+                    sequence(
+                            expect { event: ServiceToClientEvent.StateMachine ->
+                                require(event.addOrRemove == AddOrRemove.ADD)
+                            },
+                            expect { event: ServiceToClientEvent.StateMachine ->
+                                require(event.addOrRemove == AddOrRemove.REMOVE)
+                            }
+                    ),
+                    expect { event: ServiceToClientEvent.Transaction -> },
+                    expect { event: ServiceToClientEvent.TransactionBuild ->
+                        // Check the returned event is correct
+                        val tx = (event.state as TransactionBuildResult.ProtocolStarted).transaction
+                        assertNotNull(tx)
+                        assertEquals(expectedState, tx!!.tx.outputs.single().data)
+                    },
+                    expect { event: ServiceToClientEvent.OutputState ->
+                        // Check the generated state is correct
+                        val actual = event.produced.single().state.data
+                        assertEquals(expectedState, actual)
+                    }
+            )
         }
     }
 
@@ -163,46 +176,65 @@ class WalletMonitorServiceTests {
         val (monitorServiceNode, registerNode) = network.createTwoNodes()
         val sessionID = authenticate(monitorServiceNode, registerNode)
         val quantity = 1000L
-        val events = Collections.synchronizedList(ArrayList<ServiceToClientEvent>())
-        val ref = OpaqueBytes(ByteArray(1) {1})
-        var handlerReg: MessageHandlerRegistration? = null
+        val events = ReplaySubject.create<ServiceToClientEvent>()
 
-        registerNode.net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC + ".0") { msg, reg ->
-            events.add(msg.data.deserialize<ServiceToClientEvent>())
-            handlerReg = reg
+        registerNode.net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
+            events.onNext(msg.data.deserialize<ServiceToClientEvent>())
         }
 
-        // Check the monitoring service wallet is empty
-        assertFalse(monitorServiceNode.services.walletService.currentWallet.states.iterator().hasNext())
-
-        // Tell the monitoring service node to issue some cash
         val recipient = monitorServiceNode.services.storageService.myLegalIdentity
-        val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, DUMMY_NOTARY)
+
+        registerNode.net.send(registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID, ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress,
+                ClientToServiceCommand.IssueCash(Amount(quantity, GBP), OpaqueBytes.of(0), recipient, recipient)).serialize().bits), monitorServiceNode.net.myAddress)
+        val outEvent = ClientToServiceCommand.PayCash(Amount(quantity, Issued(recipient.ref(0), GBP)), recipient)
         val message = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
                 ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, outEvent).serialize().bits)
         registerNode.net.send(message, monitorServiceNode.net.myAddress)
         network.runNetwork()
 
-        val expectedState = Cash.State(Amount(quantity,
-                Issued(monitorServiceNode.services.storageService.myLegalIdentity.ref(ref), GBP)),
-                recipient.owningKey)
-
-        // Check we've received a response
-        events.forEach { event ->
-            when (event) {
-                is ServiceToClientEvent.TransactionBuild -> {
-                    // Check the returned event is correct
-                    val tx = (event.state as TransactionBuildResult.ProtocolStarted).transaction
-                    assertNotNull(tx)
-                    assertEquals(expectedState, tx!!.tx.outputs.single().data)
-                }
-                is ServiceToClientEvent.OutputState -> {
-                    // Check the generated state is correct
-                    val actual = event.produced.single().state.data
-                    assertEquals(expectedState, actual)
-                }
-                else -> fail("Unexpected in event ${event}")
-            }
+        events.expectEvents(isStrict = false) {
+            sequence(
+                    // ISSUE
+                    parallel(
+                            sequence(
+                                    expect { event: ServiceToClientEvent.StateMachine ->
+                                        require(event.addOrRemove == AddOrRemove.ADD)
+                                    },
+                                    expect { event: ServiceToClientEvent.StateMachine ->
+                                        require(event.addOrRemove == AddOrRemove.REMOVE)
+                                    }
+                            ),
+                            expect { event: ServiceToClientEvent.Transaction -> },
+                            expect { event: ServiceToClientEvent.TransactionBuild -> },
+                            expect { event: ServiceToClientEvent.OutputState -> }
+                    ),
+                    // MOVE
+                    parallel(
+                            sequence(
+                                    expect { event: ServiceToClientEvent.StateMachine ->
+                                        require(event.addOrRemove == AddOrRemove.ADD)
+                                    },
+                                    expect { event: ServiceToClientEvent.StateMachine ->
+                                        require(event.addOrRemove == AddOrRemove.REMOVE)
+                                    }
+                            ),
+                            expect { event: ServiceToClientEvent.Transaction ->
+                                require(event.transaction.sigs.size == 1)
+                                event.transaction.sigs.map { it.by }.toSet().containsAll(
+                                        listOf(
+                                                monitorServiceNode.services.storageService.myLegalIdentity.owningKey
+                                        )
+                                )
+                            },
+                            expect { event: ServiceToClientEvent.TransactionBuild ->
+                                require(event.state is TransactionBuildResult.ProtocolStarted)
+                            },
+                            expect { event: ServiceToClientEvent.OutputState ->
+                                require(event.consumed.size == 1)
+                                require(event.produced.size == 1)
+                            }
+                    )
+            )
         }
     }
 }
