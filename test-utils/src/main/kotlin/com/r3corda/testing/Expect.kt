@@ -17,7 +17,7 @@ import rx.Observable
  *
  * Example usage:
  *
- * val stream: EventStream<SomeEvent> = (..)
+ * val stream: Observable<SomeEvent> = (..)
  * stream.expectEvents {
  *   sequence(
  *     expect { event: SomeEvent.A -> require(event.isOk()) },
