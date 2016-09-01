@@ -17,7 +17,7 @@ import rx.Observable
  *
  * Example usage:
  *
- * val stream: Ovservable<SomeEvent> = (..)
+ * val stream: Observable<SomeEvent> = (..)
  * stream.expectEvents(
  *   sequence(
  *     expect { event: SomeEvent.A -> require(event.isOk()) },
@@ -118,17 +118,75 @@ internal data class Expect<E, T : E>(
 )
 
 private sealed class ExpectComposeState<E : Any> {
-    class Finished<E : Any> : ExpectComposeState<E>()
-    class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>()
+
+    abstract fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>?
+    abstract fun getExpectedEvents(): List<Class<out E>>
+
+    class Finished<E : Any> : ExpectComposeState<E>() {
+        override fun nextState(event: E) = null
+        override fun getExpectedEvents(): List<Class<out E>> = listOf()
+    }
+    class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>() {
+        override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? =
+                if (single.expect.clazz.isAssignableFrom(event.javaClass)) {
+                    @Suppress("UNCHECKED_CAST")
+                    Pair({ single.expect.expectClosure(event) }, Finished())
+                } else {
+                    null
+                }
+        override fun getExpectedEvents() = listOf(single.expect.clazz)
+    }
+
     class Sequential<E : Any>(
             val sequential: ExpectCompose.Sequential<E>,
             val index: Int,
             val state: ExpectComposeState<E>
-    ) : ExpectComposeState<E>()
+    ) : ExpectComposeState<E>() {
+        override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? {
+            val next = state.nextState(event)
+            return if (next == null) {
+                null
+            } else if (next.second is Finished) {
+                if (index == sequential.sequence.size - 1) {
+                    Pair(next.first, Finished<E>())
+                } else {
+                    val nextState = fromExpectCompose(sequential.sequence[index + 1])
+                    if (nextState is Finished) {
+                        Pair(next.first, Finished<E>())
+                    } else {
+                        Pair(next.first, Sequential(sequential, index + 1, nextState))
+                    }
+                }
+            } else {
+                Pair(next.first, Sequential(sequential, index, next.second))
+            }
+        }
+
+        override fun getExpectedEvents() = state.getExpectedEvents()
+    }
+
     class Parallel<E : Any>(
             val parallel: ExpectCompose.Parallel<E>,
             val states: List<ExpectComposeState<E>>
-    ) : ExpectComposeState<E>()
+    ) : ExpectComposeState<E>() {
+        override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? {
+            states.forEachIndexed { stateIndex, state ->
+                val next = state.nextState(event)
+                if (next != null) {
+                    val nextStates = states.mapIndexed { i, expectComposeState ->
+                        if (i == stateIndex) next.second else expectComposeState
+                    }
+                    if (nextStates.all { it is Finished }) {
+                        return Pair(next.first, Finished())
+                    } else {
+                        return Pair(next.first, Parallel(parallel, nextStates))
+                    }
+                }
+            }
+            return null
+        }
+        override fun getExpectedEvents() = states.flatMap { it.getExpectedEvents() }
+    }
 
     companion object {
         fun <E : Any> fromExpectCompose(expectCompose: ExpectCompose<E>): ExpectComposeState<E> {
@@ -148,64 +206,6 @@ private sealed class ExpectComposeState<E : Any> {
                         Finished()
                     }
                 }
-            }
-        }
-    }
-
-    fun getExpectedEvents(): List<Class<out E>> {
-        return when (this) {
-            is ExpectComposeState.Finished -> listOf()
-            is ExpectComposeState.Single -> listOf(single.expect.clazz)
-            is ExpectComposeState.Sequential -> state.getExpectedEvents()
-            is ExpectComposeState.Parallel -> states.flatMap { it.getExpectedEvents() }
-        }
-    }
-
-    fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? {
-        return when (this) {
-            is ExpectComposeState.Finished -> null
-            is ExpectComposeState.Single -> {
-                if (single.expect.clazz.isAssignableFrom(event.javaClass)) {
-                    @Suppress("UNCHECKED_CAST")
-                    Pair({ single.expect.expectClosure(event) }, Finished())
-                } else {
-                    null
-                }
-            }
-            is ExpectComposeState.Sequential -> {
-                val next = state.nextState(event)
-                if (next == null) {
-                    null
-                } else if (next.second is Finished) {
-                    if (index == sequential.sequence.size - 1) {
-                        Pair(next.first, Finished<E>())
-                    } else {
-                        val nextState = fromExpectCompose(sequential.sequence[index + 1])
-                        if (nextState is Finished) {
-                            Pair(next.first, Finished<E>())
-                        } else {
-                            Pair(next.first, Sequential(sequential, index + 1, nextState))
-                        }
-                    }
-                } else {
-                    Pair(next.first, Sequential(sequential, index, next.second))
-                }
-            }
-            is ExpectComposeState.Parallel -> {
-                states.forEachIndexed { stateIndex, state ->
-                    val next = state.nextState(event)
-                    if (next != null) {
-                        val nextStates = states.mapIndexed { i, expectComposeState ->
-                            if (i == stateIndex) next.second else expectComposeState
-                        }
-                        if (nextStates.all { it is Finished }) {
-                            return Pair(next.first, Finished())
-                        } else {
-                            return Pair(next.first, Parallel(parallel, nextStates))
-                        }
-                    }
-                }
-                null
             }
         }
     }
