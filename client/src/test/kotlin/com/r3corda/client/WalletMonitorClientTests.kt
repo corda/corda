@@ -163,7 +163,7 @@ class WalletMonitorServiceTests {
                                                 is TransactionBuildResult.Failed -> fail(state.message)
                                             }
                                         },
-                                        repeat(7) {
+                                        replicate(7) {
                                             expect { build: ServiceToClientEvent.Progress -> }
                                         }
                                 ),
