@@ -10,8 +10,8 @@ import java.util.*
  * Events triggered by changes in the node, and sent to monitoring client(s).
  */
 sealed class ServiceToClientEvent(val time: Instant) {
-    class Transaction(time: Instant, val transaction: SignedTransaction) : ServiceToClientEvent(time) {
-        override fun toString() = "Transaction(${transaction.tx.commands})"
+    class Transaction(time: Instant, val transaction: LedgerTransaction) : ServiceToClientEvent(time) {
+        override fun toString() = "Transaction(${transaction.commands})"
     }
     class OutputState(
             time: Instant,
@@ -46,7 +46,7 @@ sealed class TransactionBuildResult {
      *
      * @param transaction the transaction created as a result, in the case where the protocol has completed.
      */
-    class ProtocolStarted(val fiberId: Long, val transaction: SignedTransaction?, val message: String?) : TransactionBuildResult() {
+    class ProtocolStarted(val fiberId: Long, val transaction: LedgerTransaction?, val message: String?) : TransactionBuildResult() {
         override fun toString() = "Started($message)"
     }
 
