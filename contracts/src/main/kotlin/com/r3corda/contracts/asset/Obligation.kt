@@ -452,6 +452,7 @@ class Obligation<P> : Contract {
                      assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
             = Clauses.ConserveAmount<P>().generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
+            generateMoveCommand = { -> Commands.Move() },
             generateExitCommand = { amount -> Commands.Exit(amount) }
     )
 

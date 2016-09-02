@@ -441,9 +441,10 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(0, wtx.outputs.size)
 
-        val expected = Cash.Commands.Exit(Amount(10000, Issued(MEGA_CORP.ref(1), USD)))
-        val actual = wtx.commands.single().value
-        assertEquals(expected, actual)
+        val expectedMove = Cash.Commands.Move()
+        val expectedExit = Cash.Commands.Exit(Amount(10000, Issued(MEGA_CORP.ref(1), USD)))
+
+        assertEquals(listOf(expectedMove, expectedExit), wtx.commands.map { it.value })
     }
 
     /**
