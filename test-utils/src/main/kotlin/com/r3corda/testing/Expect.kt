@@ -1,4 +1,4 @@
-package com.r3corda.client.testing
+package com.r3corda.testing
 
 import co.paralleluniverse.strands.SettableFuture
 import org.slf4j.Logger
@@ -61,7 +61,7 @@ fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
  * @param number The number of events expected.
  * @param expectation The piece of DSL to run on each event, with the index of the event passed in.
  */
-inline fun <E> repeat(number: Int, expectation: (Int) -> ExpectCompose<E>) = sequence(*Array(number) { expectation(it) })
+inline fun <E> replicate(number: Int, expectation: (Int) -> ExpectCompose<E>) = sequence(*Array(number) { expectation(it) })
 
 /**
  * Run the specified DSL against the event stream.

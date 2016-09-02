@@ -1,7 +1,6 @@
 package com.r3corda.client
 
 import co.paralleluniverse.strands.SettableFuture
-import com.r3corda.client.testing.*
 import com.r3corda.core.contracts.*
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.node.driver.driver
@@ -10,6 +9,7 @@ import com.r3corda.node.services.monitor.ServiceToClientEvent
 import com.r3corda.node.services.monitor.TransactionBuildResult
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.testing.*
 import org.junit.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -163,7 +163,7 @@ class WalletMonitorServiceTests {
                                                 is TransactionBuildResult.Failed -> fail(state.message)
                                             }
                                         },
-                                        repeat(7) {
+                                        replicate(7) {
                                             expect { build: ServiceToClientEvent.Progress -> }
                                         }
                                 ),
