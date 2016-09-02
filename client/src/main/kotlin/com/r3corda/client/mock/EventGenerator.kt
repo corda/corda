@@ -34,13 +34,10 @@ class EventGenerator(
     val partyGenerator = Generator.oneOf(parties)
 
     val cashStateGenerator = amountIssuedGenerator.combine(publicKeyGenerator) { amount, from ->
-        ledger {
-            transaction {
-                output("state", Cash.State(amount, from))
-                command(amount.token.issuer.party.owningKey, Cash.Commands.Issue())
-                verifies()
-            }
-        }.retrieveOutputStateAndRef(Cash.State::class.java, "state")
+        val builder = TransactionBuilder()
+        builder.addOutputState(Cash.State(amount, from))
+        builder.addCommand(Command(Cash.Commands.Issue(), amount.token.issuer.party.owningKey))
+        builder.toWireTransaction().outRef<Cash.State>(0)
     }
 
     val consumedGenerator: Generator<Set<StateRef>> = Generator.frequency(
