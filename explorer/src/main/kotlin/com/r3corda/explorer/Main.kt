@@ -8,6 +8,7 @@ import com.r3corda.client.model.Models
 import com.r3corda.client.model.WalletMonitorModel
 import com.r3corda.client.model.observer
 import com.r3corda.core.contracts.ClientToServiceCommand
+import com.r3corda.explorer.model.IdentityModel
 import com.r3corda.node.driver.PortAllocation
 import com.r3corda.node.driver.driver
 import com.r3corda.node.driver.startClient
@@ -48,6 +49,7 @@ class Main : App() {
 
                 val aliceClient = startClient(aliceNode).get()
 
+                Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.identity)
                 Models.get<WalletMonitorModel>(Main::class).register(aliceClient, aliceNode)
 
                 val bobInStream = PublishSubject.create<ServiceToClientEvent>()
