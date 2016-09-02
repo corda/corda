@@ -153,6 +153,8 @@ fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Genera
 
 fun <A> Generator.Companion.pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
 
+fun <A> Generator.Companion.sampleBernoulli(maxRatio: Double = 1.0, vararg collection: A) =
+        sampleBernoulli(listOf(collection), maxRatio)
 fun <A> Generator.Companion.sampleBernoulli(collection: Collection<A>, maxRatio: Double = 1.0): Generator<List<A>> =
         intRange(0, (maxRatio * collection.size).toInt()).bind { howMany ->
             replicate(collection.size, Generator.doubleRange(0.0, 1.0)).map { chances ->
