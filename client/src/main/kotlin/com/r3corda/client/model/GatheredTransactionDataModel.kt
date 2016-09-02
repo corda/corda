@@ -1,7 +1,7 @@
 package com.r3corda.client.model
 
 import com.r3corda.client.fxutils.foldToObservableList
-import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.node.services.monitor.ServiceToClientEvent
 import com.r3corda.node.services.monitor.TransactionBuildResult
 import com.r3corda.node.utilities.AddOrRemove
@@ -18,7 +18,7 @@ interface GatheredTransactionData {
     val uuid: ObservableValue<UUID?>
     val protocolName: ObservableValue<String?>
     val protocolStatus: ObservableValue<ProtocolStatus?>
-    val transaction: ObservableValue<SignedTransaction?>
+    val transaction: ObservableValue<LedgerTransaction?>
     val status: ObservableValue<TransactionCreateStatus?>
     val lastUpdate: ObservableValue<Instant>
     val allEvents: ObservableList<out ServiceToClientEvent>
@@ -42,7 +42,7 @@ data class GatheredTransactionDataWritable(
         override val uuid: SimpleObjectProperty<UUID?> = SimpleObjectProperty(null),
         override val protocolName: SimpleObjectProperty<String?> = SimpleObjectProperty(null),
         override val protocolStatus: SimpleObjectProperty<ProtocolStatus?> = SimpleObjectProperty(null),
-        override val transaction: SimpleObjectProperty<SignedTransaction?> = SimpleObjectProperty(null),
+        override val transaction: SimpleObjectProperty<LedgerTransaction?> = SimpleObjectProperty(null),
         override val status: SimpleObjectProperty<TransactionCreateStatus?> = SimpleObjectProperty(null),
         override val lastUpdate: SimpleObjectProperty<Instant>,
         override val allEvents: ObservableList<ServiceToClientEvent> = FXCollections.observableArrayList()
