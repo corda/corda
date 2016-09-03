@@ -12,199 +12,203 @@ import java.util.zip.*;
 
 public class ZipOutputStreamTest
 {
-	private static final String TEST1 = "test1.txt";
-	private static final String TEST2 = "test2.txt";
-	private static final String TEST3 = "test3.txt";
-	private static final String TEST4 = "test4.txt";
+        private static final String TEST1 = "test1.txt";
+        private static final String TEST2 = "test2.txt";
+        private static final String TEST3 = "test3.txt";
+        private static final String TEST4 = "test4.txt";
 
-	private static final String TEST1_CONTENTS = "\"this is a test\"";
-	private static final String TEST2_CONTENTS = "this is a\nmulti-line test";
-	private static final String TEST3_CONTENTS = "74 68 69 73 20 69 73 20 61 20 74 65 73 74";
-	private static final String TEST4_CONTENTS = "01110100 01101000 01101001 01110011 00100000 01101001 01110011 00100000 01100001 00100000 01110100 01100101 01110011 01110100";
-	
-	private static final String ONE_PARAM_ZIP_PREFIX = "zos1param";
-	private static final String THREE_PARAM_ZIP_PREFIX = "zos3param";
-	private static final String ZIP_SUFFIX = ".zip";
+        private static final String TEST1_CONTENTS = "\"this is a test\"";
+        private static final String TEST2_CONTENTS = "this is a\nmulti-line test";
+        private static final String TEST3_CONTENTS = "74 68 69 73 20 69 73 20 61 20 74 65 73 74";
+        private static final String TEST4_CONTENTS = "01110100 01101000 01101001 01110011 00100000 01101001 01110011 00100000 01100001 00100000 01110100 01100101 01110011 01110100";
 
-	private static final Map<String, String> FILES_CONTENTS;
-	static
-	{
-		Map<String, String> m = new HashMap<String, String>();
-		m.put(TEST1, TEST1_CONTENTS);
-		m.put(TEST2, TEST2_CONTENTS);
-		m.put(TEST3, TEST3_CONTENTS);
-		m.put(TEST4, TEST4_CONTENTS);
-		FILES_CONTENTS = Collections.unmodifiableMap(m);
-	}
+        private static final String BYTE_ZIP_PREFIX = "zosByte";
+        private static final String ARRAY_ZIP_PREFIX = "zosArray";
+        private static final String ARRAY_OFFSET_LENGTH_ZIP_PREFIX = "zosArrayOffsetLength";
+        private static final String ZIP_SUFFIX = ".zip";
 
-	private static final boolean USE_ONE_PARAM_WRITE = true;
-	private static final boolean USE_THREE_PARAM_WRITE = false;
-	private static byte[] buffer = new byte[1024];
+        private static final Map<String, String> FILES_CONTENTS;
+        static
+        {
+                Map<String, String> m = new HashMap<String, String>();
+                m.put(TEST1, TEST1_CONTENTS);
+                m.put(TEST2, TEST2_CONTENTS);
+                m.put(TEST3, TEST3_CONTENTS);
+                m.put(TEST4, TEST4_CONTENTS);
+                FILES_CONTENTS = Collections.unmodifiableMap(m);
+        }
 
-	public static void main(String[] args)
-	{
-		List<File> zipFiles = new ArrayList<File>(2);
+        private static enum WriteStyle {
+          Byte(ARRAY_ZIP_PREFIX),
+          Array(ARRAY_ZIP_PREFIX),
+          ArrayOffsetLength(ARRAY_OFFSET_LENGTH_ZIP_PREFIX);
 
-		// Test 1-param write function
-		File f1 = createZip(USE_ONE_PARAM_WRITE);
-		zipFiles.add(f1);
-		verifyContents(f1.getAbsolutePath());
-		// Test 3-param write function
-		File f2 = createZip(USE_THREE_PARAM_WRITE);
-		zipFiles.add(f2);
-		verifyContents(f2.getAbsolutePath());
-		// Remove the created zip files
-		cleanUp(zipFiles);
-	}
+          public final String prefix;
 
-	private static File createZip(boolean useOneParam)
-	{
-		FileOutputStream outputStream = null;
-		ZipOutputStream zipContents = null;
+          private WriteStyle(String prefix) {
+            this.prefix = prefix;
+          }
+        }
+        private static byte[] buffer = new byte[1024];
 
-		try
-		{
-			// Create a temporary zip file for this test
-			String prefix = useOneParam ? ONE_PARAM_ZIP_PREFIX : THREE_PARAM_ZIP_PREFIX;
-			File outputZip = File.createTempFile(prefix, ZIP_SUFFIX);
+        private static void expect(boolean v) {
+          if (! v) throw new RuntimeException();
+        }
 
-			System.out.println("Created " + outputZip.getAbsolutePath());
+        public static void main(String[] args)
+          throws Exception
+        {
+                List<File> zipFiles = new ArrayList<File>(2);
 
-			// Prepare the streams
-			outputStream = new FileOutputStream(outputZip);
-			zipContents = new ZipOutputStream(outputStream);
+                try {
+                  // Test byte-at-a-time write function
+                  File f1 = createZip(WriteStyle.Byte);
+                  zipFiles.add(f1);
+                  verifyContents(f1.getAbsolutePath());
+                  // Test arraw write function
+                  File f2 = createZip(WriteStyle.Array);
+                  zipFiles.add(f2);
+                  verifyContents(f2.getAbsolutePath());
+                  // Test arraw write function
+                  File f3 = createZip(WriteStyle.ArrayOffsetLength);
+                  zipFiles.add(f3);
+                  verifyContents(f3.getAbsolutePath());
+                } finally {
+                  // Remove the created zip files
+                  cleanUp(zipFiles);
+                }
+        }
 
-			// Zip the file contents (convert directly from string to bytes)
-			long startTime = System.currentTimeMillis();
-			for (Map.Entry<String, String> f : FILES_CONTENTS.entrySet())
-			{
-				String name = f.getKey();
-				String contents = f.getValue();
+        private static File createZip(WriteStyle writeStyle)
+          throws Exception
+        {
+                FileOutputStream outputStream = null;
+                ZipOutputStream zipContents = null;
 
-				System.out.println("Zipping " + name + "...");
-				ZipEntry entry = new ZipEntry(name);
-				zipContents.putNextEntry(entry);
+                try
+                {
+                        // Create a temporary zip file for this test
+                        String prefix = writeStyle.prefix;
+                        File outputZip = File.createTempFile(prefix, ZIP_SUFFIX);
 
-				byte[] bytesToWrite = contents.getBytes();
+                        System.out.println("Created " + outputZip.getAbsolutePath());
 
-				if (useOneParam)
-				{
-					// Use the 1-parameter write method; takes a single byte
-					for (int i = 0; i < bytesToWrite.length; i++)
-					{
-						zipContents.write(bytesToWrite[i]);
-					}
-				}
-				else
-				{
-					// Use 3-parameter write method; takes a buffer, offset, and length
-					zipContents.write(bytesToWrite, 0 , bytesToWrite.length);
-				}
+                        // Prepare the streams
+                        outputStream = new FileOutputStream(outputZip);
+                        zipContents = new ZipOutputStream(outputStream);
 
-				// Done with this file
-				zipContents.closeEntry();
-				System.out.println("Done");
-			}
+                        // Zip the file contents (convert directly from string to bytes)
+                        long startTime = System.currentTimeMillis();
+                        for (Map.Entry<String, String> f : FILES_CONTENTS.entrySet())
+                        {
+                                String name = f.getKey();
+                                String contents = f.getValue();
 
-			// All files have been written
-			long endTime = System.currentTimeMillis();
-			System.out.println("Finished " + outputZip.getName() + " in " + ((endTime - startTime) / 1000.0) + " seconds");
-			return outputZip;
-		}
-		catch (Exception e)
-		{
-			throw new RuntimeException(e);
-		}
-		finally
-		{
-			try
-			{
-				if (zipContents != null)
-					zipContents.close();
-				if (outputStream != null)
-					outputStream.close();
-			}
-			catch (Exception e)
-			{
-				throw new RuntimeException(e);
-			}
-		}
-	}
+                                System.out.println("Zipping " + name + "...");
+                                ZipEntry entry = new ZipEntry(name);
+                                zipContents.putNextEntry(entry);
 
-	private static void verifyContents(String zipName)
-	{
-		System.out.println("Verify " + zipName);
-		ZipFile zf = null;
-		BufferedReader reader = null;
-		int numFilesInZip = 0;
+                                byte[] bytesToWrite = contents.getBytes();
 
-		try
-		{
-			String line;
-			String contents;
+                                switch (writeStyle) {
+                                case Byte: {
+                                  // Use the 1-parameter write method; takes a single byte
+                                  for (int i = 0; i < bytesToWrite.length; i++)
+                                  {
+                                    zipContents.write(bytesToWrite[i]);
+                                  }
+                                } break;
 
-			// Get the contents of each file in the zip
-			zf = new ZipFile(zipName);
-			for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements();)
-			{
-				ZipEntry entry = e.nextElement();
-				reader = new BufferedReader(new InputStreamReader(zf.getInputStream(entry)));
-				contents = "";
-				numFilesInZip += 1;
+                                case Array: {
+                                  // Use 3-parameter write method; takes a buffer, offset, and length
+                                  zipContents.write(bytesToWrite);
+                                } break;
 
-				while ((line = reader.readLine()) != null)
-				{
-					if (contents.length() > 0)
-					{
-						contents += "\n";
-					}
-					contents += line;
-				}
-				reader.close();
+                                case ArrayOffsetLength: {
+                                  // Use 3-parameter write method; takes a buffer, offset, and length
+                                  zipContents.write(bytesToWrite, 0 , bytesToWrite.length);
+                                } break;
 
-				// Assert that this file's contents are correct
-				assert(contents.equals(FILES_CONTENTS.get(entry.getName())));
-			}
-			zf.close();
+                                  default: throw new RuntimeException("unexpected write style: " + writeStyle);
+                                }
 
-			// Assert that the zip contained the correct number of files
-			assert(numFilesInZip == FILES_CONTENTS.size());
-		}
-		catch (Exception e)
-		{
-			throw new RuntimeException(e);
-		}
-		finally
-		{
-			try
-			{
-				if (zf != null)
-					zf.close();
-				if (reader != null)
-					reader.close();
-			}
-			catch (Exception e)
-			{
-				throw new RuntimeException(e);
-			}
-		}
-	}
+                                // Done with this file
+                                zipContents.closeEntry();
+                                System.out.println("Done");
+                        }
 
-	private static void cleanUp(List<File> zipFiles)
-	{
-		try
-		{
-			for (File f : zipFiles)
-			{
-				if (f.exists())
-				{
-					f.delete();
-				}
-			}
-		}
-		catch (Exception e)
-		{
-			throw new RuntimeException(e);
-		}
-	}
+                        // All files have been written
+                        long endTime = System.currentTimeMillis();
+                        System.out.println("Finished " + outputZip.getName() + " in " + ((endTime - startTime) / 1000.0) + " seconds");
+                        return outputZip;
+                }
+                finally
+                {
+                  if (zipContents != null)
+                    zipContents.close();
+                  if (outputStream != null)
+                    outputStream.close();
+                }
+        }
+
+        private static void verifyContents(String zipName)
+          throws Exception
+        {
+                System.out.println("Verify " + zipName);
+                ZipFile zf = null;
+                BufferedReader reader = null;
+                int numFilesInZip = 0;
+
+                try
+                {
+                        String line;
+                        String contents;
+
+                        // Get the contents of each file in the zip
+                        zf = new ZipFile(zipName);
+                        for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements();)
+                        {
+                                ZipEntry entry = e.nextElement();
+                                reader = new BufferedReader(new InputStreamReader(zf.getInputStream(entry)));
+                                contents = "";
+                                numFilesInZip += 1;
+
+                                while ((line = reader.readLine()) != null)
+                                {
+                                        if (contents.length() > 0)
+                                        {
+                                                contents += "\n";
+                                        }
+                                        contents += line;
+                                }
+                                reader.close();
+
+                                // Assert that this file's contents are correct
+                                expect(contents.equals(FILES_CONTENTS.get(entry.getName())));
+                        }
+                        zf.close();
+
+                        // Assert that the zip contained the correct number of files
+                        expect(numFilesInZip == FILES_CONTENTS.size());
+                }
+                finally
+                {
+                                if (zf != null)
+                                        zf.close();
+                                if (reader != null)
+                                        reader.close();
+                }
+        }
+
+        private static void cleanUp(List<File> zipFiles)
+          throws Exception
+        {
+                        for (File f : zipFiles)
+                        {
+                                if (f.exists())
+                                {
+                                        f.delete();
+                                }
+                        }
+        }
 }
