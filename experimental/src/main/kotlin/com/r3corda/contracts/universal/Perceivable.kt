@@ -1,9 +1,7 @@
 package com.r3corda.contracts.universal
 
-import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Tenor
 import java.math.BigDecimal
-import java.text.DateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -21,7 +19,19 @@ enum class Comparison {
 /**
  * Constant perceivable
  */
-data class Const<T>(val value: T) : Perceivable<T>
+data class Const<T>(val value: T) : Perceivable<T> {
+    override fun equals(other: Any?): Boolean {
+        if (other == null) return false
+        if (value == null) return false
+        if (other is Const<*>) {
+            if (value is BigDecimal && other.value is BigDecimal) {
+                return this.value.compareTo(other.value) == 0
+            }
+            return value.equals(other.value)
+        }
+        return false
+    }
+}
 
 fun<T> const(k: T) = Const(k)
 
@@ -75,6 +85,7 @@ data class PerceivableOperation<T>(val left: Perceivable<T>, val op: Operation, 
 
 operator fun Perceivable<BigDecimal>.plus(n: BigDecimal) = PerceivableOperation(this, Operation.PLUS, const(n))
 fun<T> Perceivable<T>.plus() = UnaryPlus(this)
+operator fun Perceivable<BigDecimal>.minus(n: Perceivable<BigDecimal>) = PerceivableOperation(this, Operation.MINUS, n)
 operator fun Perceivable<BigDecimal>.minus(n: BigDecimal) = PerceivableOperation(this, Operation.MINUS, const(n))
 operator fun Perceivable<BigDecimal>.plus(n: Double) = PerceivableOperation(this, Operation.PLUS, const(BigDecimal(n)))
 operator fun Perceivable<BigDecimal>.minus(n: Double) = PerceivableOperation(this, Operation.MINUS, const(BigDecimal(n)))
@@ -86,41 +97,33 @@ operator fun Perceivable<BigDecimal>.div(n: Double) = PerceivableOperation(this,
 operator fun Perceivable<Int>.plus(n: Int) = PerceivableOperation(this, Operation.PLUS, const(n))
 operator fun Perceivable<Int>.minus(n: Int) = PerceivableOperation(this, Operation.MINUS, const(n))
 
-operator fun<T> Perceivable<Amount<T>>.plus(n: Perceivable<Amount<T>>) = PerceivableOperation(this, Operation.PLUS, n)
-operator fun<T> Perceivable<Amount<T>>.minus(n: Perceivable<Amount<T>>) = PerceivableOperation(this, Operation.MINUS, n)
-
-data class ScaleAmount<T>(val left: Perceivable<BigDecimal>, val right: Perceivable<Amount<T>>) : Perceivable<Amount<T>>
-
-operator fun Perceivable<BigDecimal>.times(n: Amount<Currency>) = ScaleAmount(this, const(n))
-        //PerceivableOperation(this, Operation.TIMES, const(BigDecimal(n)))
-
-
 class DummyPerceivable<T> : Perceivable<T>
 
-data class Interest(val amount: Perceivable<Amount<Currency>>, val dayCountConvention: String,
-               val interest: Perceivable<BigDecimal>, val start: String, val end: String) : Perceivable<Amount<Currency>>
 
+// todo: holidays
+data class Interest(val amount: Perceivable<BigDecimal>, val dayCountConvention: String,
+               val interest: Perceivable<BigDecimal>, val start: String, val end: String) : Perceivable<BigDecimal>
 
 // observable of type T
 // example:
 val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
 
 
-fun libor(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> = DummyPerceivable()
-fun libor(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun libor(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<BigDecimal> = DummyPerceivable()
+fun libor(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<BigDecimal> = DummyPerceivable()
 
-fun interest(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo -  appropriate type */,
-             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> = Interest(Const(amount), dayCountConvention, Const(interest), start, end)
+fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<BigDecimal> = Interest(Const(amount), dayCountConvention, Const(interest), start, end)
 
-fun interest(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
-             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<Amount<Currency>> =
+fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: String, @Suppress("UNUSED_PARAMETER") end: String) : Perceivable<BigDecimal> =
         Interest(Const(amount), dayCountConvention, interest, start, end)
 
-fun interest(@Suppress("UNUSED_PARAMETER") amount: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo -  appropriate type */,
-             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun interest(@Suppress("UNUSED_PARAMETER") amount: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: BigDecimal /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<BigDecimal> = DummyPerceivable()
 
-fun interest(@Suppress("UNUSED_PARAMETER") rate: Amount<Currency>, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
-             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<Amount<Currency>> = DummyPerceivable()
+fun interest(@Suppress("UNUSED_PARAMETER") rate: BigDecimal, @Suppress("UNUSED_PARAMETER") dayCountConvention: String, @Suppress("UNUSED_PARAMETER") interest: Perceivable<BigDecimal> /* todo -  appropriate type */,
+             @Suppress("UNUSED_PARAMETER") start: Perceivable<Instant>, @Suppress("UNUSED_PARAMETER") end: Perceivable<Instant>) : Perceivable<BigDecimal> = DummyPerceivable()
 
 class Fixing(val source: String, val date: LocalDate, val tenor: Tenor) : Perceivable<BigDecimal>
 

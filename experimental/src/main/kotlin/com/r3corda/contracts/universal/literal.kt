@@ -1,8 +1,6 @@
 package com.r3corda.contracts.universal
 
-import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
-import com.r3corda.core.contracts.USD
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
 import java.util.*
@@ -17,23 +15,23 @@ infix fun Action.or(arrangement: Action) = Or( setOf(this, arrangement) )
 infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
 infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
 
-operator fun Long.times(currency: Currency) = Amount(this.toLong(), currency)
-operator fun Double.times(currency: Currency) = Amount(BigDecimal(this.toDouble()), currency)
+// operator fun Long.times(currency: Currency) = Amount(this.toLong(), currency)
+// operator fun Double.times(currency: Currency) = Amount(BigDecimal(this.toDouble()), currency)
 
-val Int.M: Long get() = this.toLong() * 1000000
-val Int.K: Long get() = this.toLong() * 1000
+val Int.M: BigDecimal get() = BigDecimal(this) * BigDecimal(1000000)
+val Int.K: BigDecimal get() = BigDecimal(this) * BigDecimal(1000)
 
 val zero = Zero()
 
 class ContractBuilder {
     val contracts = mutableListOf<Arrangement>()
 
-    fun Party.gives(beneficiary: Party, amount: Amount<Currency>) {
-        contracts.add( Transfer(amount, this, beneficiary))
+    fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency) {
+        contracts.add( Transfer(amount, currency, this, beneficiary))
     }
 
-    fun Party.gives(beneficiary: Party, amount: Perceivable<Amount<Currency>>) {
-        contracts.add( Transfer(amount, this, beneficiary))
+    fun Party.gives(beneficiary: Party, amount: Perceivable<BigDecimal>, currency: Currency) {
+        contracts.add( Transfer(amount, currency, this, beneficiary))
     }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")

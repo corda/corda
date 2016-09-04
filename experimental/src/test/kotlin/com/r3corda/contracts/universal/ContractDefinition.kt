@@ -1,13 +1,8 @@
 package com.r3corda.contracts.universal
 
-import com.r3corda.core.contracts.Amount
-import com.r3corda.core.contracts.Tenor
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import org.junit.Test
-import java.math.BigDecimal
-import java.time.Instant
-import java.time.LocalDate
 import java.util.*
 
 /**
@@ -32,7 +27,7 @@ class ContractDefinition {
 
     val cds_contract = roadRunner.may {
         "payout".givenThat( acmeCorporationHasDefaulted and before("2017-09-01") ) {
-            wileECoyote.gives(roadRunner, 1.M*USD)
+            wileECoyote.gives(roadRunner, 1.M, USD)
         }
     } or wileECoyote.may {
         "expire".givenThat( after("2017-09-01") ) {}
@@ -41,8 +36,8 @@ class ContractDefinition {
 
     val american_fx_option = roadRunner.may {
         "exercise".anytime {
-            wileECoyote.gives(roadRunner, 1.M*EUR)
-            roadRunner.gives(wileECoyote, 1200.K*USD)
+            wileECoyote.gives(roadRunner, 1.M, EUR)
+            roadRunner.gives(wileECoyote, 1200.K, USD)
         }
     } or wileECoyote.may {
         "expire".givenThat(after("2017-09-01")) {}
@@ -53,8 +48,8 @@ class ContractDefinition {
         "exercise".anytime {
             (roadRunner or wileECoyote).may {
                 "execute".givenThat( after("2017-09-01") ) {
-                    wileECoyote.gives( roadRunner, 1.M*EUR )
-                    roadRunner.gives( wileECoyote, 1200.K*USD )
+                    wileECoyote.gives( roadRunner, 1.M, EUR )
+                    roadRunner.gives( wileECoyote, 1200.K, USD )
                 }
             }
         }

@@ -1,12 +1,9 @@
 package com.r3corda.contracts.universal
 
-import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Sets
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
-import java.security.PublicKey
 import java.util.*
 
 /**
@@ -30,8 +27,9 @@ class Zero() : Arrangement {
 // X is an observable of type BigDecimal.
 //
 // todo: should be replaced with something that uses Corda assets and/or cash?
-data class Transfer(val amount: Perceivable<Amount<Currency>>, val from: Party, val to: Party) : Arrangement {
-    constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(amount), from, to)
+data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement {
+    constructor(amount: BigDecimal, currency: Currency, from: Party, to: Party ) : this(const(amount), currency, from, to)
+    constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(BigDecimal(amount.quantity)), amount.token, from, to)
 }
 
 

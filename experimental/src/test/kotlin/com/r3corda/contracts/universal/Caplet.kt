@@ -1,6 +1,5 @@
 package com.r3corda.contracts.universal
 
-import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.FixOf
 import com.r3corda.core.contracts.Tenor
 import com.r3corda.testing.*
@@ -20,39 +19,39 @@ class Caplet {
 
     val dt = LocalDate.of(2016, 9, 1)
 
-    val fx = Fix(FixOf("LIBOR", dt, Tenor("6M")), BigDecimal.valueOf(0.31207))
-
-    val notional = 50.M*EUR
+    val notional = 50.M
+    val currency = EUR
 
     val contract =
             (roadRunner or wileECoyote).may {
                 "exercise".anytime() {
                     val floating = interest(notional, "act/365", fix("LIBOR", dt, Tenor("6M")), "2016-04-01", "2016-10-01" )
-                    val fixed = interest(notional, "act/365", BigDecimal.valueOf(1.0), "2016-04-01", "2016-10-01")
-                    wileECoyote.gives(roadRunner, (floating - fixed).plus() )
+                    val fixed = interest(notional, "act/365", BigDecimal.valueOf(0.5), "2016-04-01", "2016-10-01")
+                    wileECoyote.gives(roadRunner, (floating - fixed).plus(), currency )
                 }
             }
 
     val contractFixed =
             (roadRunner or wileECoyote).may {
                 "exercise".anytime() {
-                    val floating = interest(notional, "act/365", BigDecimal.valueOf(.01), "2016-04-01", "2016-10-01" )
-                    val fixed = interest(notional, "act/365", BigDecimal.valueOf(1.0), "2016-04-01", "2016-10-01")
-                    wileECoyote.gives(roadRunner, (floating - fixed).plus() )
+                    val floating = interest(notional, "act/365", BigDecimal.valueOf(1.0), "2016-04-01", "2016-10-01" )
+                    val fixed = interest(notional, "act/365", BigDecimal.valueOf(0.5), "2016-04-01", "2016-10-01")
+                    wileECoyote.gives(roadRunner, (floating - fixed).plus(), currency )
                 }
             }
 
-    val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
+    val contractFinal = arrange { wileECoyote.gives(roadRunner, 250.K, EUR) }
 
-    val outStateFixed = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractFixed)
+    val stateStart = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
 
-    val transfer = arrange { wileECoyote.gives(roadRunner, 100.K*EUR )}
-    val outState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer )
+    val stateFixed = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractFixed)
+
+    val stateFinal = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractFinal )
 
     @Test
     fun issue() {
         transaction {
-            output { inState }
+            output { stateStart }
             timestamp(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
@@ -69,10 +68,10 @@ class Caplet {
     }
 
     @Test
-    fun `execute - missing fixing `() {
+    fun `execute`() {
         transaction {
-            input { inState }
-            output { outState }
+            input { stateFixed }
+            output { stateFinal }
             timestamp(TEST_TX_TIME_1)
 
             tweak {
@@ -82,15 +81,15 @@ class Caplet {
 
             command(wileECoyote.owningKey) { UniversalContract.Commands.Action("exercise") }
 
-            this `fails with` "fixing must be included"
+            this.verifies()
         }
     }
 
     @Test
     fun `fixing`() {
         transaction {
-            input { inState }
-            output { outStateFixed }
+            input { stateStart }
+            output { stateFixed }
             timestamp(TEST_TX_TIME_1)
 
             tweak {
@@ -100,26 +99,32 @@ class Caplet {
 
             tweak {
                 // wrong source
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", dt, Tenor("6M")), BigDecimal.valueOf(.01)))) }
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", dt, Tenor("6M")), BigDecimal(1.0)))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt.plusYears(1), Tenor("6M")), BigDecimal.valueOf(.01)))) }
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt.plusYears(1), Tenor("6M")), BigDecimal(1.0)))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("3M")), BigDecimal.valueOf(.01)))) }
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("3M")), BigDecimal.valueOf(1.0)))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), BigDecimal.valueOf(.01)))) }
+            tweak {
+                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), BigDecimal.valueOf(1.5)))) }
+
+                this `fails with` "output state does not reflect fix command"
+            }
+
+            command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), BigDecimal.valueOf(1.0)))) }
 
             this.verifies()
         }

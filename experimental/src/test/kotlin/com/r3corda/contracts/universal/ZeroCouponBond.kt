@@ -14,7 +14,7 @@ class ZeroCouponBond {
     val contract =
             (roadRunner or wileECoyote).may {
                 "execute".givenThat(after("2017-09-01")) {
-                    wileECoyote.gives(roadRunner, 100.K*GBP)
+                    wileECoyote.gives(roadRunner, 100.K, GBP)
                 }
             }
 
@@ -22,14 +22,14 @@ class ZeroCouponBond {
     val contractMove =
             (porkyPig or wileECoyote).may {
                 "execute".givenThat(after("2017-09-01")) {
-                    wileECoyote.gives(porkyPig, 100.K*GBP)
+                    wileECoyote.gives(porkyPig, 100.K, GBP)
                 }
             }
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
-    val transfer = arrange { wileECoyote.gives(roadRunner, 100.K*GBP) }
-    val transferWrong = arrange { wileECoyote.gives(roadRunner, 80.K*GBP) }
+    val transfer = arrange { wileECoyote.gives(roadRunner, 100.K, GBP) }
+    val transferWrong = arrange { wileECoyote.gives(roadRunner, 80.K, GBP) }
 
     val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract )
 
