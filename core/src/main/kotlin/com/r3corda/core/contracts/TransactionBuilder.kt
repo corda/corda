@@ -30,7 +30,6 @@ open class TransactionBuilder(
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
         protected var timestamp: Timestamp? = null) {
 
-    @Deprecated("use timestamp instead")
     val time: Timestamp? get() = timestamp
 
     init {
