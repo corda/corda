@@ -7,6 +7,8 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.SuspendableRunnable
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.then
+import com.r3corda.node.log
+import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
 import rx.Subscription
@@ -82,19 +84,20 @@ abstract class MutableClock : Clock() {
 @Suppress("UNUSED_VALUE") // This is here due to the compiler thinking version is not used
 @Suspendable
 private fun Clock.doInterruptibly(runnable: SuspendableRunnable) {
-    var version = 0L
     var subscription: Subscription? = null
+    var interruptedByMutation = false
     try {
         if (this is MutableClock) {
-            version = this.mutationCount
             val strand = Strand.currentStrand()
-            subscription = this.mutations.subscribe { strand.interrupt() }
+            subscription = this.mutations.subscribe {
+                interruptedByMutation = true
+                strand.interrupt()
+            }
         }
         runnable.run()
     } catch(e: InterruptedException) {
         // If clock has not mutated, then re-throw
-        val newVersion = if (this is MutableClock) this.mutationCount else version
-        if (newVersion == version) {
+        if (!interruptedByMutation) {
             throw e
         }
     } finally {
