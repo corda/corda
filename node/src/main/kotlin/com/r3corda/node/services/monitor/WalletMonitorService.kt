@@ -14,6 +14,7 @@ import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.log
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.statemachine.StateMachineManager
@@ -99,6 +100,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
                         else -> throw IllegalArgumentException("Unknown request type ${req.javaClass.name}")
                     }
                 } catch(ex: Exception) {
+                    logger.warn("Exception while processing message of type ${req.javaClass.simpleName}", ex)
                     TransactionBuildResult.Failed(ex.message)
                 }
 
@@ -178,31 +180,35 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun exitCash(req: ClientToServiceCommand.ExitCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
-        val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
-        Cash().generateExit(builder, req.amount.issuedBy(issuer),
-                services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
-        builder.signWith(services.storageService.myLegalIdentityKey)
+        try {
+            val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
+            Cash().generateExit(builder, req.amount.issuedBy(issuer),
+                    services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
+            builder.signWith(services.storageService.myLegalIdentityKey)
 
-        // Work out who the owners of the burnt states were
-        val inputStatesNullable = services.walletService.statesForRefs(builder.inputStates())
-        val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
-        if (inputStatesNullable.size != inputStates.size) {
-            val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }
-            throw InputStateRefResolveFailed(unresolvedStateRefs)
+            // Work out who the owners of the burnt states were
+            val inputStatesNullable = services.walletService.statesForRefs(builder.inputStates())
+            val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
+            if (inputStatesNullable.size != inputStates.size) {
+                val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }
+                throw InputStateRefResolveFailed(unresolvedStateRefs)
+            }
+
+            // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
+            //       count as a reason to fail?
+            val participants: Set<Party> = inputStates.filterIsInstance<Cash.State>().map { services.identityService.partyFromKey(it.owner) }.filterNotNull().toSet()
+
+            // Commit the transaction
+            val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
+            val protocol = FinalityProtocol(tx, setOf(req), participants)
+            return TransactionBuildResult.ProtocolStarted(
+                    smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId,
+                    tx.tx.toLedgerTransaction(services),
+                    "Cash destruction transaction generated"
+            )
+        } catch (ex: InsufficientBalanceException) {
+            return TransactionBuildResult.Failed(ex.message ?: "Insufficient balance")
         }
-
-        // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
-        //       count as a reason to fail?
-        val participants: Set<Party> = inputStates.filterIsInstance<Cash.State>().map { services.identityService.partyFromKey(it.owner) }.filterNotNull().toSet()
-
-        // Commit the transaction
-        val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
-        val protocol = FinalityProtocol(tx, setOf(req), participants)
-        return TransactionBuildResult.ProtocolStarted(
-                smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId,
-                tx.tx.toLedgerTransaction(services),
-                "Cash destruction transaction generated"
-        )
     }
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
