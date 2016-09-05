@@ -181,12 +181,10 @@ private fun getTimestampAsDirectoryName(): String {
 fun addressMustBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to bind") {
         try {
-            ServerSocket().use {
-                it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
-            }
-            null
-        } catch (_exception: SocketException) {
+            Socket(hostAndPort.hostText, hostAndPort.port).close()
             Unit
+        } catch (_exception: SocketException) {
+            null
         }
     }
 }
@@ -194,12 +192,10 @@ fun addressMustBeBound(hostAndPort: HostAndPort) {
 fun addressMustNotBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to unbind") {
         try {
-            ServerSocket().use {
-                it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
-            }
-            Unit
-        } catch (_exception: SocketException) {
+            Socket(hostAndPort.hostText, hostAndPort.port).close()
             null
+        } catch (_exception: SocketException) {
+            Unit
         }
     }
 }
