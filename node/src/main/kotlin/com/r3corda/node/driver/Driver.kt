@@ -94,7 +94,7 @@ sealed class PortAllocation {
     class RandomFree(): PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
-                it.bind(InetSocketAddress("localhost", 0))
+                it.bind(InetSocketAddress(0))
                 it.localPort
             }
         }
