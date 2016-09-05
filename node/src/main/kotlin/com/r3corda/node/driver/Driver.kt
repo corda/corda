@@ -20,10 +20,7 @@ import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.net.ServerSocket
-import java.net.Socket
-import java.net.SocketException
-import java.net.URLClassLoader
+import java.net.*
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
@@ -95,7 +92,13 @@ sealed class PortAllocation {
         override fun nextPort() = portCounter++
     }
     class RandomFree(): PortAllocation() {
-        override fun nextPort() = ServerSocket(0).use { it.localPort }
+        override fun nextPort(): Int {
+            return ServerSocket().use {
+                it.reuseAddress = true
+                it.bind(InetSocketAddress("localhost", 0))
+                it.localPort
+            }
+        }
     }
 }
 
@@ -179,10 +182,13 @@ private fun getTimestampAsDirectoryName(): String {
 fun addressMustBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to bind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
-            Unit
-        } catch (_exception: SocketException) {
+            ServerSocket().use {
+                it.reuseAddress = true
+                it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
+            }
             null
+        } catch (_exception: SocketException) {
+            Unit
         }
     }
 }
@@ -190,10 +196,13 @@ fun addressMustBeBound(hostAndPort: HostAndPort) {
 fun addressMustNotBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to unbind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
-            null
-        } catch (_exception: SocketException) {
+            ServerSocket().use {
+                it.reuseAddress = true
+                it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
+            }
             Unit
+        } catch (_exception: SocketException) {
+            null
         }
     }
 }
