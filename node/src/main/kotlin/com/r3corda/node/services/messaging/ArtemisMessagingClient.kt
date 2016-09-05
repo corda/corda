@@ -252,20 +252,25 @@ class ArtemisMessagingClient(directory: Path,
                 // Ignore it: this can happen if the server has gone away before we do.
             }
             consumer = null
-            running
+            val prevRunning = running
+            running = false
+            prevRunning
         }
         if (running && !executor.isOnThread) {
             // Wait for the main loop to notice the consumer has gone and finish up.
             shutdownLatch.await()
         }
-        state.locked {
-            producer?.close()
-            producer = null
-            // Ensure any trailing messages are committed to the journal
-            session!!.commit()
-            // Closing the factory closes all the sessions it produced as well.
-            clientFactory!!.close()
-            clientFactory = null
+        // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
+        if (running) {
+            state.locked {
+                producer?.close()
+                producer = null
+                // Ensure any trailing messages are committed to the journal
+                session!!.commit()
+                // Closing the factory closes all the sessions it produced as well.
+                clientFactory!!.close()
+                clientFactory = null
+            }
         }
     }
 
