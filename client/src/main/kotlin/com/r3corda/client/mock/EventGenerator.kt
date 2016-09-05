@@ -88,12 +88,21 @@ class EventGenerator(
                 )
             }
 
+    val exitCashGenerator =
+            amountIssuedGenerator.map {
+                ClientToServiceCommand.ExitCash(
+                        it.withoutIssuer(),
+                        it.token.issuer.reference
+                )
+            }
+
     val serviceToClientEventGenerator = Generator.frequency<ServiceToClientEvent>(
             1.0 to outputStateGenerator
     )
 
     val clientToServiceCommandGenerator = Generator.frequency(
-            0.33 to issueCashGenerator,
-            0.33 to moveCashGenerator
+            0.4 to issueCashGenerator,
+            0.5 to moveCashGenerator,
+            0.1 to exitCashGenerator
     )
 }
