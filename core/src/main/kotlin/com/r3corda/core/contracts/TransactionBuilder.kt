@@ -139,13 +139,12 @@ open class TransactionBuilder(
         return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
-    open fun addInputState(stateAndRef: StateAndRef<*>) = addInputState(stateAndRef.ref, stateAndRef.state.notary)
-
-    fun addInputState(stateRef: StateRef, notary: Party) {
+    open fun addInputState(stateAndRef: StateAndRef<*>) {
         check(currentSigs.isEmpty())
+        val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"${notary}\" which does not match the transaction notary \"${this.notary}\"." }
         signers.add(notary.owningKey)
-        inputs.add(stateRef)
+        inputs.add(stateAndRef.ref)
     }
 
     fun addAttachment(attachmentId: SecureHash) {

@@ -106,8 +106,8 @@ data class TestTransactionDSLInterpreter private constructor(
     internal fun toWireTransaction() = transactionBuilder.toWireTransaction()
 
     override fun input(stateRef: StateRef) {
-        val notary = ledgerInterpreter.resolveStateRef<ContractState>(stateRef).notary
-        transactionBuilder.addInputState(stateRef, notary)
+        val state = ledgerInterpreter.resolveStateRef<ContractState>(stateRef)
+        transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
     override fun _output(label: String?, notary: Party, contractState: ContractState) {
