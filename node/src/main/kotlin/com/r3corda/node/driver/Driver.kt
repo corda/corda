@@ -95,7 +95,7 @@ sealed class PortAllocation {
         override fun nextPort(): Int {
             return ServerSocket().use {
                 it.reuseAddress = true
-                it.bind(InetSocketAddress.createUnresolved("localhost", 0))
+                it.bind(InetSocketAddress("localhost", 0))
                 it.localPort
             }
         }
@@ -182,10 +182,13 @@ private fun getTimestampAsDirectoryName(): String {
 fun addressMustBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to bind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
-            Unit
-        } catch (_exception: SocketException) {
+            ServerSocket().use {
+                it.reuseAddress = true
+                it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
+            }
             null
+        } catch (_exception: SocketException) {
+            Unit
         }
     }
 }
@@ -193,10 +196,13 @@ fun addressMustBeBound(hostAndPort: HostAndPort) {
 fun addressMustNotBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to unbind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
-            null
-        } catch (_exception: SocketException) {
+            ServerSocket().use {
+                it.reuseAddress = true
+                it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
+            }
             Unit
+        } catch (_exception: SocketException) {
+            null
         }
     }
 }
