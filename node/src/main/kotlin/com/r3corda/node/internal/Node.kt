@@ -2,7 +2,6 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
-import com.google.common.util.concurrent.MoreExecutors
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -30,11 +29,9 @@ import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
-import java.net.InetSocketAddress
 import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.time.Clock
-import java.util.concurrent.TimeUnit
 import javax.management.ObjectName
 import kotlin.concurrent.thread
 
@@ -112,6 +109,8 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
+    private var shutdownThread: Thread? = null
+
     override fun makeMessagingService(): MessagingServiceInternal {
         val serverAddr = messagingServerAddr ?: {
             messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr, services.networkMapCache)
@@ -128,6 +127,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         // Start up the embedded MQ server
         messageBroker?.apply {
             configureWithDevSSLCertificate() // TODO: Create proper certificate provisioning process
+            runOnStop += Runnable { messageBroker?.stop() }
             start()
             bridgeToNetworkMapService(networkMapService)
         }
@@ -187,6 +187,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         }
 
         server.handler = handlerCollection
+        runOnStop += Runnable { server.stop() }
         server.start()
         return server
     }
@@ -252,9 +253,10 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
                 build().
                 start()
 
-        Runtime.getRuntime().addShutdownHook(thread(start = false) {
+        shutdownThread = thread(start = false) {
             stop()
-        })
+        }
+        Runtime.getRuntime().addShutdownHook(shutdownThread)
 
         return this
     }
@@ -277,18 +279,20 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         synchronized(this) {
             if (shutdown) return
             shutdown = true
+
+            // Unregister shutdown hook to prevent any unnecessary second calls to stop
+            if(shutdownThread != null) {
+                Runtime.getRuntime().removeShutdownHook(shutdownThread)
+                shutdownThread = null
+            }
         }
         log.info("Shutting down ...")
-        // Shut down the web server.
-        webServer.stop()
-        // Terminate the messaging system. This will block until messages that are in-flight have finished being
-        // processed so it may take a moment.
+
+        // All the Node started subsystems were registered with the runOnStop list at creation.
+        // So now simply call the parent to stop everything in reverse order.
+        // In particular this prevents premature shutdown of the Database by AbstractNode whilst the serverThread is active
         super.stop()
-        // We do another wait here, even though any in-flight messages have been drained away now because the
-        // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
-        // arbitrary and might be inappropriate.
-        MoreExecutors.shutdownAndAwaitTermination(serverThread, 50, TimeUnit.SECONDS)
-        messageBroker?.stop()
+
         nodeFileLock!!.release()
         log.info("Shutdown complete")
     }
