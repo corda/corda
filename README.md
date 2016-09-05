@@ -42,7 +42,7 @@ Install the Oracle JDK 8u45 or higher. It is possible that OpenJDK will also wor
 
 ## Using IntelliJ
 
-It's a good idea to use a modern IDE.  We use IntelliJ.  Install IntelliJ version 15 community edition (which is free):
+It's a good idea to use a modern IDE.  We use IntelliJ.  Install IntelliJ version 16 community edition (which is free):
 
     https://www.jetbrains.com/idea/download/
     
