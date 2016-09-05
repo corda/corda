@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class ClockUtilsTest {
 
@@ -110,6 +111,27 @@ class ClockUtilsTest {
             advanceClockAfterWait(testClock, Duration.ofMinutes(10))
         }
         assertFalse(testClock.awaitWithDeadline(advancedClock.instant(), future), "Should have reached deadline")
+    }
+
+    @Test
+    fun `test external interrupt of a clock future`() {
+        val mainStrand = Strand.currentStrand()
+        executor.execute @Suspendable {
+            // Wait until main thread is waiting
+            while (mainStrand.state != Strand.State.TIMED_WAITING) {
+                Strand.sleep(1)
+            }
+            mainStrand.interrupt()
+        }
+
+        val testClock = TestClock(stoppedClock)
+        val advancedClock = Clock.offset(stoppedClock, Duration.ofHours(10))
+
+        try {
+            testClock.awaitWithDeadline(advancedClock.instant(), SettableFuture.create<Boolean>())
+            fail("Expected InterruptedException")
+        } catch (exception: InterruptedException) {
+        }
     }
 
     /**
