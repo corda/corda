@@ -94,7 +94,6 @@ sealed class PortAllocation {
     class RandomFree(): PortAllocation() {
         override fun nextPort(): Int {
             return ServerSocket().use {
-                it.reuseAddress = true
                 it.bind(InetSocketAddress("localhost", 0))
                 it.localPort
             }
@@ -183,7 +182,6 @@ fun addressMustBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to bind") {
         try {
             ServerSocket().use {
-                it.reuseAddress = true
                 it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
             }
             null
@@ -197,7 +195,6 @@ fun addressMustNotBeBound(hostAndPort: HostAndPort) {
     poll("address $hostAndPort to unbind") {
         try {
             ServerSocket().use {
-                it.reuseAddress = true
                 it.bind(InetSocketAddress(hostAndPort.hostText, hostAndPort.port))
             }
             Unit
