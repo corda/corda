@@ -168,7 +168,6 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         checkpointStorage = storageServices.second
         netMapCache = InMemoryNetworkMapCache()
         net = makeMessagingService()
-        runOnStop += Runnable { net.stop() }
         wallet = makeWalletService()
 
         identity = makeIdentityService()
@@ -211,6 +210,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         ScheduledActivityObserver(services)
 
         startMessagingService()
+        runOnStop += Runnable { net.stop() }
         _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
         smm.start()

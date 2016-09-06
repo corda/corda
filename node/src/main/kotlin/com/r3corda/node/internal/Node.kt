@@ -281,7 +281,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             shutdown = true
 
             // Unregister shutdown hook to prevent any unnecessary second calls to stop
-            if(shutdownThread != null) {
+            if((shutdownThread != null) && (Thread.currentThread() != shutdownThread)){
                 Runtime.getRuntime().removeShutdownHook(shutdownThread)
                 shutdownThread = null
             }
