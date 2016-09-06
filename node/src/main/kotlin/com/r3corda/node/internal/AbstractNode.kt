@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CityDatabase
@@ -21,6 +20,7 @@ import com.r3corda.core.seconds
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.api.APIServer
 import com.r3corda.node.services.api.*
 import com.r3corda.node.services.config.NodeConfiguration

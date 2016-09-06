@@ -1,15 +1,14 @@
 package com.r3corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
-import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.security.PrivateKey
@@ -63,11 +62,11 @@ class InMemoryNetworkMapServiceTest {
         assert(!service.processRegistrationChangeRequest(NetworkMapService.RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
     }
 
-    class TestAcknowledgePSM(val server: NodeInfo, val hash: SecureHash) : ProtocolLogic<Unit>() {
+    class TestAcknowledgePSM(val server: NodeInfo, val mapVersion: Int) : ProtocolLogic<Unit>() {
         override val topic: String get() = NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC
         @Suspendable
         override fun call() {
-            val req = NetworkMapService.UpdateAcknowledge(hash, serviceHub.networkService.myAddress)
+            val req = NetworkMapService.UpdateAcknowledge(mapVersion, serviceHub.networkService.myAddress)
             send(server.identity, 0, req)
         }
     }
@@ -145,39 +144,40 @@ class InMemoryNetworkMapServiceTest {
         network.runNetwork()
         subscribePsm.get()
 
+        val startingMapVersion = service.mapVersion
+
         // Check the unacknowledged count is zero
-        assertEquals(0, service.getUnacknowledgedCount(registerNode.info.address))
+        assertEquals(0, service.getUnacknowledgedCount(registerNode.info.address, startingMapVersion))
 
         // Fire off an update
         val nodeKey = registerNode.storage.myLegalIdentityKey
-        var seq = 1L
+        var seq = 0L
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         var reg = NodeRegistration(registerNode.info, seq++, AddOrRemove.ADD, expires)
         var wireReg = reg.toWire(nodeKey.private)
-        service.notifySubscribers(wireReg)
+        service.notifySubscribers(wireReg, startingMapVersion + 1)
 
         // Check the unacknowledged count is one
-        assertEquals(1, service.getUnacknowledgedCount(registerNode.info.address))
+        assertEquals(1, service.getUnacknowledgedCount(registerNode.info.address, startingMapVersion + 1))
 
         // Send in an acknowledgment and verify the count goes down
-        val hash = SecureHash.sha256(wireReg.raw.bits)
         val acknowledgePsm = registerNode.services.startProtocol(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC,
-                TestAcknowledgePSM(mapServiceNode.info, hash))
+                TestAcknowledgePSM(mapServiceNode.info, startingMapVersion + 1))
         network.runNetwork()
         acknowledgePsm.get()
 
-        assertEquals(0, service.getUnacknowledgedCount(registerNode.info.address))
+        assertEquals(0, service.getUnacknowledgedCount(registerNode.info.address, startingMapVersion + 1))
 
         // Intentionally fill the pending acknowledgements to verify it doesn't drop subscribers before the limit
         // is hit. On the last iteration overflow the pending list, and check the node is unsubscribed
         for (i in 0..service.maxUnacknowledgedUpdates) {
             reg = NodeRegistration(registerNode.info, seq++, AddOrRemove.ADD, expires)
             wireReg = reg.toWire(nodeKey.private)
-            service.notifySubscribers(wireReg)
+            service.notifySubscribers(wireReg, i + startingMapVersion + 2)
             if (i < service.maxUnacknowledgedUpdates) {
-                assertEquals(i + 1, service.getUnacknowledgedCount(registerNode.info.address))
+                assertEquals(i + 1, service.getUnacknowledgedCount(registerNode.info.address, i + startingMapVersion + 2))
             } else {
-                assertNull(service.getUnacknowledgedCount(registerNode.info.address))
+                assertNull(service.getUnacknowledgedCount(registerNode.info.address, i + startingMapVersion + 2))
             }
         }
     }

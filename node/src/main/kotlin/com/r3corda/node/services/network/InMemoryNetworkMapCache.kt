@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
@@ -65,9 +64,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
             net.addMessageHandler(NetworkMapService.PUSH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
-                    val hash = SecureHash.sha256(req.wireReg.serialize().bits)
                     val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID,
-                            NetworkMapService.UpdateAcknowledge(hash, net.myAddress).serialize().bits)
+                            NetworkMapService.UpdateAcknowledge(req.mapVersion, net.myAddress).serialize().bits)
                     net.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
                 } catch(e: NodeMapError) {
