@@ -6,11 +6,10 @@ import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.NullSignature
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.testing.*
-import java.util.*
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 
 /**
  * This file contains generators for quickcheck style testing. The idea is that we can write random instance generators
