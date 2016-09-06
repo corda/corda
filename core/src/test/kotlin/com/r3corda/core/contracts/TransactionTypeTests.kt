@@ -5,7 +5,9 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
-import com.r3corda.testing.*
+import com.r3corda.testing.ALICE
+import com.r3corda.testing.ALICE_PUBKEY
+import com.r3corda.testing.BOB
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
