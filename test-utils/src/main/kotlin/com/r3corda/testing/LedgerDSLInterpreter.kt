@@ -2,6 +2,8 @@ package com.r3corda.testing
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import java.io.InputStream
 

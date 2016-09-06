@@ -1,7 +1,8 @@
 package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.noneOrSingle
+import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
 /** Defines transaction build & validation logic for a specific transaction type */

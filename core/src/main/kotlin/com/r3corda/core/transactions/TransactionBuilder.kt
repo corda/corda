@@ -1,7 +1,10 @@
-package com.r3corda.core.contracts
+package com.r3corda.core.transactions
 
+import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Duration
@@ -94,10 +97,11 @@ open class TransactionBuilder(
     /** The signatures that have been collected so far - might be incomplete! */
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
-    fun signWith(key: KeyPair) {
+    fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().serialize()
         addSignatureUnchecked(key.signWithECDSA(data.bits))
+        return this
     }
 
     /**

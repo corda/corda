@@ -7,6 +7,7 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import rx.Observable

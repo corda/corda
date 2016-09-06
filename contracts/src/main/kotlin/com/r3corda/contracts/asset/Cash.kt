@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
 import java.math.BigInteger
 import java.security.PublicKey

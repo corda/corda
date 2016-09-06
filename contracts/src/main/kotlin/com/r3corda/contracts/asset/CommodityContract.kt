@@ -11,6 +11,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.util.*
 

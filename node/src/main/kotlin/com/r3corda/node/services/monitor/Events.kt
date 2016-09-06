@@ -1,6 +1,7 @@
 package com.r3corda.node.services.monitor
 
 import com.r3corda.core.contracts.*
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.utilities.AddOrRemove
 import java.time.Instant
 import java.util.*

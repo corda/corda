@@ -4,6 +4,9 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import java.io.InputStream
 import java.security.KeyPair

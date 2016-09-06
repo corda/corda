@@ -7,7 +7,7 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.OwnableState
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.days
 import com.r3corda.core.random63BitValue

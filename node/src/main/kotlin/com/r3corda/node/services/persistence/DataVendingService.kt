@@ -2,7 +2,7 @@ package com.r3corda.node.services.persistence
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.failure
 import com.r3corda.core.messaging.MessagingService

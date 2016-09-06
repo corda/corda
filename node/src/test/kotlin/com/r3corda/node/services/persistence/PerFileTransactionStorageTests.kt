@@ -4,7 +4,7 @@ import co.paralleluniverse.strands.SettableFuture
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.primitives.Ints
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.serialization.SerializedBytes

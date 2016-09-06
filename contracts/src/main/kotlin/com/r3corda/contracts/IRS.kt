@@ -5,6 +5,7 @@ import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
 import com.r3corda.protocols.TwoPartyDealProtocol
 import org.apache.commons.jexl3.JexlBuilder

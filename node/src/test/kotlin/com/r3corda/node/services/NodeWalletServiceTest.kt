@@ -2,7 +2,7 @@ package com.r3corda.node.services
 
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.DOLLARS
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.testing.node.MockServices

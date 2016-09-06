@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.time.LocalDate
 import java.time.ZoneOffset

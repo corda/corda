@@ -2,7 +2,7 @@ package com.r3corda.node.services
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory

@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID

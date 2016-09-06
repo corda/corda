@@ -8,6 +8,7 @@ import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream

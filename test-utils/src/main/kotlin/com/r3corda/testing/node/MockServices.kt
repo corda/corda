@@ -2,7 +2,7 @@ package com.r3corda.testing.node
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Attachment
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair

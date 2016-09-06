@@ -3,9 +3,9 @@ package com.r3corda.protocols
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.ClientToServiceCommand
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.TransactionBuilder
-import com.r3corda.core.contracts.WireTransaction
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.protocols.ProtocolLogic

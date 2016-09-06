@@ -2,10 +2,9 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.checkedAdd
-import com.r3corda.core.contracts.LedgerTransaction
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.WireTransaction
-import com.r3corda.core.contracts.toLedgerTransaction
+import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic

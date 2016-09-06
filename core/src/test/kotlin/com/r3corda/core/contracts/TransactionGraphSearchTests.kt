@@ -1,6 +1,8 @@
 package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.newSecureRandom
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.testing.node.MockTransactionStorage

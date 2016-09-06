@@ -7,6 +7,7 @@ import com.r3corda.contracts.asset.sumFungibleOrZero
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.util.*
 

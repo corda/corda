@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.Timestamp;
 import com.r3corda.core.contracts.TransactionForContract.*;
 import com.r3corda.core.contracts.clauses.*;
 import com.r3corda.core.crypto.*;
+import com.r3corda.core.transactions.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
 

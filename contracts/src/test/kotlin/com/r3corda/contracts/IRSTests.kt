@@ -2,6 +2,7 @@ package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.seconds
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.TEST_TX_TIME
