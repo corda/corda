@@ -85,7 +85,6 @@ sealed class CliParams {
             val networkAddress: HostAndPort,
             val apiAddress: HostAndPort,
             val mapAddress: String,
-            val identityFile: Path,
             val tradeWithIdentities: List<Path>,
             val uploadRates: Boolean,
             val defaultLegalName: String,
@@ -166,11 +165,6 @@ sealed class CliParams {
                             CliParamsSpec.apiAddressArg.defaultsTo("localhost:${defaultApiPort(node)}")
                     )),
                     mapAddress = options.valueOf(CliParamsSpec.networkMapNetAddr),
-                    identityFile = if (options.has(CliParamsSpec.networkMapIdentityFile)) {
-                        Paths.get(options.valueOf(CliParamsSpec.networkMapIdentityFile))
-                    } else {
-                        dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME)
-                    },
                     tradeWithIdentities = if (options.has(CliParamsSpec.fakeTradeWithIdentityFile)) {
                         options.valuesOf(CliParamsSpec.fakeTradeWithIdentityFile).map { Paths.get(it) }
                     } else {
@@ -264,9 +258,6 @@ object CliParamsSpec {
     val baseDirectoryArg =
             parser.accepts("base-directory", "The directory to put all files under")
             .withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
-    val networkMapIdentityFile =
-            parser.accepts("network-map-identity-file", "The file containing the Party info of the network map")
-            .withOptionalArg()
     val networkMapNetAddr =
             parser.accepts("network-map-address", "The address of the network map")
             .withRequiredArg().defaultsTo("localhost")
@@ -411,7 +402,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
                 }
                 IRSDemoNode.NodeB -> {
                     advertisedServices = setOf(NodeInterestRates.Type)
-                    nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
+                    networkMap
                 }
             }
 
@@ -423,16 +414,6 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
 }
 
 private fun parsePartyFromFile(path: Path) = Files.readAllBytes(path).deserialize<Party>()
-
-private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
-    try {
-        val party = parsePartyFromFile(identityFile)
-        return NodeInfo(recipient, party, advertisedServices)
-    } catch (e: Exception) {
-        log.error("Could not find identify file $identityFile.")
-        throw e
-    }
-}
 
 private fun runUploadRates(host: HostAndPort): ListenableFuture<Int> {
     // Note: the getResourceAsStream is an ugly hack to get the jvm to search in the right location

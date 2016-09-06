@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.node.NodeInfo
@@ -57,7 +58,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun getNodeByLegalName(name: String) = get().singleOrNull { it.identity.name == name }
     override fun getNodeByPublicKey(publicKey: PublicKey) = get().singleOrNull { it.identity.owningKey == publicKey }
 
-    override fun addMapService(net: MessagingService, service: NodeInfo, subscribe: Boolean,
+    override fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
@@ -90,7 +91,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
             resp.nodes?.forEach { processRegistration(it) }
             future.set(Unit)
         }
-        net.send(NetworkMapService.FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, service.address)
+        net.send(NetworkMapService.FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, networkMapAddress)
 
         return future
     }

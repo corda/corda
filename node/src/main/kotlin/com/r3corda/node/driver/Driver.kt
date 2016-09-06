@@ -300,8 +300,6 @@ class DriverDSL(
 
         val driverCliParams = NodeRunner.CliParams(
                 services = advertisedServices,
-                networkMapName = networkMapNodeInfo!!.identity.name,
-                networkMapPublicKey = networkMapNodeInfo!!.identity.owningKey,
                 networkMapAddress = networkMapAddress,
                 messagingAddress = messagingAddress,
                 apiAddress = apiAddress,
@@ -386,17 +384,8 @@ class DriverDSL(
     override fun start() {
         startNetworkMapService()
         val networkMapClient = startClient("driver-$networkMapName-client", networkMapAddress).get()
-        // We fake the network map's NodeInfo with a random public key in order to retrieve the correct NodeInfo from
-        // the network map service itself.
-        val fakeNodeInfo = NodeInfo(
-                address = ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress),
-                identity = Party(
-                        name = networkMapName,
-                        owningKey = generateKeyPair().public
-                ),
-                advertisedServices = setOf(NetworkMapService.Type)
-        )
-        networkMapCache.addMapService(networkMapClient, fakeNodeInfo, true)
+        val networkMapAddr = ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress)
+        networkMapCache.addMapService(networkMapClient, networkMapAddr, true)
         networkMapNodeInfo = poll("network map cache for $networkMapName") {
             networkMapCache.partyNodes.forEach {
                 if (it.identity.name == networkMapName) {
@@ -423,8 +412,6 @@ class DriverDSL(
 
         val driverCliParams = NodeRunner.CliParams(
                 services = setOf(NetworkMapService.Type),
-                networkMapName = null,
-                networkMapPublicKey = null,
                 networkMapAddress = null,
                 messagingAddress = networkMapAddress,
                 apiAddress = apiAddress,

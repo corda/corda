@@ -32,7 +32,7 @@ class ValidatingNotaryServiceTests {
                 keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(NetworkMapService.Type, ValidatingNotaryService.Type)
         )
-        clientNode = net.createNode(networkMapAddress = notaryNode.info, keyPair = MINI_CORP_KEY)
+        clientNode = net.createNode(networkMapAddress = notaryNode.info.address, keyPair = MINI_CORP_KEY)
         net.runNetwork() // Clear network map registration messages
     }
 

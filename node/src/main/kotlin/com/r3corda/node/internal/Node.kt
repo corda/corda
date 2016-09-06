@@ -2,6 +2,7 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -53,7 +54,7 @@ class ConfigurationException(message: String) : Exception(message)
  * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
-           configuration: NodeConfiguration, networkMapAddress: NodeInfo?,
+           configuration: NodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceType>, clock: Clock = NodeClock(),
            val messagingServerAddr: HostAndPort? = null) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {

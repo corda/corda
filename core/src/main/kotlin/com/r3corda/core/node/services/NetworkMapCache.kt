@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import org.slf4j.LoggerFactory
 import java.security.PublicKey
@@ -73,12 +74,12 @@ interface NetworkMapCache {
      * updates.
      *
      * @param net the network messaging service.
-     * @param service the network map service to fetch current state from.
+     * @param networkMapAddress the network map service to fetch current state from.
      * @param subscribe if the cache should subscribe to updates.
      * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
      * version is less than or equal to the given version, no update is fetched.
      */
-    fun addMapService(net: MessagingService, service: NodeInfo,
+    fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient,
                       subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
 
     /**

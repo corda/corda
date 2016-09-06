@@ -3,7 +3,7 @@ package com.r3corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.testing.node.MockNetwork
@@ -55,12 +55,13 @@ class StateMachineManagerTests {
         node2.smm.add("test", ReceiveProtocol(topic, sessionID))
         net.runNetwork()
         node2.stop()
-        val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveProtocol>(node1.info)
+        val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveProtocol>(node1.info.address)
         assertThat(restoredProtocol.receivedPayload).isEqualTo(payload)
     }
 
-    private inline fun <reified P : NonTerminatingProtocol> MockNode.restartAndGetRestoredProtocol(networkMapAddress: NodeInfo? = null): P {
-        val node = mockNet.createNode(networkMapAddress, id)
+    private inline fun <reified P : NonTerminatingProtocol> MockNode.restartAndGetRestoredProtocol(networkMapAddress: SingleMessageRecipient? = null): P {
+        val servicesArray = advertisedServices.toTypedArray()
+        val node = mockNet.createNode(networkMapAddress, id, advertisedServices = *servicesArray)
         return node.smm.findStateMachines(P::class.java).single().first
     }
 

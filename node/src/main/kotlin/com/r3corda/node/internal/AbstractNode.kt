@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.CordaPluginRegistry
@@ -69,7 +70,7 @@ import java.util.concurrent.TimeUnit
 // TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val networkMapService: NodeInfo?,
+abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val networkMapService: SingleMessageRecipient?,
                             val advertisedServices: Set<ServiceType>, val platformClock: Clock): SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
@@ -277,11 +278,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
      * updates) if one has been supplied.
      */
     private fun registerWithNetworkMap(): ListenableFuture<Unit> {
-        require(networkMapService == null || NetworkMapService.Type in networkMapService.advertisedServices) {
+        require(networkMapService != null || NetworkMapService.Type in advertisedServices) {
             "Initial network map address must indicate a node that provides a network map service"
         }
         services.networkMapCache.addNode(info)
-        if (networkMapService != null && networkMapService != info) {
+        if (networkMapService != null) {
             // Only register if we are pointed at a network map service and it's not us.
             // TODO: Return a future so the caller knows these operations may not have completed yet, and can monitor if needed
             updateRegistration(networkMapService, AddOrRemove.ADD)
@@ -291,7 +292,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         if (inNodeNetworkMapService == null)
             return noNetworkMapConfigured()
         // Register for updates, even if we're the one running the network map.
-        return services.networkMapCache.addMapService(net, info, true, null)
+        return services.networkMapCache.addMapService(net, info.address, true, null)
     }
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
@@ -301,7 +302,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 "has any other map node been configured.")
     }
 
-    private fun updateRegistration(serviceInfo: NodeInfo, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
+    private fun updateRegistration(networkMapAddr: SingleMessageRecipient, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
         // Register this node against the network
         val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, networkMapSeq++, type, expires)
@@ -313,7 +314,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net.runOnNextMessage(REGISTER_PROTOCOL_TOPIC, sessionID, RunOnCallerThread) { message ->
             future.set(message.data.deserialize())
         }
-        net.send(message, serviceInfo.address)
+        net.send(message, networkMapAddr)
 
         return future
     }
@@ -339,8 +340,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     protected open fun makeIdentityService(): IdentityService {
         val service = InMemoryIdentityService()
-        if (networkMapService != null)
-            service.registerIdentity(networkMapService.identity)
+
         service.registerIdentity(storage.myLegalIdentity)
 
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }

@@ -134,14 +134,8 @@ fun main(args: Array<String>) {
         advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
     } else {
-        // In a real system, the identity file of the network map would be shipped with the server software, and there'd
-        // be a single shared map service  (this is analagous to the DNS seeds in Bitcoin).
-        //
-        // TODO: AbstractNode should write out the full NodeInfo object and we should just load it here.
-        val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
-        val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        NodeInfo(ArtemisMessagingClient.makeNetworkMapAddress(theirNetAddr), party, setOf(NetworkMapService.Type))
+        ArtemisMessagingClient.makeNetworkMapAddress(theirNetAddr)
     }
 
     // And now construct then start the node object. It takes a little while.

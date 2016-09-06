@@ -37,9 +37,9 @@ class NotaryChangeTests {
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(NetworkMapService.Type, SimpleNotaryService.Type))
-        clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info)
-        clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info)
-        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info, advertisedServices = SimpleNotaryService.Type)
+        clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
+        clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
+        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = SimpleNotaryService.Type)
 
         net.runNetwork() // Clear network map registration messages
     }

@@ -3,6 +3,7 @@ package com.r3corda.node.services.config
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
@@ -122,9 +123,8 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
                 advertisedServices.add(object : ServiceType(serviceId) {})
             }
         }
-        // TODO Node startup should not need a full NodeInfo for the remote NetworkMapService provider as bootstrap
-        val networkMapBootstrapIdentity = Party(mapService.identity, generateKeyPair().public)
-        val networkMapAddress: NodeInfo? = if (mapService.hostServiceLocally) null else NodeInfo(networkMapTarget, networkMapBootstrapIdentity, setOf(NetworkMapService.Type))
+
+        val networkMapAddress: SingleMessageRecipient? = if (mapService.hostServiceLocally) null else networkMapTarget
         return Node(basedir.toAbsolutePath().normalize(),
                 artemisAddress,
                 webAddress,

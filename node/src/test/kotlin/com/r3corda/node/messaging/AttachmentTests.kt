@@ -3,6 +3,7 @@ package com.r3corda.node.messaging
 import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.sha256
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.OpaqueBytes
@@ -87,7 +88,7 @@ class AttachmentTests {
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
         val n0 = network.createNode(null, -1, object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     override fun start(): MockNetwork.MockNode {
@@ -98,7 +99,7 @@ class AttachmentTests {
                 }
             }
         }, true, null, null, false, NetworkMapService.Type, SimpleNotaryService.Type)
-        val n1 = network.createNode(n0.info)
+        val n1 = network.createNode(n0.info.address)
 
         // Insert an attachment into node zero's store directly.
         val id = n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
