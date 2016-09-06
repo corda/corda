@@ -70,6 +70,9 @@ class ArtemisMessagingClient(directory: Path,
         var consumer: ClientConsumer? = null
         var session: ClientSession? = null
         var clientFactory: ClientSessionFactory? = null
+
+        // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
+        var undeliveredMessages = listOf<Message>()
     }
 
     /** A registration to handle messages of different types */
@@ -84,9 +87,6 @@ class ArtemisMessagingClient(directory: Path,
 
     private val state = ThreadBox(InnerState())
     private val handlers = CopyOnWriteArrayList<Handler>()
-
-    // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
-    private val undeliveredMessages = CopyOnWriteArrayList<Message>()
 
     init {
         require(directory.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
@@ -214,7 +214,9 @@ class ArtemisMessagingClient(directory: Path,
 
             // This is a hack; transient messages held in memory isn't crash resistant.
             // TODO: Use Artemis API more effectively so we don't pop messages off a queue that we aren't ready to use.
-            undeliveredMessages += msg
+            state.locked {
+                undeliveredMessages += msg
+            }
 
             return false
         }
@@ -312,7 +314,12 @@ class ArtemisMessagingClient(directory: Path,
         require(!topicSession.isBlank()) { "Topic must not be blank, as the empty topic is a special case." }
         val handler = Handler(executor, topicSession, callback)
         handlers.add(handler)
-        undeliveredMessages.removeIf { deliver(it) }
+        val messagesToRedeliver = state.locked {
+            val messagesToRedeliver = undeliveredMessages
+            undeliveredMessages = listOf()
+            messagesToRedeliver
+        }
+        messagesToRedeliver.forEach { deliver(it) }
         return handler
     }
 
