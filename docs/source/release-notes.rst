@@ -3,6 +3,16 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Unreleased
+----------
+
+API changes:
+
+* The transaction types (Signed, Wire, LedgerTransaction) have moved to ``com.r3corda.core.transactions``. You can
+  update your code by just deleting the broken import lines and letting your IDE re-import them from the right
+  location.
+* AbstractStateReplacementProtocol.verifyProposal has changed its prototype in a minor way.
+
 Milestone 3
 -----------
 
