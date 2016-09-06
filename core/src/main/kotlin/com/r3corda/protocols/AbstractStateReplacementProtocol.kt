@@ -1,7 +1,9 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
@@ -12,6 +14,7 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.protocols.AbstractStateReplacementProtocol.Acceptor
 import com.r3corda.protocols.AbstractStateReplacementProtocol.Instigator
 import java.security.PublicKey
@@ -119,7 +122,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
     }
 
-    abstract class Acceptor<in T>(val otherSide: Party,
+    abstract class Acceptor<T>(val otherSide: Party,
                                   val sessionIdForSend: Long,
                                   val sessionIdForReceive: Long,
                                   override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
@@ -137,24 +140,21 @@ abstract class AbstractStateReplacementProtocol<T> {
         @Suspendable
         override fun call() {
             progressTracker.currentStep = VERIFYING
-            val proposal = receive<Proposal<T>>(sessionIdForReceive).validate { it }
-
+            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(sessionIdForReceive)
             try {
-                verifyProposal(proposal)
-                verifyTx(proposal.stx)
+                val stx: SignedTransaction = maybeProposal.validate { verifyProposal(maybeProposal).stx }
+                verifyTx(stx)
+                approve(stx)
             } catch(e: Exception) {
                 // TODO: catch only specific exceptions. However, there are numerous validation exceptions
                 //       that might occur (tx validation/resolution, invalid proposal). Need to rethink how
                 //       we manage exceptions and maybe introduce some platform exception hierarchy
                 val myIdentity = serviceHub.storageService.myLegalIdentity
-                val state = proposal.stateRef
+                val state = maybeProposal.validate { it.stateRef }
                 val reason = StateReplacementRefused(myIdentity, state, e.message)
 
                 reject(reason)
-                return
             }
-
-            approve(proposal.stx)
         }
 
         @Suspendable
@@ -185,9 +185,10 @@ abstract class AbstractStateReplacementProtocol<T> {
 
         /**
          * Check the state change proposal to confirm that it's acceptable to this node. Rules for verification depend
-         * on the change proposed, and may further depend on the node itself (for example configuration).
+         * on the change proposed, and may further depend on the node itself (for example configuration). The
+         * proposal is returned if acceptable, otherwise an exception is thrown.
          */
-        abstract internal fun verifyProposal(proposal: Proposal<T>)
+        abstract fun verifyProposal(maybeProposal: UntrustworthyData<Proposal<T>>): Proposal<T>
 
         @Suspendable
         private fun verifyTx(stx: SignedTransaction) {
