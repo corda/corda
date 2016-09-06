@@ -7,8 +7,6 @@ import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.SuspendableRunnable
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.then
-import com.r3corda.node.log
-import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.Subscriber
 import rx.Subscription
@@ -39,7 +37,7 @@ abstract class MutableClock : Clock() {
     private val _version = AtomicLong(0L)
 
     /**
-     * This tracks how many direct mutations of "now" have occured for this [Clock], but not the passage of time.
+     * This tracks how many direct mutations of "now" have occurred for this [Clock], but not the passage of time.
      *
      * It starts at zero, and increments by one per mutation.
      */
@@ -81,7 +79,6 @@ abstract class MutableClock : Clock() {
  *
  * @throws InterruptedException if interrupted by something other than a [MutableClock].
  */
-@Suppress("UNUSED_VALUE") // This is here due to the compiler thinking version is not used
 @Suspendable
 private fun Clock.doInterruptibly(runnable: SuspendableRunnable) {
     var subscription: Subscription? = null
