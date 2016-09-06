@@ -20,14 +20,42 @@ import java.security.PublicKey
  * the identity of the transaction, that is, it's possible for two [SignedTransaction]s with different sets of
  * signatures to have the same identity hash.
  */
-data class WireTransaction(val inputs: List<StateRef>,
-                           val attachments: List<SecureHash>,
-                           val outputs: List<TransactionState<ContractState>>,
-                           val commands: List<Command>,
-                           val notary: Party?,
-                           val signers: List<PublicKey>,
-                           val type: TransactionType,
-                           val timestamp: Timestamp?) : NamedByHash {
+data class WireTransaction(
+        /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
+        val inputs: List<StateRef>,
+        /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
+        val attachments: List<SecureHash>,
+        /** Ordered list of states defined by this transaction, along with the associated notaries. */
+        val outputs: List<TransactionState<ContractState>>,
+        /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
+        val commands: List<Command>,
+        /**
+         * If present, the notary for this transaction. If absent then the transaction is not notarised at all.
+         * This is intended for issuance/genesis transactions that don't consume any other states and thus can't
+         * double spend anything.
+         *
+         * TODO: Ensure the invariant 'notary == null -> inputs.isEmpty' is enforced!
+         */
+        val notary: Party?,
+        /**
+         * Keys that are required to have signed the wrapping [SignedTransaction], ordered to match the list of
+         * signatures. There is nothing that forces the list to be the _correct_ list of signers for this
+         * transaction until the transaction is verified by using [LedgerTransaction.verify]. It includes the
+         * notary key, if the notary field is set.
+         */
+        val signers: List<PublicKey>,
+        /**
+         * Pointer to a class that defines the behaviour of this transaction: either normal, or "notary changing".
+         */
+        val type: TransactionType,
+        /**
+         * If specified, a time window in which this transaction may have been notarised. Contracts can check this
+         * time window to find out when a transaction is deemed to have occurred, from the ledger's perspective.
+         *
+         * TODO: Ensure the invariant 'timestamp != null -> notary != null' is enforced!
+         */
+        val timestamp: Timestamp?
+) : NamedByHash {
 
     // Cache the serialised form of the transaction and its hash to give us fast access to it.
     @Volatile @Transient private var cachedBits: SerializedBytes<WireTransaction>? = null
