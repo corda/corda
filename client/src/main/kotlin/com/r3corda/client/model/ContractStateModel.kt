@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.client.fxutils.foldToObservableList
 import com.r3corda.node.services.monitor.ServiceToClientEvent
+import com.r3corda.node.services.monitor.StateSnapshotMessage
 import javafx.collections.ObservableList
 import kotlinx.support.jdk8.collections.removeIf
 import rx.Observable
@@ -20,10 +21,12 @@ class StatesDiff<out T : ContractState>(
  */
 class ContractStateModel {
     private val serviceToClient: Observable<ServiceToClientEvent> by observable(WalletMonitorModel::serviceToClient)
+    private val snapshot: Observable<StateSnapshotMessage> by observable(WalletMonitorModel::snapshot)
     private val outputStates = serviceToClient.ofType(ServiceToClientEvent.OutputState::class.java)
 
     val contractStatesDiff = outputStates.map { StatesDiff(it.produced, it.consumed) }
     // We filter the diff first rather than the complete contract state list.
+    // TODO wire up snapshot once it holds StateAndRefs
     val cashStatesDiff = contractStatesDiff.map {
         StatesDiff(it.added.filterIsInstance<StateAndRef<Cash.State>>(), it.removed)
     }

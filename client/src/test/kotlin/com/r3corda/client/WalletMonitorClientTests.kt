@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory
 import rx.subjects.PublishSubject
 import kotlin.test.fail
 
-val log: Logger = LoggerFactory.getLogger(WalletMonitorServiceTests::class.java)
+val log: Logger = LoggerFactory.getLogger(WalletMonitorClientTests::class.java)
 
-class WalletMonitorServiceTests {
+class WalletMonitorClientTests {
     @Test
     fun cashIssueWorksEndToEnd() {
         driver {
@@ -34,7 +34,7 @@ class WalletMonitorServiceTests {
             val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
             val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
-            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
+            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream, PublishSubject.create())
             require(aliceMonitorClient.register().get())
 
             aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
@@ -77,7 +77,7 @@ class WalletMonitorServiceTests {
             val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
             val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
-            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
+            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream, PublishSubject.create())
             require(aliceMonitorClient.register().get())
 
             aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
@@ -185,7 +185,7 @@ class WalletMonitorServiceTests {
             val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
             val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
-            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
+            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream, PublishSubject.create())
             require(aliceMonitorClient.register().get())
 
             aliceOutStream.onNext(ClientToServiceCommand.IssueCash(

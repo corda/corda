@@ -5,6 +5,7 @@ import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.node.services.monitor.ServiceToClientEvent
+import com.r3corda.node.services.monitor.StateSnapshotMessage
 import rx.Observable
 import rx.Observer
 import rx.subjects.PublishSubject
@@ -19,6 +20,9 @@ class WalletMonitorModel {
     private val serviceToClientSource = PublishSubject.create<ServiceToClientEvent>()
     val serviceToClient: Observable<ServiceToClientEvent> = serviceToClientSource
 
+    private val snapshotSource = PublishSubject.create<StateSnapshotMessage>()
+    val snapshot: Observable<StateSnapshotMessage> = snapshotSource
+
     /**
      * Register for updates to/from a given wallet.
      * @param messagingService The messaging to use for communication.
@@ -30,7 +34,8 @@ class WalletMonitorModel {
                 messagingService,
                 walletMonitorNodeInfo,
                 clientToServiceSource,
-                serviceToClientSource
+                serviceToClientSource,
+                snapshotSource
         )
         require(monitorClient.register().get())
     }
