@@ -19,6 +19,10 @@ import java.util.*
  * @param notary Notary used for the transaction. If null, this indicates the transaction DOES NOT have a notary.
  * When this is set to a non-null value, an output state can be added by just passing in a [ContractState] – a
  * [TransactionState] with this notary specified will be generated automatically.
+ *
+ * @param signers The set of public keys the transaction needs signatures for. The logic for building the signers set
+ * can be customised for every [TransactionType]. E.g. in the general case it contains the command and notary public keys,
+ * but for the [TransactionType.NotaryChange] transactions it is the set of all input [ContractState.participants].
  */
 open class TransactionBuilder(
         protected val type: TransactionType = TransactionType.General(),
