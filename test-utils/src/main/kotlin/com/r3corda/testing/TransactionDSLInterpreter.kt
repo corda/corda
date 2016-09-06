@@ -74,7 +74,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      * @param state The state to be added.
      */
     fun input(state: ContractState) {
-        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder()) {
+        val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
             output { state }
         }
         input(transaction.outRef<ContractState>(0).ref)
