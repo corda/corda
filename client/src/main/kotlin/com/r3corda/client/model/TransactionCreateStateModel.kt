@@ -54,7 +54,12 @@ class TransactionCreateStateModel {
 
     /**
      * Aggregation of updates to transactions. We use the observable list as the only container and do linear search for
-     * matching transactions because we have two keys(fiber ID and UUID) and this way it's easier to avoid syncing issues
+     * matching transactions because we have two keys(fiber ID and UUID) and this way it's easier to avoid syncing issues.
+     *
+     * The Fiber ID is used to identify events that relate to the same transaction server-side, whereas the UUID is
+     * generated on the UI and is used to identify events with the UI action that triggered them. Currently a UUID is
+     * generated for each outgoing [ClientToServiceCommand].
+     *
      * TODO: Make this more efficient by maintaining and syncing two maps (for the two keys) in the accumulator
      * (Note that a transaction may be mapped by one or both)
      * TODO: Expose a writable stream to combine [serviceToClient] with to allow recording of transactions made locally(UUID)
