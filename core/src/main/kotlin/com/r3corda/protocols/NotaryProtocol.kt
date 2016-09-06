@@ -205,5 +205,5 @@ sealed class NotaryError {
 
     class TransactionInvalid : NotaryError()
 
-    class SignaturesMissing(val missingSigners: List<PublicKey>) : NotaryError()
+    class SignaturesMissing(val missingSigners: Set<PublicKey>) : NotaryError()
 }

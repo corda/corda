@@ -23,7 +23,7 @@ import java.util.*
 data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
                              val sigs: List<DigitalSignature.WithKey>) : NamedByHash {
     init {
-        check(sigs.isNotEmpty())
+        require(sigs.isNotEmpty())
     }
 
     // TODO: This needs to be reworked to ensure that the inner WireTransaction is only ever deserialised sandboxed.
@@ -34,27 +34,46 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
     override val id: SecureHash get() = txBits.hash
 
+    class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
+        override fun toString(): String {
+            return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.toStringsShort()}"
+        }
+    }
+
     /**
-     * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found contains
-     * the set of pubkeys in the signers list. If any signatures are missing, either throws an exception (by default) or
-     * returns the list of keys that have missing signatures, depending on the parameter.
+     * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
+     * In this context, "verifying" means checking they are valid signatures and that their public keys are in
+     * the contained transactions [BaseTransaction.mustSign] property.
      *
-     * @throws SignatureException if a signature is invalid, does not match or if any signature is missing.
+     * Normally you would not provide any keys to this function, but if you're in the process of building a partial
+     * transaction and you want to access the contents before you've signed it, you can specify your own keys here
+     * to bypass that check.
+     *
+     * @throws SignatureException if any signatures are invalid or unrecognised.
+     * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
     @Throws(SignatureException::class)
-    fun verifySignatures(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
+    fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         for (sig in sigs)
             sig.verifyWithECDSA(txBits.bits)
 
-        // Now examine the contents and ensure the sigs we have line up with the advertised list of signers.
         val missing = getMissingSignatures()
-        if (missing.isNotEmpty() && throwIfSignaturesAreMissing) {
-            val missingElements = getMissingKeyDescriptions(missing)
-            throw SignatureException("Missing signatures for ${missingElements} on transaction ${id.prefixChars()} for ${missing.toStringsShort()}")
+        if (missing.isNotEmpty()) {
+            val allowed = setOf(*allowedToBeMissing)
+            val needed = missing - allowed
+            if (needed.isNotEmpty())
+                throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
         }
+        return tx
+    }
 
-        return missing
+    private fun getMissingSignatures(): Set<PublicKey> {
+        val requiredKeys = tx.mustSign.toSet()
+        val sigKeys = sigs.map { it.by }.toSet()
+
+        if (sigKeys.containsAll(requiredKeys)) return emptySet()
+        return requiredKeys - sigKeys
     }
 
     /**
@@ -65,13 +84,11 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         // TODO: We need a much better way of structuring this data
         val missingElements = ArrayList<String>()
         this.tx.commands.forEach { command ->
-            if (command.signers.any { signer -> missing.contains(signer) })
+            if (command.signers.any { it in missing })
                 missingElements.add(command.toString())
         }
-        this.tx.notary?.owningKey.apply {
-            if (missing.contains(this))
-                missingElements.add("notary")
-        }
+        if (this.tx.notary?.owningKey in missing)
+            missingElements.add("notary")
         return missingElements
     }
 
@@ -86,26 +103,15 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
-     * Returns the set of missing signatures - a signature must be present for each signer public key.
-     */
-    private fun getMissingSignatures(): Set<PublicKey> {
-        val requiredKeys = tx.mustSign.toSet()
-        val sigKeys = sigs.map { it.by }.toSet()
-        if (sigKeys.containsAll(requiredKeys)) return emptySet()
-        return requiredKeys - sigKeys
-    }
-
-    /**
      * Calls [verifySignatures] to check all required signatures are present, and then calls
      * [WireTransaction.toLedgerTransaction] with the passed in [ServiceHub] to resolve the dependencies,
      * returning an unverified LedgerTransaction.
      *
      * @throws FileNotFoundException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
+     * @throws SignatureException if any signatures were invalid or unrecognised
+     * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
-    @Throws(FileNotFoundException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub): LedgerTransaction {
-        verifySignatures()
-        return tx.toLedgerTransaction(services)
-    }
+    @Throws(FileNotFoundException::class, TransactionResolutionException::class, SignaturesMissingException::class)
+    fun toLedgerTransaction(services: ServiceHub) = verifySignatures().toLedgerTransaction(services)
 }

@@ -47,7 +47,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
      * @param tx transaction builder to add states and commands to.
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
-     * the responsibility of the caller to check that they do not exit funds held by others.
+     * the responsibility of the caller to check that they do not attempt to exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,

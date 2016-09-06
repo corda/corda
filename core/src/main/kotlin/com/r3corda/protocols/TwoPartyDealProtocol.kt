@@ -20,7 +20,6 @@ import com.r3corda.core.utilities.trace
 import java.math.BigDecimal
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.SignatureException
 import java.time.Duration
 
 /**
@@ -105,11 +104,7 @@ object TwoPartyDealProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val missingSigs = stx.verifySignatures(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
-                    throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
-
-                val wtx: WireTransaction = stx.tx
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.identity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)

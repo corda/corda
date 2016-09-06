@@ -7,7 +7,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.crypto.toStringsShort
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -19,7 +18,6 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.SignatureException
 import java.util.*
 
 /**
@@ -124,12 +122,7 @@ object TwoPartyTradeProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
-                val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
-                if (missingSigs != expected)
-                    throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs ${expected.toStringsShort()}")
-
-                val wtx: WireTransaction = it.tx
+                val wtx: WireTransaction = it.verifySignatures(myKeyPair.public, notaryNode.identity.owningKey)
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
                 // Download and check all the things that this transaction depends on and verify it is contract-valid,
