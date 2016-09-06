@@ -80,8 +80,8 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
 
         for (state in gathered) tx.addInputState(state)
         for (state in outputs) tx.addOutputState(state)
-        tx.addCommand(generateMoveCommand())
-        tx.addCommand(generateExitCommand(amountIssued), amountIssued.token.issuer.party.owningKey)
+        tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner })
+        tx.addCommand(generateExitCommand(amountIssued), gathered.flatMap { it.state.data.exitKeys })
         return amountIssued.token.issuer.party.owningKey
     }
 
