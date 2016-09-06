@@ -5,11 +5,13 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.indexOfOrThrow
+import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.THREAD_LOCAL_KRYO
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.Emoji
+import java.io.FileNotFoundException
 import java.security.PublicKey
 
 /**
@@ -58,5 +60,27 @@ data class WireTransaction(val inputs: List<StateRef>,
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
         return buf.toString()
+    }
+
+    /**
+     * Looks up identities and attachments from storage to generate a [LedgerTransaction]. A transaction is expected to
+     * have been fully resolved using the resolution protocol by this point.
+     *
+     * @throws FileNotFoundException if a required attachment was not found in storage.
+     * @throws TransactionResolutionException if an input points to a transaction not found in storage.
+     */
+    @Throws(FileNotFoundException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(services: ServiceHub): LedgerTransaction {
+        // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
+        val authenticatedArgs = commands.map {
+            val parties = it.signers.mapNotNull { pk -> services.identityService.partyFromKey(pk) }
+            AuthenticatedObject(it.signers, parties, it.value)
+        }
+        // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
+        val attachments = attachments.map {
+            services.storageService.attachments.openAttachment(it) ?: throw FileNotFoundException(it.toString())
+        }
+        val resolvedInputs = inputs.map { StateAndRef(services.loadState(it), it) }
+        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, signers, timestamp, type)
     }
 }

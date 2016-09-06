@@ -1,10 +1,13 @@
 package com.r3corda.core.transactions
 
 import com.r3corda.core.contracts.NamedByHash
+import com.r3corda.core.contracts.TransactionResolutionException
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringsShort
+import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.serialization.SerializedBytes
+import java.io.FileNotFoundException
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
@@ -38,6 +41,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      *
      * @throws SignatureException if a signature is invalid, does not match or if any signature is missing.
      */
+    @Throws(SignatureException::class)
     fun verifySignatures(throwIfSignaturesAreMissing: Boolean = true): Set<PublicKey> {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         for (sig in sigs)
@@ -96,5 +100,19 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
         if (sigKeys.containsAll(requiredKeys)) return emptySet()
         return requiredKeys - sigKeys
+    }
+
+    /**
+     * Calls [verifySignatures] to check all required signatures are present, and then calls
+     * [WireTransaction.toLedgerTransaction] with the passed in [ServiceHub] to resolve the dependencies,
+     * returning an unverified LedgerTransaction.
+     *
+     * @throws FileNotFoundException if a required attachment was not found in storage.
+     * @throws TransactionResolutionException if an input points to a transaction not found in storage.
+     */
+    @Throws(FileNotFoundException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(services: ServiceHub): LedgerTransaction {
+        verifySignatures()
+        return tx.toLedgerTransaction(services)
     }
 }

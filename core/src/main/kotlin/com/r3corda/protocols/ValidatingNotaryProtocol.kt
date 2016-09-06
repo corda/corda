@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.TransactionVerificationException
 import com.r3corda.core.transactions.WireTransaction
-import com.r3corda.core.contracts.toLedgerTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessProvider
