@@ -76,13 +76,15 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
 
                 val state = proposal.stateRef
                 val proposedTx = proposal.stx.tx
-                require(proposedTx.inputs.contains(state)) { "The proposed state $state is not in the proposed transaction inputs" }
+                require(state in proposedTx.inputs) { "The proposed state $state is not in the proposed transaction inputs" }
+                require(proposedTx.type.javaClass == TransactionType.NotaryChange::class.java) {
+                    "The proposed transaction is not a notary change transaction."
+                }
 
                 // An example requirement
                 val blacklist = listOf("Evil Notary")
                 require(!blacklist.contains(newNotary.name)) { "The proposed new notary $newNotary is not trusted by the party" }
 
-                // TODO: Verify the type!
 
                 proposal
             }

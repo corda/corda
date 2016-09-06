@@ -37,7 +37,7 @@ abstract class BaseTransaction(
         val timestamp: Timestamp?
 ) : NamedByHash {
 
-    fun checkInvariants() {
+    protected fun checkInvariants() {
         if (notary == null) check(inputs.isEmpty()) { "The notary must be specified explicitly for any transaction that has inputs." }
         if (timestamp != null) check(notary != null) { "If a timestamp is provided, there must be a notary." }
     }
