@@ -94,10 +94,11 @@ open class TransactionBuilder(
     /** The signatures that have been collected so far - might be incomplete! */
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
-    fun signWith(key: KeyPair) {
+    fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().serialize()
         addSignatureUnchecked(key.signWithECDSA(data.bits))
+        return this
     }
 
     /**
