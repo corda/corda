@@ -13,41 +13,39 @@ import java.util.stream.Collectors
 /**
  * Utility bindings for the [Amount] type, similar in spirit to [Bindings]
  */
-class AmountBindings {
-    companion object {
-        fun <T> sum(amounts: ObservableList<Amount<T>>, token: T) = EasyBind.map(
-                    Bindings.createLongBinding({
-                        amounts.stream().collect(Collectors.summingLong {
-                            require(it.token == token)
-                            it.quantity
-                        })
-                    }, arrayOf(amounts))
-            ) { sum -> Amount(sum.toLong(), token) }
+object AmountBindings {
+    fun <T> sum(amounts: ObservableList<Amount<T>>, token: T) = EasyBind.map(
+            Bindings.createLongBinding({
+                amounts.stream().collect(Collectors.summingLong {
+                    require(it.token == token)
+                    it.quantity
+                })
+            }, arrayOf(amounts))
+    ) { sum -> Amount(sum.toLong(), token) }
 
-        fun exchange(
-                currency: ObservableValue<Currency>,
-                exchangeRate: ObservableValue<ExchangeRate>
-        ): ObservableValue<Pair<Currency, (Amount<Currency>) -> Long>> {
-            return EasyBind.combine(currency, exchangeRate) { currency, exchangeRate ->
-                Pair(currency) { amount: Amount<Currency> ->
-                    (exchangeRate.rate(amount.token, currency) * amount.quantity).toLong()
-                }
+    fun exchange(
+            currency: ObservableValue<Currency>,
+            exchangeRate: ObservableValue<ExchangeRate>
+    ): ObservableValue<Pair<Currency, (Amount<Currency>) -> Long>> {
+        return EasyBind.combine(currency, exchangeRate) { currency, exchangeRate ->
+            Pair(currency) { amount: Amount<Currency> ->
+                (exchangeRate.rate(amount.token, currency) * amount.quantity).toLong()
             }
         }
+    }
 
-        fun sumAmountExchange(
-                amounts: ObservableList<Amount<Currency>>,
-                currency: ObservableValue<Currency>,
-                exchangeRate: ObservableValue<ExchangeRate>
-        ): ObservableValue<Amount<Currency>> {
-            return EasyBind.monadic(exchange(currency, exchangeRate)).flatMap {
-                val (currencyValue, exchange: (Amount<Currency>) -> Long) = it
-                EasyBind.map(
-                        Bindings.createLongBinding({
-                            amounts.stream().collect(Collectors.summingLong { exchange(it) })
-                        } , arrayOf(amounts))
-                ) { Amount(it.toLong(), currencyValue) }
-            }
+    fun sumAmountExchange(
+            amounts: ObservableList<Amount<Currency>>,
+            currency: ObservableValue<Currency>,
+            exchangeRate: ObservableValue<ExchangeRate>
+    ): ObservableValue<Amount<Currency>> {
+        return EasyBind.monadic(exchange(currency, exchangeRate)).flatMap {
+            val (currencyValue, exchange: (Amount<Currency>) -> Long) = it
+            EasyBind.map(
+                    Bindings.createLongBinding({
+                        amounts.stream().collect(Collectors.summingLong { exchange(it) })
+                    } , arrayOf(amounts))
+            ) { Amount(it.toLong(), currencyValue) }
         }
     }
 }
