@@ -202,7 +202,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         private fun checkMySignatureRequired(tx: WireTransaction) {
             // TODO: use keys from the keyManagementService instead
             val myKey = serviceHub.storageService.myLegalIdentity.owningKey
-            require(tx.signers.contains(myKey)) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
+            require(myKey in tx.mustSign) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
         }
 
         @Suspendable
