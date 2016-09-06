@@ -1,6 +1,9 @@
 package com.r3corda.core.contracts
 
 import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.io.FileNotFoundException
 
 // TODO: Move these into the actual classes (i.e. where people would expect to find them) and split Transactions.kt into multiple files

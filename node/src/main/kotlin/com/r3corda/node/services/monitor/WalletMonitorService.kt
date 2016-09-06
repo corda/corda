@@ -14,6 +14,8 @@ import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.statemachine.StateMachineManager

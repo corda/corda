@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.OpaqueBytes
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
 import com.r3corda.core.utilities.DUMMY_PUBKEY_2

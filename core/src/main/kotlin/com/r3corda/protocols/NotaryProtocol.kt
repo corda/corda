@@ -1,10 +1,10 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.Timestamp
-import com.r3corda.core.contracts.WireTransaction
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData

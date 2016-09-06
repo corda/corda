@@ -6,6 +6,8 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.serialization.SerializedBytes
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.node.api.*
 import java.time.LocalDateTime
 import javax.ws.rs.core.Response

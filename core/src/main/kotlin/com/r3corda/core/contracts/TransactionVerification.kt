@@ -3,6 +3,7 @@ package com.r3corda.core.contracts
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.transactions.LedgerTransaction
 import java.security.PublicKey
 import java.util.*
 

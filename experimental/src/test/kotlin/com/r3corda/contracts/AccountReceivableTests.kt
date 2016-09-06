@@ -1,7 +1,7 @@
 package com.r3corda.contracts
 
 import com.r3corda.core.contracts.DOLLARS
-import com.r3corda.core.contracts.LedgerTransaction
+import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.contracts.toLedgerTransaction
 import com.r3corda.core.seconds

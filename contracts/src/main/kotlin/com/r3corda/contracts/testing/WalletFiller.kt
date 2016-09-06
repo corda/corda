@@ -6,7 +6,7 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub

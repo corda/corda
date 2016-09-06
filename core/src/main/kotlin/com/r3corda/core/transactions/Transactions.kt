@@ -1,6 +1,7 @@
-package com.r3corda.core.contracts
+package com.r3corda.core.transactions
 
 import com.esotericsoftware.kryo.Kryo
+import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash

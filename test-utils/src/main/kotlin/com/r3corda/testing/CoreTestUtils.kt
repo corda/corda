@@ -6,7 +6,7 @@ import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
 import com.r3corda.testing.*
 import com.r3corda.core.contracts.StateRef
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.testing.node.MockIdentityService

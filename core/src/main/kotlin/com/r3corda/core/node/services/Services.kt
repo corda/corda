@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.transactions.WireTransaction
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey

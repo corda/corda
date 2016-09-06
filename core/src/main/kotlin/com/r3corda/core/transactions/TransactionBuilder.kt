@@ -1,7 +1,10 @@
-package com.r3corda.core.contracts
+package com.r3corda.core.transactions
 
+import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Duration

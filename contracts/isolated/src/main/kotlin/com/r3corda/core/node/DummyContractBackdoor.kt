@@ -2,7 +2,7 @@ package com.r3corda.core.node
 
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.PartyAndReference
-import com.r3corda.core.contracts.TransactionBuilder
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.crypto.Party
 
 interface DummyContractBackdoor {

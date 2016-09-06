@@ -1,7 +1,7 @@
 package com.r3corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.TxWritableStorageService

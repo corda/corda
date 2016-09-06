@@ -5,6 +5,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.AttachmentStorage
 import com.r3corda.core.serialization.*
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.testing.node.MockAttachmentStorage
 import com.r3corda.testing.MEGA_CORP
