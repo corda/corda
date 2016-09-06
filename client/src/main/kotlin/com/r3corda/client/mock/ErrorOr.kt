@@ -1,40 +1,40 @@
 package com.r3corda.client.mock
 
-sealed class ErrorOr<out A> {
-    class Error<A>(val error: String): ErrorOr<A>()
-    class Success<A>(val value: A): ErrorOr<A>()
+class ErrorOr<out A> private constructor(
+        val value: A?,
+        val error: Exception?
+) {
+    constructor(value: A): this(value, null)
+    constructor(error: Exception): this(null, error)
+
+    fun <T> match(onValue: (A) -> T, onError: (Exception) -> T): T {
+        if (value != null) {
+            return onValue(value)
+        } else {
+            return onError(error!!)
+        }
+    }
 
     fun getValueOrThrow(): A {
-        return when (this) {
-            is ErrorOr.Error -> throw Exception(this.error)
-            is ErrorOr.Success -> this.value
+        if (value != null) {
+            return value
+        } else {
+            throw error!!
         }
     }
 
     // Functor
     fun <B> map(function: (A) -> B): ErrorOr<B> {
-        return when (this) {
-            is ErrorOr.Error -> ErrorOr.Error(error)
-            is ErrorOr.Success -> ErrorOr.Success(function(value))
-        }
+        return ErrorOr(value?.let(function), error)
     }
 
     // Applicative
     fun <B, C> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
-        return when (this) {
-            is ErrorOr.Error -> ErrorOr.Error(error)
-            is ErrorOr.Success -> when (other) {
-                is ErrorOr.Error -> ErrorOr.Error(other.error)
-                is ErrorOr.Success -> ErrorOr.Success(function(value, other.value))
-            }
-        }
+        return ErrorOr(value?.let { a -> other.value?.let { b -> function(a, b) } }, error ?: other.error)
     }
 
     // Monad
     fun <B> bind(function: (A) -> ErrorOr<B>): ErrorOr<B> {
-        return when (this) {
-            is ErrorOr.Error -> ErrorOr.Error(error)
-            is ErrorOr.Success -> function(value)
-        }
+        return value?.let(function) ?: ErrorOr<B>(error!!)
     }
 }

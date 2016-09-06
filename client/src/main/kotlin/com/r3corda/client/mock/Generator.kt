@@ -52,14 +52,14 @@ class Generator<out A>(val generate: (Random) -> ErrorOr<A>) {
             Generator { generate(it).bind { a -> function(a).generate(it) } }
 
     companion object {
-        fun <A> pure(value: A) = Generator { ErrorOr.Success(value) }
-        fun <A> impure(valueClosure: () -> A) = Generator { ErrorOr.Success(valueClosure()) }
-        fun <A> fail(error: String) = Generator<A> { ErrorOr.Error(error) }
+        fun <A> pure(value: A) = Generator { ErrorOr(value) }
+        fun <A> impure(valueClosure: () -> A) = Generator { ErrorOr(valueClosure()) }
+        fun <A> fail(error: Exception) = Generator<A> { ErrorOr(error) }
 
         // Alternative
         fun <A> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).bind { generators[it] }
 
-        fun <A> success(generate: (Random) -> A) = Generator { ErrorOr.Success(generate(it)) }
+        fun <A> success(generate: (Random) -> A) = Generator { ErrorOr(generate(it)) }
         fun <A> frequency(vararg generators: Pair<Double, Generator<A>>): Generator<A> {
             val ranges = mutableListOf<Pair<Double, Double>>()
             var current = 0.0
@@ -85,12 +85,13 @@ class Generator<out A>(val generate: (Random) -> ErrorOr<A>) {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
-                when (element) {
-                    is ErrorOr.Error -> return@Generator ErrorOr.Error(element.error)
-                    is ErrorOr.Success -> result.add(element.value)
+                if (element.value != null) {
+                    result.add(element.value)
+                } else {
+                    return@Generator ErrorOr(element.error!!)
                 }
             }
-            ErrorOr.Success(result)
+            ErrorOr(result)
         }
     }
 }
@@ -98,18 +99,19 @@ class Generator<out A>(val generate: (Random) -> ErrorOr<A>) {
 fun <A> Generator.Companion.oneOf(list: List<A>) = intRange(0, list.size - 1).map { list[it] }
 
 fun <A> Generator<A>.generateOrFail(random: Random, numberOfTries: Int = 1): A {
-    var error: String? = null
+    var error: Exception? = null
     for (i in 0 .. numberOfTries - 1) {
         val result = generate(random)
-        when (result) {
-            is ErrorOr.Error -> error = result.error
-            is ErrorOr.Success -> return result.value
+        if (result.value != null) {
+            return result.value
+        } else {
+            error = result.error
         }
     }
     if (error == null) {
         throw IllegalArgumentException("numberOfTries cannot be <= 0")
     } else {
-        throw Exception("Failed to generate, last error $error")
+        throw Exception("Failed to generate", error)
     }
 }
 
@@ -136,19 +138,19 @@ fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Genera
     val result = mutableListOf<A>()
     var finish = false
     while (!finish) {
-        val error = Generator.doubleRange(0.0, 1.0).generate(it).bind { value ->
+        val errorOr = Generator.doubleRange(0.0, 1.0).generate(it).bind { value ->
             if (value < chance) {
                 generator.generate(it).map { result.add(it) }
             } else {
                 finish = true
-                ErrorOr.Success(Unit)
+                ErrorOr(Unit)
             }
         }
-        if (error is ErrorOr.Error) {
-            return@Generator ErrorOr.Error(error.error)
+        if (errorOr.error != null) {
+            return@Generator ErrorOr(errorOr.error)
         }
     }
-    ErrorOr.Success(result)
+    ErrorOr(result)
 }
 
 fun <A> Generator.Companion.pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
