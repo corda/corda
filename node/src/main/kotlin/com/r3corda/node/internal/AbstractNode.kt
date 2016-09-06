@@ -2,6 +2,7 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.SignedTransaction
@@ -49,13 +50,14 @@ import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase
 import org.slf4j.Logger
-import java.io.Closeable
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -134,7 +136,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     val customServices: ArrayList<Any> = ArrayList()
-    protected val closeOnStop: ArrayList<Closeable> = ArrayList()
+    protected val runOnStop: ArrayList<Runnable> = ArrayList()
 
     /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
     inline fun <reified T: Any> findService() = customServices.filterIsInstance<T>().single()
@@ -166,6 +168,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         checkpointStorage = storageServices.second
         netMapCache = InMemoryNetworkMapCache()
         net = makeMessagingService()
+        runOnStop += Runnable { net.stop() }
         wallet = makeWalletService()
 
         identity = makeIdentityService()
@@ -188,6 +191,14 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 listOf(tokenizableServices),
                 checkpointStorage,
                 serverThread)
+        if (serverThread is ExecutorService) {
+            runOnStop += Runnable {
+                // We wait here, even though any in-flight messages should have been drained away because the
+                // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
+                // arbitrary and might be inappropriate.
+                MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, TimeUnit.SECONDS)
+            }
+        }
 
         inNodeWalletMonitorService = makeWalletMonitorService() // Note this HAS to be after smm is set
         buildAdvertisedServices()
@@ -213,7 +224,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             val (toClose, database) = configureDatabase(props)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             log.info("Connected to ${database.vendor} database.")
-            closeOnStop += toClose
+            runOnStop += Runnable { toClose.close() }
         }
     }
 
@@ -354,11 +365,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // to indicate "Please shut down gracefully" vs "Shut down now".
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
-        net.stop()
-        // Stop in opposite order to starting
-        for (toClose in closeOnStop.reversed()) {
-            toClose.close()
+
+        // Run shutdown hooks in opposite order to starting
+        for (toRun in runOnStop.reversed()) {
+            toRun.run()
         }
+        runOnStop.clear()
     }
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal
