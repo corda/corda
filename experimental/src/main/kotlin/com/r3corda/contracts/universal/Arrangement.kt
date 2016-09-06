@@ -27,6 +27,7 @@ class Zero() : Arrangement {
 // X is an observable of type BigDecimal.
 //
 // todo: should be replaced with something that uses Corda assets and/or cash?
+// todo: should only be allowed to transfer non-negative amounts
 data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement {
     constructor(amount: BigDecimal, currency: Currency, from: Party, to: Party ) : this(const(amount), currency, from, to)
     constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(BigDecimal(amount.quantity)), amount.token, from, to)
@@ -42,7 +43,9 @@ data class And(val arrangements: Set<Arrangement>) : Arrangement
 // _condition_ is met. If the action is performed the arrangement state transitions into the specified arrangement.
 data class Action(val name: String, val condition: Perceivable<Boolean>,
                   val actors: Set<Party>, val arrangement: Arrangement) : Arrangement {
-    constructor(name: String, condition: Perceivable<Boolean>, actor: Party, arrangement: Arrangement) : this(name, condition, setOf(actor), arrangement)
+    constructor(name: String, condition: Perceivable<Boolean>,
+                actor: Party, arrangement: Arrangement)
+    : this(name, condition, setOf(actor), arrangement)
 }
 
 

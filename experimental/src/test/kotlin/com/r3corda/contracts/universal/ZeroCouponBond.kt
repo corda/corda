@@ -11,20 +11,22 @@ import java.time.Instant
 
 class ZeroCouponBond {
 
-    val contract =
-            (roadRunner or wileECoyote).may {
-                "execute".givenThat(after("2017-09-01")) {
-                    wileECoyote.gives(roadRunner, 100.K, GBP)
-                }
+    val contract = arrange {
+        (roadRunner or wileECoyote).may {
+            "execute".givenThat(after("2017-09-01")) {
+                wileECoyote.gives(roadRunner, 100.K, GBP)
             }
+        }
+    }
 
 
-    val contractMove =
-            (porkyPig or wileECoyote).may {
-                "execute".givenThat(after("2017-09-01")) {
-                    wileECoyote.gives(porkyPig, 100.K, GBP)
-                }
+    val contractMove = arrange {
+        (porkyPig or wileECoyote).may {
+            "execute".givenThat(after("2017-09-01")) {
+                wileECoyote.gives(porkyPig, 100.K, GBP)
             }
+        }
+    }
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 

@@ -14,47 +14,61 @@ val roadRunner = Party("Road Runner", generateKeyPair().public)
 val wileECoyote = Party("Wile E. Coyote", generateKeyPair().public)
 val porkyPig = Party("Porky Pig", generateKeyPair().public)
 
+val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
+
 
 // Currencies
-val USD = Currency.getInstance("USD")
-val GBP = Currency.getInstance("GBP")
-val EUR = Currency.getInstance("EUR")
-val KRW = Currency.getInstance("KRW")
+val USD: Currency = Currency.getInstance("USD")
+val GBP: Currency = Currency.getInstance("GBP")
+val EUR: Currency = Currency.getInstance("EUR")
+val KRW: Currency = Currency.getInstance("KRW")
 
 
 class ContractDefinition {
 
 
-    val cds_contract = roadRunner.may {
-        "payout".givenThat( acmeCorporationHasDefaulted and before("2017-09-01") ) {
-            wileECoyote.gives(roadRunner, 1.M, USD)
-        }
-    } or wileECoyote.may {
-        "expire".givenThat( after("2017-09-01") ) {}
-    }
-
-
-    val american_fx_option = roadRunner.may {
-        "exercise".anytime {
-            wileECoyote.gives(roadRunner, 1.M, EUR)
-            roadRunner.gives(wileECoyote, 1200.K, USD)
-        }
-    } or wileECoyote.may {
-        "expire".givenThat(after("2017-09-01")) {}
-    }
-
-
-    val european_fx_option = roadRunner.may {
-        "exercise".anytime {
-            (roadRunner or wileECoyote).may {
-                "execute".givenThat( after("2017-09-01") ) {
-                    wileECoyote.gives( roadRunner, 1.M, EUR )
-                    roadRunner.gives( wileECoyote, 1200.K, USD )
-                }
+    val cds_contract = arrange {
+        roadRunner.may {
+            "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
+                wileECoyote.gives(roadRunner, 1.M, USD)
+            }
+        } or wileECoyote.may {
+            "expire".givenThat(after("2017-09-01")) {
+                zero
             }
         }
-    } or wileECoyote.may {
-        "expire".givenThat( after("2017-09-01")) {}
+    }
+
+
+    val american_fx_option = arrange {
+        roadRunner.may {
+            "exercise".anytime {
+                wileECoyote.gives(roadRunner, 1.M, EUR)
+                roadRunner.gives(wileECoyote, 1200.K, USD)
+            }
+        } or wileECoyote.may {
+            "expire".givenThat(after("2017-09-01")) {
+                zero
+            }
+        }
+    }
+
+
+    val european_fx_option = arrange {
+        roadRunner.may {
+            "exercise".anytime {
+                (roadRunner or wileECoyote).may {
+                    "execute".givenThat(after("2017-09-01")) {
+                        wileECoyote.gives(roadRunner, 1.M, EUR)
+                        roadRunner.gives(wileECoyote, 1200.K, USD)
+                    }
+                }
+            }
+        } or wileECoyote.may {
+            "expire".givenThat(after("2017-09-01")) {
+                zero
+            }
+        }
     }
 
 

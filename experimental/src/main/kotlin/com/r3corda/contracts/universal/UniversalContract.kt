@@ -6,10 +6,14 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
 import java.security.PublicKey
+import java.time.Instant
+import java.time.LocalDate
 
 /**
  * Created by sofusmortensen on 23/05/16.
  */
+
+
 
 val UNIVERSAL_PROGRAM_ID = UniversalContract()
 
@@ -40,6 +44,14 @@ class UniversalContract : Contract {
         else -> throw Error("Unable to evaluate")
     }
 
+    fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<LocalDate>): LocalDate = when (expr) {
+        is Const -> expr.value
+        else -> throw Error("Unable to evaluate")
+    }
+    fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<Instant>): Instant = when (expr) {
+        is Const -> expr.value
+        else -> throw Error("Unable to evaluate")
+    }
     fun eval(tx: TransactionForContract, expr: Perceivable<Boolean>): Boolean = when (expr) {
         is PerceivableAnd -> eval(tx, expr.left) && eval(tx, expr.right)
         is PerceivableOr -> eval(tx, expr.right) || eval(tx, expr.right)
@@ -77,7 +89,7 @@ class UniversalContract : Contract {
                 }
                 is Fixing -> {
                     requireThat { "Fixing must be included" by false }
-                    BigDecimal(0.0)
+                    0.0.bd
                 }
                 is Interest -> {
                     val a = eval(tx, expr.amount)
@@ -85,7 +97,7 @@ class UniversalContract : Contract {
 
                     //todo
 
-                    a * i / BigDecimal(100)
+                    a * i / 100.0.bd
                 }
                 else -> throw NotImplementedError("eval - BigDecimal - " + expr.javaClass.name)
             }
@@ -126,7 +138,11 @@ class UniversalContract : Contract {
     }
 
     fun validateImmediateTransfers(tx: TransactionForContract, arrangement: Arrangement): Arrangement = when (arrangement) {
-        is Transfer -> Transfer(eval(tx, arrangement.amount), arrangement.currency, arrangement.from, arrangement.to)
+        is Transfer -> {
+            val amount = eval(tx, arrangement.amount)
+            requireThat { "transferred quantity is non-negative" by (amount >= BigDecimal.ZERO) }
+            Transfer(amount, arrangement.currency, arrangement.from, arrangement.to)
+        }
         is And -> And(arrangement.arrangements.map { validateImmediateTransfers(tx, it) }.toSet())
         else -> arrangement
     }
@@ -222,9 +238,9 @@ class UniversalContract : Contract {
                 is Interest -> Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
                         perceivable.dayCountConvention, replaceFixing(tx, perceivable.interest, fixings, unusedFixings),
                         perceivable.start, perceivable.end) as Perceivable<T>
-                is Fixing -> if (fixings.containsKey(FixOf(perceivable.source, perceivable.date, perceivable.tenor))) {
-                    unusedFixings.remove(FixOf(perceivable.source, perceivable.date, perceivable.tenor))
-                    Const(fixings[FixOf(perceivable.source, perceivable.date, perceivable.tenor)]!!) as Perceivable<T>
+                is Fixing -> if (fixings.containsKey(FixOf(perceivable.source, eval(tx, perceivable.date).toLocalDate(), perceivable.tenor))) {
+                    unusedFixings.remove(FixOf(perceivable.source, eval(tx, perceivable.date).toLocalDate(), perceivable.tenor))
+                    Const(fixings[FixOf(perceivable.source, eval(tx, perceivable.date).toLocalDate(), perceivable.tenor)]!!) as Perceivable<T>
                 } else perceivable
                 else -> throw NotImplementedError("replaceFixing - " + perceivable.javaClass.name)
             }

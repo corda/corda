@@ -10,29 +10,53 @@ import java.util.*
  */
 
 
-infix fun Arrangement.and(arrangement: Arrangement) = And( setOf(this, arrangement) )
-infix fun Action.or(arrangement: Action) = Or( setOf(this, arrangement) )
-infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
-infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
-
 // operator fun Long.times(currency: Currency) = Amount(this.toLong(), currency)
 // operator fun Double.times(currency: Currency) = Amount(BigDecimal(this.toDouble()), currency)
 
 val Int.M: BigDecimal get() = BigDecimal(this) * BigDecimal(1000000)
 val Int.K: BigDecimal get() = BigDecimal(this) * BigDecimal(1000)
 
+val Double.bd: BigDecimal get() = BigDecimal(this)
+
 val zero = Zero()
 
-class ContractBuilder {
+open class ContractBuilder {
     val contracts = mutableListOf<Arrangement>()
 
-    fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency) {
-        contracts.add( Transfer(amount, currency, this, beneficiary))
+    fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency) : Transfer {
+        val c = Transfer(amount, currency, this, beneficiary)
+        contracts.add( c )
+        return c
     }
 
-    fun Party.gives(beneficiary: Party, amount: Perceivable<BigDecimal>, currency: Currency) {
-        contracts.add( Transfer(amount, currency, this, beneficiary))
+    fun Party.gives(beneficiary: Party, amount: Perceivable<BigDecimal>, currency: Currency) : Transfer {
+        val c = Transfer(amount, currency, this, beneficiary)
+        contracts.add( c )
+        return c
     }
+
+    fun Party.may(init: ActionBuilder.() -> Unit) : Or {
+        val b = ActionBuilder(setOf(this))
+        b.init()
+        val c = Or(b.actions.toSet())
+        contracts.add(c)
+        return c
+    }
+
+    fun Set<Party>.may(init: ActionBuilder.() -> Unit) : Or {
+        val b = ActionBuilder(this)
+        b.init()
+        val c = Or(b.actions.toSet())
+        contracts.add(c)
+        return c
+    }
+
+    infix fun Party.or(party: Party) = setOf(this, party)
+    infix fun Set<Party>.or(party: Party) = this.plus(party)
+
+    @Deprecated(level = DeprecationLevel.ERROR, message = "Not allowed")
+    fun Action(@Suppress("UNUSED_PARAMETER") name: String, @Suppress("UNUSED_PARAMETER") condition: Perceivable<Boolean>,
+               @Suppress("UNUSED_PARAMETER") actors: Set<Party>, @Suppress("UNUSED_PARAMETER") arrangement: Arrangement) {}
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
     fun<T> String.anytime(@Suppress("UNUSED_PARAMETER") ignore: T ) {}
@@ -47,7 +71,28 @@ class ContractBuilder {
         contracts.add( Transfer(amount, currency, this, beneficiary))
     }*/
 
-    fun final() =
+    infix fun Arrangement.and(arrangement: Arrangement) = And( setOf(this, arrangement) )
+    infix fun Action.or(arrangement: Action) = Or( setOf(this, arrangement) )
+    infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
+    infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
+
+    fun rollOut(startDate: String, endDate: String, frequency: Frequency, init: RollOutBuilder<Dummy>.() -> Unit) : RollOut {
+        val b = RollOutBuilder(startDate, endDate, frequency, Dummy())
+        b.init()
+        val c = b.final()
+        contracts.add(c)
+        return c
+    }
+
+    fun <T> rollOut(startDate: String, endDate: String, frequency: Frequency, vars: T, init: RollOutBuilder<T>.() -> Unit) : RollOut {
+        val b = RollOutBuilder(startDate, endDate, frequency, vars)
+        b.init()
+        val c = b.final()
+        contracts.add(c)
+        return c
+    }
+
+    open fun final() =
             when (contracts.size) {
                 0 -> zero
                 1 -> contracts[0]
@@ -62,7 +107,7 @@ interface GivenThatResolve {
 class ActionBuilder(val actors: Set<Party>) {
     val actions = mutableListOf<Action>()
 
-    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Unit ) {
+    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement ) {
         val b = ContractBuilder()
         b.init()
         actions.add( Action(this, condition, actors, b.final() ) )
@@ -84,21 +129,6 @@ class ActionBuilder(val actors: Set<Party>) {
     }
 }
 
-fun Party.may(init: ActionBuilder.() -> Unit) : Or {
-    val b = ActionBuilder(setOf(this))
-    b.init()
-    return Or(b.actions.toSet())
-}
-
-fun Set<Party>.may(init: ActionBuilder.() -> Unit) : Or {
-    val b = ActionBuilder(this)
-    b.init()
-    return Or(b.actions.toSet())
-}
-
-infix fun Party.or(party: Party) = setOf(this, party)
-infix fun Set<Party>.or(party: Party) = this.plus(party)
-
 fun arrange(init: ContractBuilder.() -> Unit ) : Arrangement {
     val b = ContractBuilder()
     b.init()
@@ -109,7 +139,7 @@ data class Parameter<T>(val initialValue: T) : Perceivable<T>
 
 fun<T> variable(v: T) = Parameter<T>(v)
 
-class RollOutBuilder<T>(val startDate: String, val endDate: String, val frequency: Frequency, val vars: T) {
+class RollOutBuilder<T>(val startDate: String, val endDate: String, val frequency: Frequency, val vars: T) : ContractBuilder() {
 
     val start = StartDate()
     val end = EndDate()
@@ -123,22 +153,9 @@ class RollOutBuilder<T>(val startDate: String, val endDate: String, val frequenc
                          @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>,
                          @Suppress("UNUSED_PARAMETER") p3: kotlin.Pair<Parameter<T3>, Perceivable<T3>>) = Continuation()
 
-    fun final() =
-            RollOut(startDate, endDate, frequency, zero)
+    override fun final() =
+            RollOut(startDate, endDate, frequency, super.final())
 }
 
 
 class Dummy {}
-
-fun rollOut(startDate: String, endDate: String, frequency: Frequency, init: RollOutBuilder<Dummy>.() -> Unit) : Arrangement {
-    val b = RollOutBuilder(startDate, endDate, frequency, Dummy())
-    b.init()
-    return b.final()
-}
-
-fun<T> rollOut(startDate: String, endDate: String, frequency: Frequency, vars: T, init: RollOutBuilder<T>.() -> Unit) : Arrangement {
-    val b = RollOutBuilder(startDate, endDate, frequency, vars)
-    b.init()
-
-    return b.final()
-}

@@ -14,13 +14,14 @@ class FXSwap {
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
     val TEST_TX_TIME_TOO_EARLY: Instant get() = Instant.parse("2017-08-31T12:00:00.00Z")
 
-    val contract =
-            (roadRunner or wileECoyote).may {
-                "execute".givenThat(after("2017-09-01")) {
-                    wileECoyote.gives(roadRunner, 1200.K, USD)
-                    roadRunner.gives(wileECoyote, 1.M, EUR)
-                }
+    val contract = arrange {
+        (roadRunner or wileECoyote).may {
+            "execute".givenThat(after("2017-09-01")) {
+                wileECoyote.gives(roadRunner, 1200.K, USD)
+                roadRunner.gives(wileECoyote, 1.M, EUR)
             }
+        }
+    }
 
     val transfer1 = arrange { wileECoyote.gives(roadRunner, 1200.K, USD) }
     val transfer2 = arrange { roadRunner.gives(wileECoyote, 1.M, EUR) }
