@@ -12,30 +12,17 @@ import rx.Observable
 import java.time.Instant
 import java.util.UUID
 
-sealed class TransactionCreateStatus() {
-    class Started(val message: String?) : TransactionCreateStatus()
-    class Failed(val message: String?) : TransactionCreateStatus()
-
-    override fun toString(): String {
-        return when (this) {
-            is TransactionCreateStatus.Started -> message ?: "Started"
-            is TransactionCreateStatus.Failed -> message ?: "Failed"
-        }
-    }
+sealed class TransactionCreateStatus(val message: String?) {
+    class Started(message: String?) : TransactionCreateStatus(message)
+    class Failed(message: String?) : TransactionCreateStatus(message)
+    override fun toString(): String = message ?: javaClass.simpleName
 }
 
-sealed class ProtocolStatus() {
-    object Added: ProtocolStatus()
-    object Removed: ProtocolStatus()
-    class InProgress(val status: String): ProtocolStatus()
-
-    override fun toString(): String {
-        return when (this) {
-            ProtocolStatus.Added -> "Added"
-            ProtocolStatus.Removed -> "Removed"
-            is ProtocolStatus.InProgress -> status
-        }
-    }
+sealed class ProtocolStatus(val status: String?) {
+    object Added: ProtocolStatus(null)
+    object Removed: ProtocolStatus(null)
+    class InProgress(status: String): ProtocolStatus(status)
+    override fun toString(): String = status ?: javaClass.simpleName
 }
 
 interface TransactionCreateState {
