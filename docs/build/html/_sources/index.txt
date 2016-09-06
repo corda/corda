@@ -1,7 +1,9 @@
 Welcome to the Corda repository!
 ================================
 
-This documentation describes the prototype of a proposed architecture for distributed ledgers.
+This documentation describes Corda, a proposed architecture for distributed ledgers, the vision for which is outlined in the `Corda Introductory Whitepaper`_.
+
+.. _`Corda Introductory Whitepaper`: _static/corda-introductory-whitepaper.pdf
 
 The goal of this prototype is to explore fundamentally better designs for distributed ledgers than what presently exists
 on the market, tailor made for the needs of the financial industry. We are attempting to prove or disprove the

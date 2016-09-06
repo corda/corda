@@ -174,7 +174,7 @@
 <h1>Writing a contract using clauses<a class="headerlink" href="#writing-a-contract-using-clauses" title="Permalink to this headline">¶</a></h1>
 <p>This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
 already completed &#8220;<a class="reference internal" href="tutorial-contract.html"><span class="doc">Writing a contract</span></a>&#8221;.</p>
-<p>Clauses are essentially &#8220;mini-contracts&#8221; which contain verification logic, and are composed together to form
+<p>Clauses are essentially micro-contracts which contain independent verification logic, and are composed together to form
 a contract. With appropriate design, they can be made to be reusable, for example issuing contract state objects is
 generally the same for all fungible contracts, so a single issuance clause can be shared. This cuts down on scope for
 error, and improves consistency of behaviour.</p>
@@ -197,20 +197,19 @@ In the case of commercial paper, we have a &#8220;Grouping&#8221; outermost clau
 </div></blockquote>
 <div class="section" id="commercial-paper-class">
 <h2>Commercial paper class<a class="headerlink" href="#commercial-paper-class" title="Permalink to this headline">¶</a></h2>
-<p>First we need to change the class from implementing <code class="docutils literal"><span class="pre">Contract</span></code>, to extend <code class="docutils literal"><span class="pre">ClauseVerifier</span></code>. This is an abstract
-class which provides a verify() function for us, and requires we provide a property (<code class="docutils literal"><span class="pre">clauses</span></code>) for the clauses to test,
-and a function (<code class="docutils literal"><span class="pre">extractCommands</span></code>) to extract the applicable commands from the transaction. This is important because
-<code class="docutils literal"><span class="pre">ClauseVerifier</span></code> checks that no commands applicable to the contract are left unprocessed at the end. The following
-examples are trimmed to the modified class definition and added elements, for brevity:</p>
+<p>To use the clause verification logic, the contract needs to call the <code class="docutils literal"><span class="pre">verifyClauses()</span></code> function, passing in the transaction,
+a list of clauses to verify, and a collection of commands the clauses are expected to handle all of. This list of
+commands is important because <code class="docutils literal"><span class="pre">verifyClauses()</span></code> checks that none of the commands are left unprocessed at the end, and
+raises an error if they are. The following examples are trimmed to the modified class definition and added elements, for
+brevity:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">ClauseVerifier</span> <span class="p">{</span>
-    <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">)</span>
 
-    <span class="k">override</span> <span class="k">val</span> <span class="py">clauses</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">SingleClause</span><span class="p">&gt;</span>
-        <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="k">throw</span> <span class="n">UnsupportedOperationException</span><span class="p">(</span><span class="s">&quot;not implemented&quot;</span><span class="p">)</span>
-
-    <span class="k">override</span> <span class="k">fun</span> <span class="nf">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;</span>
+    <span class="k">private</span> <span class="k">fun</span> <span class="nf">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">):</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">AuthenticatedObject</span><span class="p">&lt;</span><span class="n">CommandData</span><span class="p">&gt;&gt;</span>
         <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">select</span><span class="p">&lt;</span><span class="n">Commands</span><span class="p">&gt;()</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">)</span> <span class="p">=</span> <span class="n">verifyClauses</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">listOf</span><span class="p">(</span><span class="n">Clauses</span><span class="p">.</span><span class="n">Group</span><span class="p">()),</span> <span class="n">extractCommands</span><span class="p">(</span><span class="n">tx</span><span class="p">))</span>
 </pre></div>
 </div>
 <div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">CommercialPaper</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
@@ -220,16 +219,16 @@ examples are trimmed to the modified class definition and added elements, for br
     <span class="o">}</span>
 
     <span class="nd">@Override</span>
-    <span class="kd">public</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">SingleClause</span><span class="o">&gt;</span> <span class="nf">getClauses</span><span class="o">()</span> <span class="o">{</span>
-        <span class="k">throw</span> <span class="n">UnsupportedOperationException</span><span class="o">(</span><span class="s">&quot;not implemented&quot;</span><span class="o">);</span>
-    <span class="o">}</span>
-
-    <span class="nd">@Override</span>
     <span class="kd">public</span> <span class="n">Collection</span><span class="o">&lt;</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="nf">extractCommands</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
         <span class="k">return</span> <span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">()</span>
                 <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
                 <span class="o">.</span><span class="na">filter</span><span class="o">((</span><span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">CommandData</span><span class="o">&gt;</span> <span class="n">command</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span> <span class="k">return</span> <span class="n">command</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">Commands</span><span class="o">;</span> <span class="o">})</span>
                 <span class="o">.</span><span class="na">collect</span><span class="o">(</span><span class="n">Collectors</span><span class="o">.</span><span class="na">toList</span><span class="o">());</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verify</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForContract</span> <span class="n">tx</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IllegalArgumentException</span> <span class="o">{</span>
+        <span class="n">ClauseVerifier</span><span class="o">.</span><span class="na">verifyClauses</span><span class="o">(</span><span class="n">tx</span><span class="o">,</span> <span class="n">Collections</span><span class="o">.</span><span class="na">singletonList</span><span class="o">(</span><span class="k">new</span> <span class="n">Clause</span><span class="o">.</span><span class="na">Group</span><span class="o">()),</span> <span class="n">extractCommands</span><span class="o">(</span><span class="n">tx</span><span class="o">));</span>
     <span class="o">}</span>
 </pre></div>
 </div>

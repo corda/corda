@@ -122,8 +122,11 @@ interface ContractState {
      *
      * The encumbered state refers to another by index, and the referred encumbrance state
      * is an output state in a particular position on the same transaction that created the encumbered state. An alternative
-     * would be encumber by reference to a StateRef., which would allow the specification of encumbrance by a state created
-     * in a prior transaction.
+     * implementation would be encumber by reference to a StateRef., which would allow the specification of encumbrance
+     * by a state created in a prior transaction.
+     *
+     * Note that an encumbered state that is being consumed must have its encumbrance consumed in the same transaction,
+     * otherwise the transaction is not valid.
      */
     val encumbrance: Int? get() = null
 }

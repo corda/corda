@@ -13,8 +13,7 @@ import kotlin.test.assertFailsWith
 val TEST_TIMELOCK_ID = TransactionEncumbranceTests.TestTimeLock()
 
 class TransactionEncumbranceTests {
-    val defaultRef = OpaqueBytes(ByteArray(1, {1}))
-    val defaultIssuer = MEGA_CORP.ref(defaultRef)
+    val defaultIssuer = MEGA_CORP.ref(1)
     val encumberedState = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
             owner = DUMMY_PUBKEY_1,
@@ -34,13 +33,10 @@ class TransactionEncumbranceTests {
         override val legalContractReference = SecureHash.sha256("TestTimeLock")
         override fun verify(tx: TransactionForContract) {
             val timestamp: Timestamp? = tx.timestamp
-            val timeLockCommand = tx.commands.select<TestTimeLock.Commands>().first()
-            if (timeLockCommand.value is TestTimeLock.Commands.Exit) {
-                val time = timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
-                requireThat {
-                    "the time specified in the time-lock has passed" by
-                            (time >= tx.inputs.filterIsInstance<TestTimeLock.State>().first().validFrom)
-                }
+            val time = timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
+            requireThat {
+                "the time specified in the time-lock has passed" by
+                        (time >= tx.inputs.filterIsInstance<TestTimeLock.State>().single().validFrom)
             }
         }
         data class State(
@@ -49,10 +45,6 @@ class TransactionEncumbranceTests {
             override val participants: List<PublicKey>
                 get() = throw UnsupportedOperationException()
             override val contract: Contract = TEST_TIMELOCK_ID
-        }
-        interface Commands : CommandData {
-            class Issue : TypeOnlyCommandData(), Commands
-            class Exit : TypeOnlyCommandData(), Commands
         }
     }
 
@@ -68,26 +60,22 @@ class TransactionEncumbranceTests {
             }
         }
         // An encumbered state must not be encumbered by itself.
-        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
-            transaction {
-                input { unencumberedState }
-                input { unencumberedState }
-                output { unencumberedState }
-                // The encumbered state refers to an encumbrance in position 1, so what follows is wrong.
-                output { encumberedState }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this.verifies()
-            }
+        transaction {
+            input { unencumberedState }
+            input { unencumberedState }
+            output { unencumberedState }
+            // The encumbered state refers to an encumbrance in position 1, so what follows is wrong.
+            output { encumberedState }
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this `fails with` "Missing required encumbrance 1 in OUTPUT"
         }
         // An encumbered state must not reference an index greater than the size of the output states.
-        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
-            transaction {
-                input { unencumberedState }
-                // The encumbered state refers to an encumbrance in position 1, so there should be at least 2 outputs.
-                output { encumberedState }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this.verifies()
-            }
+        transaction {
+            input { unencumberedState }
+            // The encumbered state refers to an encumbrance in position 1, so there should be at least 2 outputs.
+            output { encumberedState }
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this `fails with` "Missing required encumbrance 1 in OUTPUT"
         }
 
     }
@@ -95,43 +83,37 @@ class TransactionEncumbranceTests {
     @Test
     fun testEncumbranceEffects() {
         // A transaction containing an input state that is encumbered must fail if the encumbrance is not in the correct position.
-        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
-            ledger {
-                unverifiedTransaction {
-                    output("state encumbered by 5pm time-lock") { encumberedState }
-                    output { unencumberedState }
-                    output("5pm time-lock") { FIVE_PM_TIMELOCK }
-                }
-                transaction {
-                    input("state encumbered by 5pm time-lock")
-                    input("5pm time-lock")
-                    output { stateWithNewOwner }
-                    command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                    command(DUMMY_PUBKEY_1) { TestTimeLock.Commands.Exit() }
-                    timestamp(FIVE_PM)
-                    this.verifies()
-                }
+         ledger {
+            unverifiedTransaction {
+                output("state encumbered by 5pm time-lock") { encumberedState }
+                output { unencumberedState }
+                output("5pm time-lock") { FIVE_PM_TIMELOCK }
+            }
+            transaction {
+                input("state encumbered by 5pm time-lock")
+                input("5pm time-lock")
+                output { stateWithNewOwner }
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                timestamp(FIVE_PM)
+                this `fails with` "Missing required encumbrance 1 in INPUT"
             }
         }
         // A transaction containing an input state that is encumbered must fail if the encumbrance is not in the correct transaction.
-        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
-            ledger {
-                unverifiedTransaction {
-                    output("state encumbered by 5pm time-lock") { encumberedState }
-                    output { unencumberedState }
-                }
-                unverifiedTransaction {
-                    output("5pm time-lock") { FIVE_PM_TIMELOCK }
-                }
-                transaction {
-                    input("state encumbered by 5pm time-lock")
-                    input("5pm time-lock")
-                    output { stateWithNewOwner }
-                    command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                    command(DUMMY_PUBKEY_1) { TestTimeLock.Commands.Exit() }
-                    timestamp(FIVE_PM)
-                    this.verifies()
-                }
+        ledger {
+            unverifiedTransaction {
+                output("state encumbered by 5pm time-lock") { encumberedState }
+                output { unencumberedState }
+            }
+            unverifiedTransaction {
+                output("5pm time-lock") { FIVE_PM_TIMELOCK }
+            }
+            transaction {
+                input("state encumbered by 5pm time-lock")
+                input("5pm time-lock")
+                output { stateWithNewOwner }
+                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                timestamp(FIVE_PM)
+                this `fails with` "Missing required encumbrance 1 in INPUT"
             }
         }
         // A transaction with an input state that is encumbered must succeed if the rules of the encumbrance are met.
@@ -144,9 +126,8 @@ class TransactionEncumbranceTests {
             transaction {
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
-                output { stateWithNewOwner }
+                output { unencumberedState }
                 command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                command(DUMMY_PUBKEY_1) { TestTimeLock.Commands.Exit() }
                 timestamp(FIVE_PM)
                 this.verifies()
             }
@@ -161,9 +142,8 @@ class TransactionEncumbranceTests {
             transaction {
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
-                output { stateWithNewOwner }
+                output { unencumberedState }
                 command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                command(DUMMY_PUBKEY_1) { TestTimeLock.Commands.Exit() }
                 timestamp(FOUR_PM)
                 this `fails with` "the time specified in the time-lock has passed"
             }

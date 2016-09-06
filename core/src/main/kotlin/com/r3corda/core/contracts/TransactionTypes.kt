@@ -83,17 +83,21 @@ sealed class TransactionType {
                 encumberedInput ->
                 if (tx.inputs.none { it.ref.txhash == encumberedInput.ref.txhash &&
                         it.ref.index == encumberedInput.state.data.encumbrance }) {
-                    throw TransactionVerificationException.TransactionMissingEncumbranceException(tx)
+                    throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                            tx, encumberedInput.state.data.encumbrance!!,
+                            TransactionVerificationException.Direction.INPUT
+                    )
                 }
             }
 
-            // Check that an encumbered state does not refer to itself as the encumbrance, and that the number of outputs
-            // can contain the encumbrance.
-            tx.outputs.forEachIndexed { i, it ->
-                if (it.data.encumbrance != null) {
-                    if (it.data.encumbrance == i || it.data.encumbrance!! >= tx.outputs.size) {
-                        throw TransactionVerificationException.TransactionMissingEncumbranceException(tx)
-                    }
+            // Check that, in the outputs, an encumbered state does not refer to itself as the encumbrance,
+            // and that the number of outputs can contain the encumbrance.
+            for ((i, output) in tx.outputs.withIndex() ) {
+                val encumbranceIndex = output.data.encumbrance ?: continue
+                if (encumbranceIndex == i || encumbranceIndex >= tx.outputs.size) {
+                    throw TransactionVerificationException.TransactionMissingEncumbranceException(
+                            tx, encumbranceIndex,
+                            TransactionVerificationException.Direction.OUTPUT)
                 }
             }
         }

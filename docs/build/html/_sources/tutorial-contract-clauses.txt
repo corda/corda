@@ -10,7 +10,7 @@ Writing a contract using clauses
 This tutorial will take you through restructuring the commercial paper contract to use clauses. You should have
 already completed ":doc:`tutorial-contract`".
 
-Clauses are essentially "mini-contracts" which contain verification logic, and are composed together to form
+Clauses are essentially micro-contracts which contain independent verification logic, and are composed together to form
 a contract. With appropriate design, they can be made to be reusable, for example issuing contract state objects is
 generally the same for all fungible contracts, so a single issuance clause can be shared. This cuts down on scope for
 error, and improves consistency of behaviour.
@@ -27,24 +27,23 @@ In the case of commercial paper, we have a "Grouping" outermost clause, which wi
 Commercial paper class
 ----------------------
 
-First we need to change the class from implementing ``Contract``, to extend ``ClauseVerifier``. This is an abstract
-class which provides a verify() function for us, and requires we provide a property (``clauses``) for the clauses to test,
-and a function (``extractCommands``) to extract the applicable commands from the transaction. This is important because
-``ClauseVerifier`` checks that no commands applicable to the contract are left unprocessed at the end. The following
-examples are trimmed to the modified class definition and added elements, for brevity:
+To use the clause verification logic, the contract needs to call the ``verifyClauses()`` function, passing in the transaction,
+a list of clauses to verify, and a collection of commands the clauses are expected to handle all of. This list of
+commands is important because ``verifyClauses()`` checks that none of the commands are left unprocessed at the end, and
+raises an error if they are. The following examples are trimmed to the modified class definition and added elements, for
+brevity:
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-      class CommercialPaper : ClauseVerifier {
-          override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
+      class CommercialPaper : Contract {
+          override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
-          override val clauses: List<SingleClause>
-              get() = throw UnsupportedOperationException("not implemented")
-
-          override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
+          private fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<CommandData>>
               = tx.commands.select<Commands>()
+
+          override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clauses.Group()), extractCommands(tx))
 
    .. sourcecode:: java
 
@@ -55,16 +54,16 @@ examples are trimmed to the modified class definition and added elements, for br
           }
 
           @Override
-          public List<SingleClause> getClauses() {
-              throw UnsupportedOperationException("not implemented");
-          }
-
-          @Override
           public Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
               return tx.getCommands()
                       .stream()
                       .filter((AuthenticatedObject<CommandData> command) -> { return command.getValue() instanceof Commands; })
                       .collect(Collectors.toList());
+          }
+
+          @Override
+          public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
+              ClauseVerifier.verifyClauses(tx, Collections.singletonList(new Clause.Group()), extractCommands(tx));
           }
 
 Clauses

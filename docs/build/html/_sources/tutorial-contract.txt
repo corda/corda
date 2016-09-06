@@ -845,6 +845,70 @@ be implemented once in a separate contract, with the controlling data being held
 
 Future versions of the prototype will explore these concepts in more depth.
 
+Encumbrances
+------------
+
+All contract states may be *encumbered* by up to one other state, which we call an **encumbrance**.
+
+The encumbrance state, if present, forces additional controls over the encumbered state, since the encumbrance state contract
+will also be verified during the execution of the transaction. For example, a contract state could be encumbered
+with a time-lock contract state; the state is then only processable in a transaction that verifies that the time
+specified in the encumbrance time-lock has passed.
+
+The encumbered state refers to its encumbrance by index, and the referred encumbrance state
+is an output state in a particular position on the same transaction that created the encumbered state. Note that an
+encumbered state that is being consumed must have its encumbrance consumed in the same transaction, otherwise the
+transaction is not valid.
+
+The encumbrance reference is optional in the ``ContractState`` interface:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val encumbrance: Int? get() = null
+
+    .. sourcecode:: java
+
+        @Nullable
+        @Override
+        public Integer getEncumbrance() {
+            return null;
+        }
+
+
+The time-lock contract mentioned above can be implemented very simply:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+    class TestTimeLock : Contract {
+        ...
+        override fun verify(tx: TransactionForContract) {
+            val timestamp: Timestamp? = tx.timestamp
+            ...
+            requireThat {
+                "the time specified in the time-lock has passed" by
+                        (time >= tx.inputs.filterIsInstance<TestTimeLock.State>().single().validFrom)
+            }
+        }
+        ...
+    }
+
+We can then set up an encumbered state:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val encumberedState = Cash.State(amount = 1000.DOLLARS `issued by` defaultIssuer, owner = DUMMY_PUBKEY_1, encumbrance = 1)
+        val fourPmTimelock = TestTimeLock.State(Instant.parse("2015-04-17T16:00:00.00Z"))
+
+When we construct a transaction that generates the encumbered state, we must place the encumbrance in the corresponding output
+position of that transaction. And when we subsequently consume that encumbered state, the same encumbrance state must be
+available somewhere within the input set of states.
+
 Clauses
 -------
 
