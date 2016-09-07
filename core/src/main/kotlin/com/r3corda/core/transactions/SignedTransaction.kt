@@ -55,8 +55,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @Throws(SignatureException::class)
     fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
-        for (sig in sigs)
-            sig.verifyWithECDSA(txBits.bits)
+        checkSignaturesAreValid()
 
         val missing = getMissingSignatures()
         if (missing.isNotEmpty()) {
@@ -66,6 +65,20 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
                 throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
         }
         return tx
+    }
+
+    /**
+     * Mathematically validates the signatures that are present on this transaction. This does not imply that
+     * the signatures are by the right keys, or that there are sufficient signatures, just that they aren't
+     * corrupt. If you use this function directly you'll need to do the other checks yourself. Probably you
+     * want [verifySignatures] instead.
+     *
+     * @throws SignatureException if a signature fails to verify.
+     */
+    @Throws(SignatureException::class)
+    fun checkSignaturesAreValid() {
+        for (sig in sigs)
+            sig.verifyWithECDSA(txBits.bits)
     }
 
     private fun getMissingSignatures(): Set<PublicKey> {
