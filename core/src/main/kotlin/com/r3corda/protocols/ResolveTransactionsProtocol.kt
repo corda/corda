@@ -32,6 +32,44 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
+
+        private fun topologicalSort(transactions: Iterable<SignedTransaction>): List<SignedTransaction> {
+
+            // Construct txhash -> dependent-txhashes map
+            val forwardGraph = HashMap<SecureHash, HashSet<SecureHash>>()
+            transactions.forEach { tx ->
+                tx.tx.inputs.forEach { input ->
+                    forwardGraph.getOrPut(input.txhash) { HashSet() }.add(tx.id)
+                }
+            }
+
+            // Construct txhash -> tx map
+            val transactionMap = HashMap<SecureHash, SignedTransaction>()
+            transactions.forEach { transactionMap[it.tx.id] = it }
+
+            val visited = HashSet<SecureHash>()
+            val result = LinkedList<SignedTransaction>()
+
+            fun visit(transactionHash: SecureHash) {
+                if (transactionHash in visited) {
+                    return
+                }
+                visited.add(transactionHash)
+                forwardGraph[transactionHash]?.forEach {
+                    visit(it)
+                }
+                result.addFirst(transactionMap[transactionHash]!!)
+            }
+
+            transactions.forEach {
+                visit(it.tx.id)
+            }
+
+            require(result.size == transactionMap.size)
+            require(visited.size == transactionMap.size)
+            return result
+        }
+
     }
 
     class ExcessivelyLargeTransactionGraph() : Exception()
@@ -60,7 +98,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
     @Suspendable
     override fun call(): List<LedgerTransaction> {
-        val newTxns: Iterable<SignedTransaction> = downloadDependencies(txHashes)
+        val newTxns: Iterable<SignedTransaction> = topologicalSort(downloadDependencies(txHashes))
 
         // For each transaction, verify it and insert it into the database. As we are iterating over them in a
         // depth-first order, we should not encounter any verification failures due to missing data. If we fail

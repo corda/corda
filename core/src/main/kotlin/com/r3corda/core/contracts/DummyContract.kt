@@ -54,11 +54,13 @@ class DummyContract : Contract {
             return TransactionType.General.Builder(notary = notary).withItems(state, Command(Commands.Create(), owner.party.owningKey))
         }
 
-        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: PublicKey): TransactionBuilder {
-            val priorState = prior.state.data
+        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: PublicKey) = move(listOf(prior), newOwner)
+        fun move(priors: List<StateAndRef<DummyContract.SingleOwnerState>>, newOwner: PublicKey): TransactionBuilder {
+            require(priors.size > 0)
+            val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)
-            return TransactionType.General.Builder(notary = prior.state.notary).withItems(
-                    /* INPUT   */ prior,
+            return TransactionType.General.Builder(notary = priors[0].state.notary).withItems(
+                    /* INPUTS  */ *priors.toTypedArray(),
                     /* COMMAND */ Command(cmd, priorState.owner),
                     /* OUTPUT  */ state
             )
