@@ -8,6 +8,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
@@ -93,8 +94,8 @@ class TwoPartyTradeProtocolTests {
         ledger {
 
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
-            val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
+            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
+            val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
@@ -139,11 +140,11 @@ class TwoPartyTradeProtocolTests {
     fun `shutdown and restore`() {
         ledger {
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
-            var bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
+            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
+            var bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
 
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-            val networkMapAddr = notaryNode.info
+            val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages
 
@@ -202,7 +203,7 @@ class TwoPartyTradeProtocolTests {
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
             bobNode = net.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
-                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                     advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                     return MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id, BOB_KEY)
                 }
@@ -229,10 +230,10 @@ class TwoPartyTradeProtocolTests {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(networkMapAddr: NodeInfo?, name: String, keyPair: KeyPair): MockNetwork.MockNode {
+    private fun makeNodeWithTracking(networkMapAddr: SingleMessageRecipient?, name: String, keyPair: KeyPair): MockNetwork.MockNode {
         // Create a node in the mock network ...
         return net.createNode(networkMapAddr, -1, object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     // That constructs the storage service object in a customised way ...
@@ -250,8 +251,8 @@ class TwoPartyTradeProtocolTests {
     @Test
     fun `check dependencies of sale asset are resolved`() {
         val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-        val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
-        val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
+        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
+        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
 
         ledger(aliceNode.services) {
 
@@ -371,8 +372,8 @@ class TwoPartyTradeProtocolTests {
             expectedMessageSubstring: String
     ) {
         val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-        val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
-        val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
+        val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
+        val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
         val bobKey = bobNode.keyManagement.freshKey()

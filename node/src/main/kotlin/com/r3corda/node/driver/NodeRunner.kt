@@ -1,16 +1,11 @@
 package com.r3corda.node.driver
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.parsePublicKeyBase58
-import com.r3corda.core.crypto.toBase58String
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
-import com.r3corda.node.services.network.NetworkMapService
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
 import joptsimple.OptionSet
@@ -18,7 +13,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.PublicKey
 import java.util.*
 
 private val log: Logger = LoggerFactory.getLogger(NodeRunner::class.java)
@@ -33,15 +27,8 @@ class NodeRunner {
             with(cliParams) {
 
                 val networkMapNodeInfo =
-                        if (networkMapName != null && networkMapPublicKey != null && networkMapAddress != null) {
-                            NodeInfo(
-                                    address = ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress),
-                                    identity = Party(
-                                            name = networkMapName,
-                                            owningKey = networkMapPublicKey
-                                    ),
-                                    advertisedServices = setOf(NetworkMapService.Type)
-                            )
+                        if (networkMapAddress != null) {
+                            ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress)
                         } else {
                             null
                         }
@@ -70,8 +57,6 @@ class NodeRunner {
 
     class CliParams (
             val services: Set<ServiceType>,
-            val networkMapName: String?,
-            val networkMapPublicKey: PublicKey?,
             val networkMapAddress: HostAndPort?,
             val messagingAddress: HostAndPort,
             val apiAddress: HostAndPort,
@@ -82,10 +67,6 @@ class NodeRunner {
             val parser = OptionParser()
             val services =
                     parser.accepts("services").withRequiredArg().ofType(String::class.java)
-            val networkMapName =
-                    parser.accepts("network-map-name").withOptionalArg().ofType(String::class.java)
-            val networkMapPublicKey =
-                    parser.accepts("network-map-public-key").withOptionalArg().ofType(String::class.java)
             val networkMapAddress =
                     parser.accepts("network-map-address").withOptionalArg().ofType(String::class.java)
             val messagingAddress =
@@ -100,8 +81,6 @@ class NodeRunner {
 
             fun parse(optionSet: OptionSet): CliParams {
                 val services = optionSet.valuesOf(services)
-                val networkMapName = optionSet.valueOf(networkMapName)
-                val networkMapPublicKey = optionSet.valueOf(networkMapPublicKey)?.run { parsePublicKeyBase58(this) }
                 val networkMapAddress = optionSet.valueOf(networkMapAddress)
                 val messagingAddress = requiredArgument(optionSet, messagingAddress)
                 val apiAddress = requiredArgument(optionSet, apiAddress)
@@ -112,8 +91,6 @@ class NodeRunner {
                         messagingAddress = HostAndPort.fromString(messagingAddress),
                         apiAddress = HostAndPort.fromString(apiAddress),
                         baseDirectory = baseDirectory,
-                        networkMapName = networkMapName,
-                        networkMapPublicKey = networkMapPublicKey,
                         networkMapAddress = networkMapAddress?.let { HostAndPort.fromString(it) }
                 )
             }
@@ -124,14 +101,6 @@ class NodeRunner {
             if (services.isNotEmpty()) {
                 cliArguments.add("--services")
                 cliArguments.addAll(services.map { it.toString() })
-            }
-            if (networkMapName != null) {
-                cliArguments.add("--network-map-name")
-                cliArguments.add(networkMapName)
-            }
-            if (networkMapPublicKey != null) {
-                cliArguments.add("--network-map-public-key")
-                cliArguments.add(networkMapPublicKey.toBase58String())
             }
             if (networkMapAddress != null) {
                 cliArguments.add("--network-map-address")

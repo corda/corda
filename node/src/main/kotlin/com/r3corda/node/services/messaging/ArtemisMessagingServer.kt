@@ -3,6 +3,7 @@ package com.r3corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.newSecureRandom
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.utilities.loggerFor
@@ -67,8 +68,8 @@ class ArtemisMessagingServer(directory: Path,
         running = false
     }
 
-    fun bridgeToNetworkMapService(networkMapService: NodeInfo?) {
-        if ((networkMapService != null) && (networkMapService.address is NetworkMapAddress)) {
+    fun bridgeToNetworkMapService(networkMapService: SingleMessageRecipient?) {
+        if ((networkMapService != null) && (networkMapService is NetworkMapAddress)) {
             val query = activeMQServer.queueQuery(NETWORK_MAP_ADDRESS)
             if (!query.isExists) {
                 activeMQServer.createQueue(NETWORK_MAP_ADDRESS, NETWORK_MAP_ADDRESS, null, true, false)
@@ -87,7 +88,7 @@ class ArtemisMessagingServer(directory: Path,
                     val query = activeMQServer.queueQuery(queueName)
                     if (query.isExists) {
                         // Queue exists so now wire up bridge
-                        maybeDeployBridgeForAddress(queueName, change.node)
+                        maybeDeployBridgeForAddress(queueName, change.node.address)
                     }
                 }
 
@@ -99,7 +100,7 @@ class ArtemisMessagingServer(directory: Path,
                     val query = activeMQServer.queueQuery(queueName)
                     if (query.isExists) {
                         // Deploy new bridge
-                        maybeDeployBridgeForAddress(queueName, change.node)
+                        maybeDeployBridgeForAddress(queueName, change.node.address)
                     }
                 }
 
@@ -135,7 +136,7 @@ class ArtemisMessagingServer(directory: Path,
                     if (identity != null) {
                         val nodeInfo = networkMapCache.getNodeByPublicKey(identity)
                         if (nodeInfo != null) {
-                            maybeDeployBridgeForAddress(queueName, nodeInfo)
+                            maybeDeployBridgeForAddress(queueName, nodeInfo.address)
                         }
                     }
                 }
@@ -191,8 +192,8 @@ class ArtemisMessagingServer(directory: Path,
      * For every queue created we need to have a bridge deployed in case the address of the queue
      * is that of a remote party
      */
-    private fun maybeDeployBridgeForAddress(name: SimpleString, nodeInfo: NodeInfo) {
-        val hostAndPort = toHostAndPort(nodeInfo.address)
+    private fun maybeDeployBridgeForAddress(name: SimpleString, address: SingleMessageRecipient) {
+        val hostAndPort = toHostAndPort(address)
 
         if (hostAndPort == myHostPort) {
             return

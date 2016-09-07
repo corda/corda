@@ -38,7 +38,6 @@ fun main(args: Array<String>) {
     val networkAddressArg = parser.accepts("network-address").withRequiredArg().required()
     val dirArg = parser.accepts("directory").withRequiredArg().defaultsTo("rate-fix-demo-data")
     val networkMapAddrArg = parser.accepts("network-map").withRequiredArg().required()
-    val networkMapIdentityArg = parser.accepts("network-map-identity-file").withRequiredArg().required()
 
     val fixOfArg = parser.accepts("fix-of").withRequiredArg().defaultsTo("ICE LIBOR 2016-03-16 1M")
     val expectedRateArg = parser.accepts("expected-rate").withRequiredArg().defaultsTo("0.67")
@@ -56,8 +55,6 @@ fun main(args: Array<String>) {
 
     val dir = Paths.get(options.valueOf(dirArg))
     val networkMapAddr = ArtemisMessagingClient.makeNetworkMapAddress(HostAndPort.fromString(options.valueOf(networkMapAddrArg)))
-    val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
-    val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity, setOf(NetworkMapService.Type, NotaryService.Type))
 
     val fixOf: FixOf = NodeInterestRates.parseFixOf(options.valueOf(fixOfArg))
     val expectedRate = BigDecimal(options.valueOf(expectedRateArg))
@@ -77,7 +74,7 @@ fun main(args: Array<String>) {
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddress,
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddr,
             advertisedServices, DemoClock()).setup().start() }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]
