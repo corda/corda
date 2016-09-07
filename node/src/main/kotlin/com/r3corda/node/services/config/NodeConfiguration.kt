@@ -90,12 +90,6 @@ class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : N
     override val dataSourceProperties: Properties by config
 }
 
-class NameServiceConfig(conf: Config) {
-    val hostServiceLocally: Boolean by conf
-    val address: HostAndPort by conf
-    val identity: String by conf
-}
-
 class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val basedir: Path by conf
     override val myLegalName: String by conf
@@ -108,28 +102,26 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
     val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
+    val networkMapAddress: HostAndPort? = if (conf.hasPath("networkMapAddress")) HostAndPort.fromString(conf.getString("networkMapAddress")) else null
     val hostNotaryServiceLocally: Boolean by conf
     val extraAdvertisedServiceIds: String by conf
-    val mapService: NameServiceConfig = NameServiceConfig(conf.getConfig("mapService"))
     val clock: Clock = NodeClock()
 
     fun createNode(): Node {
-        val networkMapTarget = ArtemisMessagingClient.makeNetworkMapAddress(mapService.address)
         val advertisedServices = mutableSetOf<ServiceType>()
-        if (mapService.hostServiceLocally) advertisedServices.add(NetworkMapService.Type)
         if (hostNotaryServiceLocally) advertisedServices.add(SimpleNotaryService.Type)
         if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
             for (serviceId in extraAdvertisedServiceIds.split(",")) {
                 advertisedServices.add(object : ServiceType(serviceId) {})
             }
         }
-
-        val networkMapAddress: SingleMessageRecipient? = if (mapService.hostServiceLocally) null else networkMapTarget
+        if (networkMapAddress == null) advertisedServices.add(NetworkMapService.Type)
+        val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress)
         return Node(basedir.toAbsolutePath().normalize(),
                 artemisAddress,
                 webAddress,
                 this,
-                networkMapAddress,
+                networkMapMessageAddress,
                 advertisedServices,
                 clock,
                 messagingServerAddress

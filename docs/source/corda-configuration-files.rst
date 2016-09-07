@@ -40,11 +40,7 @@ General node configuration file for hosting the IRSDemo services.
 	webAddress : "localhost:31339"
 	hostNotaryServiceLocally: false
 	extraAdvertisedServiceIds: "corda.interest_rates"
-	mapService : {
-	   hostServiceLocally : false
-	   address : "localhost:12345"
-	   identity : "Notary Service"
-	}
+	networkMapAddress : "localhost:12345"
 	useHTTPS : false
 
 NetworkMapService plus Simple Notary configuration file.
@@ -60,11 +56,6 @@ NetworkMapService plus Simple Notary configuration file.
 	webAddress : "localhost:12346"
 	hostNotaryServiceLocally: true
 	extraAdvertisedServiceIds: ""
-	mapService : {
-	   hostServiceLocally : true
-	   address : ${artemisAddress}
-	   identity : ${myLegalName}
-	}
 	useHTTPS : false
 
 Configuration File Fields
@@ -103,11 +94,7 @@ Configuration File Fields
 
 :extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the 
 
-:mapService.hostServiceLocally: If true the node is declaring itself as the NetworkMapService host. Otherwise the configuration below is the remote connection details for the node to connect to the NetworkMapService.
-
-:mapService.address: If the node is hosting the NetworkMapService this should be exactly equal to the artemisAddress (hence $ substitution above). Otherwise this value is the remote HostAndPort string for the ArtemisMQ service on the hosting node.
-
-:mapService.identity: If the node is hosting the NetworkMapService this should be exactly equal to the myLegalName (hence $ substitution above). Otherwise this value must match the myLegalName of the hosting node.
+:networkMapAddress: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise the configuration value is the remote HostAndPort string for the ArtemisMQ service on the hosting node.
 
 :useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled then unencrypted HTTP traffic to the node's **webAddress** port is not supported.
 
