@@ -24,26 +24,26 @@ class Caplet {
     val currency = EUR
 
     val contract = arrange {
-        (roadRunner or wileECoyote).may {
+        (acmeCorp or highStreetBank).may {
             "exercise".anytime() {
                 val floating = interest(notional, "act/365", fix("LIBOR", dt, Tenor("6M")), "2016-04-01", "2016-10-01")
                 val fixed = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-10-01")
-                wileECoyote.gives(roadRunner, (floating - fixed).plus(), currency)
+                highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
             }
         }
     }
 
     val contractFixed = arrange {
-        (roadRunner or wileECoyote).may {
+        (acmeCorp or highStreetBank).may {
             "exercise".anytime() {
                 val floating = interest(notional, "act/365", 1.0.bd, "2016-04-01", "2016-10-01")
                 val fixed = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-10-01")
-                wileECoyote.gives(roadRunner, (floating - fixed).plus(), currency)
+                highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
             }
         }
     }
 
-    val contractFinal = arrange { wileECoyote.gives(roadRunner, 250.K, EUR) }
+    val contractFinal = arrange { highStreetBank.gives(acmeCorp, 250.K, EUR) }
 
     val stateStart = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract)
 
@@ -60,11 +60,11 @@ class Caplet {
             this `fails with` "transaction has a single command"
 
             tweak {
-                command(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
 
             this.verifies()
         }
@@ -78,11 +78,11 @@ class Caplet {
             timestamp(TEST_TX_TIME_1)
 
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Action("exercise") }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
 
             this.verifies()
         }
@@ -96,38 +96,38 @@ class Caplet {
             timestamp(TEST_TX_TIME_1)
 
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
 
             tweak {
                 // wrong source
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", dt, Tenor("6M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", dt, Tenor("6M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt.plusYears(1), Tenor("6M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt.plusYears(1), Tenor("6M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("3M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), 1.5.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), 1.5.bd))) }
 
                 this `fails with` "output state does not reflect fix command"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), 1.0.bd))) }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", dt, Tenor("6M")), 1.0.bd))) }
 
             this.verifies()
         }

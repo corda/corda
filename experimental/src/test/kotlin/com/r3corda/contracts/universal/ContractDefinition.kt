@@ -10,9 +10,9 @@ import java.util.*
  */
 
 // Test parties
-val roadRunner = Party("Road Runner", generateKeyPair().public)
-val wileECoyote = Party("Wile E. Coyote", generateKeyPair().public)
-val porkyPig = Party("Porky Pig", generateKeyPair().public)
+val acmeCorp = Party("ACME Corporation", generateKeyPair().public)
+val highStreetBank = Party("High Street Bank", generateKeyPair().public)
+val momAndPop = Party("Mom and Pop", generateKeyPair().public)
 
 val acmeCorporationHasDefaulted = DummyPerceivable<Boolean>()
 
@@ -28,11 +28,11 @@ class ContractDefinition {
 
 
     val cds_contract = arrange {
-        roadRunner.may {
+        acmeCorp.may {
             "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
-                wileECoyote.gives(roadRunner, 1.M, USD)
+                highStreetBank.gives(acmeCorp, 1.M, USD)
             }
-        } or wileECoyote.may {
+        } or highStreetBank.may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }
@@ -41,12 +41,12 @@ class ContractDefinition {
 
 
     val american_fx_option = arrange {
-        roadRunner.may {
+        acmeCorp.may {
             "exercise".anytime {
-                wileECoyote.gives(roadRunner, 1.M, EUR)
-                roadRunner.gives(wileECoyote, 1200.K, USD)
+                highStreetBank.gives(acmeCorp, 1.M, EUR)
+                acmeCorp.gives(highStreetBank, 1200.K, USD)
             }
-        } or wileECoyote.may {
+        } or highStreetBank.may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }
@@ -55,16 +55,16 @@ class ContractDefinition {
 
 
     val european_fx_option = arrange {
-        roadRunner.may {
+        acmeCorp.may {
             "exercise".anytime {
-                (roadRunner or wileECoyote).may {
+                (acmeCorp or highStreetBank).may {
                     "execute".givenThat(after("2017-09-01")) {
-                        wileECoyote.gives(roadRunner, 1.M, EUR)
-                        roadRunner.gives(wileECoyote, 1200.K, USD)
+                        highStreetBank.gives(acmeCorp, 1.M, EUR)
+                        acmeCorp.gives(highStreetBank, 1200.K, USD)
                     }
                 }
             }
-        } or wileECoyote.may {
+        } or highStreetBank.may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }

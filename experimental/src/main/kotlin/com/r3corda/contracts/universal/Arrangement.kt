@@ -12,7 +12,6 @@ import java.util.*
 
 interface Arrangement
 
-
 // A base arrangement with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
 class Zero() : Arrangement {
     override fun hashCode(): Int {
@@ -28,11 +27,7 @@ class Zero() : Arrangement {
 //
 // todo: should be replaced with something that uses Corda assets and/or cash?
 // todo: should only be allowed to transfer non-negative amounts
-data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement {
-    constructor(amount: BigDecimal, currency: Currency, from: Party, to: Party ) : this(const(amount), currency, from, to)
-    constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(BigDecimal(amount.quantity)), amount.token, from, to)
-}
-
+data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement
 
 // A combinator over a list of arrangements. Each arrangement in list will create a separate independent arrangement state.
 // The ``And`` combinator cannot be root in a arrangement.

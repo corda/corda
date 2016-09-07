@@ -24,7 +24,7 @@ open class ContractBuilder {
     val contracts = mutableListOf<Arrangement>()
 
     fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency) : Transfer {
-        val c = Transfer(amount, currency, this, beneficiary)
+        val c = Transfer(const(amount), currency, this, beneficiary)
         contracts.add( c )
         return c
     }

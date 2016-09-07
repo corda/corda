@@ -141,7 +141,7 @@ class UniversalContract : Contract {
         is Transfer -> {
             val amount = eval(tx, arrangement.amount)
             requireThat { "transferred quantity is non-negative" by (amount >= BigDecimal.ZERO) }
-            Transfer(amount, arrangement.currency, arrangement.from, arrangement.to)
+            Transfer(const(amount), arrangement.currency, arrangement.from, arrangement.to)
         }
         is And -> And(arrangement.arrangements.map { validateImmediateTransfers(tx, it) }.toSet())
         else -> arrangement

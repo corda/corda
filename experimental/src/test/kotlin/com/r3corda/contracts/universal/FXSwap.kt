@@ -15,23 +15,23 @@ class FXSwap {
     val TEST_TX_TIME_TOO_EARLY: Instant get() = Instant.parse("2017-08-31T12:00:00.00Z")
 
     val contract = arrange {
-        (roadRunner or wileECoyote).may {
+        (acmeCorp or highStreetBank).may {
             "execute".givenThat(after("2017-09-01")) {
-                wileECoyote.gives(roadRunner, 1200.K, USD)
-                roadRunner.gives(wileECoyote, 1.M, EUR)
+                highStreetBank.gives(acmeCorp, 1200.K, USD)
+                acmeCorp.gives(highStreetBank, 1.M, EUR)
             }
         }
     }
 
-    val transfer1 = arrange { wileECoyote.gives(roadRunner, 1200.K, USD) }
-    val transfer2 = arrange { roadRunner.gives(wileECoyote, 1.M, EUR) }
+    val transfer1 = arrange { highStreetBank.gives(acmeCorp, 1200.K, USD) }
+    val transfer2 = arrange { acmeCorp.gives(highStreetBank, 1.M, EUR) }
 
     val outState1 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer1 )
     val outState2 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transfer2 )
 
-    val transferBad1 = arrange { wileECoyote.gives(roadRunner, 1200.K, GBP) } // wrong currency
-    val transferBad2 = arrange { roadRunner.gives(wileECoyote, 900.K, EUR) } // wrong amount
-    val transferBad3 = arrange { wileECoyote.gives(wileECoyote, 1.M, EUR) } // wrong party
+    val transferBad1 = arrange { highStreetBank.gives(acmeCorp, 1200.K, GBP) } // wrong currency
+    val transferBad2 = arrange { acmeCorp.gives(highStreetBank, 900.K, EUR) } // wrong amount
+    val transferBad3 = arrange { highStreetBank.gives(highStreetBank, 1.M, EUR) } // wrong party
 
     val outStateBad1 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferBad1 )
     val outStateBad2 = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), transferBad2 )
@@ -49,15 +49,15 @@ class FXSwap {
             this `fails with` "transaction has a single command"
 
             tweak {
-                command(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails with` "the transaction is signed by all liable parties"
             }
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
-            command(wileECoyote.owningKey, roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+            command(highStreetBank.owningKey, acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
 
             this.verifies()
         }
@@ -72,11 +72,11 @@ class FXSwap {
             timestamp(TEST_TX_TIME_1)
 
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("execute") }
 
             this.verifies()
         }
@@ -91,11 +91,11 @@ class FXSwap {
             timestamp(TEST_TX_TIME_1)
 
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("execute") }
 
             this.verifies()
         }
@@ -109,7 +109,7 @@ class FXSwap {
             output { outState2 }
             timestamp(TEST_TX_TIME_1)
 
-            command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "action must be authorized"
         }
     }
@@ -122,7 +122,7 @@ class FXSwap {
             output { outState2 }
             timestamp(TEST_TX_TIME_TOO_EARLY)
 
-            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "condition must be met"
         }
     }
@@ -134,7 +134,7 @@ class FXSwap {
             output { outState1 }
             timestamp(TEST_TX_TIME_1)
 
-            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output state must match action result state"
         }
     }
@@ -147,7 +147,7 @@ class FXSwap {
             output { outStateBad2 }
             timestamp(TEST_TX_TIME_1)
 
-            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output states must match action result state"
         }
     }
@@ -160,7 +160,7 @@ class FXSwap {
             output { outState2 }
             timestamp(TEST_TX_TIME_1)
 
-            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output states must match action result state"
         }
     }
@@ -173,7 +173,7 @@ class FXSwap {
             output { outStateBad3 }
             timestamp(TEST_TX_TIME_1)
 
-            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output states must match action result state"
         }
     }

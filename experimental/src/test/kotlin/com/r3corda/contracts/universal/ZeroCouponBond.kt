@@ -12,26 +12,26 @@ import java.time.Instant
 class ZeroCouponBond {
 
     val contract = arrange {
-        (roadRunner or wileECoyote).may {
+        (acmeCorp or highStreetBank).may {
             "execute".givenThat(after("2017-09-01")) {
-                wileECoyote.gives(roadRunner, 100.K, GBP)
+                highStreetBank.gives(acmeCorp, 100.K, GBP)
             }
         }
     }
 
 
     val contractMove = arrange {
-        (porkyPig or wileECoyote).may {
+        (momAndPop or highStreetBank).may {
             "execute".givenThat(after("2017-09-01")) {
-                wileECoyote.gives(porkyPig, 100.K, GBP)
+                highStreetBank.gives(momAndPop, 100.K, GBP)
             }
         }
     }
 
     val TEST_TX_TIME_1: Instant get() = Instant.parse("2017-09-02T12:00:00.00Z")
 
-    val transfer = arrange { wileECoyote.gives(roadRunner, 100.K, GBP) }
-    val transferWrong = arrange { wileECoyote.gives(roadRunner, 80.K, GBP) }
+    val transfer = arrange { highStreetBank.gives(acmeCorp, 100.K, GBP) }
+    val transferWrong = arrange { highStreetBank.gives(acmeCorp, 80.K, GBP) }
 
     val inState = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contract )
 
@@ -55,11 +55,11 @@ class ZeroCouponBond {
             this `fails with` "transaction has a single command"
 
             tweak {
-                command(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
 
             this.verifies()
         }
@@ -73,11 +73,11 @@ class ZeroCouponBond {
             timestamp(TEST_TX_TIME_1)
 
             tweak {
-                command(wileECoyote.owningKey) { UniversalContract.Commands.Action("some undefined name") }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("execute") }
 
             this.verifies()
         }
@@ -90,7 +90,7 @@ class ZeroCouponBond {
             output { outState }
             timestamp(TEST_TX_TIME_1)
 
-            command(porkyPig.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "action must be authorized"
         }
     }
@@ -102,7 +102,7 @@ class ZeroCouponBond {
             output { outStateWrong }
             timestamp(TEST_TX_TIME_1)
 
-            command(roadRunner.owningKey) { UniversalContract.Commands.Action("execute") }
+            command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output state must match action result state"
         }
     }
@@ -114,24 +114,24 @@ class ZeroCouponBond {
 
             tweak {
                 output { outStateMove }
-                command(roadRunner.owningKey) {
-                    UniversalContract.Commands.Move(roadRunner, porkyPig)
+                command(acmeCorp.owningKey) {
+                    UniversalContract.Commands.Move(acmeCorp, momAndPop)
                 }
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
             tweak {
                 output { inState }
-                command(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
-                    UniversalContract.Commands.Move(roadRunner, porkyPig)
+                command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
+                    UniversalContract.Commands.Move(acmeCorp, momAndPop)
                 }
                 this `fails with` "output state does not reflect move command"
             }
 
             output { outStateMove}
 
-            command(roadRunner.owningKey, porkyPig.owningKey, wileECoyote.owningKey) {
-                UniversalContract.Commands.Move(roadRunner, porkyPig)
+            command(acmeCorp.owningKey, momAndPop.owningKey, highStreetBank.owningKey) {
+                UniversalContract.Commands.Move(acmeCorp, momAndPop)
             }
             this.verifies()
         }

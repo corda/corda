@@ -17,28 +17,28 @@ class Swaption {
     val coupon = 1.5.bd
 
     val dreary_contract = arrange {
-        (wileECoyote or roadRunner).may {
+        (highStreetBank or acmeCorp).may {
             "proceed".givenThat(after("01/07/2015")) {
-                wileECoyote.gives(roadRunner, libor(notional, "01/04/2015", "01/07/2015"), currency)
-                roadRunner.gives(wileECoyote, interest(notional, "act/365", coupon, "01/04/2015", "01/07/2015"), currency)
-                (wileECoyote or roadRunner).may {
+                highStreetBank.gives(acmeCorp, libor(notional, "01/04/2015", "01/07/2015"), currency)
+                acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/04/2015", "01/07/2015"), currency)
+                (highStreetBank or acmeCorp).may {
                     "proceed".givenThat(after("01/10/2015")) {
-                        wileECoyote.gives(roadRunner, libor(notional, "01/07/2015", "01/10/2015"), currency)
-                        roadRunner.gives(wileECoyote, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
+                        highStreetBank.gives(acmeCorp, libor(notional, "01/07/2015", "01/10/2015"), currency)
+                        acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
 
-                        (wileECoyote or roadRunner).may {
+                        (highStreetBank or acmeCorp).may {
                             // etc ...
                         }
                     }
-                } or roadRunner.may {
+                } or acmeCorp.may {
                     "cancel".anytime {
-                        roadRunner.gives(wileECoyote, 10.K, USD)
+                        acmeCorp.gives(highStreetBank, 10.K, USD)
                     }
                 }
             }
-        } or roadRunner.may {
+        } or acmeCorp.may {
             "cancel".anytime {
-                roadRunner.gives(wileECoyote, 10.K, USD)
+                acmeCorp.gives(highStreetBank, 10.K, USD)
             }
         }
     }
@@ -46,15 +46,15 @@ class Swaption {
 
     val elegant_contract = arrange {
         rollOut("01/04/2015", "01/04/2025", Frequency.Quarterly) {
-            (wileECoyote or roadRunner).may {
+            (highStreetBank or acmeCorp).may {
                 "proceed".givenThat(after(start)) {
-                    wileECoyote.gives(roadRunner, libor(notional, start, end), currency)
-                    roadRunner.gives(wileECoyote, interest(notional, "act/365", coupon, start, end), currency)
+                    highStreetBank.gives(acmeCorp, libor(notional, start, end), currency)
+                    acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, start, end), currency)
                     next()
                 }
-            } or roadRunner.may {
+            } or acmeCorp.may {
                 "cancel".anytime {
-                    roadRunner.gives(wileECoyote, 10.K, currency)
+                    acmeCorp.gives(highStreetBank, 10.K, currency)
                 }
             }
         }
@@ -66,18 +66,18 @@ class Swaption {
         rollOut("01/04/2015", "01/04/2016", Frequency.Quarterly, object {
             val cap = variable(150.K)
         }) {
-            roadRunner.may {
+            acmeCorp.may {
                 "exercise".givenThat(before(end)) {
                     val payout = (EUR / USD - strike).plus() * notional
 
-                    (roadRunner or wileECoyote).may {
+                    (acmeCorp or highStreetBank).may {
                         "proceed".givenThat(after(end)) {
-                            wileECoyote.gives(roadRunner, payout, USD)
+                            highStreetBank.gives(acmeCorp, payout, USD)
                             next(vars.cap to vars.cap - payout)
                         }
                     }
                 }
-            } or (roadRunner or wileECoyote).may {
+            } or (acmeCorp or highStreetBank).may {
                 "proceedWithoutExercise".givenThat(after(end)) {
                     next()
                 }
@@ -89,18 +89,18 @@ class Swaption {
         rollOut("01/04/2015", "01/04/2016", Frequency.Quarterly, object {
             val uses = variable(4)
         }) {
-            roadRunner.may {
+            acmeCorp.may {
                 "exercise".givenThat(before(end)) {
                     val payout = (EUR / USD - strike).plus() * notional
 
-                    (roadRunner or wileECoyote).may {
+                    (acmeCorp or highStreetBank).may {
                         "proceed".givenThat(after(end)) {
-                            wileECoyote.gives(roadRunner, payout, currency)
+                            highStreetBank.gives(acmeCorp, payout, currency)
                             next(vars.uses to vars.uses - 1)
                         }
                     }
                 }
-            } or (roadRunner or wileECoyote).may {
+            } or (acmeCorp or highStreetBank).may {
                 "proceedWithoutExercise".givenThat(after(end)) {
                     next()
                 }

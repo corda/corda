@@ -20,14 +20,14 @@ class Cap {
 
     val contract = arrange {
         rollOut("2016-04-01", "2017-04-01", Frequency.Quarterly) {
-            (roadRunner or wileECoyote).may {
+            (acmeCorp or highStreetBank).may {
                 "exercise".anytime {
                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
-                    wileECoyote.gives(roadRunner, floating - fixed, currency)
+                    highStreetBank.gives(acmeCorp, floating - fixed, currency)
                     next()
                 }
-            } or roadRunner.may {
+            } or acmeCorp.may {
                 "skip".anytime {
                     next()
                 }
@@ -42,15 +42,15 @@ class Cap {
         rollOut("2016-04-01", "2017-04-01", Frequency.Quarterly, object {
             val limit = variable(150.K)
         }) {
-            (roadRunner or wileECoyote).may {
+            (acmeCorp or highStreetBank).may {
                 "exercise".anytime {
                     val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                     val payout = (floating - fixed).plus()
-                    wileECoyote.gives(roadRunner, payout, currency)
+                    highStreetBank.gives(acmeCorp, payout, currency)
                     next(vars.limit to vars.limit - payout)
                 }
-            } or roadRunner.may {
+            } or acmeCorp.may {
                 "skip".anytime {
                     next()
                 }
@@ -67,11 +67,11 @@ class Cap {
             this `fails with` "transaction has a single command"
 
             tweak {
-                command(roadRunner.owningKey) { UniversalContract.Commands.Issue() }
+                command(acmeCorp.owningKey) { UniversalContract.Commands.Issue() }
                 this `fails with` "the transaction is signed by all liable parties"
             }
 
-            command(wileECoyote.owningKey) { UniversalContract.Commands.Issue() }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Issue() }
 
             this.verifies()
         }
