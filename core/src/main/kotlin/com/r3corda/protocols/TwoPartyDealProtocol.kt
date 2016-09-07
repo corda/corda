@@ -100,7 +100,7 @@ object TwoPartyDealProtocol {
         fun verifyPartialTransaction(untrustedPartialTX: UntrustworthyData<SignedTransaction>): SignedTransaction {
             progressTracker.currentStep = VERIFYING
 
-            untrustedPartialTX.validate { stx ->
+            untrustedPartialTX.unwrap { stx ->
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
@@ -240,7 +240,7 @@ object TwoPartyDealProtocol {
             val handshake = receive<Handshake<U>>(sessionID)
 
             progressTracker.currentStep = VERIFYING
-            handshake.validate {
+            handshake.unwrap {
                 return validateHandshake(it)
             }
         }
@@ -252,7 +252,7 @@ object TwoPartyDealProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromPrimary>(otherSide, theirSessionID, sessionID, stx).validate { it }
+            return sendAndReceive<SignaturesFromPrimary>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
         }
 
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

@@ -81,7 +81,7 @@ abstract class FetchDataProtocol<T : NamedByHash, in W : Any>(
 
     private fun validateFetchResponse(maybeItems: UntrustworthyData<ArrayList<W?>>,
                                       requests: List<SecureHash>): List<T> =
-            maybeItems.validate { response ->
+            maybeItems.unwrap { response ->
                 if (response.size != requests.size)
                     throw BadAnswer()
                 for ((index, resp) in response.withIndex()) {

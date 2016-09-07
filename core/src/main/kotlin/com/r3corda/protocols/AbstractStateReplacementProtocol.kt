@@ -103,7 +103,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             sendAndReceive<Ack>(node.identity, 0, sessionIdForReceive, handshake)
 
             val response = sendAndReceive<Result>(node.identity, sessionIdForSend, sessionIdForReceive, proposal)
-            val participantSignature = response.validate {
+            val participantSignature = response.unwrap {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
                     check(it.sig.by == node.identity.owningKey) { "Not signed by the required participant" }
@@ -142,7 +142,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             progressTracker.currentStep = VERIFYING
             val maybeProposal: UntrustworthyData<Proposal<T>> = receive(sessionIdForReceive)
             try {
-                val stx: SignedTransaction = maybeProposal.validate { verifyProposal(maybeProposal).stx }
+                val stx: SignedTransaction = maybeProposal.unwrap { verifyProposal(maybeProposal).stx }
                 verifyTx(stx)
                 approve(stx)
             } catch(e: Exception) {
@@ -150,7 +150,7 @@ abstract class AbstractStateReplacementProtocol<T> {
                 //       that might occur (tx validation/resolution, invalid proposal). Need to rethink how
                 //       we manage exceptions and maybe introduce some platform exception hierarchy
                 val myIdentity = serviceHub.storageService.myLegalIdentity
-                val state = maybeProposal.validate { it.stateRef }
+                val state = maybeProposal.unwrap { it.stateRef }
                 val reason = StateReplacementRefused(myIdentity, state, e.message)
 
                 reject(reason)
@@ -166,7 +166,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, sessionIdForSend, sessionIdForReceive, response)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
-            val allSignatures = swapSignatures.validate { signatures ->
+            val allSignatures = swapSignatures.unwrap { signatures ->
                 signatures.forEach { it.verifyWithECDSA(stx.txBits) }
                 signatures
             }

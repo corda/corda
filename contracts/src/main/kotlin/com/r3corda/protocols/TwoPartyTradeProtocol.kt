@@ -118,7 +118,7 @@ object TwoPartyTradeProtocol {
 
             progressTracker.currentStep = VERIFYING
 
-            maybeSTX.validate {
+            maybeSTX.unwrap {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
@@ -207,7 +207,7 @@ object TwoPartyTradeProtocol {
             val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
 
             progressTracker.currentStep = VERIFYING
-            maybeTradeRequest.validate {
+            maybeTradeRequest.unwrap {
                 // What is the seller trying to sell us?
                 val asset = it.assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
@@ -235,7 +235,7 @@ object TwoPartyTradeProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).validate { it }
+            return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
         }
 
         private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

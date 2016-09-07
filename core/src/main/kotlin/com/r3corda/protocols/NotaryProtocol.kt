@@ -72,7 +72,7 @@ object NotaryProtocol {
         private fun validateResponse(response: UntrustworthyData<Result>): Result {
             progressTracker.currentStep = VALIDATING
 
-            response.validate {
+            response.unwrap {
                 if (it.sig != null) validateSignature(it.sig, stx.txBits)
                 else if (it.error is NotaryError.Conflict) it.error.conflict.verified()
                 else if (it.error == null || it.error !is NotaryError)
@@ -105,7 +105,7 @@ object NotaryProtocol {
 
         @Suspendable
         override fun call() {
-            val (stx, reqIdentity) = receive<SignRequest>(receiveSessionID).validate { it }
+            val (stx, reqIdentity) = receive<SignRequest>(receiveSessionID).unwrap { it }
             val wtx = stx.tx
 
             val result = try {

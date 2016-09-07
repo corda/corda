@@ -78,7 +78,7 @@ class InMemoryNetworkMapServiceTest {
         override fun call(): Collection<NodeRegistration>? {
             val sessionID = random63BitValue()
             val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVersion, serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.FetchMapResponse>(server.identity, 0, sessionID, req).validate { it.nodes }
+            return sendAndReceive<NetworkMapService.FetchMapResponse>(server.identity, 0, sessionID, req).unwrap { it.nodes }
         }
     }
 
@@ -89,7 +89,7 @@ class InMemoryNetworkMapServiceTest {
         override fun call(): NetworkMapService.RegistrationResponse {
             val sessionID = random63BitValue()
             val req = NetworkMapService.RegistrationRequest(reg.toWire(privateKey), serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.RegistrationResponse>(server.identity, 0, sessionID, req).validate { it }
+            return sendAndReceive<NetworkMapService.RegistrationResponse>(server.identity, 0, sessionID, req).unwrap { it }
         }
     }
 
@@ -100,7 +100,7 @@ class InMemoryNetworkMapServiceTest {
         override fun call(): NetworkMapService.SubscribeResponse {
             val sessionID = random63BitValue()
             val req = NetworkMapService.SubscribeRequest(subscribe, serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.SubscribeResponse>(server.identity, 0, sessionID, req).validate { it }
+            return sendAndReceive<NetworkMapService.SubscribeResponse>(server.identity, 0, sessionID, req).unwrap { it }
         }
     }
 

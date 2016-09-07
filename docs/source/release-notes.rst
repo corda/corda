@@ -11,7 +11,8 @@ API changes:
 * The transaction types (Signed, Wire, LedgerTransaction) have moved to ``com.r3corda.core.transactions``. You can
   update your code by just deleting the broken import lines and letting your IDE re-import them from the right
   location.
-* AbstractStateReplacementProtocol.verifyProposal has changed its prototype in a minor way.
+* ``AbstractStateReplacementProtocol.verifyProposal`` has changed its prototype in a minor way.
+* The ``UntrustworthyData<T>.validate`` method has been renamed to ``unwrap`` - the old name is now deprecated.
 
 Milestone 3
 -----------

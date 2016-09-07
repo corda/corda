@@ -306,7 +306,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).validate { it }
+        val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).unwrap { it }
 
         progressTracker.currentStep = SELF_ISSUING
 

@@ -69,7 +69,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
          */
         @Suspendable
         override fun verifyProposal(maybeProposal: UntrustworthyData<AbstractStateReplacementProtocol.Proposal<Party>>): AbstractStateReplacementProtocol.Proposal<Party> {
-            return maybeProposal.validate { proposal ->
+            return maybeProposal.unwrap { proposal ->
                 val newNotary = proposal.modification
                 val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.identity == newNotary }
                 require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
