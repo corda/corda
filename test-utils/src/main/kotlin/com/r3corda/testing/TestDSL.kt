@@ -314,7 +314,7 @@ data class TestLedgerDSLInterpreter private constructor (
  * @return List of [SignedTransaction]s.
  */
 fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>) = transactionsToSign.map { wtx ->
-    check(wtx.signers.isNotEmpty())
+    check(wtx.mustSign.isNotEmpty())
     val bits = wtx.serialize()
     require(bits == wtx.serialized)
     val signatures = ArrayList<DigitalSignature.WithKey>()
@@ -323,7 +323,7 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>)
     (ALL_TEST_KEYS + extraKeys).forEach {
         keyLookup[it.public] = it
     }
-    wtx.signers.forEach {
+    wtx.mustSign.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
         signatures += key.signWithECDSA(bits)
     }

@@ -17,5 +17,9 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
         get() = fromUntrustedWorld
 
     @Suppress("DEPRECATION")
+    inline fun <R> unwrap(validator: (T) -> R) = validator(data)
+
+    @Suppress("DEPRECATION")
+    @Deprecated("This old name was confusing, use unwrap instead", replaceWith = ReplaceWith("unwrap"))
     inline fun <R> validate(validator: (T) -> R) = validator(data)
 }

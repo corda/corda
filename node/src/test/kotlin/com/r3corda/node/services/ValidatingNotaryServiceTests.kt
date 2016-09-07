@@ -5,7 +5,6 @@ import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
-import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.protocols.NotaryError
@@ -13,6 +12,7 @@ import com.r3corda.protocols.NotaryException
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.testing.MEGA_CORP_KEY
 import com.r3corda.testing.MINI_CORP_KEY
+import com.r3corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
@@ -73,6 +73,6 @@ class ValidatingNotaryServiceTests {
         assertThat(notaryError).isInstanceOf(NotaryError.SignaturesMissing::class.java)
 
         val missingKeys = (notaryError as NotaryError.SignaturesMissing).missingSigners
-        assertEquals(missingKeys, listOf(expectedMissingKey))
+        assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 }

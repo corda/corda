@@ -102,7 +102,7 @@ class StateMachineManagerTests {
 
         @Suspendable
         override fun doCall() {
-            receivedPayload = receive<Any>(sessionID).validate { it }
+            receivedPayload = receive<Any>(sessionID).unwrap { it }
         }
     }
 

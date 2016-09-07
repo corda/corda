@@ -7,13 +7,13 @@ import com.r3corda.core.seconds
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.internal.AbstractNode
-import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.NotaryChangeProtocol
 import com.r3corda.protocols.NotaryChangeProtocol.Instigator
 import com.r3corda.protocols.StateReplacementException
 import com.r3corda.protocols.StateReplacementRefused
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -93,6 +93,7 @@ class NotaryChangeTests {
     //       - The requesting party wants to change additional state fields
     //       - Multiple states in a single "notary change" transaction
     //       - Transaction contains additional states and commands with business logic
+    //       - The transaction type is not a notary change transaction at all.
 }
 
 fun issueState(node: AbstractNode): StateAndRef<*> {

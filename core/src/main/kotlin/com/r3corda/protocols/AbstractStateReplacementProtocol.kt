@@ -1,7 +1,9 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
@@ -12,6 +14,7 @@ import com.r3corda.core.random63BitValue
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.protocols.AbstractStateReplacementProtocol.Acceptor
 import com.r3corda.protocols.AbstractStateReplacementProtocol.Instigator
 import java.security.PublicKey
@@ -100,7 +103,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             sendAndReceive<Ack>(node.identity, 0, sessionIdForReceive, handshake)
 
             val response = sendAndReceive<Result>(node.identity, sessionIdForSend, sessionIdForReceive, proposal)
-            val participantSignature = response.validate {
+            val participantSignature = response.unwrap {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
                     check(it.sig.by == node.identity.owningKey) { "Not signed by the required participant" }
@@ -119,7 +122,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         }
     }
 
-    abstract class Acceptor<in T>(val otherSide: Party,
+    abstract class Acceptor<T>(val otherSide: Party,
                                   val sessionIdForSend: Long,
                                   val sessionIdForReceive: Long,
                                   override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
@@ -137,24 +140,21 @@ abstract class AbstractStateReplacementProtocol<T> {
         @Suspendable
         override fun call() {
             progressTracker.currentStep = VERIFYING
-            val proposal = receive<Proposal<T>>(sessionIdForReceive).validate { it }
-
+            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(sessionIdForReceive)
             try {
-                verifyProposal(proposal)
-                verifyTx(proposal.stx)
+                val stx: SignedTransaction = maybeProposal.unwrap { verifyProposal(maybeProposal).stx }
+                verifyTx(stx)
+                approve(stx)
             } catch(e: Exception) {
                 // TODO: catch only specific exceptions. However, there are numerous validation exceptions
                 //       that might occur (tx validation/resolution, invalid proposal). Need to rethink how
                 //       we manage exceptions and maybe introduce some platform exception hierarchy
                 val myIdentity = serviceHub.storageService.myLegalIdentity
-                val state = proposal.stateRef
+                val state = maybeProposal.unwrap { it.stateRef }
                 val reason = StateReplacementRefused(myIdentity, state, e.message)
 
                 reject(reason)
-                return
             }
-
-            approve(proposal.stx)
         }
 
         @Suspendable
@@ -166,7 +166,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, sessionIdForSend, sessionIdForReceive, response)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
-            val allSignatures = swapSignatures.validate { signatures ->
+            val allSignatures = swapSignatures.unwrap { signatures ->
                 signatures.forEach { it.verifyWithECDSA(stx.txBits) }
                 signatures
             }
@@ -185,9 +185,10 @@ abstract class AbstractStateReplacementProtocol<T> {
 
         /**
          * Check the state change proposal to confirm that it's acceptable to this node. Rules for verification depend
-         * on the change proposed, and may further depend on the node itself (for example configuration).
+         * on the change proposed, and may further depend on the node itself (for example configuration). The
+         * proposal is returned if acceptable, otherwise an exception is thrown.
          */
-        abstract internal fun verifyProposal(proposal: Proposal<T>)
+        abstract fun verifyProposal(maybeProposal: UntrustworthyData<Proposal<T>>): Proposal<T>
 
         @Suspendable
         private fun verifyTx(stx: SignedTransaction) {
@@ -201,7 +202,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         private fun checkMySignatureRequired(tx: WireTransaction) {
             // TODO: use keys from the keyManagementService instead
             val myKey = serviceHub.storageService.myLegalIdentity.owningKey
-            require(tx.signers.contains(myKey)) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
+            require(myKey in tx.mustSign) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
         }
 
         @Suspendable

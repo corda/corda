@@ -5,7 +5,8 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.*
-import com.r3corda.testing.*
+import com.r3corda.testing.MINI_CORP
+import com.r3corda.testing.generateStateRef
 import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
@@ -84,7 +85,7 @@ class TransactionSerializationTests {
         val signedTX = tx.toSignedTransaction()
 
         // Cannot construct with an empty sigs list.
-        assertFailsWith(IllegalStateException::class) {
+        assertFailsWith(IllegalArgumentException::class) {
             signedTX.copy(sigs = emptyList())
         }
 

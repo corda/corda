@@ -57,6 +57,7 @@ Read on to learn:
    protocol-state-machines
    oracles
    event-scheduling
+   secure-coding-guidelines
 
 .. toctree::
    :maxdepth: 2

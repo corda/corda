@@ -1,12 +1,12 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.TransactionVerificationException
-import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessProvider
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.security.SignatureException
 
 /**
@@ -37,10 +37,11 @@ class ValidatingNotaryProtocol(otherSide: Party,
     }
 
     private fun checkSignatures(stx: SignedTransaction) {
-        val myKey = serviceHub.storageService.myLegalIdentity.owningKey
-        val missing = stx.verifySignatures(throwIfSignaturesAreMissing = false) - myKey
-
-        if (missing.isNotEmpty()) throw NotaryException(NotaryError.SignaturesMissing(missing.toList()))
+        try {
+            stx.verifySignatures(serviceHub.storageService.myLegalIdentity.owningKey)
+        } catch(e: SignedTransaction.SignaturesMissingException) {
+            throw NotaryException(NotaryError.SignaturesMissing(e.missing))
+        }
     }
 
     @Suspendable

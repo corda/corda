@@ -30,7 +30,7 @@ sealed class TransactionType {
         if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey
-        val missing = requiredKeys - tx.signers
+        val missing = requiredKeys - tx.mustSign
 
         return missing
     }

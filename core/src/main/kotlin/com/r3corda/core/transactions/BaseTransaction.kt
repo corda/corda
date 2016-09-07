@@ -25,7 +25,7 @@ abstract class BaseTransaction(
          * transaction until the transaction is verified by using [LedgerTransaction.verify]. It includes the
          * notary key, if the notary field is set.
          */
-        val signers: List<PublicKey>,
+        val mustSign: List<PublicKey>,
         /**
          * Pointer to a class that defines the behaviour of this transaction: either normal, or "notary changing".
          */
@@ -37,7 +37,7 @@ abstract class BaseTransaction(
         val timestamp: Timestamp?
 ) : NamedByHash {
 
-    fun checkInvariants() {
+    protected fun checkInvariants() {
         if (notary == null) check(inputs.isEmpty()) { "The notary must be specified explicitly for any transaction that has inputs." }
         if (timestamp != null) check(notary != null) { "If a timestamp is provided, there must be a notary." }
     }
@@ -45,9 +45,9 @@ abstract class BaseTransaction(
     override fun equals(other: Any?) =
             other is BaseTransaction &&
             notary == other.notary &&
-            signers == other.signers &&
+            mustSign == other.mustSign &&
             type == other.type &&
             timestamp == other.timestamp
 
-    override fun hashCode() = Objects.hash(notary, signers, type, timestamp)
+    override fun hashCode() = Objects.hash(notary, mustSign, type, timestamp)
 }

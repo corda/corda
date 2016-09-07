@@ -6,9 +6,6 @@ import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.utilities.*
-import com.r3corda.testing.LedgerDSL
-import com.r3corda.testing.TestLedgerDSLInterpreter
-import com.r3corda.testing.TestTransactionDSLInterpreter
 import com.r3corda.testing.*
 import org.junit.Test
 import java.security.PublicKey

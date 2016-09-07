@@ -1,18 +1,11 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.ClientToServiceCommand
-import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.core.transactions.TransactionBuilder
-import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
-import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.ProgressTracker
-import java.util.*
 
 
 /**
@@ -43,6 +36,8 @@ class FinalityProtocol(val transaction: SignedTransaction,
 
     @Suspendable
     override fun call() {
+        // TODO: Resolve the tx here: it's probably already been done, but re-resolution is a no-op and it'll make the API more forgiving.
+
         progressTracker.currentStep = NOTARISING
         // Notarise the transaction if needed
         val notarisedTransaction = if (needsNotarySignature(transaction)) {
@@ -57,7 +52,6 @@ class FinalityProtocol(val transaction: SignedTransaction,
         subProtocol(BroadcastTransactionProtocol(notarisedTransaction, events, participants))
     }
 
-    private fun needsNotarySignature(transaction: SignedTransaction) = expectsNotarySignature(transaction.tx) && hasNoNotarySignature(transaction)
-    private fun expectsNotarySignature(transaction: WireTransaction) = transaction.notary != null && transaction.notary.owningKey in transaction.signers
-    private fun hasNoNotarySignature(transaction: SignedTransaction) = transaction.tx.notary?.owningKey !in transaction.sigs.map { it.by }
+    private fun needsNotarySignature(stx: SignedTransaction) = stx.tx.notary != null && hasNoNotarySignature(stx)
+    private fun hasNoNotarySignature(stx: SignedTransaction) = stx.tx.notary?.owningKey !in stx.sigs.map { it.by }
 }

@@ -2,12 +2,12 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.checkedAdd
-import com.r3corda.core.transactions.LedgerTransaction
-import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.util.*
 
 // TODO: This code is currently unit tested by TwoPartyTradeProtocolTests, it should have its own tests.
@@ -82,7 +82,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // be a clearer API if we do that. But for consistency with the other c'tor we currently do not.
         //
         // If 'stx' is set, then 'wtx' is the contents (from the c'tor).
-        stx?.verifySignatures()
+        val wtx = stx?.verifySignatures() ?: wtx
         wtx?.let {
             fetchMissingAttachments(listOf(it))
             val ltx = it.toLedgerTransaction(serviceHub)

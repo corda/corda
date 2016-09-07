@@ -7,7 +7,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.crypto.toStringsShort
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -19,7 +18,6 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.SignatureException
 import java.util.*
 
 /**
@@ -120,16 +118,11 @@ object TwoPartyTradeProtocol {
 
             progressTracker.currentStep = VERIFYING
 
-            maybeSTX.validate {
+            maybeSTX.unwrap {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
-                val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
-                if (missingSigs != expected)
-                    throw SignatureException("The set of missing signatures is not as expected: ${missingSigs.toStringsShort()} vs ${expected.toStringsShort()}")
-
-                val wtx: WireTransaction = it.tx
+                val wtx: WireTransaction = it.verifySignatures(myKeyPair.public, notaryNode.identity.owningKey)
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
                 // Download and check all the things that this transaction depends on and verify it is contract-valid,
@@ -214,7 +207,7 @@ object TwoPartyTradeProtocol {
             val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
 
             progressTracker.currentStep = VERIFYING
-            maybeTradeRequest.validate {
+            maybeTradeRequest.unwrap {
                 // What is the seller trying to sell us?
                 val asset = it.assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
@@ -242,7 +235,7 @@ object TwoPartyTradeProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).validate { it }
+            return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
         }
 
         private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

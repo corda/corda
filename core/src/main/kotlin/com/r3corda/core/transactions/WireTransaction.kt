@@ -77,7 +77,7 @@ class WireTransaction(
             services.storageService.attachments.openAttachment(it) ?: throw FileNotFoundException(it.toString())
         }
         val resolvedInputs = inputs.map { StateAndRef(services.loadState(it), it) }
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, signers, timestamp, type)
+        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timestamp, type)
     }
 
     override fun toString(): String {

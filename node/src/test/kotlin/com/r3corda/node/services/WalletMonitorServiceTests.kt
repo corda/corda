@@ -58,7 +58,7 @@ class WalletMonitorServiceTests {
         override val topic: String get() = WalletMonitorService.IN_EVENT_TOPIC
         @Suspendable
         override fun call(): ServiceToClientEvent.OutputState
-            = receive<ServiceToClientEvent.OutputState>(sessionID).validate { it }
+            = receive<ServiceToClientEvent.OutputState>(sessionID).unwrap { it }
     }
 
     class TestRegisterPSM(val server: NodeInfo, val sessionID: Long)
@@ -67,7 +67,7 @@ class WalletMonitorServiceTests {
         @Suspendable
         override fun call(): RegisterResponse {
             val req = RegisterRequest(serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<RegisterResponse>(server.identity, 0, sessionID, req).validate { it }
+            return sendAndReceive<RegisterResponse>(server.identity, 0, sessionID, req).unwrap { it }
         }
     }
 
