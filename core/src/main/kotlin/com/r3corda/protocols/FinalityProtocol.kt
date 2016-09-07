@@ -36,6 +36,8 @@ class FinalityProtocol(val transaction: SignedTransaction,
 
     @Suspendable
     override fun call() {
+        // TODO: Resolve the tx here: it's probably already been done, but re-resolution is a no-op and it'll make the API more forgiving.
+
         progressTracker.currentStep = NOTARISING
         // Notarise the transaction if needed
         val notarisedTransaction = if (needsNotarySignature(transaction)) {

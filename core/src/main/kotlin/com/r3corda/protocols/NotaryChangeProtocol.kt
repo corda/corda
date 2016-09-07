@@ -85,7 +85,6 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
                 val blacklist = listOf("Evil Notary")
                 require(!blacklist.contains(newNotary.name)) { "The proposed new notary $newNotary is not trusted by the party" }
 
-
                 proposal
             }
         }
