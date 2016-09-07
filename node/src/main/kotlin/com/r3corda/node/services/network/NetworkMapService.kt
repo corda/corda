@@ -6,6 +6,7 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.messaging.MessageHandlerRegistration
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
@@ -82,13 +83,13 @@ interface NetworkMapService {
 }
 
 @ThreadSafe
-class InMemoryNetworkMapService(services: ServiceHubInternal, home: NodeRegistration) : AbstractNetworkMapService(services) {
+class InMemoryNetworkMapService(services: ServiceHubInternal) : AbstractNetworkMapService(services) {
 
     override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
 
     init {
-        setup(home)
+        setup()
     }
 }
 
@@ -99,7 +100,8 @@ class InMemoryNetworkMapService(services: ServiceHubInternal, home: NodeRegistra
  * subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.
  */
 @ThreadSafe
-abstract class AbstractNetworkMapService(services: ServiceHubInternal) : NetworkMapService, AbstractNodeService(services) {
+abstract class AbstractNetworkMapService
+(services: ServiceHubInternal) : NetworkMapService, AbstractNodeService(services) {
     protected abstract val registeredNodes: MutableMap<Party, NodeRegistrationInfo>
 
     // Map from subscriber address, to most recently acknowledged update map version.
@@ -121,35 +123,38 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
      */
     val maxSizeRegistrationRequestBytes = 5500
 
+    private val handlers = ArrayList<MessageHandlerRegistration>()
+
     // Filter reduces this to the entries that add a node to the map
     override val nodes: List<NodeInfo>
         get() = registeredNodes.mapNotNull { if (it.value.reg.type == AddOrRemove.ADD) it.value.reg.node else null }
 
-    protected fun setup(home: NodeRegistration) {
-        // Register the local node with the service
-        val homeIdentity = home.node.identity
-        val registrationInfo = NodeRegistrationInfo(home, mapVersionIncrementAndGet())
-        registeredNodes[homeIdentity] = registrationInfo
-
+    protected fun setup() {
         // Register message handlers
-        addMessageHandler(NetworkMapService.FETCH_PROTOCOL_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.FETCH_PROTOCOL_TOPIC,
                 { req: NetworkMapService.FetchMapRequest -> processFetchAllRequest(req) }
         )
-        addMessageHandler(NetworkMapService.QUERY_PROTOCOL_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.QUERY_PROTOCOL_TOPIC,
                 { req: NetworkMapService.QueryIdentityRequest -> processQueryRequest(req) }
         )
-        addMessageHandler(NetworkMapService.REGISTER_PROTOCOL_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.REGISTER_PROTOCOL_TOPIC,
                 { req: NetworkMapService.RegistrationRequest -> processRegistrationChangeRequest(req) }
         )
-        addMessageHandler(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
+        handlers += addMessageHandler(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
                 { req: NetworkMapService.SubscribeRequest -> processSubscriptionRequest(req) }
         )
-        net.addMessageHandler(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
+        handlers += net.addMessageHandler(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, null) { message, r ->
             val req = message.data.deserialize<NetworkMapService.UpdateAcknowledge>()
             processAcknowledge(req)
         }
+    }
 
-        // TODO: notify subscribers of name service registration.  Network service is not up, so how?
+    @VisibleForTesting
+    fun unregisterNetworkHandlers() {
+        for (handler in handlers) {
+            net.removeMessageHandler(handler)
+        }
+        handlers.clear()
     }
 
     private fun addSubscriber(subscriber: MessageRecipients) {

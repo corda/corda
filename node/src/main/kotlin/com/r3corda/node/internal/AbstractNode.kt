@@ -28,13 +28,13 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
-import com.r3corda.node.services.keys.E2ETestKeyManagementService
+import com.r3corda.node.services.keys.PersistentKeyManagementService
 import com.r3corda.node.services.monitor.WalletMonitorService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
-import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
+import com.r3corda.node.services.network.PersistentNetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
@@ -296,17 +296,17 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             "Initial network map address must indicate a node that provides a network map service"
         }
         services.networkMapCache.addNode(info)
-        if (networkMapService != null) {
-            // Only register if we are pointed at a network map service and it's not us.
-            // TODO: Return a future so the caller knows these operations may not have completed yet, and can monitor if needed
-            updateRegistration(networkMapService, AddOrRemove.ADD)
-            return services.networkMapCache.addMapService(net, networkMapService, true, null)
-        }
         // In the unit test environment, we may run without any network map service sometimes.
-        if (inNodeNetworkMapService == null)
+        if (networkMapService == null && inNodeNetworkMapService == null)
             return noNetworkMapConfigured()
+        else
+            return registerWithNetworkMap(networkMapService ?: info.address)
+    }
+
+    private fun registerWithNetworkMap(networkMapServiceAddress: SingleMessageRecipient): ListenableFuture<Unit> {
         // Register for updates, even if we're the one running the network map.
-        return services.networkMapCache.addMapService(net, info.address, true, null)
+        updateRegistration(networkMapServiceAddress, AddOrRemove.ADD)
+        return services.networkMapCache.addMapService(net, networkMapServiceAddress, true, null)
     }
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
@@ -318,8 +318,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
     private fun updateRegistration(networkMapAddr: SingleMessageRecipient, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
         // Register this node against the network
-        val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val reg = NodeRegistration(info, networkMapSeq++, type, expires)
+        val instant = platformClock.instant()
+        val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val reg = NodeRegistration(info, instant.toEpochMilli(), type, expires)
         val sessionID = random63BitValue()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
         val message = net.createMessage(REGISTER_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, request.serialize().bits)
@@ -333,12 +334,10 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return future
     }
 
-    protected open fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
+    protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(setOf(storage.myLegalIdentityKey))
 
     open protected fun makeNetworkMapService() {
-        val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
-        inNodeNetworkMapService = InMemoryNetworkMapService(services, reg)
+        inNodeNetworkMapService = PersistentNetworkMapService(services)
     }
 
     open protected fun makeNotaryService(type: ServiceType): NotaryService {

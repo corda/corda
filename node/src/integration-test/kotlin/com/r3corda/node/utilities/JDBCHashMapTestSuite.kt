@@ -2,21 +2,25 @@ package com.r3corda.node.utilities
 
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import junit.framework.TestSuite
+import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.AfterClass
 import org.junit.BeforeClass
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
 import java.io.Closeable
 import java.sql.Connection
+import java.util.*
 
 @RunWith(Suite::class)
 @Suite.SuiteClasses(
         JDBCHashMapTestSuite.MapLoadOnInitFalse::class,
         JDBCHashMapTestSuite.MapLoadOnInitTrue::class,
         JDBCHashMapTestSuite.SetLoadOnInitFalse::class,
-        JDBCHashMapTestSuite.SetLoadOnInitTrue::class)
+        JDBCHashMapTestSuite.SetLoadOnInitTrue::class,
+        JDBCHashMapTestSuite.MapCanBeReloaded::class)
 class JDBCHashMapTestSuite {
     companion object {
         lateinit var dataSource: Closeable
@@ -142,6 +146,72 @@ class JDBCHashMapTestSuite {
             val set = JDBCHashSet<String>("test_set_${System.nanoTime()}", loadOnInit = loadOnInit)
             set.addAll(elements)
             return set
+        }
+    }
+
+    /**
+     * Test that the contents of a map can be reloaded from the database.
+     *
+     * If the Map reloads, then so will the Set as it just delegates.
+     */
+    class MapCanBeReloaded {
+        private val ops = listOf(Triple(AddOrRemove.ADD, "A", "1"),
+                Triple(AddOrRemove.ADD, "B", "2"),
+                Triple(AddOrRemove.ADD, "C", "3"),
+                Triple(AddOrRemove.ADD, "D", "4"),
+                Triple(AddOrRemove.ADD, "E", "5"),
+                Triple(AddOrRemove.REMOVE, "A", "6"),
+                Triple(AddOrRemove.ADD, "G", "7"),
+                Triple(AddOrRemove.ADD, "H", "8"),
+                Triple(AddOrRemove.REMOVE, "D", "9"),
+                Triple(AddOrRemove.ADD, "C", "10"))
+
+        private fun applyOpsToMap(map: MutableMap<String, String>): MutableMap<String, String> {
+            for (op in ops) {
+                if (op.first == AddOrRemove.ADD) {
+                    map[op.second] = op.third
+                } else {
+                    map.remove(op.second)
+                }
+            }
+            return map
+        }
+
+        private val transientMapForComparison = applyOpsToMap(LinkedHashMap())
+
+        companion object {
+            lateinit var dataSource: Closeable
+
+            @JvmStatic
+            @BeforeClass
+            fun before() {
+                dataSource = configureDatabase(makeTestDataSourceProperties()).first
+            }
+
+            @JvmStatic
+            @AfterClass
+            fun after() {
+                dataSource.close()
+            }
+        }
+
+
+        @Test
+        fun `fill map and check content after reconstruction`() {
+            databaseTransaction {
+                val persistentMap = JDBCHashMap<String, String>("the_table")
+                // Populate map the first time.
+                applyOpsToMap(persistentMap)
+                assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
+            }
+            databaseTransaction {
+                val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = false)
+                assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
+            }
+            databaseTransaction {
+                val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = true)
+                assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
+            }
         }
     }
 }

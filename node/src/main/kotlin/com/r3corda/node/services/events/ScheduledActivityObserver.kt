@@ -18,6 +18,13 @@ class ScheduledActivityObserver(val services: ServiceHubInternal) {
             update.consumed.forEach { services.schedulerService.unscheduleStateActivity(it) }
             update.produced.forEach { scheduleStateActivity(it, services.protocolLogicRefFactory) }
         }
+
+        // In the short term, to get restart-able IRS demo, re-initialise from wallet state
+        // TODO: there's a race condition here.  We need to move persistence into the scheduler but that is a bigger
+        //       change so I want to revisit as a distinct branch/PR.
+        for (state in services.walletService.currentWallet.statesOfType<SchedulableState>()) {
+            scheduleStateActivity(state, services.protocolLogicRefFactory)
+        }
     }
 
     private fun scheduleStateActivity(produced: StateAndRef<ContractState>, protocolLogicRefFactory: ProtocolLogicRefFactory) {
