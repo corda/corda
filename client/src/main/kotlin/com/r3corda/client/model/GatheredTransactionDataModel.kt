@@ -64,7 +64,7 @@ class GatheredTransactionDataModel {
      * (Note that a transaction may be mapped by one or both)
      * TODO: Expose a writable stream to combine [serviceToClient] with to allow recording of transactions made locally(UUID)
      */
-    val gatheredGatheredTransactionDataList: ObservableList<out GatheredTransactionData> =
+    val gatheredTransactionDataList: ObservableList<out GatheredTransactionData> =
             serviceToClient.foldToObservableList<ServiceToClientEvent, GatheredTransactionDataWritable, Unit>(
                     initialAccumulator = Unit,
                     folderFun = { serviceToClientEvent, _unit, transactionStates ->

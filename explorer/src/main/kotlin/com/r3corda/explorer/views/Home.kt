@@ -34,8 +34,8 @@ class Home : View() {
 
     private val selectedView: WritableValue<SelectedView> by writableValue(TopLevelModel::selectedView)
     private val cashStates: ObservableList<StateAndRef<Cash.State>> by observableList(ContractStateModel::cashStates)
-    private val transactionCreateStates: ObservableList<out TransactionCreateState>
-            by observableListReadOnly(TransactionCreateStateModel::transactionCreateStates)
+    private val gatheredTransactionDataList: ObservableList<out GatheredTransactionData>
+            by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
     private val reportingCurrency: ObservableValue<Currency> by observableValue(SettingsModel::reportingCurrency)
     private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
 
@@ -57,8 +57,8 @@ class Home : View() {
 
         ourTransactionsLabel.textProperty().bind(
                 Bindings.createStringBinding({
-                    NumberFormatter.intComma.format(transactionCreateStates.size)
-                }, arrayOf(transactionCreateStates))
+                    NumberFormatter.intComma.format(gatheredTransactionDataList.size)
+                }, arrayOf(gatheredTransactionDataList))
         )
         ourTransactionsPane.setOnMouseClicked { clickEvent ->
             if (clickEvent.button == MouseButton.PRIMARY) {

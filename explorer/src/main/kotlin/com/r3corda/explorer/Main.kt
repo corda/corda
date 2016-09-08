@@ -54,7 +54,7 @@ class Main : App() {
                 val bobOutStream = PublishSubject.create<ClientToServiceCommand>()
 
                 val bobClient = startClient(bobNode).get()
-                val bobMonitorClient = WalletMonitorClient(bobClient, bobNode, bobOutStream, bobInStream)
+                val bobMonitorClient = WalletMonitorClient(bobClient, bobNode, bobOutStream, bobInStream, PublishSubject.create())
                 assert(bobMonitorClient.register().get())
 
                 for (i in 0 .. 10000) {

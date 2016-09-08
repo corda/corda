@@ -4,8 +4,8 @@ import com.r3corda.client.model.*
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.CommandData
-import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.contracts.withoutIssuer
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.explorer.formatters.AmountFormatter
 import com.r3corda.explorer.model.ReportingCurrencyModel
 import com.r3corda.explorer.ui.setColumnPrefWidthPolicy
@@ -39,8 +39,8 @@ class TransactionViewer: View() {
     private val transactionViewCommandTypes: TableColumn<ViewerNode, String> by fxid("TransactionViewCommandTypes")
     private val transactionViewTotalValueEquiv: TableColumn<ViewerNode, Amount<Currency>> by fxid("TransactionViewTotalValueEquiv")
 
-    private val transactionCreateStates: ObservableList<out TransactionCreateState>
-            by observableListReadOnly(TransactionCreateStateModel::transactionCreateStates)
+    private val gatheredTransactionDataList: ObservableList<out GatheredTransactionData>
+            by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
     private val reportingExchange: ObservableValue<Pair<Currency, (Amount<Currency>) -> Amount<Currency>>>
             by observableValue(ReportingCurrencyModel::reportingExchange)
 
@@ -54,7 +54,7 @@ class TransactionViewer: View() {
             val transaction: ObservableValue<SignedTransaction?>
     )
 
-    private val viewerNodes = EasyBind.map(transactionCreateStates) {
+    private val viewerNodes = EasyBind.map(gatheredTransactionDataList) {
         ViewerNode(
                 transactionId = EasyBind.combine(it.fiberId, it.uuid) { fiberId, uuid -> Pair(fiberId, uuid) },
                 originator = EasyBind.map(it.uuid) { uuid ->
