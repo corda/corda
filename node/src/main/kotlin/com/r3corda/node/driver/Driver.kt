@@ -7,6 +7,7 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
@@ -14,6 +15,7 @@ import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AffinityExecutor
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
@@ -21,6 +23,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.net.*
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
@@ -289,25 +292,24 @@ class DriverDSL(
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
         val nodeDirectory = "$baseDirectory/$name"
+        val useNotary = advertisedServices.any { it.isSubTypeOf(NotaryService.Type) }
 
         val config = NodeConfiguration.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to name
+                        "myLegalName" to name,
+                        "basedir" to Paths.get(nodeDirectory).normalize().toString(),
+                        "artemisAddress" to messagingAddress.toString(),
+                        "webAddress" to apiAddress.toString(),
+                        "hostNotaryServiceLocally" to useNotary.toString(),
+                        "extraAdvertisedServiceIds" to advertisedServices.map { x -> x.id }.joinToString(","),
+                        "networkMapAddress" to networkMapAddress.toString()
                 )
         )
 
-        val driverCliParams = NodeRunner.CliParams(
-                services = advertisedServices,
-                networkMapAddress = networkMapAddress,
-                messagingAddress = messagingAddress,
-                apiAddress = apiAddress,
-                baseDirectory = nodeDirectory
-        )
-
         return Executors.newSingleThreadExecutor().submit(Callable<NodeInfo> {
-            registerProcess(DriverDSL.startNode(config, driverCliParams, name, quasarJarPath, debugPort))
+            registerProcess(DriverDSL.startNode(config, quasarJarPath, debugPort))
             poll("network map cache for $name") {
                 networkMapCache.partyNodes.forEach {
                     if (it.identity.name == name) {
@@ -406,19 +408,17 @@ class DriverDSL(
                 baseDirectoryPath = Paths.get(nodeDirectory),
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to networkMapName
+                        "myLegalName" to networkMapName,
+                        "basedir" to Paths.get(nodeDirectory).normalize().toString(),
+                        "artemisAddress" to networkMapAddress.toString(),
+                        "webAddress" to apiAddress.toString(),
+                        "hostNotaryServiceLocally" to "false",
+                        "extraAdvertisedServiceIds" to ""
                 )
         )
 
-        val driverCliParams = NodeRunner.CliParams(
-                services = setOf(NetworkMapService.Type),
-                networkMapAddress = null,
-                messagingAddress = networkMapAddress,
-                apiAddress = apiAddress,
-                baseDirectory = nodeDirectory
-        )
         log.info("Starting network-map-service")
-        registerProcess(startNode(config, driverCliParams, networkMapName, quasarJarPath, debugPort))
+        registerProcess(startNode(config, quasarJarPath, debugPort))
     }
 
     companion object {
@@ -433,16 +433,14 @@ class DriverDSL(
 
         private fun startNode(
                 config: Config,
-                cliParams: NodeRunner.CliParams,
-                legalName: String,
                 quasarJarPath: String,
                 debugPort: Int?
         ): Process {
-
+            val nodeConf = FullNodeConfiguration(config)
             // Write node.conf
-            writeConfig(cliParams.baseDirectory, "node.conf", config)
+            writeConfig(nodeConf.basedir, "node.conf", config)
 
-            val className = NodeRunner::class.java.canonicalName
+            val className = "com.r3corda.node.MainKt" // cannot directly get class for this, so just use string
             val separator = System.getProperty("file.separator")
             val classpath = System.getProperty("java.class.path")
             val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
@@ -453,26 +451,27 @@ class DriverDSL(
                 emptyList()
             
             val javaArgs = listOf(path) +
-                    listOf("-Dname=$legalName", "-javaagent:$quasarJarPath") + debugPortArg +
+                    listOf("-Dname=${nodeConf.myLegalName}", "-javaagent:$quasarJarPath") + debugPortArg +
                     listOf("-cp", classpath, className) +
-                    cliParams.toCliArguments()
+                    "--base-directory=${nodeConf.basedir}"
             val builder = ProcessBuilder(javaArgs)
             builder.redirectError(Paths.get("error.$className.log").toFile())
             builder.inheritIO()
+            builder.directory(nodeConf.basedir.toFile())
             val process = builder.start()
-            addressMustBeBound(cliParams.messagingAddress)
+            addressMustBeBound(nodeConf.artemisAddress)
             // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
             // the handlers for the advertised services are not yet registered. A hacky workaround is that we wait for
             // the web api address to be bound as well, as that starts after the services. Needs rethinking.
-            addressMustBeBound(cliParams.apiAddress)
+            addressMustBeBound(nodeConf.webAddress)
 
             return process
         }
     }
 }
 
-fun writeConfig(path: String, filename: String, config: Config) {
-    File(path).mkdirs()
+fun writeConfig(path: Path, filename: String, config: Config) {
+    path.toFile().mkdirs()
     File("$path/$filename").writeText(config.root().render(ConfigRenderOptions.concise()))
 }
 
