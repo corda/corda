@@ -909,6 +909,16 @@ When we construct a transaction that generates the encumbered state, we must pla
 position of that transaction. And when we subsequently consume that encumbered state, the same encumbrance state must be
 available somewhere within the input set of states.
 
+In future, we will consider the concept of a *covenant*. This is where the encumbrance travels alongside each iteration of
+the encumbered state. For example, a cash state may be encumbered with a *domicile* encumbrance, which checks the domicile of
+the identity of the owner that the cash state is being moved to, in order to uphold sanction screening regulations, and prevent
+cash being paid to parties domiciled in e.g. North Korea. In this case, the encumbrance should be permanently attached to
+the all future cash states stemmimg from this one.
+
+We will also consider marking states that are capable of being encumbrances as such. This will prevent states being used
+as encumbrances inadvertently. For example, the time-lock above would be usable as an encumbrance, but it makes no sense to
+be able to encumber a cash state with another one.
+
 Clauses
 -------
 

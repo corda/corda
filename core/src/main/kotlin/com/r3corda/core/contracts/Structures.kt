@@ -115,10 +115,11 @@ interface ContractState {
     /**
      * All contract states may be _encumbered_ by up to one other state.
      *
-     * The encumbrance state, if present, forces additional controls over this state, since the encumbrance state contract
-     * will also be verified during the execution of the transaction. For example, a contract state could be encumbered
-     * with a time-lock contract state; the state is then only processable in a transaction that verifies that the time
-     * specified in the encumbrance time-lock has passed.
+     * The encumbrance state, if present, forces additional controls over the encumbered state, since the platform checks
+     * that the encumbrance state is present as an input in the same transaction that consumes the encumbered state, and
+     * the contract code and rules of the encumbrance state will also be verified during the execution of the transaction.
+     * For example, a cash contract state could be encumbered with a time-lock contract state; the cash state is then only
+     * processable in a transaction that verifies that the time specified in the encumbrance time-lock has passed.
      *
      * The encumbered state refers to another by index, and the referred encumbrance state
      * is an output state in a particular position on the same transaction that created the encumbered state. An alternative

@@ -2,13 +2,11 @@ package com.r3corda.core.contracts
 
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.testing.*
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import kotlin.test.assertFailsWith
 
 val TEST_TIMELOCK_ID = TransactionEncumbranceTests.TestTimeLock()
 
@@ -32,32 +30,30 @@ class TransactionEncumbranceTests {
     class TestTimeLock : Contract {
         override val legalContractReference = SecureHash.sha256("TestTimeLock")
         override fun verify(tx: TransactionForContract) {
-            val timestamp: Timestamp? = tx.timestamp
-            val time = timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
+            val time = tx.timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
             requireThat {
                 "the time specified in the time-lock has passed" by
                         (time >= tx.inputs.filterIsInstance<TestTimeLock.State>().single().validFrom)
             }
         }
+
         data class State(
                 val validFrom: Instant
         ) : ContractState {
-            override val participants: List<PublicKey>
-                get() = throw UnsupportedOperationException()
+            override val participants: List<PublicKey> = emptyList()
             override val contract: Contract = TEST_TIMELOCK_ID
         }
     }
 
     @Test
     fun trivial() {
-        // A transaction containing an input state that is encumbered must fail if the encumbrance is missing on the inputs.
-        assertFailsWith(TransactionVerificationException.TransactionMissingEncumbranceException::class) {
-            transaction {
-                input { encumberedState }
-                output { unencumberedState }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
-                this.verifies()
-            }
+        // A transaction containing an input state that is encumbered must fail if the encumbrance has not been presented
+        // on the input states.
+        transaction {
+            input { encumberedState }
+            output { unencumberedState }
+            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this `fails with` "Missing required encumbrance 1 in INPUT"
         }
         // An encumbered state must not be encumbered by itself.
         transaction {
@@ -70,6 +66,7 @@ class TransactionEncumbranceTests {
             this `fails with` "Missing required encumbrance 1 in OUTPUT"
         }
         // An encumbered state must not reference an index greater than the size of the output states.
+        // In this test, the output encumbered state refers to an encumbrance in position 1, but there is only one output.
         transaction {
             input { unencumberedState }
             // The encumbered state refers to an encumbrance in position 1, so there should be at least 2 outputs.
@@ -82,8 +79,10 @@ class TransactionEncumbranceTests {
 
     @Test
     fun testEncumbranceEffects() {
-        // A transaction containing an input state that is encumbered must fail if the encumbrance is not in the correct position.
-         ledger {
+        // This test fails because the encumbered state is pointing to the ordinary cash state as the encumbrance,
+        // instead of the timelock by mistake, so when we try and use it the transaction fails as we didn't include the
+        // encumbrance cash state.
+        ledger {
             unverifiedTransaction {
                 output("state encumbered by 5pm time-lock") { encumberedState }
                 output { unencumberedState }
@@ -98,7 +97,10 @@ class TransactionEncumbranceTests {
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
         }
-        // A transaction containing an input state that is encumbered must fail if the encumbrance is not in the correct transaction.
+        // A transaction containing an input state that is encumbered must fail if the encumbrance is not in the correct
+        // transaction. In this test, the intended encumbrance is presented alongside the encumbered state for consumption,
+        // although the encumbered state always refers to the encumbrance produced in the same transaction, and the in this case
+        // the encumbrance was created in a separate transaction.
         ledger {
             unverifiedTransaction {
                 output("state encumbered by 5pm time-lock") { encumberedState }
@@ -133,6 +135,7 @@ class TransactionEncumbranceTests {
             }
         }
         // A transaction with an input state that is encumbered must fail if the rules of the encumbrance are not met.
+        // In this test, the time-lock encumbrance is being processed in a transaction before the time allowed.
         ledger {
             unverifiedTransaction {
                 output("state encumbered by 5pm time-lock") { encumberedState }
