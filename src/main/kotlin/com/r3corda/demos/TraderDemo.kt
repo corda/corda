@@ -199,7 +199,7 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // Self issue some cash.
     //
     // TODO: At some point this demo should be extended to have a central bank node.
-    node.services.fillWithSomeTestCash(3000.DOLLARS,
+    node.services.fillWithSomeTestCash(300000.DOLLARS,
                                        outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
                                        ownedBy = node.services.keyManagementService.freshKey().public)
 

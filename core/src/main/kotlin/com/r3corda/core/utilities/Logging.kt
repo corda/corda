@@ -13,9 +13,8 @@ import kotlin.reflect.KClass
 // logging at that level is enabled.
 inline fun <reified T : Any> loggerFor(): org.slf4j.Logger = LoggerFactory.getLogger(T::class.java)
 
-inline fun org.slf4j.Logger.trace(msg: () -> String) {
-    if (isTraceEnabled) trace(msg())
-}
+inline fun org.slf4j.Logger.trace(msg: () -> String) { if (isTraceEnabled) trace(msg()) }
+inline fun org.slf4j.Logger.debug(msg: () -> String) { if (isDebugEnabled) debug(msg()) }
 
 /** A configuration helper that allows modifying the log level for specific loggers */
 object LogHelper {

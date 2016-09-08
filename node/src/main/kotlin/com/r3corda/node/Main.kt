@@ -9,7 +9,7 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.nio.file.Paths
 
-val log = LoggerFactory.getLogger("Main")
+private val log = LoggerFactory.getLogger("Main")
 
 object ParamsSpec {
     val parser = OptionParser()
