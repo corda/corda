@@ -39,7 +39,8 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
             val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
             transactions.forEach { tx ->
                 tx.tx.inputs.forEach { input ->
-                    forwardGraph.getOrPut(input.txhash) { HashSet() }.add(tx)
+                    // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
+                    forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(tx)
                 }
             }
 
