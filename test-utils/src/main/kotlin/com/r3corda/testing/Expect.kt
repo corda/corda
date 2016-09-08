@@ -41,22 +41,25 @@ private val log: Logger = LoggerFactory.getLogger("Expect")
  * @param match Optional additional matching logic
  * @param expectClosure The closure to run on the event
  */
-fun <E : Any, T : E> expect(klass: Class<T>, match: (T) -> Boolean, expectClosure: (T) -> Unit): ExpectCompose<E> {
+fun <E : Any> expect(klass: Class<E>, match: (E) -> Boolean, expectClosure: (E) -> Unit): ExpectCompose<E> {
     return ExpectCompose.Single(Expect(klass, match, expectClosure))
 }
 
 /**
  * Convenience variant of [expect] reifying the [Class] parameter
  */
-inline fun <E : Any, reified T : E> expect(
-        noinline match: (T) -> Boolean = { true },
-        noinline expectClosure: (T) -> Unit = {}
-): ExpectCompose<E> = expect(T::class.java, match, expectClosure)
+inline fun <reified E : Any> expect(
+        noinline match: (E) -> Boolean = { true },
+        noinline expectClosure: (E) -> Unit
+): ExpectCompose<E> = expect(E::class.java, match, expectClosure)
 
 /**
  * Convenience variant of [expect] that only matches events that are strictly equal to [event]
  */
-inline fun <reified E : Any> expect(event: E): ExpectCompose<E> = expect(match = { event == it })
+inline fun <reified E : Any> expect(
+        event: E,
+        noinline expectClosure: (E) -> Unit = {}
+): ExpectCompose<E> = expect(match = { event == it }, expectClosure = expectClosure)
 
 /**
  * Tests that events arrive in the specified order.
@@ -78,7 +81,8 @@ fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
  * @param number The number of events expected.
  * @param expectation The piece of DSL to run on each event, with the index of the event passed in.
  */
-inline fun <E> replicate(number: Int, expectation: (Int) -> ExpectCompose<E>) = sequence(*Array(number) { expectation(it) })
+inline fun <E> replicate(number: Int, expectation: (Int) -> ExpectCompose<E>): ExpectCompose<E> =
+        sequence(*Array(number) { expectation(it) })
 
 /**
  * Run the specified DSL against the event [Observable].
@@ -163,25 +167,25 @@ fun <S, E : Any> S.genericExpectEvents(
 }
 
 sealed class ExpectCompose<out E> {
-    internal class Single<E>(val expect: Expect<E, E>) : ExpectCompose<E>()
+    internal class Single<E>(val expect: Expect<E>) : ExpectCompose<E>()
     internal class Sequential<E>(val sequence: List<ExpectCompose<E>>) : ExpectCompose<E>()
     internal class Parallel<E>(val parallel: List<ExpectCompose<E>>) : ExpectCompose<E>()
 }
 
-internal data class Expect<E, T : E>(
-        val clazz: Class<T>,
-        val match: (T) -> Boolean,
-        val expectClosure: (T) -> Unit
+internal data class Expect<in E>(
+        val clazz: Class<in E>,
+        val match: (E) -> Boolean,
+        val expectClosure: (E) -> Unit
 )
 
 private sealed class ExpectComposeState<E : Any> {
 
     abstract fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>?
-    abstract fun getExpectedEvents(): List<Class<out E>>
+    abstract fun getExpectedEvents(): List<Class<in E>>
 
     class Finished<E : Any> : ExpectComposeState<E>() {
         override fun nextState(event: E) = null
-        override fun getExpectedEvents(): List<Class<out E>> = listOf()
+        override fun getExpectedEvents(): List<Class<in E>> = listOf()
     }
     class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>() {
         override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? =
