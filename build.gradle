@@ -158,11 +158,10 @@ tasks.withType(CreateStartScripts) {
     }
 }
 
-task integrationTest(type: Test) {
+task integrationTest(type: Test, dependsOn: [':node:integrationTest',':client:integrationTest']) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
-test.finalizedBy(integrationTest)
 
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
