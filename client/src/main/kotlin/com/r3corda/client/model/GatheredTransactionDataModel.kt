@@ -1,7 +1,7 @@
 package com.r3corda.client.model
 
 import com.r3corda.client.fxutils.foldToObservableList
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.services.monitor.ServiceToClientEvent
 import com.r3corda.node.services.monitor.TransactionBuildResult
 import com.r3corda.node.utilities.AddOrRemove
@@ -11,6 +11,16 @@ import javafx.collections.ObservableList
 import rx.Observable
 import java.time.Instant
 import java.util.UUID
+
+interface GatheredTransactionData {
+    val fiberId: ObservableValue<Long?>
+    val uuid: ObservableValue<UUID?>
+    val protocolName: ObservableValue<String?>
+    val protocolStatus: ObservableValue<ProtocolStatus?>
+    val transaction: ObservableValue<SignedTransaction?>
+    val status: ObservableValue<TransactionCreateStatus?>
+    val lastUpdate: ObservableValue<Instant>
+}
 
 sealed class TransactionCreateStatus(val message: String?) {
     class Started(message: String?) : TransactionCreateStatus(message)
@@ -25,17 +35,7 @@ sealed class ProtocolStatus(val status: String?) {
     override fun toString(): String = status ?: javaClass.simpleName
 }
 
-interface TransactionCreateState {
-    val fiberId: ObservableValue<Long?>
-    val uuid: ObservableValue<UUID?>
-    val protocolName: ObservableValue<String?>
-    val protocolStatus: ObservableValue<ProtocolStatus?>
-    val transaction: ObservableValue<SignedTransaction?>
-    val status: ObservableValue<TransactionCreateStatus?>
-    val lastUpdate: ObservableValue<Instant>
-}
-
-data class TransactionCreateStateWritable(
+data class GatheredTransactionDataWritable(
         override val fiberId: SimpleObjectProperty<Long?> = SimpleObjectProperty(null),
         override val uuid: SimpleObjectProperty<UUID?> = SimpleObjectProperty(null),
         override val protocolName: SimpleObjectProperty<String?> = SimpleObjectProperty(null),
@@ -43,12 +43,12 @@ data class TransactionCreateStateWritable(
         override val transaction: SimpleObjectProperty<SignedTransaction?> = SimpleObjectProperty(null),
         override val status: SimpleObjectProperty<TransactionCreateStatus?> = SimpleObjectProperty(null),
         override val lastUpdate: SimpleObjectProperty<Instant>
-) : TransactionCreateState
+) : GatheredTransactionData
 
 /**
  * This model provides an observable list of states relating to the creation of a transaction not yet on ledger.
  */
-class TransactionCreateStateModel {
+class GatheredTransactionDataModel {
 
     private val serviceToClient: Observable<ServiceToClientEvent> by observable(WalletMonitorModel::serviceToClient)
 
@@ -64,8 +64,8 @@ class TransactionCreateStateModel {
      * (Note that a transaction may be mapped by one or both)
      * TODO: Expose a writable stream to combine [serviceToClient] with to allow recording of transactions made locally(UUID)
      */
-    val transactionCreateStates: ObservableList<out TransactionCreateState> =
-            serviceToClient.foldToObservableList<ServiceToClientEvent, TransactionCreateStateWritable, Unit>(
+    val gatheredGatheredTransactionDataList: ObservableList<out GatheredTransactionData> =
+            serviceToClient.foldToObservableList<ServiceToClientEvent, GatheredTransactionDataWritable, Unit>(
                     initialAccumulator = Unit,
                     folderFun = { serviceToClientEvent, _unit, transactionStates ->
                         return@foldToObservableList when (serviceToClientEvent) {
@@ -123,14 +123,14 @@ class TransactionCreateStateModel {
 
     companion object {
         private fun newFiberIdTransactionStateOrModify(
-                transactionStates: ObservableList<TransactionCreateStateWritable>,
+                transactionStates: ObservableList<GatheredTransactionDataWritable>,
                 fiberId: Long,
                 lastUpdate: Instant,
-                tweak: TransactionCreateStateWritable.() -> Unit
+                tweak: GatheredTransactionDataWritable.() -> Unit
         ) {
             val index = transactionStates.indexOfFirst { it.fiberId.value == fiberId }
             if (index < 0) {
-                val newState = TransactionCreateStateWritable(
+                val newState = GatheredTransactionDataWritable(
                         fiberId = SimpleObjectProperty(fiberId),
                         lastUpdate = SimpleObjectProperty(lastUpdate)
                 )
@@ -144,17 +144,17 @@ class TransactionCreateStateModel {
         }
 
         private fun newUuidTransactionStateOrModify(
-                transactionStates: ObservableList<TransactionCreateStateWritable>,
+                transactionStates: ObservableList<GatheredTransactionDataWritable>,
                 uuid: UUID,
                 fiberId: Long?,
                 lastUpdate: Instant,
-                tweak: TransactionCreateStateWritable.() -> Unit
+                tweak: GatheredTransactionDataWritable.() -> Unit
         ) {
             val index = transactionStates.indexOfFirst {
                 it.uuid.value == uuid || (fiberId != null && it.fiberId.value == fiberId)
             }
             if (index < 0) {
-                val newState = TransactionCreateStateWritable(
+                val newState = GatheredTransactionDataWritable(
                         uuid = SimpleObjectProperty(uuid),
                         fiberId = SimpleObjectProperty(fiberId),
                         lastUpdate = SimpleObjectProperty(lastUpdate)
