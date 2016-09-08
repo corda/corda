@@ -98,6 +98,30 @@ class ResolveTransactionsProtocolTest {
     }
 
     @Test
+    fun `triangle of transactions resolves fine`() {
+        val stx1 = makeTransactions().first
+
+        val stx2 = DummyContract.move(stx1.tx.outRef(0), MINI_CORP_PUBKEY).run {
+            signWith(MEGA_CORP_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+            toSignedTransaction()
+        }
+
+        val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), MINI_CORP_PUBKEY).run {
+            signWith(MEGA_CORP_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+            toSignedTransaction()
+        }
+
+        a.services.recordTransactions(stx2, stx3)
+
+        val p = ResolveTransactionsProtocol(setOf(stx3.id), a.info.identity)
+        val future = b.services.startProtocol("resolve", p)
+        net.runNetwork()
+        future.get()
+    }
+
+    @Test
     fun attachment() {
         val id = a.services.storageService.attachments.importAttachment("Some test file".toByteArray().opaque().open())
         val stx2 = makeTransactions(withAttachment = id).second
