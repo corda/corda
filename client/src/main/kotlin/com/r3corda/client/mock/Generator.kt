@@ -1,6 +1,5 @@
 package com.r3corda.client.mock
 
-import com.r3corda.client.mock.Generator.Companion.choice
 import com.r3corda.core.ErrorOr
 import java.util.*
 
