@@ -11,9 +11,10 @@ import rx.Observable
  * [sequence] is used to impose ordering invariants on the stream, whereas [parallel] allows events to arrive in any order.
  *
  * The only restriction on [parallel] is that we should be able to discriminate which branch to take based on the
- * arrived event's type. If this is ambiguous the first matching piece of DSL will be run.
-
- * [sequence]s and [parallel]s can be nested arbitrarily.
+ * arrived event's type and optionally custom matching logic. If this is ambiguous the first matching piece of DSL will
+ * be run.
+ *
+ * [sequence]s and [parallel]s can be nested arbitrarily
  *
  * Example usage:
  *
@@ -35,11 +36,27 @@ private val log: Logger = LoggerFactory.getLogger("Expect")
 
 /**
  * Expect an event of type [T] and run [expectClosure] on it
+ *
+ * @param klass The [Class] to use for checking the incoming event's type
+ * @param match Optional additional matching logic
+ * @param expectClosure The closure to run on the event
  */
-inline fun <E : Any, reified T : E> expect(noinline expectClosure: (T) -> Unit) = expect(T::class.java, expectClosure)
-fun <E : Any, T : E> expect(klass: Class<T>, expectClosure: (T) -> Unit): ExpectCompose<E> {
-    return ExpectCompose.Single(Expect(klass, expectClosure))
+fun <E : Any, T : E> expect(klass: Class<T>, match: (T) -> Boolean, expectClosure: (T) -> Unit): ExpectCompose<E> {
+    return ExpectCompose.Single(Expect(klass, match, expectClosure))
 }
+
+/**
+ * Convenience variant of [expect] reifying the [Class] parameter
+ */
+inline fun <E : Any, reified T : E> expect(
+        noinline match: (T) -> Boolean = { true },
+        noinline expectClosure: (T) -> Unit = {}
+): ExpectCompose<E> = expect(T::class.java, match, expectClosure)
+
+/**
+ * Convenience variant of [expect] that only matches events that are strictly equal to [event]
+ */
+inline fun <reified E : Any> expect(event: E): ExpectCompose<E> = expect(match = { event == it })
 
 /**
  * Tests that events arrive in the specified order.
@@ -64,42 +81,81 @@ fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = Expe
 inline fun <E> replicate(number: Int, expectation: (Int) -> ExpectCompose<E>) = sequence(*Array(number) { expectation(it) })
 
 /**
- * Run the specified DSL against the event stream.
+ * Run the specified DSL against the event [Observable].
  *
- * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subset of events).
+ * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subsequence of events).
  * @param expectCompose The DSL we expect to match against the stream of events.
  */
-fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) {
+fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) =
+        genericExpectEvents(
+                isStrict = isStrict,
+                stream = { function: (E) -> Unit ->
+                    val lock = object {}
+                    subscribe { event ->
+                        synchronized(lock) {
+                            function(event)
+                        }
+                    }
+                },
+                expectCompose = expectCompose
+        )
+
+/**
+ * Run the specified DSL against the event [Iterable].
+ *
+ * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subsequence of events).
+ * @param expectCompose The DSL we expect to match against the stream of events.
+ */
+fun <E : Any> Iterable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) =
+        genericExpectEvents(
+                isStrict = isStrict,
+                stream = { function: (E) -> Unit ->
+                    forEach(function)
+                },
+                expectCompose = expectCompose
+        )
+
+/**
+ * Run the specified DSL against the generic event [S]tream
+ *
+ * @param isStrict If false non-matched events are disregarded (so the DSL will only check a subsequence of events).
+ * @param stream A function that extracts events from the stream.
+ * @param expectCompose The DSL we expect to match against the stream of events.
+ */
+fun <S, E : Any> S.genericExpectEvents(
+        isStrict: Boolean = true,
+        stream: S.((E) -> Unit) -> Unit,
+        expectCompose: () -> ExpectCompose<E>
+) {
     val finishFuture = SettableFuture<Unit>()
-    val stateLock = object {}
     var state = ExpectComposeState.fromExpectCompose(expectCompose())
-    subscribe { event ->
-        synchronized(stateLock) {
-            if (state is ExpectComposeState.Finished) {
+    stream { event ->
+        if (state is ExpectComposeState.Finished) {
+            if (isStrict) {
                 log.warn("Got event $event, but was expecting no further events")
-                return@subscribe
             }
-            val next = state.nextState(event)
-            log.info("$event :: ${state.getExpectedEvents()} -> ${next?.second?.getExpectedEvents()}")
-            if (next == null) {
-                val expectedStates = state.getExpectedEvents()
-                val message = "Got $event, expected one of $expectedStates"
-                if (isStrict) {
-                    finishFuture.setException(Exception(message))
-                    state = ExpectComposeState.Finished()
-                } else {
-                    log.warn("$message, discarding event as isStrict=false")
-                }
+            return@stream
+        }
+        val next = state.nextState(event)
+        val expectedStates = state.getExpectedEvents()
+        log.info("$event :: ${expectedStates.map { it.simpleName }} -> ${next?.second?.getExpectedEvents()?.map { it.simpleName }}")
+        if (next == null) {
+            val message = "Got $event, did not match any expectations of type ${expectedStates.map { it.simpleName }}"
+            if (isStrict) {
+                finishFuture.setException(Exception(message))
+                state = ExpectComposeState.Finished()
             } else {
-                state = next.second
-                try {
-                    next.first()
-                } catch (exception: Exception) {
-                    finishFuture.setException(exception)
-                }
-                if (state is ExpectComposeState.Finished) {
-                    finishFuture.set(Unit)
-                }
+                log.info("$message, discarding event as isStrict=false")
+            }
+        } else {
+            state = next.second
+            try {
+                next.first()
+            } catch (exception: Exception) {
+                finishFuture.setException(exception)
+            }
+            if (state is ExpectComposeState.Finished) {
+                finishFuture.set(Unit)
             }
         }
     }
@@ -114,6 +170,7 @@ sealed class ExpectCompose<out E> {
 
 internal data class Expect<E, T : E>(
         val clazz: Class<T>,
+        val match: (T) -> Boolean,
         val expectClosure: (T) -> Unit
 )
 
@@ -128,7 +185,7 @@ private sealed class ExpectComposeState<E : Any> {
     }
     class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>() {
         override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? =
-                if (single.expect.clazz.isAssignableFrom(event.javaClass)) {
+                if (single.expect.clazz.isAssignableFrom(event.javaClass) && single.expect.match(event)) {
                     @Suppress("UNCHECKED_CAST")
                     Pair({ single.expect.expectClosure(event) }, Finished())
                 } else {
