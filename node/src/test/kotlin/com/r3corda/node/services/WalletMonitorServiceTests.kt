@@ -140,7 +140,7 @@ class WalletMonitorServiceTests {
                         // Check the returned event is correct
                         val tx = (event.state as TransactionBuildResult.ProtocolStarted).transaction
                         assertNotNull(tx)
-                        assertEquals(expectedState, tx!!.tx.outputs.single().data)
+                        assertEquals(expectedState, tx!!.outputs.single().data)
                     },
                     expect { event: ServiceToClientEvent.OutputState ->
                         // Check the generated state is correct
@@ -202,8 +202,8 @@ class WalletMonitorServiceTests {
                                     }
                             ),
                             expect { event: ServiceToClientEvent.Transaction ->
-                                require(event.transaction.sigs.size == 1)
-                                event.transaction.sigs.map { it.by }.toSet().containsAll(
+                                require(event.transaction.mustSign.size == 1)
+                                event.transaction.mustSign.containsAll(
                                         listOf(
                                                 monitorServiceNode.services.storageService.myLegalIdentity.owningKey
                                         )
