@@ -886,7 +886,7 @@ The time-lock contract mentioned above can be implemented very simply:
     class TestTimeLock : Contract {
         ...
         override fun verify(tx: TransactionForContract) {
-            val timestamp: Timestamp? = tx.timestamp
+            val time = tx.timestamp.before ?: throw IllegalStateException(...)
             ...
             requireThat {
                 "the time specified in the time-lock has passed" by
