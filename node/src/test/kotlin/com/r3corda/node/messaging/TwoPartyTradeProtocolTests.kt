@@ -298,17 +298,19 @@ class TwoPartyTradeProtocolTests {
             run {
                 val records = (bobNode.storage.validatedTransactions as RecordingTransactionStorage).records
                 // Check Bobs's database accesses as Bob's cash transactions are downloaded by Alice.
-                assertThat(records).containsExactly(
-                        // Buyer Bob is told about Alice's commercial paper, but doesn't know it ..
-                        TxRecord.Get(alicesFakePaper[0].id),
-                        // He asks and gets the tx, validates it, sees it's a self issue with no dependencies, stores.
-                        TxRecord.Add(alicesSignedTxns.values.first()),
-                        // Alice gets Bob's proposed transaction and doesn't know his two cash states. She asks, Bob answers.
-                        TxRecord.Get(bobsFakeCash[1].id),
-                        TxRecord.Get(bobsFakeCash[2].id),
-                        // Alice notices that Bob's cash txns depend on a third tx she also doesn't know. She asks, Bob answers.
-                        TxRecord.Get(bobsFakeCash[0].id)
-                )
+                records.expectEvents(isStrict = false) {
+                    sequence(
+                            // Buyer Bob is told about Alice's commercial paper, but doesn't know it ..
+                            expect(TxRecord.Get(alicesFakePaper[0].id)),
+                            // He asks and gets the tx, validates it, sees it's a self issue with no dependencies, stores.
+                            expect(TxRecord.Add(alicesSignedTxns.values.first())),
+                            // Alice gets Bob's proposed transaction and doesn't know his two cash states. She asks, Bob answers.
+                            expect(TxRecord.Get(bobsFakeCash[1].id)),
+                            expect(TxRecord.Get(bobsFakeCash[2].id)),
+                            // Alice notices that Bob's cash txns depend on a third tx she also doesn't know. She asks, Bob answers.
+                            expect(TxRecord.Get(bobsFakeCash[0].id))
+                    )
+                }
 
                 // Bob has downloaded the attachment.
                 bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
@@ -321,33 +323,35 @@ class TwoPartyTradeProtocolTests {
             // And from Alice's perspective ...
             run {
                 val records = (aliceNode.storage.validatedTransactions as RecordingTransactionStorage).records
-                assertThat(records).containsExactly(
-                        // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
-                        // He requests, Alice looks up in her DB to send the tx to Bob
-                        TxRecord.Get(alicesFakePaper[0].id),
-                        // Seller Alice gets a proposed tx which depends on Bob's two cash txns and her own tx.
-                        TxRecord.Get(bobsFakeCash[1].id),
-                        TxRecord.Get(bobsFakeCash[2].id),
-                        TxRecord.Get(alicesFakePaper[0].id),
-                        // Alice notices that Bob's cash txns depend on a third tx she also doesn't know.
-                        TxRecord.Get(bobsFakeCash[0].id),
-                        // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
-                        // Bob's transactions are valid, so she commits to the database
-                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!),
-                        TxRecord.Get(bobsFakeCash[0].id),   // Verify
-                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!),
-                        TxRecord.Get(bobsFakeCash[0].id),   // Verify
-                        TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!),
-                        // Now she verifies the transaction is contract-valid (not signature valid) which means
-                        // looking up the states again.
-                        TxRecord.Get(bobsFakeCash[1].id),
-                        TxRecord.Get(bobsFakeCash[2].id),
-                        TxRecord.Get(alicesFakePaper[0].id),
-                        // Alice needs to look up the input states to find out which Notary they point to
-                        TxRecord.Get(bobsFakeCash[1].id),
-                        TxRecord.Get(bobsFakeCash[2].id),
-                        TxRecord.Get(alicesFakePaper[0].id)
-                )
+                records.expectEvents(isStrict = false) {
+                    sequence(
+                            // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
+                            // He requests, Alice looks up in her DB to send the tx to Bob
+                            expect(TxRecord.Get(alicesFakePaper[0].id)),
+                            // Seller Alice gets a proposed tx which depends on Bob's two cash txns and her own tx.
+                            expect(TxRecord.Get(bobsFakeCash[1].id)),
+                            expect(TxRecord.Get(bobsFakeCash[2].id)),
+                            expect(TxRecord.Get(alicesFakePaper[0].id)),
+                            // Alice notices that Bob's cash txns depend on a third tx she also doesn't know.
+                            expect(TxRecord.Get(bobsFakeCash[0].id)),
+                            // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
+                            // Bob's transactions are valid, so she commits to the database
+                            expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!)),
+                            expect(TxRecord.Get(bobsFakeCash[0].id)),   // Verify
+                            expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!)),
+                            expect(TxRecord.Get(bobsFakeCash[0].id)),   // Verify
+                            expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!)),
+                            // Now she verifies the transaction is contract-valid (not signature valid) which means
+                            // looking up the states again.
+                            expect(TxRecord.Get(bobsFakeCash[1].id)),
+                            expect(TxRecord.Get(bobsFakeCash[2].id)),
+                            expect(TxRecord.Get(alicesFakePaper[0].id)),
+                            // Alice needs to look up the input states to find out which Notary they point to
+                            expect(TxRecord.Get(bobsFakeCash[1].id)),
+                            expect(TxRecord.Get(bobsFakeCash[2].id)),
+                            expect(TxRecord.Get(alicesFakePaper[0].id))
+                    )
+                }
             }
         }
     }
