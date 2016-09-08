@@ -1,6 +1,5 @@
 package com.r3corda.client
 
-import co.paralleluniverse.strands.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.node.driver.driver
@@ -16,12 +15,11 @@ import org.slf4j.LoggerFactory
 import rx.subjects.PublishSubject
 import kotlin.test.fail
 
-val log: Logger = LoggerFactory.getLogger(WalletMonitorServiceTests::class.java)
+val log: Logger = LoggerFactory.getLogger(WalletMonitorClientTests::class.java)
 
-class WalletMonitorServiceTests {
+class WalletMonitorClientTests {
     @Test
     fun cashIssueWorksEndToEnd() {
-
         driver {
             val aliceNodeFuture = startNode("Alice")
             val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(SimpleNotaryService.Type))
@@ -36,7 +34,7 @@ class WalletMonitorServiceTests {
             val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
             val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
-            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
+            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream, PublishSubject.create())
             require(aliceMonitorClient.register().get())
 
             aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
@@ -46,26 +44,20 @@ class WalletMonitorServiceTests {
                     notary = notaryNode.identity
             ))
 
-            val buildFuture = SettableFuture<ServiceToClientEvent.TransactionBuild>()
-            val eventFuture = SettableFuture<ServiceToClientEvent.OutputState>()
-            aliceInStream.subscribe {
-                if (it is ServiceToClientEvent.OutputState)
-                    eventFuture.set(it)
-                else if (it is ServiceToClientEvent.TransactionBuild)
-                    buildFuture.set(it)
-                else
-                    log.warn("Unexpected event $it")
+            aliceInStream.expectEvents(isStrict = false) {
+                    parallel(
+                            expect { build: ServiceToClientEvent.TransactionBuild ->
+                                val state = build.state
+                                if (state is TransactionBuildResult.Failed) {
+                                    fail(state.message)
+                                }
+                            },
+                            expect { output: ServiceToClientEvent.OutputState ->
+                                require(output.consumed.size == 0)
+                                require(output.produced.size == 1)
+                            }
+                    )
             }
-
-            val buildEvent = buildFuture.get()
-            val state = buildEvent.state
-            if (state is TransactionBuildResult.Failed) {
-                fail(state.message)
-            }
-
-            val outputEvent = eventFuture.get()
-            require(outputEvent.consumed.size == 0)
-            require(outputEvent.produced.size == 1)
         }
     }
 
@@ -85,7 +77,7 @@ class WalletMonitorServiceTests {
             val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
             val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
-            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
+            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream, PublishSubject.create())
             require(aliceMonitorClient.register().get())
 
             aliceOutStream.onNext(ClientToServiceCommand.IssueCash(
@@ -193,7 +185,7 @@ class WalletMonitorServiceTests {
             val aliceInStream = PublishSubject.create<ServiceToClientEvent>()
             val aliceOutStream = PublishSubject.create<ClientToServiceCommand>()
 
-            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream)
+            val aliceMonitorClient = WalletMonitorClient(client, aliceNode, aliceOutStream, aliceInStream, PublishSubject.create())
             require(aliceMonitorClient.register().get())
 
             aliceOutStream.onNext(ClientToServiceCommand.IssueCash(

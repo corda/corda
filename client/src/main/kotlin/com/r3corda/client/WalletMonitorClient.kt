@@ -24,7 +24,8 @@ class WalletMonitorClient(
         val net: MessagingService,
         val node: NodeInfo,
         val outEvents: Observable<ClientToServiceCommand>,
-        val inEvents: Observer<ServiceToClientEvent>
+        val inEvents: Observer<ServiceToClientEvent>,
+        val snapshot: Observer<StateSnapshotMessage>
 ) {
     private val sessionID = random63BitValue()
 
@@ -37,8 +38,10 @@ class WalletMonitorClient(
             net.removeMessageHandler(reg)
             future.set(resp.success)
         }
-        net.addMessageHandler(WalletMonitorService.STATE_TOPIC, sessionID) { msg, req ->
-            // TODO
+        net.addMessageHandler(WalletMonitorService.STATE_TOPIC, sessionID) { msg, reg ->
+            val snapshotMessage = msg.data.deserialize<StateSnapshotMessage>()
+            net.removeMessageHandler(reg)
+            snapshot.onNext(snapshotMessage)
         }
 
         net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
