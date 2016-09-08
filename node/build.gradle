@@ -19,9 +19,19 @@ configurations {
 
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
     runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
     test {
         resources {
             srcDir "../config/test"
@@ -119,6 +129,14 @@ dependencies {
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.4.7"
+
+    // Integration test helpers
+    integrationTestCompile 'junit:junit:4.12'
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
+
+task integrationTest(type: Test) {
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}

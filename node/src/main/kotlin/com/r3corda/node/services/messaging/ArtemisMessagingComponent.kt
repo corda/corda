@@ -1,5 +1,6 @@
 package com.r3corda.node.services.messaging
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.parsePublicKeyBase58
@@ -40,7 +41,8 @@ abstract class ArtemisMessagingComponent(val directory: Path, val config: NodeCo
          * N.B. Marked as JvmStatic to allow use in the inherited classes.
          */
         @JvmStatic
-        internal fun toHostAndPort(target: MessageRecipients): HostAndPort {
+        @VisibleForTesting
+        fun toHostAndPort(target: MessageRecipients): HostAndPort {
             val addr = target as? ArtemisMessagingComponent.ArtemisAddress ?: throw IllegalArgumentException("Not an Artemis address")
             return addr.hostAndPort
         }
