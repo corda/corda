@@ -34,8 +34,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
 
         private fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
-
-            // Construct txhash -> dependent-txhashes map
+            // Construct txhash -> dependent-txs map
             val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
             transactions.forEach { tx ->
                 tx.tx.inputs.forEach { input ->
@@ -48,22 +47,21 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
             val result = ArrayList<SignedTransaction>(transactions.size)
 
             fun visit(transaction: SignedTransaction) {
-                if (transaction.id in visited) {
-                    return
+                if (transaction.id !in visited) {
+                    visited.add(transaction.id)
+                    forwardGraph[transaction.id]?.forEach {
+                        visit(it)
+                    }
+                    result.add(transaction)
                 }
-                visited.add(transaction.id)
-                forwardGraph[transaction.id]?.forEach {
-                    visit(it)
-                }
-                result.add(transaction)
             }
 
             transactions.forEach {
                 visit(it)
             }
 
-            require(result.size == transactions.size)
             result.reverse()
+            require(result.size == transactions.size)
             return result
         }
 
