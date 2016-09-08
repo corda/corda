@@ -1,5 +1,6 @@
 # Register a ServiceLoader service extending from com.r3corda.node.CordaPluginRegistry
 com.r3corda.demos.IRSDemoPluginRegistry
+com.r3corda.demos.api.NodeInterestRates$Plugin
 com.r3corda.demos.protocols.AutoOfferProtocol$Plugin
 com.r3corda.demos.protocols.ExitServerProtocol$Plugin
 com.r3corda.demos.protocols.UpdateBusinessDayProtocol$Plugin

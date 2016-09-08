@@ -1,4 +1,4 @@
-package com.r3corda.node.services
+package com.r3corda.core.testing
 
 import com.r3corda.contracts.asset.CASH
 import com.r3corda.contracts.asset.Cash
@@ -14,7 +14,7 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.testing.node.MockNetwork
-import com.r3corda.node.services.clientapi.NodeInterestRates
+import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.protocols.RatesFixProtocol
 import com.r3corda.testing.ALICE_PUBKEY
 import com.r3corda.testing.MEGA_CORP

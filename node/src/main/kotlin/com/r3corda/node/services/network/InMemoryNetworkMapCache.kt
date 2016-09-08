@@ -21,7 +21,6 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.services.api.RegulatorService
-import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AddOrRemove
 import rx.Observable
@@ -42,8 +41,6 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         get() = get(RegulatorService.Type)
     override val notaryNodes: List<NodeInfo>
         get() = get(NotaryService.Type)
-    override val ratesOracleNodes: List<NodeInfo>
-        get() = get(NodeInterestRates.Type)
     override val partyNodes: List<NodeInfo>
         get() = registeredNodes.map { it.value }
     private val _changed = PublishSubject.create<MapChange>()
