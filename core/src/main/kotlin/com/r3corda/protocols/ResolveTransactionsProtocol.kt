@@ -33,40 +33,36 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
 
-        private fun topologicalSort(transactions: Iterable<SignedTransaction>): List<SignedTransaction> {
+        private fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
 
             // Construct txhash -> dependent-txhashes map
-            val forwardGraph = HashMap<SecureHash, HashSet<SecureHash>>()
+            val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
             transactions.forEach { tx ->
                 tx.tx.inputs.forEach { input ->
-                    forwardGraph.getOrPut(input.txhash) { HashSet() }.add(tx.id)
+                    forwardGraph.getOrPut(input.txhash) { HashSet() }.add(tx)
                 }
             }
 
-            // Construct txhash -> tx map
-            val transactionMap = HashMap<SecureHash, SignedTransaction>()
-            transactions.forEach { transactionMap[it.tx.id] = it }
+            val visited = HashSet<SecureHash>(transactions.size)
+            val result = ArrayList<SignedTransaction>(transactions.size)
 
-            val visited = HashSet<SecureHash>()
-            val result = LinkedList<SignedTransaction>()
-
-            fun visit(transactionHash: SecureHash) {
-                if (transactionHash in visited) {
+            fun visit(transaction: SignedTransaction) {
+                if (transaction.id in visited) {
                     return
                 }
-                visited.add(transactionHash)
-                forwardGraph[transactionHash]?.forEach {
+                visited.add(transaction.id)
+                forwardGraph[transaction.id]?.forEach {
                     visit(it)
                 }
-                result.addFirst(transactionMap[transactionHash]!!)
+                result.add(transaction)
             }
 
             transactions.forEach {
-                visit(it.tx.id)
+                visit(it)
             }
 
-            require(result.size == transactionMap.size)
-            require(visited.size == transactionMap.size)
+            require(result.size == transactions.size)
+            result.reverse()
             return result
         }
 
@@ -134,7 +130,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     override val topic: String get() = throw UnsupportedOperationException()
 
     @Suspendable
-    private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
+    private fun downloadDependencies(depsToCheck: Set<SecureHash>): Collection<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
         // first traversal across the dependency graph.
         //
@@ -184,7 +180,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
                 throw ExcessivelyLargeTransactionGraph()
         }
 
-        return resultQ.values.reversed()
+        return resultQ.values
     }
 
     /**
