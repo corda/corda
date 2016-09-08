@@ -43,6 +43,7 @@ abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Co
                      assetStates: List<StateAndRef<S>>): PublicKey
         = conserveClause.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
+            generateMoveCommand = { -> generateMoveCommand() },
             generateExitCommand = { amount -> generateExitCommand(amount) }
     )
 

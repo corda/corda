@@ -53,6 +53,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                      assetStates: List<StateAndRef<S>>,
                      deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKey) -> TransactionState<S>,
+                     generateMoveCommand: () -> CommandData,
                      generateExitCommand: (Amount<Issued<T>>) -> CommandData): PublicKey {
         val owner = assetStates.map { it.state.data.owner }.toSet().single()
         val currency = amountIssued.token.product
@@ -79,7 +80,8 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
 
         for (state in gathered) tx.addInputState(state)
         for (state in outputs) tx.addOutputState(state)
-        tx.addCommand(generateExitCommand(amountIssued), amountIssued.token.issuer.party.owningKey)
+        tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner })
+        tx.addCommand(generateExitCommand(amountIssued), gathered.flatMap { it.state.data.exitKeys })
         return amountIssued.token.issuer.party.owningKey
     }
 
