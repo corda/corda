@@ -17,6 +17,7 @@ import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.deserialize
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.ProgressTracker
@@ -133,14 +134,8 @@ fun main(args: Array<String>) {
         advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
         null
     } else {
-        // In a real system, the identity file of the network map would be shipped with the server software, and there'd
-        // be a single shared map service  (this is analagous to the DNS seeds in Bitcoin).
-        //
-        // TODO: AbstractNode should write out the full NodeInfo object and we should just load it here.
-        val path = Paths.get(baseDirectory, Role.BUYER.name.toLowerCase(), "identity-public")
-        val party = Files.readAllBytes(path).deserialize<Party>()
         advertisedServices = emptySet()
-        NodeInfo(ArtemisMessagingClient.makeRecipient(theirNetAddr), party, setOf(NetworkMapService.Type))
+        ArtemisMessagingClient.makeNetworkMapAddress(theirNetAddr)
     }
 
     // And now construct then start the node object. It takes a little while.
@@ -182,7 +177,7 @@ private fun runSeller(node: Node, amount: Amount<Currency>, otherSide: Party) {
         tradeTX = node.smm.findStateMachines(TraderDemoProtocolSeller::class.java).single().second
     } else {
         val seller = TraderDemoProtocolSeller(otherSide, amount)
-        tradeTX = node.smm.add("demo.seller", seller)
+        tradeTX = node.services.startProtocol("demo.seller", seller)
     }
 
     tradeTX.success {
@@ -204,7 +199,7 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // Self issue some cash.
     //
     // TODO: At some point this demo should be extended to have a central bank node.
-    node.services.fillWithSomeTestCash(3000.DOLLARS,
+    node.services.fillWithSomeTestCash(300000.DOLLARS,
                                        outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
                                        ownedBy = node.services.keyManagementService.freshKey().public)
 
@@ -217,7 +212,7 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
         // We use a simple scenario-specific wrapper protocol to make things happen.
         val otherSide = message.data.deserialize<Party>()
         val buyer = TraderDemoProtocolBuyer(otherSide, attachmentsPath, amount)
-        node.smm.add("demo.buyer", buyer)
+        node.services.startProtocol("demo.buyer", buyer)
     }
 }
 
@@ -311,7 +306,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).validate { it }
+        val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).unwrap { it }
 
         progressTracker.currentStep = SELF_ISSUING
 

@@ -1,0 +1,87 @@
+<HTML>
+<HEAD>
+<title>InterestRateSwap.Clauses.Agree - </title>
+<link rel="stylesheet" href="../../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../../index.html">com.r3corda.contracts</a>&nbsp;/&nbsp;<a href="../../index.html">InterestRateSwap</a>&nbsp;/&nbsp;<a href="../index.html">Clauses</a>&nbsp;/&nbsp;<a href=".">Agree</a><br/>
+<br/>
+<h1>Agree</h1>
+<code><span class="keyword">class </span><span class="identifier">Agree</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-abstract-i-r-s-clause/index.html"><span class="identifier">AbstractIRSClause</span></a></code><br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Agree</span><span class="symbol">(</span><span class="symbol">)</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="required-commands.html">requiredCommands</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Determine whether this clause runs or not</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="verify.html">verify</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.Agree$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.contracts.InterestRateSwap.Commands)))), com.r3corda.core.contracts.UniqueIdentifier)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.Agree$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.contracts.InterestRateSwap.Commands)))), com.r3corda.core.contracts.UniqueIdentifier)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.Agree$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.contracts.InterestRateSwap.Commands)))), com.r3corda.core.contracts.UniqueIdentifier)/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.Agree$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.contracts.InterestRateSwap.Commands)))), com.r3corda.core.contracts.UniqueIdentifier)/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="../../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.Agree$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.State)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.contracts.InterestRateSwap.Commands)))), com.r3corda.core.contracts.UniqueIdentifier)/groupingKey">groupingKey</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">&gt;</span></code><p>Verify the transaction matches the conditions from this clause. For example, a "no zero amount output" clause
+would check each of the output states that it applies to, looking for a zero amount, and throw IllegalStateException
+if any matched.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-abstract-i-r-s-clause/check-leg-amounts.html">checkLegAmounts</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkLegAmounts</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.AbstractIRSClause$checkLegAmounts(kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-i-r-s-clause/check-leg-dates.html">checkLegDates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkLegDates</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.AbstractIRSClause$checkLegDates(kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-i-r-s-clause/check-rates.html">checkRates</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkRates</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.AbstractIRSClause$checkRates(kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-i-r-s-clause/check-schedules.html">checkSchedules</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkSchedules</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.AbstractIRSClause$checkSchedules(kotlin.collections.List((com.r3corda.contracts.InterestRateSwap.CommonLeg)))/legs">legs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../-common-leg/index.html"><span class="identifier">CommonLeg</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-abstract-i-r-s-clause/get-floating-leg-payments-differences.html">getFloatingLegPaymentsDifferences</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getFloatingLegPaymentsDifferences</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.AbstractIRSClause$getFloatingLegPaymentsDifferences(kotlin.collections.Map((java.time.LocalDate, com.r3corda.contracts.Event)), kotlin.collections.Map((java.time.LocalDate, com.r3corda.contracts.Event)))/payments1">payments1</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">,</span>&nbsp;<a href="../../../-event/index.html"><span class="identifier">Event</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.Clauses.AbstractIRSClause$getFloatingLegPaymentsDifferences(kotlin.collections.Map((java.time.LocalDate, com.r3corda.contracts.Event)), kotlin.collections.Map((java.time.LocalDate, com.r3corda.contracts.Event)))/payments2">payments2</span><span class="symbol">:</span>&nbsp;<span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">,</span>&nbsp;<a href="../../../-event/index.html"><span class="identifier">Event</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDate.html"><span class="identifier">LocalDate</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../../-floating-rate-payment-event/index.html"><span class="identifier">FloatingRatePaymentEvent</span></a><span class="symbol">,</span>&nbsp;<a href="../../../-floating-rate-payment-event/index.html"><span class="identifier">FloatingRatePaymentEvent</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Compares two schedules of Floating Leg Payments, returns the difference (i.e. omissions in either leg or changes to the values).</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

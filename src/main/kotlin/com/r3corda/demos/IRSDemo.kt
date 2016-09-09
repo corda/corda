@@ -1,6 +1,8 @@
 package com.r3corda.demos
 
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
@@ -19,13 +21,13 @@ import com.r3corda.demos.utilities.putJson
 import com.r3corda.demos.utilities.uploadFile
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
-import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.testing.node.MockNetwork
 import joptsimple.OptionParser
 import joptsimple.OptionSet
 import org.apache.commons.io.IOUtils
@@ -56,7 +58,8 @@ enum class IRSDemoRole {
     NodeA,
     NodeB,
     Trade,
-    Date
+    Date,
+    Rates
 }
 
 /**
@@ -82,7 +85,6 @@ sealed class CliParams {
             val networkAddress: HostAndPort,
             val apiAddress: HostAndPort,
             val mapAddress: String,
-            val identityFile: Path,
             val tradeWithIdentities: List<Path>,
             val uploadRates: Boolean,
             val defaultLegalName: String,
@@ -103,6 +105,13 @@ sealed class CliParams {
     class DateChange(
             val apiAddress: HostAndPort,
             val dateString: String
+    ) : CliParams()
+
+    /**
+     * Corresponds to role 'Rates'.
+     */
+    class UploadRates(
+            val apiAddress: HostAndPort
     ) : CliParams()
 
     /**
@@ -156,11 +165,6 @@ sealed class CliParams {
                             CliParamsSpec.apiAddressArg.defaultsTo("localhost:${defaultApiPort(node)}")
                     )),
                     mapAddress = options.valueOf(CliParamsSpec.networkMapNetAddr),
-                    identityFile = if (options.has(CliParamsSpec.networkMapIdentityFile)) {
-                        Paths.get(options.valueOf(CliParamsSpec.networkMapIdentityFile))
-                    } else {
-                        dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME)
-                    },
                     tradeWithIdentities = if (options.has(CliParamsSpec.fakeTradeWithIdentityFile)) {
                         options.valuesOf(CliParamsSpec.fakeTradeWithIdentityFile).map { Paths.get(it) }
                     } else {
@@ -202,6 +206,15 @@ sealed class CliParams {
             )
         }
 
+        private fun parseRatesUpload(options: OptionSet): UploadRates {
+            return UploadRates(
+                    apiAddress = HostAndPort.fromString(options.valueOf(
+                            CliParamsSpec.apiAddressArg.defaultsTo("localhost:${defaultApiPort(IRSDemoNode.NodeB)}")
+                    ))
+
+            )
+        }
+
         fun parse(options: OptionSet): CliParams {
             if (options.has(CliParamsSpec.help)) {
                 return Help
@@ -214,6 +227,7 @@ sealed class CliParams {
                 IRSDemoRole.NodeB -> parseRunNode(options, IRSDemoNode.NodeB)
                 IRSDemoRole.Trade -> parseTrade(options)
                 IRSDemoRole.Date -> parseDateChange(options)
+                IRSDemoRole.Rates -> parseRatesUpload(options)
             }
         }
     }
@@ -244,9 +258,6 @@ object CliParamsSpec {
     val baseDirectoryArg =
             parser.accepts("base-directory", "The directory to put all files under")
             .withOptionalArg().defaultsTo(CliParams.defaultBaseDirectory)
-    val networkMapIdentityFile =
-            parser.accepts("network-map-identity-file", "The file containing the Party info of the network map")
-            .withOptionalArg()
     val networkMapNetAddr =
             parser.accepts("network-map-address", "The address of the network map")
             .withRequiredArg().defaultsTo("localhost")
@@ -293,6 +304,7 @@ fun runIRSDemo(args: Array<String>): Int {
         is CliParams.RunNode -> runNode(cliParams)
         is CliParams.Trade -> runTrade(cliParams)
         is CliParams.DateChange -> runDateChange(cliParams)
+        is CliParams.UploadRates -> runUploadRates(cliParams)
         is CliParams.Help -> {
             printHelp(CliParamsSpec.parser)
             0
@@ -372,9 +384,11 @@ private fun runTrade(cliParams: CliParams.Trade): Int {
     }
 }
 
+fun runUploadRates(cliParams: CliParams.UploadRates) = runUploadRates(cliParams.apiAddress).get()
+
 private fun createRecipient(addr: String): SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
-    return ArtemisMessagingClient.makeRecipient(hostAndPort)
+    return ArtemisMessagingClient.makeNetworkMapAddress(hostAndPort)
 }
 
 private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient): Node {
@@ -388,7 +402,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
                 }
                 IRSDemoNode.NodeB -> {
                     advertisedServices = setOf(NodeInterestRates.Type)
-                    nodeInfo(networkMap, params.identityFile, setOf(NetworkMapService.Type, SimpleNotaryService.Type))
+                    networkMap
                 }
             }
 
@@ -401,33 +415,27 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
 
 private fun parsePartyFromFile(path: Path) = Files.readAllBytes(path).deserialize<Party>()
 
-private fun nodeInfo(recipient: SingleMessageRecipient, identityFile: Path, advertisedServices: Set<ServiceType> = emptySet()): NodeInfo {
-    try {
-        val party = parsePartyFromFile(identityFile)
-        return NodeInfo(recipient, party, advertisedServices)
-    } catch (e: Exception) {
-        log.error("Could not find identify file $identityFile.")
-        throw e
-    }
-}
-
-private fun runUploadRates(host: HostAndPort) {
+private fun runUploadRates(host: HostAndPort): ListenableFuture<Int> {
     // Note: the getResourceAsStream is an ugly hack to get the jvm to search in the right location
     val fileContents = IOUtils.toString(CliParams::class.java.getResourceAsStream("example.rates.txt"))
     var timer: Timer? = null
+    val result = SettableFuture.create<Int>()
     timer = fixedRateTimer("upload-rates", false, 0, 5000, {
         try {
             val url = URL("http://${host.toString()}/upload/interest-rates")
             if (uploadFile(url, fileContents)) {
                 timer!!.cancel()
                 log.info("Rates uploaded successfully")
+                result.set(0)
             } else {
                 log.error("Could not upload rates. Retrying in 5 seconds. ")
+                result.set(1)
             }
         } catch (e: Exception) {
             log.error("Could not upload rates due to exception. Retrying in 5 seconds")
         }
     })
+    return result
 }
 
 private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {

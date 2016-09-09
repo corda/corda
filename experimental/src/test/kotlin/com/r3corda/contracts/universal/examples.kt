@@ -13,28 +13,62 @@ import java.util.*
 
 // various example arrangements using basic syntax
 
-    val cds_contract = Action("payout", acmeCorporationHasDefaulted and before("2017-09-01"),
-            roadRunner,
-            Transfer(Amount(1.M, USD), wileECoyote, roadRunner))
+val cds_contract = arrange {
+    acmeCorp.may {
+        "claim".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
+            highStreetBank.gives(acmeCorp, 1.M, USD)
+        }
+    }
+}
 
 // fx swap
 // both parties have the right to trigger the exchange of cash flows
-    val an_fx_swap = Action("execute", after("2017-09-01"), setOf(roadRunner, wileECoyote),
-            Transfer(1200.K * USD, wileECoyote, roadRunner)
-                    and Transfer(1.M * EUR, roadRunner, wileECoyote))
+val an_fx_swap = arrange {
+    (acmeCorp or highStreetBank).may {
+        "execute".givenThat(after("2017-09-01")) {
+            highStreetBank.gives(acmeCorp, 1200.K, USD)
+            acmeCorp.gives(highStreetBank, 1.M, EUR)
+        }
+    }
+}
 
-    val american_fx_option = Action("exercise", before("2017-09-01"),
-            roadRunner,
-            Transfer(1200.K * USD, wileECoyote, roadRunner)
-                    and Transfer(1.M * EUR, roadRunner, wileECoyote))
+val american_fx_option = arrange {
+    acmeCorp.may {
+        "exercise".givenThat(before("2017-09-01")) {
+            highStreetBank.gives(acmeCorp, 1200.K, USD)
+            acmeCorp.gives(highStreetBank, 1.M, EUR)
+        }
+    }
+}
 
-    val european_fx_option = Action("exercise", before("2017-09-01"), roadRunner, fx_swap("2017-09-01", 1.M, 1.2, EUR, USD, roadRunner, wileECoyote)) or
-            Action("expire", after("2017-09-01"), wileECoyote, zero)
+val european_fx_option = arrange {
+    acmeCorp.may {
+        "exercise".givenThat(before("2017-09-01")) {
+            fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD, acmeCorp, highStreetBank)
+        }
+    } or (acmeCorp or highStreetBank).may {
+        "expire".anytime {
+            zero
+        }
+    }
+}
 
-    val zero_coupon_bond_1 = Action("execute", after("2017-09-01"), roadRunner, Transfer(1.M * USD, wileECoyote, roadRunner))
+val zero_coupon_bond_1 = arrange {
+    acmeCorp.may {
+        "execute".givenThat(after("2017-09-01")) {
+            highStreetBank.gives(acmeCorp, 1.M, USD)
+        }
+    }
+}
 
 // maybe in the presence of negative interest rates you would want other side of contract to be able to take initiative as well
-    val zero_coupon_bond_2 = Action("execute", after("2017-09-01"), setOf(roadRunner, wileECoyote), Transfer(1.M * USD, wileECoyote, roadRunner))
+val zero_coupon_bond_2 = arrange {
+    (acmeCorp or highStreetBank).may {
+        "execute".givenThat(after("2017-09-01")) {
+            highStreetBank.gives(acmeCorp, 1.M, USD)
+        }
+    }
+}
 
 // no touch
 // Party Receiver
@@ -45,8 +79,24 @@ import java.util.*
 //
 // Assume observable is using FX fixing
 //
-    val no_touch = Action("execute", after("2017-09-01"), setOf(roadRunner, wileECoyote), Transfer(1.M * USD, wileECoyote, roadRunner)) or
-            Action("knock out", EUR / USD gt 1.3, wileECoyote, zero)
+val no_touch = arrange {
+    (acmeCorp or highStreetBank).may {
+        "execute".givenThat(after("2017-09-01")) {
+            highStreetBank.gives(acmeCorp, 1.M, USD)
+        }
+    } or highStreetBank.may {
+        "knock out".givenThat(EUR/USD gt 1.3)
+    }
+}
 
-    val one_touch = Action("expire", after("2017-09-01"), wileECoyote, zero) or
-            Action("knock in", EUR / USD gt 1.3, roadRunner, Transfer(1.M * USD, wileECoyote, roadRunner))
+val one_touch = arrange {
+    highStreetBank.may {
+        "expire".givenThat(after("2017-09-01")) {
+            zero
+        }
+    } or acmeCorp.may {
+        "knock in".givenThat(EUR / USD gt 1.3) {
+            highStreetBank.gives(acmeCorp, 1.M, USD)
+        }
+    }
+}

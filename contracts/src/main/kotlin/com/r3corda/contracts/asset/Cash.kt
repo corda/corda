@@ -4,10 +4,10 @@ import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.GroupClauseVerifier
-import com.r3corda.core.contracts.clauses.MatchBehaviour
+import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
 import java.math.BigInteger
 import java.security.PublicKey
@@ -34,7 +34,7 @@ val CASH_PROGRAM_ID = Cash()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class Cash : OnLedgerAsset<Currency, Cash.State>() {
+class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     /**
      * TODO:
      * 1) hash should be of the contents, not the URI
@@ -46,32 +46,30 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
      * that is inconsistent with the legal contract.
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
-    override val conserveClause: AbstractConserveAmount<State, Currency> = Clauses.ConserveAmount()
-    override val clauses = listOf(Clauses.Group())
-    override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
-            = tx.commands.select<Cash.Commands>()
+    override val conserveClause: AbstractConserveAmount<State, Commands, Currency> = Clauses.ConserveAmount()
+    override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Cash.Commands>>
+            = commands.select<Cash.Commands>()
 
     interface Clauses {
-        class Group : GroupClauseVerifier<State, Issued<Currency>>() {
-            override val ifMatched: MatchBehaviour = MatchBehaviour.END
-            override val ifNotMatched: MatchBehaviour = MatchBehaviour.ERROR
-            override val clauses = listOf(
-                        NoZeroSizedOutputs<State, Currency>(),
+        class Group : GroupClauseVerifier<State, Commands, Issued<Currency>>(AllComposition<State, Commands, Issued<Currency>>(
+                NoZeroSizedOutputs<State, Commands, Currency>(),
+                FirstComposition<State, Commands, Issued<Currency>>(
                         Issue(),
                         ConserveAmount())
-
+        )
+        ) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Currency>>>
                     = tx.groupStates<State, Issued<Currency>> { it.issuanceDef }
         }
 
-        class Issue : AbstractIssue<State, Currency>(
+        class Issue : AbstractIssue<State, Commands, Currency>(
                 sum = { sumCash() },
                 sumOrZero = { sumCashOrZero(it) }
         ) {
-            override val requiredCommands = setOf(Commands.Issue::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
-        class ConserveAmount : AbstractConserveAmount<State, Currency>()
+        class ConserveAmount : AbstractConserveAmount<State, Commands, Currency>()
     }
 
     /** A state representing a cash claim against some party. */
@@ -86,7 +84,7 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
         : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val deposit = amount.token.issuer
-        override val exitKeys = setOf(deposit.party.owningKey)
+        override val exitKeys = setOf(owner, deposit.party.owningKey)
         override val contract = CASH_PROGRAM_ID
         override val issuanceDef = amount.token
         override val participants = listOf(owner)
@@ -145,6 +143,9 @@ class Cash : OnLedgerAsset<Currency, Cash.State>() {
     override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
     override fun generateIssueCommand() = Commands.Issue()
     override fun generateMoveCommand() = Commands.Move()
+
+    override fun verify(tx: TransactionForContract)
+        = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
 }
 
 // Small DSL extensions.

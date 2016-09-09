@@ -4,8 +4,11 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.NodeConfiguration
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
@@ -15,6 +18,7 @@ import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.InVMLoginModule
+import rx.Subscription
 import java.math.BigInteger
 import java.nio.file.Path
 import javax.annotation.concurrent.ThreadSafe
@@ -35,7 +39,8 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class ArtemisMessagingServer(directory: Path,
                              config: NodeConfiguration,
-                             val myHostPort: HostAndPort) : ArtemisMessagingComponent(directory, config) {
+                             val myHostPort: HostAndPort,
+                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent(directory, config) {
     companion object {
         val log = loggerFor<ArtemisMessagingServer>()
     }
@@ -44,20 +49,71 @@ class ArtemisMessagingServer(directory: Path,
         var running = false
     }
 
-    val myAddress: SingleMessageRecipient = Address(myHostPort)
     private val mutex = ThreadBox(InnerState())
     private lateinit var activeMQServer: ActiveMQServer
+    private var networkChangeHandle: Subscription? = null
 
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
+            networkChangeHandle = networkMapCache.changed.subscribe { onNetworkChange(it) }
             running = true
         }
     }
 
     fun stop() = mutex.locked {
+        networkChangeHandle?.unsubscribe()
+        networkChangeHandle = null
         activeMQServer.stop()
         running = false
+    }
+
+    fun bridgeToNetworkMapService(networkMapService: SingleMessageRecipient?) {
+        if ((networkMapService != null) && (networkMapService is NetworkMapAddress)) {
+            val query = activeMQServer.queueQuery(NETWORK_MAP_ADDRESS)
+            if (!query.isExists) {
+                activeMQServer.createQueue(NETWORK_MAP_ADDRESS, NETWORK_MAP_ADDRESS, null, true, false)
+            }
+
+            maybeDeployBridgeForAddress(NETWORK_MAP_ADDRESS, networkMapService)
+        }
+    }
+
+    private fun onNetworkChange(change: NetworkMapCache.MapChange) {
+        val address = change.node.address
+        if (address is ArtemisMessagingComponent.ArtemisAddress) {
+            val queueName = address.queueName
+            when (change.type) {
+                NetworkMapCache.MapChangeType.Added -> {
+                    val query = activeMQServer.queueQuery(queueName)
+                    if (query.isExists) {
+                        // Queue exists so now wire up bridge
+                        maybeDeployBridgeForAddress(queueName, change.node.address)
+                    }
+                }
+
+                NetworkMapCache.MapChangeType.Modified -> {
+                    (change.prevNodeInfo?.address as? ArtemisMessagingComponent.ArtemisAddress)?.let {
+                        // remove any previous possibly different bridge
+                        maybeDestroyBridge(it.queueName)
+                    }
+                    val query = activeMQServer.queueQuery(queueName)
+                    if (query.isExists) {
+                        // Deploy new bridge
+                        maybeDeployBridgeForAddress(queueName, change.node.address)
+                    }
+                }
+
+                NetworkMapCache.MapChangeType.Removed -> {
+                    (change.prevNodeInfo?.address as? ArtemisMessagingComponent.ArtemisAddress)?.let {
+                        // Remove old bridge
+                        maybeDestroyBridge(it.queueName)
+                    }
+                    // just in case of NetworkMapCache version issues
+                    maybeDestroyBridge(queueName)
+                }
+            }
+        }
     }
 
     private fun configureAndStartServer() {
@@ -74,8 +130,16 @@ class ArtemisMessagingServer(directory: Path,
             registerActivationFailureListener { exception -> throw exception }
             // Deploy bridge for a newly created queue
             registerPostQueueCreationCallback { queueName ->
-                log.trace("Queue created: $queueName")
-                maybeDeployBridgeForAddress(queueName.toString())
+                log.info("Queue created: $queueName")
+                if (queueName != NETWORK_MAP_ADDRESS) {
+                    val identity = tryParseKeyFromQueueName(queueName)
+                    if (identity != null) {
+                        val nodeInfo = networkMapCache.getNodeByPublicKey(identity)
+                        if (nodeInfo != null) {
+                            maybeDeployBridgeForAddress(queueName, nodeInfo.address)
+                        }
+                    }
+                }
             }
         }
         activeMQServer.start()
@@ -102,35 +166,53 @@ class ArtemisMessagingServer(directory: Path,
         return ActiveMQJAASSecurityManager(InVMLoginModule::class.java.name, securityConfig)
     }
 
+    fun connectorExists(hostAndPort: HostAndPort) = hostAndPort.toString() in activeMQServer.configuration.connectorConfigurations
+
+    fun addConnector(hostAndPort: HostAndPort) = activeMQServer.configuration.addConnectorConfiguration(
+            hostAndPort.toString(),
+            tcpTransport(
+                    ConnectionDirection.OUTBOUND,
+                    hostAndPort.hostText,
+                    hostAndPort.port
+            )
+    )
+
+    fun bridgeExists(name: SimpleString) = activeMQServer.clusterManager.bridges.containsKey(name.toString())
+
+    fun deployBridge(hostAndPort: HostAndPort, name: SimpleString) = activeMQServer.deployBridge(BridgeConfiguration().apply {
+        val nameStr = name.toString()
+        setName(nameStr)
+        queueName = nameStr
+        forwardingAddress = nameStr
+        staticConnectors = listOf(hostAndPort.toString())
+        confirmationWindowSize = 100000 // a guess
+    })
+
     /**
      * For every queue created we need to have a bridge deployed in case the address of the queue
      * is that of a remote party
      */
-    private fun maybeDeployBridgeForAddress(name: String) {
-        val hostAndPort = HostAndPort.fromString(name)
+    private fun maybeDeployBridgeForAddress(name: SimpleString, address: SingleMessageRecipient) {
+        val hostAndPort = toHostAndPort(address)
 
-        fun connectorExists() = name in activeMQServer.configuration.connectorConfigurations
+        if (hostAndPort == myHostPort) {
+            return
+        }
 
-        fun addConnector() = activeMQServer.configuration.addConnectorConfiguration(
-                name,
-                tcpTransport(
-                        ConnectionDirection.OUTBOUND,
-                        hostAndPort.hostText,
-                        hostAndPort.port
-                )
-        )
+        if (!connectorExists(hostAndPort)) {
+            log.info("add connector $hostAndPort")
+            addConnector(hostAndPort)
+        }
 
-        fun deployBridge() = activeMQServer.deployBridge(BridgeConfiguration().apply {
-            setName(name)
-            queueName = name
-            forwardingAddress = name
-            staticConnectors = listOf(name)
-            confirmationWindowSize = 100000 // a guess
-        })
+        if (!bridgeExists(name)) {
+            log.info("add bridge $hostAndPort $name")
+            deployBridge(hostAndPort, name)
+        }
+    }
 
-        if (!connectorExists()) {
-            addConnector()
-            deployBridge()
+    private fun maybeDestroyBridge(name: SimpleString) {
+        if (bridgeExists(name)) {
+            activeMQServer.destroyBridge(name.toString())
         }
     }
 

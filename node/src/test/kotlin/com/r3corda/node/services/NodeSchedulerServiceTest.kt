@@ -6,19 +6,19 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.testing.MockKeyManagementService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
-import com.r3corda.core.testing.ALICE_KEY
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.node.internal.testing.TestClock
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.testing.node.TestClock
 import com.r3corda.node.services.events.NodeSchedulerService
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.testing.ALICE_KEY
+import com.r3corda.testing.node.MockKeyManagementService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
@@ -82,7 +82,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         override val participants: List<PublicKey>
             get() = throw UnsupportedOperationException()
 
-        override val thread = SecureHash.sha256("does not matter but we need it to be unique ${Math.random()}")
+        override val linearId = UniqueIdentifier()
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
 

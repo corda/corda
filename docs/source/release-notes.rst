@@ -3,12 +3,51 @@ Release notes
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Unreleased
+----------
+
+API changes:
+
+* The transaction types (Signed, Wire, LedgerTransaction) have moved to ``com.r3corda.core.transactions``. You can
+  update your code by just deleting the broken import lines and letting your IDE re-import them from the right
+  location.
+* ``AbstractStateReplacementProtocol.verifyProposal`` has changed its prototype in a minor way.
+* The ``UntrustworthyData<T>.validate`` method has been renamed to ``unwrap`` - the old name is now deprecated.
+
+Milestone 3
+-----------
+
+* More work on preparing for the testnet:
+
+    * Corda is now a standalone app server that loads "CorDapps" into itself as plugins. Whilst the existing IRS
+      and trader demos still exist for now, these will soon be removed and there will only be a single Corda node
+      program. Note that the node is a single, standalone jar file that is easier to execute than the demos.
+    * Project Vega (shared SIMM modelling for derivative portfolios) has already been converted to be a CorDapp.
+    * Significant work done on making the node persist its wallet data to a SQL backend, with more on the way.
+    * Upgrades and refactorings of the core transaction types in preparation for the incoming sandboxing work.
+
+* The Clauses API that seeks to make writing smart contracts easier has gone through another design iteration,
+  with the result that clauses are now cleaner and more composable.
+* Improvements to the protocol API for finalising transactions (notarising, transmitting and storing).
+* Lots of work done on an MQ based client API.
+* Improvements to the developer site:
+
+    * The developer site has been re-read from start to finish and refreshed for M3 so there should be no obsolete
+      texts or references anywhere.
+    * The Corda non-technical white paper is now a part of the developer site and git repository. The LaTeX source is
+      also provided so if you spot any issues with it, you can send us patches.
+    * There is a new section on how to write CorDapps.
+
+* Further R&D work by Sofus Mortensen in the experimental module on a new 'universal' contract language.
+* SSL for the REST API and webapp server can now be configured.
+
+
 Milestone 2
 -----------
 
 * Big improvements to the interest rate swap app:
 
-    * A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
+    * A new web app demonstrating the IRS contract has been added. This can x``be used as an example for how to interact with
       the Corda API from the web.
     * Simplifications to the way the demo is used from the command line.
     * :doc:`Detailed documentation on how the contract works and can be used <contract-irs>` has been written.
@@ -54,6 +93,7 @@ API changes:
 * The ``arg`` method in the test DSL is now called ``command`` to be consistent with the rest of the data model.
 * The messaging APIs have changed somewhat to now use a new ``TopicSession`` object. These APIs will continue to change
   in the upcoming releases.
+* Clauses now have default values provided for ``ifMatched``, ``ifNotMatched`` and ``requiredCommands``.
 
 New documentation:
 

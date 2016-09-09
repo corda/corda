@@ -4,16 +4,16 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.seconds
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.DUMMY_NOTARY_KEY
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.internal.AbstractNode
-import com.r3corda.node.internal.testing.MockNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.NotaryChangeProtocol
 import com.r3corda.protocols.NotaryChangeProtocol.Instigator
 import com.r3corda.protocols.StateReplacementException
 import com.r3corda.protocols.StateReplacementRefused
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -37,9 +37,9 @@ class NotaryChangeTests {
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(NetworkMapService.Type, SimpleNotaryService.Type))
-        clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info)
-        clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info)
-        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info, advertisedServices = SimpleNotaryService.Type)
+        clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
+        clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
+        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = SimpleNotaryService.Type)
 
         net.runNetwork() // Clear network map registration messages
     }
@@ -49,7 +49,7 @@ class NotaryChangeTests {
         val state = issueState(clientNodeA)
         val newNotary = newNotaryNode.info.identity
         val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC, protocol)
+        val future = clientNodeA.services.startProtocol(NotaryChangeProtocol.TOPIC, protocol)
 
         net.runNetwork()
 
@@ -62,7 +62,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB)
         val newNotary = newNotaryNode.info.identity
         val protocol = Instigator(state, newNotary)
-        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC, protocol)
+        val future = clientNodeA.services.startProtocol(NotaryChangeProtocol.TOPIC, protocol)
 
         net.runNetwork()
 
@@ -78,7 +78,7 @@ class NotaryChangeTests {
         val state = issueMultiPartyState(clientNodeA, clientNodeB)
         val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
         val protocol = Instigator(state, newEvilNotary)
-        val future = clientNodeA.smm.add(NotaryChangeProtocol.TOPIC, protocol)
+        val future = clientNodeA.services.startProtocol(NotaryChangeProtocol.TOPIC, protocol)
 
         net.runNetwork()
 
@@ -93,6 +93,7 @@ class NotaryChangeTests {
     //       - The requesting party wants to change additional state fields
     //       - Multiple states in a single "notary change" transaction
     //       - Transaction contains additional states and commands with business logic
+    //       - The transaction type is not a notary change transaction at all.
 }
 
 fun issueState(node: AbstractNode): StateAndRef<*> {

@@ -6,33 +6,36 @@ import com.r3corda.core.contracts.Amount
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
 import java.security.PublicKey
+import java.time.Instant
+import java.time.LocalDate
 import java.util.*
 
 /**
  * Created by sofusmortensen on 23/05/16.
  */
 
+fun Instant.toLocalDate() : LocalDate = LocalDate.ofEpochDay( this.epochSecond / 60 / 60 / 24 )
+fun LocalDate.toInstant() : Instant = Instant.ofEpochSecond( this.toEpochDay() * 60 * 60 * 24 )
 
 /** returns list of potentially liable parties for a given contract */
 fun liableParties(contract: Arrangement) : Set<PublicKey> {
 
-    fun visit(arrangement: Arrangement) : ImmutableSet<PublicKey> {
+    fun visit(arrangement: Arrangement) : ImmutableSet<PublicKey> =
         when (arrangement) {
-            is Zero -> return ImmutableSet.of<PublicKey>()
-            is Transfer -> return ImmutableSet.of(arrangement.from.owningKey)
+            is Zero -> ImmutableSet.of<PublicKey>()
+            is Transfer -> ImmutableSet.of(arrangement.from.owningKey)
             is Action ->
                 if (arrangement.actors.size != 1)
-                    return visit(arrangement.arrangement)
+                    visit(arrangement.arrangement)
                 else
-                    return Sets.difference(visit(arrangement.arrangement), ImmutableSet.of(arrangement.actors.single())).immutableCopy()
+                    Sets.difference(visit(arrangement.arrangement), ImmutableSet.of(arrangement.actors.single())).immutableCopy()
             is And ->
-                return arrangement.arrangements.fold( ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll( visit(k)) } ).build()
+                arrangement.arrangements.fold( ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll( visit(k)) } ).build()
             is Or ->
-                return arrangement.actions.fold( ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll( visit(k)) } ).build()
+                arrangement.actions.fold( ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll( visit(k)) } ).build()
+            is RollOut -> visit( arrangement.template )
+            else -> throw IllegalArgumentException("liableParties " + arrangement)
         }
-
-        throw IllegalArgumentException()
-    }
 
     return visit(contract)
 }
@@ -66,7 +69,7 @@ fun replaceParty(action: Action, from: Party, to: Party) : Action {
 fun replaceParty(arrangement: Arrangement, from: Party, to: Party) : Arrangement {
     return when (arrangement) {
         is Zero -> arrangement
-        is Transfer -> Transfer( arrangement.amount,
+        is Transfer -> Transfer( arrangement.amount, arrangement.currency,
                                  if (arrangement.from == from) to else arrangement.from,
                                  if (arrangement.to == from) to else arrangement.to )
         is Action -> replaceParty(arrangement, from, to)

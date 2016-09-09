@@ -5,14 +5,17 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.WalletService
-import com.r3corda.core.node.services.testing.MockServices
-import com.r3corda.core.node.services.testing.makeTestDataSourceProperties
-import com.r3corda.core.testing.*
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.node.makeTestDataSourceProperties
+import com.r3corda.testing.DummyLinearContract
+import com.r3corda.testing.*
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
@@ -60,11 +63,11 @@ class WalletWithCashTest {
         assertEquals(3, w.states.toList().size)
 
         val state = w.states.toList()[0].state.data as Cash.State
-        assertEquals(29.01.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
+        assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
         assertEquals(services.key.public, state.owner)
 
-        assertEquals(35.38.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
-        assertEquals(35.61.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
+        assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
+        assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
     }
 
     @Test
@@ -104,55 +107,49 @@ class WalletWithCashTest {
 
 
     @Test
-    fun branchingLinearStatesFails() {
+    fun branchingLinearStatesFailsToVerify() {
         val freshKey = services.keyManagementService.freshKey()
-        val thread = SecureHash.sha256("thread")
+        val linearId = UniqueIdentifier()
 
         // Issue a linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
-            signWith(freshKey)
-            signWith(DUMMY_NOTARY_KEY)
-        }.toSignedTransaction()
-
-        wallet.notify(dummyIssue.tx)
-        assertEquals(1, wallet.currentWallet.states.toList().size)
-
-        // Issue another linear state of the same thread (nonce different)
-        val dummyIssue2 = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
 
         assertThatThrownBy {
-            wallet.notify(dummyIssue2.tx)
+            dummyIssue.toLedgerTransaction(services).verify()
         }
-        assertEquals(1, wallet.currentWallet.states.toList().size)
     }
 
     @Test
     fun sequencingLinearStatesWorks() {
         val freshKey = services.keyManagementService.freshKey()
 
-        val thread = SecureHash.sha256("thread")
+        val linearId = UniqueIdentifier()
 
         // Issue a linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
+
+        dummyIssue.toLedgerTransaction(services).verify()
 
         wallet.notify(dummyIssue.tx)
         assertEquals(1, wallet.currentWallet.states.toList().size)
 
         // Move the same state
         val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearState(thread = thread, participants = listOf(freshKey.public)))
+            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
             addInputState(dummyIssue.tx.outRef<LinearState>(0))
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction()
+
+        dummyIssue.toLedgerTransaction(services).verify()
 
         wallet.notify(dummyMove.tx)
         assertEquals(1, wallet.currentWallet.states.toList().size)

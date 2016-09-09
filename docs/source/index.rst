@@ -1,6 +1,9 @@
 Welcome to the Corda repository!
 ================================
 
+.. warning:: This build of the docs is from the *master branch*, not a milestone release. It may not reflect the
+   current state of the code.
+
 This documentation describes Corda, a proposed architecture for distributed ledgers, the vision for which is outlined in the `Corda Introductory Whitepaper`_.
 
 .. _`Corda Introductory Whitepaper`: _static/corda-introductory-whitepaper.pdf
@@ -31,8 +34,10 @@ Read on to learn:
    transaction-data-types
    consensus
    messaging
+   creating-a-cordapp
    running-the-demos
    node-administration
+   corda-configuration-files
 
 .. toctree::
    :maxdepth: 2
@@ -52,6 +57,7 @@ Read on to learn:
    protocol-state-machines
    oracles
    event-scheduling
+   secure-coding-guidelines
 
 .. toctree::
    :maxdepth: 2

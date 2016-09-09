@@ -1,9 +1,16 @@
 package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
-import com.r3corda.core.node.services.testing.MockServices
 import com.r3corda.core.seconds
-import com.r3corda.core.testing.*
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.testing.LedgerDSL
+import com.r3corda.testing.TestLedgerDSLInterpreter
+import com.r3corda.testing.TestTransactionDSLInterpreter
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.*
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -394,9 +401,10 @@ class IRSTests {
 
     @Test
     fun `ensure failure occurs when there are inbound states for an agreement command`() {
+        val irs = singleIRS()
         transaction {
-            input() { singleIRS() }
-            output("irs post agreement") { singleIRS() }
+            input() { irs }
+            output("irs post agreement") { irs }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
             timestamp(TEST_TX_TIME)
             this `fails with` "There are no in states for an agreement"
@@ -665,10 +673,11 @@ class IRSTests {
             transaction("Agreement") {
                 output("irs post agreement2") {
                     irs.copy(
-                            irs.fixedLeg,
-                            irs.floatingLeg,
-                            irs.calculation,
-                            irs.common.copy(tradeID = "t2")
+                            linearId = UniqueIdentifier("t2"),
+                            fixedLeg = irs.fixedLeg,
+                            floatingLeg = irs.floatingLeg,
+                            calculation = irs.calculation,
+                            common = irs.common.copy(tradeID = "t2")
                     )
                 }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }

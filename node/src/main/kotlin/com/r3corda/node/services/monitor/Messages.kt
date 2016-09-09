@@ -1,5 +1,6 @@
 package com.r3corda.node.services.monitor
 
+import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.protocols.DirectRequestMessage

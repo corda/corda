@@ -6,7 +6,15 @@ apply plugin: 'kotlin'
 sourceCompatibility = 1.5
 
 repositories {
+    mavenLocal()
     mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
 compileKotlin {
@@ -21,4 +29,5 @@ dependencies {
     compile project(':contracts')
 
     testCompile 'junit:junit:4.12'
+    compile project(':test-utils')
 }

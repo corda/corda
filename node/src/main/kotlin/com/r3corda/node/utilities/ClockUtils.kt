@@ -37,7 +37,7 @@ abstract class MutableClock : Clock() {
     private val _version = AtomicLong(0L)
 
     /**
-     * This tracks how many direct mutations of "now" have occured for this [Clock], but not the passage of time.
+     * This tracks how many direct mutations of "now" have occurred for this [Clock], but not the passage of time.
      *
      * It starts at zero, and increments by one per mutation.
      */
@@ -79,22 +79,22 @@ abstract class MutableClock : Clock() {
  *
  * @throws InterruptedException if interrupted by something other than a [MutableClock].
  */
-@Suppress("UNUSED_VALUE") // This is here due to the compiler thinking version is not used
 @Suspendable
 private fun Clock.doInterruptibly(runnable: SuspendableRunnable) {
-    var version = 0L
     var subscription: Subscription? = null
+    var interruptedByMutation = false
     try {
         if (this is MutableClock) {
-            version = this.mutationCount
             val strand = Strand.currentStrand()
-            subscription = this.mutations.subscribe { strand.interrupt() }
+            subscription = this.mutations.subscribe {
+                interruptedByMutation = true
+                strand.interrupt()
+            }
         }
         runnable.run()
     } catch(e: InterruptedException) {
         // If clock has not mutated, then re-throw
-        val newVersion = if (this is MutableClock) this.mutationCount else version
-        if (newVersion == version) {
+        if (!interruptedByMutation) {
             throw e
         }
     } finally {

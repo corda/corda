@@ -5,9 +5,9 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumFungibleOrNull
 import com.r3corda.contracts.asset.sumFungibleOrZero
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.GroupClause
-import com.r3corda.core.contracts.clauses.MatchBehaviour
+import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.util.*
 
@@ -16,14 +16,7 @@ import java.util.*
  * Move command is provided, and errors if absent. Must be the last clause under a grouping clause;
  * errors on no-match, ends on match.
  */
-abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause<S, Issued<T>> {
-    override val ifMatched: MatchBehaviour
-        get() = MatchBehaviour.END
-    override val ifNotMatched: MatchBehaviour
-        get() = MatchBehaviour.ERROR
-    override val requiredCommands: Set<Class<out CommandData>>
-        get() = emptySet()
-
+abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T : Any> : Clause<S, C, Issued<T>>() {
     /**
      * Gather assets from the given list of states, sufficient to match or exceed the given amount.
      *
@@ -53,16 +46,16 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
      *
      * @param tx transaction builder to add states and commands to.
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
-     * @param changeKey the key to send any change to. This needs to be explicitly stated as the input states are not
-     * necessarily owned by us.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
-     * the responsibility of the caller to check that they do not exit funds held by others.
+     * the responsibility of the caller to check that they do not attempt to exit funds held by others.
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     changeKey: PublicKey, assetStates: List<StateAndRef<S>>,
+                     assetStates: List<StateAndRef<S>>,
                      deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKey) -> TransactionState<S>,
+                     generateMoveCommand: () -> CommandData,
                      generateExitCommand: (Amount<Issued<T>>) -> CommandData): PublicKey {
+        val owner = assetStates.map { it.state.data.owner }.toSet().single()
         val currency = amountIssued.token.product
         val amount = Amount(amountIssued.quantity, currency)
         var acceptableCoins = assetStates.filter { ref -> ref.state.data.amount.token == amountIssued.token }
@@ -82,12 +75,13 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
 
         val outputs = if (change != null) {
             // Add a change output and adjust the last output downwards.
-            listOf(deriveState(gathered.last().state, change, changeKey))
+            listOf(deriveState(gathered.last().state, change, owner))
         } else emptyList()
 
         for (state in gathered) tx.addInputState(state)
         for (state in outputs) tx.addOutputState(state)
-        tx.addCommand(generateExitCommand(amountIssued), amountIssued.token.issuer.party.owningKey)
+        tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner })
+        tx.addCommand(generateExitCommand(amountIssued), gathered.flatMap { it.state.data.exitKeys })
         return amountIssued.token.issuer.party.owningKey
     }
 
@@ -178,26 +172,31 @@ abstract class AbstractConserveAmount<S: FungibleAsset<T>, T: Any> : GroupClause
     override fun verify(tx: TransactionForContract,
                         inputs: List<S>,
                         outputs: List<S>,
-                        commands: Collection<AuthenticatedObject<CommandData>>,
-                        token: Issued<T>): Set<CommandData> {
-        val inputAmount: Amount<Issued<T>> = inputs.sumFungibleOrNull<T>() ?: throw IllegalArgumentException("there is at least one asset input for group $token")
-        val deposit = token.issuer
-        val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(token)
+                        commands: List<AuthenticatedObject<C>>,
+                        groupingKey: Issued<T>?): Set<C> {
+        require(groupingKey != null) { "Conserve amount clause can only be used on grouped states" }
+        val matchedCommands = commands.filter { command -> command.value is FungibleAsset.Commands.Move || command.value is FungibleAsset.Commands.Exit<*> }
+        val inputAmount: Amount<Issued<T>> = inputs.sumFungibleOrNull<T>() ?: throw IllegalArgumentException("there is at least one asset input for group $groupingKey")
+        val deposit = groupingKey!!.issuer
+        val outputAmount: Amount<Issued<T>> = outputs.sumFungibleOrZero(groupingKey)
 
-        // If we want to remove assets from the ledger, that must be signed for by the issuer.
-        // A mis-signed or duplicated exit command will just be ignored here and result in the exit amount being zero.
+        // If we want to remove assets from the ledger, that must be signed for by the issuer and owner.
         val exitKeys: Set<PublicKey> = inputs.flatMap { it.exitKeys }.toSet()
-        val exitCommand = tx.commands.select<FungibleAsset.Commands.Exit<T>>(parties = null, signers = exitKeys).filter {it.value.amount.token == token}.singleOrNull()
-        val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, token)
+        val exitCommand = matchedCommands.select<FungibleAsset.Commands.Exit<T>>(parties = null, signers = exitKeys).filter { it.value.amount.token == groupingKey }.singleOrNull()
+        val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, groupingKey)
 
         requireThat {
             "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-            "for reference ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
+            "for reference ${deposit.reference} at issuer ${deposit.party.name} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
                     (inputAmount == outputAmount + amountExitingLedger)
         }
 
-        return listOf(exitCommand?.value, verifyMoveCommand<FungibleAsset.Commands.Move>(inputs, tx))
-                .filter { it != null }
-                .requireNoNulls().toSet()
+        verifyMoveCommand<FungibleAsset.Commands.Move>(inputs, commands)
+
+        // This is safe because we've taken the commands from a collection of C objects at the start
+        @Suppress("UNCHECKED_CAST")
+        return matchedCommands.map { it.value }.toSet()
     }
+
+    override fun toString(): String = "Conserve amount between inputs and outputs"
 }

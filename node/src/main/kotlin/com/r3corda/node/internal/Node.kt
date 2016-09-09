@@ -2,13 +2,14 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
-import com.google.common.util.concurrent.MoreExecutors
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
@@ -17,22 +18,21 @@ import com.r3corda.node.servlets.Config
 import com.r3corda.node.servlets.DataUploadServlet
 import com.r3corda.node.servlets.ResponseFilter
 import com.r3corda.node.utilities.AffinityExecutor
-import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
+import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
-import java.net.InetSocketAddress
 import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.time.Clock
-import java.util.concurrent.TimeUnit
 import javax.management.ObjectName
 import kotlin.concurrent.thread
 
@@ -54,7 +54,7 @@ class ConfigurationException(message: String) : Exception(message)
  * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
 class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
-           configuration: NodeConfiguration, networkMapAddress: NodeInfo?,
+           configuration: NodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceType>, clock: Clock = NodeClock(),
            val messagingServerAddr: HostAndPort? = null) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
@@ -110,20 +110,27 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
     // when our process shuts down, but we try in stop() anyway just to be nice.
     private var nodeFileLock: FileLock? = null
 
+    private var shutdownThread: Thread? = null
+
     override fun makeMessagingService(): MessagingServiceInternal {
         val serverAddr = messagingServerAddr ?: {
-            messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr)
+            messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr, services.networkMapCache)
             p2pAddr
         }()
-
-        return ArtemisMessagingClient(dir, configuration, serverAddr, p2pAddr, serverThread)
+        if (networkMapService != null) {
+            return ArtemisMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread)
+        } else {
+            return ArtemisMessagingClient(dir, configuration, serverAddr, null, serverThread)
+        }
     }
 
     override fun startMessagingService() {
         // Start up the embedded MQ server
         messageBroker?.apply {
             configureWithDevSSLCertificate() // TODO: Create proper certificate provisioning process
+            runOnStop += Runnable { messageBroker?.stop() }
             start()
+            bridgeToNetworkMapService(networkMapService)
         }
 
         // Start up the MQ client.
@@ -135,8 +142,6 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
     private fun initWebServer(): Server {
         // Note that the web server handlers will all run concurrently, and not on the node thread.
-        val server = Server(InetSocketAddress(webServerAddr.hostText, webServerAddr.port))
-
         val handlerCollection = HandlerCollection()
 
         // Export JMX monitoring statistics and data over REST/JSON.
@@ -153,7 +158,37 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         // API, data upload and download to services (attachments, rates oracles etc)
         handlerCollection.addHandler(buildServletContextHandler())
 
+        val server = Server()
+
+        if (configuration is FullNodeConfiguration && configuration.useHTTPS) {
+            val httpsConfiguration = HttpConfiguration()
+            httpsConfiguration.outputBufferSize = 32768
+            httpsConfiguration.addCustomizer(SecureRequestCustomizer())
+            val sslContextFactory = SslContextFactory()
+            val keyStorePath = dir.resolve("certificates").resolve("sslkeystore.jks")
+            val trustStorePath = dir.resolve("certificates").resolve("truststore.jks")
+            sslContextFactory.setKeyStorePath(keyStorePath.toString())
+            sslContextFactory.setKeyStorePassword(configuration.keyStorePassword)
+            sslContextFactory.setKeyManagerPassword(configuration.keyStorePassword)
+            sslContextFactory.setTrustStorePath(trustStorePath.toString())
+            sslContextFactory.setTrustStorePassword(configuration.trustStorePassword)
+            sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
+            sslContextFactory.setIncludeProtocols("TLSv1.2")
+            sslContextFactory.setExcludeCipherSuites(".*NULL.*", ".*RC4.*", ".*MD5.*", ".*DES.*", ".*DSS.*")
+            sslContextFactory.setIncludeCipherSuites(".*AES.*GCM.*")
+            val sslConnector = ServerConnector(server, SslConnectionFactory(sslContextFactory, "http/1.1"), HttpConnectionFactory(httpsConfiguration))
+            sslConnector.port = webServerAddr.port
+            server.connectors = arrayOf<Connector>(sslConnector)
+        } else {
+            val httpConfiguration = HttpConfiguration()
+            httpConfiguration.outputBufferSize = 32768
+            val httpConnector = ServerConnector(server, HttpConnectionFactory(httpConfiguration))
+            httpConnector.port = webServerAddr.port
+            server.connectors = arrayOf<Connector>(httpConnector)
+        }
+
         server.handler = handlerCollection
+        runOnStop += Runnable { server.stop() }
         server.start()
         return server
     }
@@ -219,9 +254,10 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
                 build().
                 start()
 
-        Runtime.getRuntime().addShutdownHook(thread(start = false) {
+        shutdownThread = thread(start = false) {
             stop()
-        })
+        }
+        Runtime.getRuntime().addShutdownHook(shutdownThread)
 
         return this
     }
@@ -244,18 +280,20 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         synchronized(this) {
             if (shutdown) return
             shutdown = true
+
+            // Unregister shutdown hook to prevent any unnecessary second calls to stop
+            if((shutdownThread != null) && (Thread.currentThread() != shutdownThread)){
+                Runtime.getRuntime().removeShutdownHook(shutdownThread)
+                shutdownThread = null
+            }
         }
         log.info("Shutting down ...")
-        // Shut down the web server.
-        webServer.stop()
-        // Terminate the messaging system. This will block until messages that are in-flight have finished being
-        // processed so it may take a moment.
+
+        // All the Node started subsystems were registered with the runOnStop list at creation.
+        // So now simply call the parent to stop everything in reverse order.
+        // In particular this prevents premature shutdown of the Database by AbstractNode whilst the serverThread is active
         super.stop()
-        // We do another wait here, even though any in-flight messages have been drained away now because the
-        // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
-        // arbitrary and might be inappropriate.
-        MoreExecutors.shutdownAndAwaitTermination(serverThread, 50, TimeUnit.SECONDS)
-        messageBroker?.stop()
+
         nodeFileLock!!.release()
         log.info("Shutdown complete")
     }

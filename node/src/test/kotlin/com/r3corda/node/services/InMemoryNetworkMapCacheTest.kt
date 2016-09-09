@@ -1,6 +1,6 @@
 package com.r3corda.node.services
 
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 
@@ -16,7 +16,7 @@ class InMemoryNetworkMapCacheTest {
     fun registerWithNetwork() {
         val (n0, n1) = network.createTwoNodes()
 
-        val future = n1.services.networkMapCache.addMapService(n1.net, n0.info, false, null)
+        val future = n1.services.networkMapCache.addMapService(n1.net, n0.info.address, false, null)
         network.runNetwork()
         future.get()
     }

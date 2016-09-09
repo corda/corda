@@ -2,21 +2,21 @@ package com.r3corda.node.services
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.node.services.*
-import com.r3corda.core.node.services.testing.MockStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
-import com.r3corda.core.testing.InMemoryWalletService
-import com.r3corda.core.testing.MOCK_IDENTITY_SERVICE
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.node.services.network.MockNetworkMapCache
+import com.r3corda.testing.node.MockNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.statemachine.StateMachineManager
+import com.r3corda.core.testing.InMemoryWalletService
+import com.r3corda.testing.node.MockStorageService
+import com.r3corda.testing.MOCK_IDENTITY_SERVICE
 import java.time.Clock
 
 @Suppress("LeakingThis")
@@ -62,7 +62,7 @@ open class MockServiceHubInternal(
     lateinit var smm: StateMachineManager
 
     override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-        return smm.add(loggerName, logic)
+        return smm.add(loggerName, logic).resultFuture
     }
 
     init {

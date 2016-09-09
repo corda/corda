@@ -6,7 +6,8 @@ import kotlin.*;
 import org.junit.*;
 
 import static com.r3corda.core.contracts.ContractsDSL.*;
-import static com.r3corda.core.testing.CoreTestUtils.*;
+import static com.r3corda.core.utilities.TestConstants.*;
+import static com.r3corda.testing.CoreTestUtils.*;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL

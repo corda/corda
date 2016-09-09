@@ -5,11 +5,13 @@ import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.GroupClauseVerifier
-import com.r3corda.core.contracts.clauses.MatchBehaviour
+import com.r3corda.core.contracts.clauses.AnyComposition
+import com.r3corda.core.contracts.clauses.verifyClause
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.util.*
 
@@ -28,9 +30,12 @@ val COMMODITY_PROGRAM_ID = CommodityContract()
  * differences are in representation of the underlying commodity. Issuer in this context means the party who has the
  * commodity, or is otherwise responsible for delivering the commodity on demand, and the deposit reference is use for
  * internal accounting by the issuer (it might be, for example, a warehouse and/or location within a warehouse).
+ *
+ * This is an early stage example contract used to illustrate non-cash fungible assets, and is likely to change significantly
+ * in future.
  */
 // TODO: Need to think about expiry of commodities, how to require payment of storage costs, etc.
-class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
+class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, CommodityContract.State>() {
     /**
      * TODO:
      * 1) hash should be of the contents, not the URI
@@ -43,7 +48,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/commodity-claims.html")
 
-    override val conserveClause: AbstractConserveAmount<State, Commodity> = Clauses.ConserveAmount()
+    override val conserveClause: AbstractConserveAmount<State, Commands, Commodity> = Clauses.ConserveAmount()
 
     /**
      * The clauses for this contract are essentially:
@@ -59,24 +64,10 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
          * Grouping clause to extract input and output states into matched groups and then run a set of clauses over
          * each group.
          */
-        class Group : GroupClauseVerifier<State, Issued<Commodity>>() {
-            /**
-             * The group clause does not depend on any commands being present, so something has gone terribly wrong if
-             * it doesn't match.
-             */
-            override val ifNotMatched = MatchBehaviour.ERROR
-            /**
-             * The group clause is the only top level clause, so end after processing it. If there are any commands left
-             * after this clause has run, the clause verifier will trigger an error.
-             */
-            override val ifMatched = MatchBehaviour.END
-            // Subclauses to run on each group
-            override val clauses = listOf(
-                    NoZeroSizedOutputs<State, Commodity>(),
-                    Issue(),
-                    ConserveAmount()
-            )
-
+        class Group : GroupClauseVerifier<State, Commands, Issued<Commodity>>(AnyComposition(
+                NoZeroSizedOutputs<State, Commands, Commodity>(),
+                Issue(),
+                ConserveAmount())) {
             /**
              * Group commodity states by issuance definition (issuer and underlying commodity).
              */
@@ -87,17 +78,17 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
         /**
          * Standard issue clause, specialised to match the commodity issue command.
          */
-        class Issue : AbstractIssue<State, Commodity>(
+        class Issue : AbstractIssue<State, Commands, Commodity>(
                 sum = { sumCommodities() },
                 sumOrZero = { sumCommoditiesOrZero(it) }
         ) {
-            override val requiredCommands = setOf(Commands.Issue::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
         /**
          * Standard clause for conserving the amount from input to output.
          */
-        class ConserveAmount : AbstractConserveAmount<State, Commodity>()
+        class ConserveAmount : AbstractConserveAmount<State, Commands, Commodity>()
     }
     
     /** A state representing a commodity claim against some party */
@@ -147,9 +138,10 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.State>() {
          */
         data class Exit(override val amount: Amount<Issued<Commodity>>) : Commands, FungibleAsset.Commands.Exit<Commodity>
     }
-    override val clauses = listOf(Clauses.Group())
-    override fun extractCommands(tx: TransactionForContract): List<AuthenticatedObject<FungibleAsset.Commands>>
-            = tx.commands.select<CommodityContract.Commands>()
+    override fun verify(tx: TransactionForContract)
+            = verifyClause(tx, Clauses.Group(), extractCommands(tx.commands))
+    override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Commands>>
+            = commands.select<CommodityContract.Commands>()
 
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.

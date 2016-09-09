@@ -423,15 +423,43 @@ enum class NetType {
     PAYMENT
 }
 
-data class Commodity(val symbol: String,
+/**
+ * Class representing a commodity, as an equivalent to the [Currency] class. This exists purely to enable the
+ * [CommodityContract] contract, and is likely to change in future.
+ *
+ * @param commodityCode a unique code for the commodity. No specific registry for these is currently defined, although
+ * this is likely to change in future.
+ * @param displayName human readable name for the commodity.
+ * @param defaultFractionDigits the number of digits normally after the decimal point when referring to quantities of
+ * this commodity.
+ */
+data class Commodity(val commodityCode: String,
                      val displayName: String,
-                     val commodityCode: String = symbol,
                      val defaultFractionDigits: Int = 0) {
     companion object {
         private val registry = mapOf(
+                // Simple example commodity, as in http://www.investopedia.com/university/commodities/commodities14.asp
                 Pair("FCOJ", Commodity("FCOJ", "Frozen concentrated orange juice"))
         )
-        fun getInstance(symbol: String): Commodity?
-                = registry[symbol]
+        fun getInstance(commodityCode: String): Commodity?
+                = registry[commodityCode]
+    }
+}
+
+/**
+ * This class provides a truly unique identifier of a trade, state, or other business object.
+ * @param externalId If there is an existing weak identifer e.g. trade reference id.
+ * This should be set here the first time a UniqueIdentifier identifier is created as part of an issue,
+ * or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong id.
+ * @param id Should never be set by user code and left as default initialised.
+ * So that the first time a state is issued this should be given a new UUID.
+ * Subsequent copies and evolutions of a state should just copy the externalId and Id fields unmodified.
+ */
+data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) {
+    override fun toString(): String {
+        if (externalId != null) {
+            return "${externalId}_${id.toString()}"
+        }
+        return id.toString()
     }
 }

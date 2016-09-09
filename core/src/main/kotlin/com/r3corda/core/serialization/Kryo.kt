@@ -13,6 +13,8 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.AttachmentsClassLoader
 import com.r3corda.core.node.services.AttachmentStorage
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.NonEmptySet
 import com.r3corda.core.utilities.NonEmptySetSerializer
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
@@ -232,7 +234,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.outputs)
         kryo.writeClassAndObject(output, obj.commands)
         kryo.writeClassAndObject(output, obj.notary)
-        kryo.writeClassAndObject(output, obj.signers)
+        kryo.writeClassAndObject(output, obj.mustSign)
         kryo.writeClassAndObject(output, obj.type)
         kryo.writeClassAndObject(output, obj.timestamp)
     }

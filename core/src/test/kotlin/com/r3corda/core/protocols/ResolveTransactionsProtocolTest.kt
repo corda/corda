@@ -1,14 +1,15 @@
 package com.r3corda.core.protocols
 
 import com.r3corda.core.contracts.DummyContract
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.NullSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.opaque
-import com.r3corda.core.testing.*
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.protocols.ResolveTransactionsProtocol
+import com.r3corda.testing.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -94,6 +95,30 @@ class ResolveTransactionsProtocolTest {
         assertFailsWith<ResolveTransactionsProtocol.ExcessivelyLargeTransactionGraph> {
             rootCauseExceptions { future.get() }
         }
+    }
+
+    @Test
+    fun `triangle of transactions resolves fine`() {
+        val stx1 = makeTransactions().first
+
+        val stx2 = DummyContract.move(stx1.tx.outRef(0), MINI_CORP_PUBKEY).run {
+            signWith(MEGA_CORP_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+            toSignedTransaction()
+        }
+
+        val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), MINI_CORP_PUBKEY).run {
+            signWith(MEGA_CORP_KEY)
+            signWith(DUMMY_NOTARY_KEY)
+            toSignedTransaction()
+        }
+
+        a.services.recordTransactions(stx2, stx3)
+
+        val p = ResolveTransactionsProtocol(setOf(stx3.id), a.info.identity)
+        val future = b.services.startProtocol("resolve", p)
+        net.runNetwork()
+        future.get()
     }
 
     @Test

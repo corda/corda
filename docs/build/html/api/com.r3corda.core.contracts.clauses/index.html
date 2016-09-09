@@ -12,61 +12,51 @@
 <tbody>
 <tr>
 <td>
-<a href="-clause/index.html">Clause</a></td>
+<a href="-all-composition/index.html">AllComposition</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">Clause</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-clause-verifier/index.html">ClauseVerifier</a></td>
-<td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ClauseVerifier</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract/index.html"><span class="identifier">Contract</span></a></code><p>Abstract superclass for clause-based contracts to extend, which provides a verify() function
-that delegates to the supplied list of clauses.</p>
+<code><span class="keyword">class </span><span class="identifier">AllComposition</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-composite-clause/index.html"><span class="identifier">CompositeClause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Compose a number of clauses, such that all of the clauses must run for verification to pass.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="-group-clause.html">GroupClause</a></td>
+<a href="-any-composition/index.html">AnyComposition</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">GroupClause</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">, </span><a href="-group-verify/index.html"><span class="identifier">GroupVerify</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">AnyComposition</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-composite-clause/index.html"><span class="identifier">CompositeClause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Compose a number of clauses, such that any number of the clauses can run.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-clause/index.html">Clause</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">Clause</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-composite-clause/index.html">CompositeClause</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">CompositeClause</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Abstract supertype for clauses which compose other clauses together in some logical manner.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-concrete-clause/index.html">ConcreteClause</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ConcreteClause</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Abstract supertype for clauses which provide their own verification logic, rather than delegating to subclauses.
+By default these clauses are always matched (they have no required commands).</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-first-composition/index.html">FirstComposition</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FirstComposition</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-composite-clause/index.html"><span class="identifier">CompositeClause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Compose a number of clauses, such that the first match is run, and it errors if none is run.</p>
+</td>
 </tr>
 <tr>
 <td>
 <a href="-group-clause-verifier/index.html">GroupClauseVerifier</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">GroupClauseVerifier</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-single-clause.html"><span class="identifier">SingleClause</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="-group-verify/index.html">GroupVerify</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">GroupVerify</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-interceptor-clause/index.html">InterceptorClause</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">InterceptorClause</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-single-clause.html"><span class="identifier">SingleClause</span></a></code><p>A clause which intercepts calls to a wrapped clause, and passes them through verification
-only from a pre-clause. This is similar to an inceptor in aspect orientated programming.</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="-match-behaviour/index.html">MatchBehaviour</a></td>
-<td>
-<code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">MatchBehaviour</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="-single-clause.html">SingleClause</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">SingleClause</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">, </span><a href="-single-verify/index.html"><span class="identifier">SingleVerify</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="-single-verify/index.html">SingleVerify</a></td>
-<td>
-<code><span class="keyword">interface </span><span class="identifier">SingleVerify</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">GroupClauseVerifier</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-concrete-clause/index.html"><span class="identifier">ConcreteClause</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -75,10 +65,16 @@ only from a pre-clause. This is similar to an inceptor in aspect orientated prog
 <tbody>
 <tr>
 <td>
-<a href="verify-clauses.html">verifyClauses</a></td>
+<a href="matches.html">matches</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyClauses</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClauses(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.core.contracts.clauses.SingleClause)))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClauses(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.core.contracts.clauses.SingleClause)))/clauses">clauses</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-single-clause.html"><span class="identifier">SingleClause</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><br/>
-<code><span class="keyword">fun </span><span class="identifier">verifyClauses</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClauses(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.core.contracts.clauses.SingleClause)), kotlin.collections.Collection((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClauses(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.core.contracts.clauses.SingleClause)), kotlin.collections.Collection((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/clauses">clauses</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="-single-clause.html"><span class="identifier">SingleClause</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClauses(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.List((com.r3corda.core.contracts.clauses.SingleClause)), kotlin.collections.Collection((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Verify a transaction against the given list of clauses.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">matches</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses$matches(com.r3corda.core.contracts.clauses.Clause((com.r3corda.core.contracts.ContractState, com.r3corda.core.contracts.clauses.matches.C, kotlin.Any)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.clauses.matches.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>Determine if the given list of commands matches the required commands for a clause to trigger.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="verify-clause.html">verifyClause</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span> <span class="identifier">verifyClause</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClause(com.r3corda.core.contracts.TransactionForContract, com.r3corda.core.contracts.clauses.Clause((com.r3corda.core.contracts.ContractState, com.r3corda.core.contracts.clauses.verifyClause.C, kotlin.Unit)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.clauses.verifyClause.C)))))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClause(com.r3corda.core.contracts.TransactionForContract, com.r3corda.core.contracts.clauses.Clause((com.r3corda.core.contracts.ContractState, com.r3corda.core.contracts.clauses.verifyClause.C, kotlin.Unit)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.clauses.verifyClause.C)))))/clause">clause</span><span class="symbol">:</span>&nbsp;<a href="-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.clauses$verifyClause(com.r3corda.core.contracts.TransactionForContract, com.r3corda.core.contracts.clauses.Clause((com.r3corda.core.contracts.ContractState, com.r3corda.core.contracts.clauses.verifyClause.C, kotlin.Unit)), kotlin.collections.List((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.clauses.verifyClause.C)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><span class="identifier">C</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Verify a transaction against the given list of clauses.</p>
 </td>
 </tr>
 </tbody>

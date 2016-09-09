@@ -1,10 +1,7 @@
 package com.r3corda.core.testing
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.testing.utilities.NodeApi
-import com.r3corda.core.testing.utilities.TestTimestamp
-import com.r3corda.core.testing.utilities.assertExitOrKill
-import com.r3corda.core.testing.utilities.spawn
+import com.r3corda.testing.*
 import org.junit.Test
 import kotlin.test.assertEquals
 

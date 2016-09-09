@@ -7,7 +7,7 @@
 <a href="../../../index.html">com.r3corda.contracts</a>&nbsp;/&nbsp;<a href="../../index.html">CommercialPaper</a>&nbsp;/&nbsp;<a href="../index.html">Clauses</a>&nbsp;/&nbsp;<a href=".">Group</a><br/>
 <br/>
 <h1>Group</h1>
-<code><span class="keyword">class </span><span class="identifier">Group</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/index.html"><span class="identifier">GroupClauseVerifier</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">Group</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/index.html"><span class="identifier">GroupClauseVerifier</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -21,40 +21,14 @@
 </tr>
 </tbody>
 </table>
-<h3>Properties</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="clauses.html">clauses</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">clauses</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="if-matched.html">ifMatched</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">ifMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is not matches</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="if-not-matched.html">ifNotMatched</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">ifNotMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is matched</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3>Inherited Properties</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="../../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/required-commands.html">requiredCommands</a></td>
+<a href="../../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/clause.html">clause</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Classes for commands which must ALL be present in transaction for this clause to be triggered</p>
-</td>
+<code><span class="keyword">val </span><span class="identifier">clause</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -63,23 +37,9 @@
 <tbody>
 <tr>
 <td>
-<a href="extract-groups.html">extractGroups</a></td>
+<a href="group-states.html">groupStates</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">extractGroups</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.CommercialPaper.Clauses.Group$extractGroups(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-transaction-for-contract/-in-out-group/index.html"><span class="identifier">InOutGroup</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Inherited Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/verify.html">verify</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">verify</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.clauses.GroupClauseVerifier$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.Collection((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.clauses.GroupClauseVerifier$verify(com.r3corda.core.contracts.TransactionForContract, kotlin.collections.Collection((com.r3corda.core.contracts.AuthenticatedObject((com.r3corda.core.contracts.CommandData)))))/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-authenticated-object/index.html"><span class="identifier">AuthenticatedObject</span></a><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span></code><p>Verify the transaction matches the conditions from this clause. For example, a "no zero amount output" clause
-would check each of the output states that it applies to, looking for a zero amount, and throw IllegalStateException
-if any matched.</p>
-</td>
+<code><span class="keyword">fun </span><span class="identifier">groupStates</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.CommercialPaper.Clauses.Group$groupStates(com.r3corda.core.contracts.TransactionForContract)/tx">tx</span><span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-transaction-for-contract/index.html"><span class="identifier">TransactionForContract</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../../com.r3corda.core.contracts/-transaction-for-contract/-in-out-group/index.html"><span class="identifier">InOutGroup</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../-terms/index.html"><span class="identifier">Terms</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

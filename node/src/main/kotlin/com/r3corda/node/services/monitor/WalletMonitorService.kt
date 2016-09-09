@@ -1,28 +1,28 @@
 package com.r3corda.node.services.monitor
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
-import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AddOrRemove
-import org.slf4j.LoggerFactory
+import com.r3corda.protocols.BroadcastTransactionProtocol
+import com.r3corda.protocols.FinalityProtocol
 import java.security.KeyPair
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -154,35 +154,22 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
                 monitor.recipients)
     }
 
-    /**
-     * Notifies the node associated with the [recipient] public key. Returns a future holding a Boolean of whether the
-     * node accepted the transaction or not.
-     */
-    private fun notifyRecipientAboutTransaction(
-            recipient: PublicKey,
-            transaction: SignedTransaction
-    ): ListenableFuture<Unit> {
-        val recipientNodeInfo = services.networkMapCache.getNodeByPublicKey(recipient) ?: throw PublicKeyLookupFailed(recipient)
-        return DataVending.Service.notify(net, services.storageService.myLegalIdentity,
-                recipientNodeInfo, transaction)
-    }
-
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun initatePayment(req: ClientToServiceCommand.PayCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
-            Cash().generateSpend(builder, Amount(req.pennies, req.tokenDef.product), req.owner,
-                    services.walletService.currentWallet.statesOfType<Cash.State>(),
-                    setOf(req.tokenDef.issuer.party))
+            Cash().generateSpend(builder, req.amount.withoutIssuer(), req.recipient.owningKey,
+                    // TODO: Move cash state filtering by issuer down to the contract itself
+                    services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.amount.token == req.amount.token },
+                    setOf(req.amount.token.issuer.party))
             .forEach {
                 val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
                 builder.signWith(KeyPair(it, key))
             }
-            val tx = builder.toSignedTransaction()
-            services.walletService.notify(tx.tx)
-            notifyRecipientAboutTransaction(req.owner, tx)
-            return TransactionBuildResult.Complete(tx, "Cash payment completed")
+            val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
+            val protocol = FinalityProtocol(tx, setOf(req), setOf(req.recipient))
+            return TransactionBuildResult.ProtocolStarted(smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId, tx, "Cash payment transaction generated")
         } catch(ex: InsufficientBalanceException) {
             return TransactionBuildResult.Failed(ex.message ?: "Insufficient balance")
         }
@@ -192,38 +179,39 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
     private fun exitCash(req: ClientToServiceCommand.ExitCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
-        Cash().generateExit(builder, Amount(req.pennies, Issued(issuer, req.currency)),
-                issuer.party.owningKey, services.walletService.currentWallet.statesOfType<Cash.State>())
+        Cash().generateExit(builder, req.amount.issuedBy(issuer),
+                services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
         builder.signWith(services.storageService.myLegalIdentityKey)
-        val tx = builder.toSignedTransaction()
-        services.walletService.notify(tx.tx)
-        // Notify the owners
-        val inputStatesNullable = services.walletService.statesForRefs(tx.tx.inputs)
+
+        // Work out who the owners of the burnt states were
+        val inputStatesNullable = services.walletService.statesForRefs(builder.inputStates())
         val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
         if (inputStatesNullable.size != inputStates.size) {
             val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }
             throw InputStateRefResolveFailed(unresolvedStateRefs)
         }
-        inputStates.filterIsInstance<Cash.State>().map { it.owner }.toSet().forEach {
-            notifyRecipientAboutTransaction(it, tx)
-        }
-        return TransactionBuildResult.Complete(tx, "Cash destruction completed")
+
+        // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
+        //       count as a reason to fail?
+        val participants: Set<Party> = inputStates.filterIsInstance<Cash.State>().map { services.identityService.partyFromKey(it.owner) }.filterNotNull().toSet()
+
+        // Commit the transaction
+        val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
+        val protocol = FinalityProtocol(tx, setOf(req), participants)
+        return TransactionBuildResult.ProtocolStarted(smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId, tx, "Cash destruction transaction generated")
     }
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun issueCash(req: ClientToServiceCommand.IssueCash): TransactionBuildResult {
-        val builder: TransactionBuilder = TransactionType.General.Builder(notary = req.notary)
+        val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
         val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
-        Cash().generateIssue(builder, Amount(req.pennies, Issued(issuer, req.currency)), req.recipient, req.notary)
+        Cash().generateIssue(builder, req.amount.issuedBy(issuer), req.recipient.owningKey, req.notary)
         builder.signWith(services.storageService.myLegalIdentityKey)
-        val tx = builder.toSignedTransaction()
-        services.walletService.notify(tx.tx)
-        notifyRecipientAboutTransaction(req.recipient, tx)
-        return TransactionBuildResult.Complete(tx, "Cash issuance completed")
+        val tx = builder.toSignedTransaction(checkSufficientSignatures = true)
+        // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
+        val protocol = BroadcastTransactionProtocol(tx, setOf(req), setOf(req.recipient))
+        return TransactionBuildResult.ProtocolStarted(smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId, tx, "Cash issuance completed")
     }
-
-    class PublicKeyLookupFailed(failedPublicKey: PublicKey) :
-            Exception("Failed to lookup public keys $failedPublicKey")
 
     class InputStateRefResolveFailed(stateRefs: List<StateRef>) :
             Exception("Failed to resolve input StateRefs $stateRefs")

@@ -25,14 +25,14 @@ conserved (output = input - exit)</p>
 <td>
 <a href="-conserve-amount/index.html">ConserveAmount</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ConserveAmount</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html"><span class="identifier">AbstractConserveAmount</span></a><span class="symbol">&lt;</span><a href="../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><p>Standard clause for conserving the amount from input to output.</p>
+<code><span class="keyword">class </span><span class="identifier">ConserveAmount</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html"><span class="identifier">AbstractConserveAmount</span></a><span class="symbol">&lt;</span><a href="../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><p>Standard clause for conserving the amount from input to output.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-group/index.html">Group</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Group</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/index.html"><span class="identifier">GroupClauseVerifier</span></a><span class="symbol">&lt;</span><a href="../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Grouping clause to extract input and output states into matched groups and then run a set of clauses over
+<code><span class="keyword">class </span><span class="identifier">Group</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts.clauses/-group-clause-verifier/index.html"><span class="identifier">GroupClauseVerifier</span></a><span class="symbol">&lt;</span><a href="../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Grouping clause to extract input and output states into matched groups and then run a set of clauses over
 each group.</p>
 </td>
 </tr>
@@ -40,7 +40,7 @@ each group.</p>
 <td>
 <a href="-issue/index.html">Issue</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.contracts.clause/-abstract-issue/index.html"><span class="identifier">AbstractIssue</span></a><span class="symbol">&lt;</span><a href="../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><p>Standard issue clause, specialised to match the commodity issue command.</p>
+<code><span class="keyword">class </span><span class="identifier">Issue</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.contracts.clause/-abstract-issue/index.html"><span class="identifier">AbstractIssue</span></a><span class="symbol">&lt;</span><a href="../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-commodity/index.html"><span class="identifier">Commodity</span></a><span class="symbol">&gt;</span></code><p>Standard issue clause, specialised to match the commodity issue command.</p>
 </td>
 </tr>
 </tbody>

@@ -3,19 +3,18 @@ package com.r3corda.contracts;
 import com.google.common.collect.*;
 import com.r3corda.contracts.asset.*;
 import com.r3corda.core.contracts.*;
-import static com.r3corda.core.contracts.ContractsDSL.requireThat;
-
 import com.r3corda.core.contracts.Timestamp;
 import com.r3corda.core.contracts.TransactionForContract.*;
 import com.r3corda.core.contracts.clauses.*;
 import com.r3corda.core.crypto.*;
-import kotlin.Unit;
+import com.r3corda.core.transactions.*;
+import kotlin.*;
 import org.jetbrains.annotations.*;
 
 import java.security.*;
 import java.time.*;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.stream.*;
 
 import static com.r3corda.core.contracts.ContractsDSL.*;
 import static kotlin.collections.CollectionsKt.*;
@@ -26,10 +25,9 @@ import static kotlin.collections.CollectionsKt.*;
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  */
 public class JavaCommercialPaper implements Contract {
-    //public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
-    public static class State implements ContractState, ICommercialPaperState {
+    public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
         private PublicKey owner;
         private Amount<Issued<Currency>> faceValue;
@@ -54,6 +52,12 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
+        @NotNull
+        @Override
+        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
+            return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
+        }
+
         public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
             return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
         }
@@ -70,6 +74,7 @@ public class JavaCommercialPaper implements Contract {
             return issuance;
         }
 
+        @NotNull
         public PublicKey getOwner() {
             return owner;
         }
@@ -86,7 +91,6 @@ public class JavaCommercialPaper implements Contract {
         @Override
         public Contract getContract() {
             return JCP_PROGRAM_ID;
-            //return SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
         }
 
         @Override
@@ -128,44 +132,17 @@ public class JavaCommercialPaper implements Contract {
         }
     }
 
-    public interface Clause {
-        abstract class AbstractGroup implements GroupClause<State, State> {
-            @NotNull
-            @Override
-            public MatchBehaviour getIfNotMatched() {
-                return MatchBehaviour.CONTINUE;
-            }
-
-            @NotNull
-            @Override
-            public MatchBehaviour getIfMatched() {
-                return MatchBehaviour.END;
-            }
-        }
-
-        class Group extends GroupClauseVerifier<State, State> {
-            @NotNull
-            @Override
-            public MatchBehaviour getIfMatched() {
-                return MatchBehaviour.END;
-            }
-
-            @NotNull
-            @Override
-            public MatchBehaviour getIfNotMatched() {
-                return MatchBehaviour.ERROR;
-            }
-
-            @NotNull
-            @Override
-            public List<GroupClause<State, State>> getClauses() {
-                final List<GroupClause<State, State>> clauses = new ArrayList<>();
-
-                clauses.add(new Clause.Redeem());
-                clauses.add(new Clause.Move());
-                clauses.add(new Clause.Issue());
-
-                return clauses;
+    public interface Clauses {
+        class Group extends GroupClauseVerifier<State, Commands, State> {
+            // This complains because we're passing generic types into a varargs, but it is valid so we suppress the
+            // warning.
+            @SuppressWarnings("unchecked")
+            Group() {
+                super(new AnyComposition<>(
+                        new Clauses.Redeem(),
+                        new Clauses.Move(),
+                        new Clauses.Issue()
+                ));
             }
 
             @NotNull
@@ -175,7 +152,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Move extends AbstractGroup {
+        class Move extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -184,11 +161,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 State input = single(inputs);
@@ -206,7 +183,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Redeem extends AbstractGroup {
+        class Redeem extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -215,11 +192,11 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
@@ -248,7 +225,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
-        class Issue extends AbstractGroup {
+        class Issue extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {
@@ -257,14 +234,13 @@ public class JavaCommercialPaper implements Contract {
 
             @NotNull
             @Override
-            public Set<CommandData> verify(@NotNull TransactionForContract tx,
+            public Set<Commands> verify(@NotNull TransactionForContract tx,
                                            @NotNull List<? extends State> inputs,
                                            @NotNull List<? extends State> outputs,
-                                           @NotNull Collection<? extends AuthenticatedObject<? extends CommandData>> commands,
-                                           @NotNull State token) {
+                                           @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
+                                           @NotNull State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
-                Party notary = cmd.getValue().notary;
                 Timestamp timestampCommand = tx.getTimestamp();
                 Instant time = null == timestampCommand
                         ? null
@@ -291,49 +267,28 @@ public class JavaCommercialPaper implements Contract {
         }
 
         class Redeem implements Commands {
-            private final Party notary;
-
-            public  Redeem(Party setNotary) {
-                this.notary = setNotary;
-            }
-
             @Override
             public boolean equals(Object obj) { return obj instanceof Redeem; }
         }
 
         class Issue implements Commands {
-            private final Party notary;
-
-            public  Issue(Party setNotary) {
-                this.notary = setNotary;
-            }
-
             @Override
-            public boolean equals(Object obj) {
-                if (obj instanceof Issue) {
-                    Issue other = (Issue)obj;
-                    return notary.equals(other.notary);
-                } else {
-                    return false;
-                }
-            }
-
-            @Override
-            public int hashCode() { return notary.hashCode(); }
+            public boolean equals(Object obj) { return obj instanceof Issue; }
         }
     }
 
     @NotNull
-    private Collection<AuthenticatedObject<CommandData>> extractCommands(@NotNull TransactionForContract tx) {
+    private List<AuthenticatedObject<Commands>> extractCommands(@NotNull TransactionForContract tx) {
         return tx.getCommands()
                 .stream()
                 .filter((AuthenticatedObject<CommandData> command) -> command.getValue() instanceof Commands)
+                .map((AuthenticatedObject<CommandData> command) -> new AuthenticatedObject<>(command.getSigners(), command.getSigningParties(), (Commands) command.getValue()))
                 .collect(Collectors.toList());
     }
 
     @Override
     public void verify(@NotNull TransactionForContract tx) throws IllegalArgumentException {
-        ClauseVerifier.verifyClauses(tx, Collections.singletonList(new Clause.Group()), extractCommands(tx));
+        ClauseVerifier.verifyClause(tx, new Clauses.Group(), extractCommands(tx));
     }
 
     @NotNull
@@ -346,13 +301,13 @@ public class JavaCommercialPaper implements Contract {
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
         State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary);
-        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(notary), issuance.getParty().getOwningKey()));
+        return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException {
         new Cash().generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), wallet, null);
         tx.addInputState(paper);
-        tx.addCommand(new Command(new Commands.Redeem(paper.getState().getNotary()), paper.getState().getData().getOwner()));
+        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
 
     public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {

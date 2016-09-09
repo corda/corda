@@ -148,6 +148,14 @@ we do not support coercing numeric types in the reflective search for matching c
 </tr>
 <tr>
 <td>
+<a href="../../com.r3corda.protocols/-broadcast-transaction-protocol/index.html">BroadcastTransactionProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BroadcastTransactionProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Notify all involved parties about a transaction, including storing a copy. Normally this would be called via
+<a href="../../com.r3corda.protocols/-finality-protocol/index.html">FinalityProtocol</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../../com.r3corda.protocols/-two-party-trade-protocol/-buyer/index.html">Buyer</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">Buyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
@@ -165,6 +173,13 @@ timestamp is correct and none of its inputs have been used in another completed 
 <a href="../../com.r3corda.protocols/-fetch-data-protocol/index.html">FetchDataProtocol</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">FetchDataProtocol</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-named-by-hash/index.html"><span class="identifier">NamedByHash</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">W</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><a href="../../com.r3corda.protocols/-fetch-data-protocol/-result/index.html"><span class="identifier">Result</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>An abstract protocol for fetching typed data from a remote peer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.protocols/-finality-protocol/index.html">FinalityProtocol</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FinalityProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ProtocolLogic</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
 </td>
 </tr>
 <tr>

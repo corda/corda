@@ -3,16 +3,16 @@ package com.r3corda.node.services
 import com.r3corda.core.contracts.Command
 import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.TransactionType
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.DUMMY_NOTARY_KEY
-import com.r3corda.core.testing.MEGA_CORP_KEY
-import com.r3corda.core.testing.MINI_CORP_KEY
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.protocols.NotaryError
 import com.r3corda.protocols.NotaryException
 import com.r3corda.protocols.NotaryProtocol
+import com.r3corda.testing.MEGA_CORP_KEY
+import com.r3corda.testing.MINI_CORP_KEY
+import com.r3corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
@@ -32,7 +32,7 @@ class ValidatingNotaryServiceTests {
                 keyPair = DUMMY_NOTARY_KEY,
                 advertisedServices = *arrayOf(NetworkMapService.Type, ValidatingNotaryService.Type)
         )
-        clientNode = net.createNode(networkMapAddress = notaryNode.info, keyPair = MINI_CORP_KEY)
+        clientNode = net.createNode(networkMapAddress = notaryNode.info.address, keyPair = MINI_CORP_KEY)
         net.runNetwork() // Clear network map registration messages
     }
 
@@ -45,7 +45,7 @@ class ValidatingNotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
@@ -65,7 +65,7 @@ class ValidatingNotaryServiceTests {
         }
 
         val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.smm.add(NotaryProtocol.TOPIC, protocol)
+        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
         net.runNetwork()
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
@@ -73,6 +73,6 @@ class ValidatingNotaryServiceTests {
         assertThat(notaryError).isInstanceOf(NotaryError.SignaturesMissing::class.java)
 
         val missingKeys = (notaryError as NotaryError.SignaturesMissing).missingSigners
-        assertEquals(missingKeys, listOf(expectedMissingKey))
+        assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 }

@@ -2,9 +2,8 @@ package com.r3corda.contracts.asset
 
 import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.SingleClause
-import com.r3corda.core.contracts.clauses.verifyClauses
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,12 +24,9 @@ import java.security.PublicKey
  * At the same time, other contracts that just want assets and don't care much who is currently holding it can ignore
  * the issuer/depositRefs and just examine the amount fields.
  */
-abstract class OnLedgerAsset<T : Any, S : FungibleAsset<T>> : Contract {
-    abstract val clauses: List<SingleClause>
-    abstract fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
-    abstract val conserveClause: AbstractConserveAmount<S, T>
-
-    override fun verify(tx: TransactionForContract) = verifyClauses(tx, clauses, extractCommands(tx))
+abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Contract {
+    abstract fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): Collection<AuthenticatedObject<C>>
+    abstract val conserveClause: AbstractConserveAmount<S, C, T>
 
     /**
      * Generate an transaction exiting assets from the ledger.
@@ -44,9 +40,10 @@ abstract class OnLedgerAsset<T : Any, S : FungibleAsset<T>> : Contract {
      * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
      */
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     changeKey: PublicKey, assetStates: List<StateAndRef<S>>): PublicKey
-        = conserveClause.generateExit(tx, amountIssued, changeKey, assetStates,
+                     assetStates: List<StateAndRef<S>>): PublicKey
+        = conserveClause.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> deriveState(state, amount, owner) },
+            generateMoveCommand = { -> generateMoveCommand() },
             generateExitCommand = { amount -> generateExitCommand(amount) }
     )
 

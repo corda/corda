@@ -19,9 +19,19 @@ configurations {
 
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
     runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+    }
     test {
         resources {
             srcDir "../config/test"
@@ -34,12 +44,14 @@ sourceSets {
 
 dependencies {
     compile project(':contracts')
+    testCompile project(':test-utils')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+    compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -60,8 +72,10 @@ dependencies {
     compile "org.fusesource.jansi:jansi:1.13"
 
     // GraphStream: For visualisation
-    compile "org.graphstream:gs-core:1.3"
-    compile "org.graphstream:gs-ui:1.3"
+    testCompile "org.graphstream:gs-core:1.3"
+    testCompile("org.graphstream:gs-ui:1.3") {
+        exclude group: "bouncycastle"
+    }
     compile("com.intellij:forms_rt:7.0.3") {
         exclude group: "asm"
     }
@@ -105,6 +119,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
+    testCompile 'com.pholser:junit-quickcheck-core:0.6'
+
     // For H2 database support in persistence
     compile "com.h2database:h2:1.3.176"
 
@@ -113,6 +129,14 @@ dependencies {
 
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.4.7"
+
+    // Integration test helpers
+    integrationTestCompile 'junit:junit:4.12'
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
+
+task integrationTest(type: Test) {
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}

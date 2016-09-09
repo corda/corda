@@ -1,5 +1,6 @@
 package com.r3corda.core.contracts
 
+import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
@@ -7,6 +8,7 @@ import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
@@ -215,16 +217,41 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
 data class ScheduledActivity(val logicRef: ProtocolLogicRef, override val scheduledAt: Instant) : Scheduled
 
 /**
- * A state that evolves by superseding itself, all of which share the common "thread".
+ * A state that evolves by superseding itself, all of which share the common "linearId".
  *
  * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet.
  */
-interface LinearState : ContractState {
-    /** Unique thread id within the wallets of all parties */
-    val thread: SecureHash
+interface LinearState: ContractState {
+    /**
+     * Unique id shared by all LinearState states throughout history within the wallets of all parties.
+     * Verify methods should check that one input and one output share the id in a transaction,
+     * except at issuance/termination.
+     */
+    val linearId: UniqueIdentifier
 
-    /** true if this should be tracked by our wallet(s) */
+    /**
+     * True if this should be tracked by our wallet(s).
+     * */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
+
+    /**
+     * Standard clause to verify the LinearState safety properties.
+     */
+    class ClauseVerifier<S : LinearState>(val stateClass: Class<S>) : Clause<ContractState, CommandData, Unit>() {
+        override fun verify(tx: TransactionForContract,
+                            inputs: List<ContractState>,
+                            outputs: List<ContractState>,
+                            commands: List<AuthenticatedObject<CommandData>>,
+                            groupingKey: Unit?): Set<CommandData> {
+            val filteredInputs = inputs.filterIsInstance(stateClass)
+            val inputIds = filteredInputs.map { it.linearId }.distinct()
+            require(inputIds.count() == filteredInputs.count()) { "LinearStates cannot be merged" }
+            val filteredOutputs = outputs.filterIsInstance(stateClass)
+            val outputIds = filteredOutputs.map { it.linearId }.distinct()
+            require(outputIds.count() == filteredOutputs.count()) { "LinearStates cannot be split" }
+            return emptySet()
+        }
+    }
 }
 
 interface SchedulableState : ContractState {
@@ -346,6 +373,12 @@ interface MoveCommand : CommandData {
      */
     // TODO: Replace SecureHash here with a general contract constraints object
     val contractHash: SecureHash?
+}
+
+/** A common netting command for contracts whose states can be netted. */
+interface NetCommand : CommandData {
+    /** The type of netting to apply, see [NetType] for options. */
+    val type: NetType
 }
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */

@@ -1,17 +1,19 @@
 package com.r3corda.core.testing
 
 import com.google.common.net.HostAndPort
-import com.r3corda.core.testing.utilities.*
+import com.r3corda.testing.*
 import kotlin.test.assertEquals
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class IRSDemoTest {
+class IRSDemoTest: IntegrationTestCategory {
     @Test fun `runs IRS demo`() {
-        val nodeAddrA = freeLocalHostAndPort()
-        val apiAddrA = freeLocalHostAndPort()
-        val apiAddrB = freeLocalHostAndPort()
+        val hostAndPorts = getFreeLocalPorts("localhost", 4)
+
+        val nodeAddrA = hostAndPorts[0]
+        val apiAddrA = hostAndPorts[1]
+        val apiAddrB = hostAndPorts[2]
 
         val baseDirectory = Paths.get("./build/integration-test/${TestTimestamp.timestamp}/irs-demo")
         var procA: Process? = null
@@ -29,7 +31,7 @@ class IRSDemoTest {
             procB = startNode(
                     baseDirectory = baseDirectory,
                     nodeType = "NodeB",
-                    nodeAddr = freeLocalHostAndPort(),
+                    nodeAddr = hostAndPorts[3],
                     networkMapAddr = nodeAddrA,
                     apiAddr = apiAddrB
             )

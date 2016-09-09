@@ -13,9 +13,6 @@ so far. We have:
 The demos create node data directories in the root of the project. If something goes wrong with them, blow away the
 directories and try again.
 
-.. note:: Corda is developed on MacOS and works best on UNIX systems. Both demos are easily run on Windows but
-   you won't get the nice coloured output.
-
 Trader demo
 -----------
 
@@ -106,7 +103,7 @@ To install the web demo please follow these steps;
 
 1. Install Node: https://nodejs.org/en/download/ and ensure the npm executable is on your classpath
 2. Open a terminal
-3. Run `npm install -g bower` or `sudo npm install -g bower` if on a *nix system.
+3. Run `npm install -g bower` or `sudo npm install -g bower` if on a Unix system.
 4. In the terminal navigate to `<corda>/src/main/resources/com/r3corda/demos/irswebdemo`
 5. Run `bower install`
 

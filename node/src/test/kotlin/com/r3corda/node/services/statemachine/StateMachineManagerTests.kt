@@ -2,62 +2,77 @@ package com.r3corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.node.services.MockServiceHubInternal
-import com.r3corda.node.services.api.Checkpoint
-import com.r3corda.node.services.api.CheckpointStorage
-import com.r3corda.node.services.api.MessagingServiceInternal
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
-import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.core.random63BitValue
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
-import java.util.*
 
 class StateMachineManagerTests {
 
-    val checkpointStorage = RecordingCheckpointStorage()
-    val network = InMemoryMessagingNetwork(false).InMemoryMessaging(true, InMemoryMessagingNetwork.Handle(1, "mock"))
-    val smm = createManager()
+    val net = MockNetwork()
+    lateinit var node1: MockNode
+    lateinit var node2: MockNode
+
+    @Before
+    fun start() {
+        val nodes = net.createTwoNodes()
+        node1 = nodes.first
+        node2 = nodes.second
+        net.runNetwork()
+    }
 
     @After
     fun cleanUp() {
-        network.stop()
+        net.stopNodes()
     }
 
     @Test
     fun `newly added protocol is preserved on restart`() {
-        smm.add("test", ProtocolWithoutCheckpoints())
-        // Ensure we're restoring from the original add checkpoint
-        assertThat(checkpointStorage.allCheckpoints).hasSize(1)
-        val restoredProtocol = createManager().run {
-            start()
-            findStateMachines(ProtocolWithoutCheckpoints::class.java).single().first
-        }
+        node1.smm.add("test", ProtocolWithoutCheckpoints())
+        val restoredProtocol = node1.restartAndGetRestoredProtocol<ProtocolWithoutCheckpoints>()
         assertThat(restoredProtocol.protocolStarted).isTrue()
     }
 
     @Test
     fun `protocol can lazily use the serviceHub in its constructor`() {
         val protocol = ProtocolWithLazyServiceHub()
-        smm.add("test", protocol)
+        node1.smm.add("test", protocol)
         assertThat(protocol.lazyTime).isNotNull()
     }
 
-    private fun createManager() = StateMachineManager(object : MockServiceHubInternal() {
-        override val networkService: MessagingServiceInternal get() = network
-    }, emptyList(), checkpointStorage, AffinityExecutor.SAME_THREAD)
+    @Test
+    fun `protocol suspended just after receiving payload`() {
+        val topic = "send-and-receive"
+        val sessionID = random63BitValue()
+        val payload = random63BitValue()
+        node1.smm.add("test", SendProtocol(topic, node2.info.identity, sessionID, payload))
+        node2.smm.add("test", ReceiveProtocol(topic, sessionID))
+        net.runNetwork()
+        node2.stop()
+        val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveProtocol>(node1.info.address)
+        assertThat(restoredProtocol.receivedPayload).isEqualTo(payload)
+    }
+
+    private inline fun <reified P : NonTerminatingProtocol> MockNode.restartAndGetRestoredProtocol(networkMapAddress: SingleMessageRecipient? = null): P {
+        val servicesArray = advertisedServices.toTypedArray()
+        val node = mockNet.createNode(networkMapAddress, id, advertisedServices = *servicesArray)
+        return node.smm.findStateMachines(P::class.java).single().first
+    }
 
 
-
-    private class ProtocolWithoutCheckpoints : ProtocolLogic<Unit>() {
+    private class ProtocolWithoutCheckpoints : NonTerminatingProtocol() {
 
         @Transient var protocolStarted = false
 
         @Suspendable
-        override fun call() {
+        override fun doCall() {
             protocolStarted = true
-            Fiber.park()
         }
 
         override val topic: String get() = throw UnsupportedOperationException()
@@ -75,21 +90,37 @@ class StateMachineManagerTests {
     }
 
 
-    class RecordingCheckpointStorage : CheckpointStorage {
+    private class SendProtocol(override val topic: String, val destination: Party, val sessionID: Long, val payload: Any) : ProtocolLogic<Unit>() {
+        @Suspendable
+        override fun call() = send(destination, sessionID, payload)
+    }
 
-        private val _checkpoints = ArrayList<Checkpoint>()
-        val allCheckpoints = ArrayList<Checkpoint>()
 
-        override fun addCheckpoint(checkpoint: Checkpoint) {
-            _checkpoints.add(checkpoint)
-            allCheckpoints.add(checkpoint)
+    private class ReceiveProtocol(override val topic: String, val sessionID: Long) : NonTerminatingProtocol() {
+
+        @Transient var receivedPayload: Any? = null
+
+        @Suspendable
+        override fun doCall() {
+            receivedPayload = receive<Any>(sessionID).unwrap { it }
+        }
+    }
+
+
+    /**
+     * A protocol that suspends forever after doing some work. This is to allow it to be retrieved from the SMM after
+     * restart for testing checkpoint restoration. Store any results as @Transient fields.
+     */
+    private abstract class NonTerminatingProtocol : ProtocolLogic<Unit>() {
+
+        @Suspendable
+        override fun call() {
+            doCall()
+            Fiber.park()
         }
 
-        override fun removeCheckpoint(checkpoint: Checkpoint) {
-            _checkpoints.remove(checkpoint)
-        }
-
-        override val checkpoints: Iterable<Checkpoint> get() = _checkpoints
+        @Suspendable
+        abstract fun doCall()
     }
 
 }

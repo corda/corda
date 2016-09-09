@@ -1,11 +1,15 @@
 package com.r3corda.contracts
 
+import com.r3corda.contracts.asset.Cash
+import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.contracts.asset.sumCashBy
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
 import java.time.Instant
@@ -30,8 +34,7 @@ class CommercialPaperLegacy : Contract {
             val maturityDate: Instant
     ) : OwnableState, ICommercialPaperState {
         override val contract = CP_LEGACY_PROGRAM_ID
-        override val participants: List<PublicKey>
-            get() = listOf(owner)
+        override val participants = listOf(owner)
 
         fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
@@ -46,11 +49,11 @@ class CommercialPaperLegacy : Contract {
     }
 
     interface Commands : CommandData {
-        class Move: TypeOnlyCommandData(), Commands
-        data class Redeem(val notary: Party) : Commands
+        class Move : TypeOnlyCommandData(), Commands
+        class Redeem : TypeOnlyCommandData(), Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        data class Issue(val notary: Party) : Commands
+        class Issue : TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: TransactionForContract) {
@@ -74,8 +77,8 @@ class CommercialPaperLegacy : Contract {
                     }
                 }
 
-            // Redemption of the paper requires movement of on-ledger cash.
                 is Commands.Redeem -> {
+                    // Redemption of the paper requires movement of on-ledger cash.
                     val input = inputs.single()
                     val received = tx.outputs.sumCashBy(input.owner)
                     val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
@@ -97,6 +100,7 @@ class CommercialPaperLegacy : Contract {
                         "output values sum to more than the inputs" by (output.faceValue.quantity > 0)
                         "the maturity date is not in the past" by (time < output.maturityDate)
                         // Don't allow an existing CP state to be replaced by this issuance.
+                        // TODO: this has a weird/incorrect assertion string because it doesn't quite match the logic in the clause version.
                         // TODO: Consider how to handle the case of mistaken issuances, or other need to patch.
                         "output values sum to more than the inputs" by inputs.isEmpty()
                     }
@@ -106,5 +110,26 @@ class CommercialPaperLegacy : Contract {
                 else -> throw IllegalArgumentException("Unrecognised command")
             }
         }
+    }
+
+    fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant,
+                      notary: Party): TransactionBuilder {
+        val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
+        return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+    }
+
+    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
+        tx.addInputState(paper)
+        tx.addOutputState(paper.state.data.withOwner(newOwner))
+        tx.addCommand(Command(Commands.Move(), paper.state.data.owner))
+    }
+
+    @Throws(InsufficientBalanceException::class)
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: Wallet) {
+        // Add the cash movement using the states in our wallet.
+        Cash().generateSpend(tx, paper.state.data.faceValue.withoutIssuer(),
+                paper.state.data.owner, wallet.statesOfType<Cash.State>())
+        tx.addInputState(paper)
+        tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner))
     }
 }

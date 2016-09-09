@@ -1,12 +1,9 @@
 package com.r3corda.contracts.universal
 
-import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Sets
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
-import java.security.PublicKey
 import java.util.*
 
 /**
@@ -14,7 +11,6 @@ import java.util.*
  */
 
 interface Arrangement
-
 
 // A base arrangement with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
 class Zero() : Arrangement {
@@ -30,10 +26,8 @@ class Zero() : Arrangement {
 // X is an observable of type BigDecimal.
 //
 // todo: should be replaced with something that uses Corda assets and/or cash?
-data class Transfer(val amount: Perceivable<Amount<Currency>>, val from: Party, val to: Party) : Arrangement {
-    constructor(amount: Amount<Currency>, from: Party, to: Party ) : this(const(amount), from, to)
-}
-
+// todo: should only be allowed to transfer non-negative amounts
+data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency, val from: Party, val to: Party) : Arrangement
 
 // A combinator over a list of arrangements. Each arrangement in list will create a separate independent arrangement state.
 // The ``And`` combinator cannot be root in a arrangement.
@@ -44,7 +38,9 @@ data class And(val arrangements: Set<Arrangement>) : Arrangement
 // _condition_ is met. If the action is performed the arrangement state transitions into the specified arrangement.
 data class Action(val name: String, val condition: Perceivable<Boolean>,
                   val actors: Set<Party>, val arrangement: Arrangement) : Arrangement {
-    constructor(name: String, condition: Perceivable<Boolean>, actor: Party, arrangement: Arrangement) : this(name, condition, setOf(actor), arrangement)
+    constructor(name: String, condition: Perceivable<Boolean>,
+                actor: Party, arrangement: Arrangement)
+    : this(name, condition, setOf(actor), arrangement)
 }
 
 
@@ -58,4 +54,12 @@ data class RollOut(val startDate: String, val endDate: String, val frequency: Fr
 
 // Continuation of roll out
 // May only be used inside template for RollOut
-class Continuation : Arrangement
+class Continuation() : Arrangement {
+    override fun hashCode(): Int {
+        return 1
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Continuation
+    }
+}

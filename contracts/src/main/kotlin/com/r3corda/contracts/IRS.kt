@@ -5,6 +5,7 @@ import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
 import com.r3corda.protocols.TwoPartyDealProtocol
 import org.apache.commons.jexl3.JexlBuilder
@@ -447,20 +448,14 @@ class InterestRateSwap() : Contract {
                 fixingCalendar, index, indexSource, indexTenor)
     }
 
-    fun extractCommands(tx: TransactionForContract): Collection<AuthenticatedObject<CommandData>>
-            = tx.commands.select<Commands>()
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
-    override fun verify(tx: TransactionForContract) = verifyClauses(tx, listOf(Clause.Timestamped(), Clause.Group()), extractCommands(tx))
-
-    interface Clause {
+    interface Clauses {
         /**
          * Common superclass for IRS contract clauses, which defines behaviour on match/no-match, and provides
          * helper functions for the clauses.
          */
-        abstract class AbstractIRSClause : GroupClause<State, String> {
-            override val ifMatched = MatchBehaviour.END
-            override val ifNotMatched = MatchBehaviour.CONTINUE
-
+        abstract class AbstractIRSClause : Clause<State, Commands, UniqueIdentifier>() {
             // These functions may make more sense to use for basket types, but for now let's leave them here
             fun checkLegDates(legs: List<CommonLeg>) {
                 requireThat {
@@ -502,23 +497,18 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        class Group : GroupClauseVerifier<State, String>() {
-            override val ifMatched = MatchBehaviour.END
-            override val ifNotMatched = MatchBehaviour.ERROR
-
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, String>>
+        class Group : GroupClauseVerifier<State, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, UniqueIdentifier>>
                 // Group by Trade ID for in / out states
-                = tx.groupStates() { state -> state.common.tradeID }
-
-            override val clauses = listOf(Agree(), Fix(), Pay(), Mature())
+                = tx.groupStates() { state -> state.linearId }
         }
 
-        class Timestamped : SingleClause {
-            override val ifMatched = MatchBehaviour.CONTINUE
-            override val ifNotMatched = MatchBehaviour.ERROR
-            override val requiredCommands = emptySet<Class<out CommandData>>()
-
-            override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
+        class Timestamped : Clause<ContractState, Commands, Unit>() {
+            override fun verify(tx: TransactionForContract,
+                                inputs: List<ContractState>,
+                                outputs: List<ContractState>,
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: Unit?): Set<Commands> {
                 require(tx.timestamp?.midpoint != null) { "must be timestamped" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
@@ -526,13 +516,13 @@ class InterestRateSwap() : Contract {
         }
 
         class Agree : AbstractIRSClause() {
-            override val requiredCommands = setOf(Commands.Agree::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Agree::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: String): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Agree>()
                 val irs = outputs.filterIsInstance<State>().single()
                 requireThat {
@@ -562,13 +552,13 @@ class InterestRateSwap() : Contract {
         }
 
         class Fix : AbstractIRSClause() {
-            override val requiredCommands = setOf(Commands.Refix::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Refix::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: String): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Refix>()
                 val irs = outputs.filterIsInstance<State>().single()
                 val prevIrs = inputs.filterIsInstance<State>().single()
@@ -607,13 +597,13 @@ class InterestRateSwap() : Contract {
         }
 
         class Pay : AbstractIRSClause() {
-            override val requiredCommands = setOf(Commands.Pay::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Pay::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: String): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Pay>()
                 requireThat {
                     "Payments not supported / verifiable yet" by false
@@ -623,17 +613,18 @@ class InterestRateSwap() : Contract {
         }
 
         class Mature : AbstractIRSClause() {
-            override val requiredCommands = setOf(Commands.Mature::class.java)
+            override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Mature::class.java)
 
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State>,
                                 outputs: List<State>,
-                                commands: Collection<AuthenticatedObject<CommandData>>,
-                                token: String): Set<CommandData> {
+                                commands: List<AuthenticatedObject<Commands>>,
+                                groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Mature>()
                 val irs = inputs.filterIsInstance<State>().single()
                 requireThat {
                     "No more fixings to be applied" by (irs.calculation.nextFixingDate() == null)
+                    "The irs is fully consumed and there is no id matched output state" by outputs.isEmpty()
                 }
 
                 return setOf(command.value)
@@ -656,11 +647,12 @@ class InterestRateSwap() : Contract {
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
             val calculation: Calculation,
-            val common: Common
+            val common: Common,
+            override val linearId: UniqueIdentifier = UniqueIdentifier(common.tradeID)
     ) : FixableDealState, SchedulableState {
 
         override val contract = IRS_PROGRAM_ID
-        override val thread = SecureHash.sha256(common.tradeID)
+
         override val ref = common.tradeID
 
         override val participants: List<PublicKey>

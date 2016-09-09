@@ -1,6 +1,6 @@
 buildscript {
     ext.kotlin_version = '1.0.3'
-    ext.quasar_version = '0.7.5'
+    ext.quasar_version = '0.7.6'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.3.0'
     ext.jackson_version = '2.8.0.rc2'
@@ -48,7 +48,7 @@ allprojects {
 
     // Our version: bump this on release.
     group 'com.r3corda'
-    version '0.3-SNAPSHOT'
+    version '0.4-SNAPSHOT'
 }
 
 repositories {
@@ -102,21 +102,24 @@ mainClassName = 'com.r3corda.demos.TraderDemoKt'
 
 dependencies {
     compile project(':node')
+    // TODO: Demos should not depend on test code, but only use production APIs
+    compile project(':test-utils')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.2"
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
+    compile 'co.paralleluniverse:capsule:1.0.3'
 
     // Unit testing helpers.
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.4.1'
-    testCompile 'com.pholser:junit-quickcheck-core:0.6'
 
     // Integration test helpers
     integrationTestCompile 'junit:junit:4.12'
     integrationTestCompile 'org.assertj:assertj-core:${assertj_version}'
+    integrationTestCompile project(':test-utils')
 }
 
 // Package up the demo programs.
@@ -155,11 +158,10 @@ tasks.withType(CreateStartScripts) {
     }
 }
 
-task integrationTest(type: Test) {
+task integrationTest(type: Test, dependsOn: [':node:integrationTest',':client:integrationTest']) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
-test.finalizedBy(integrationTest)
 
 
 task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
@@ -196,46 +198,49 @@ applicationDistribution.into("bin") {
     fileMode = 0755
 }
 
-task createCapsule(type: FatCapsule, dependsOn: 'quasarScan') {
+task buildCordaJAR(type: FatCapsule, dependsOn: 'quasarScan') {
     applicationClass 'com.r3corda.node.MainKt'
+    archiveName 'corda.jar'
+    applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class')
 
     capsuleManifest {
         appClassPath = ["jolokia-agent-war-${project.ext.jolokia_version}.war"]
         systemProperties['log4j.configuration'] = 'log4j2.xml'
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         minJavaVersion = '1.8.0'
+        caplets = ['CordaCaplet']
     }
 }
 
-task createStandalone(dependsOn: 'createCapsule') << {
+task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
     copy {
-        from createCapsule.outputs.getFiles()
+        from buildCordaJAR.outputs.getFiles()
         from 'config/dev/nameservernode.conf'
-        into "${buildDir}/standalone/nameserver"
+        into "${buildDir}/nodes/nameserver"
         rename 'nameservernode.conf', 'node.conf'
     }
 
     copy {
-        from createCapsule.outputs.getFiles()
+        from buildCordaJAR.outputs.getFiles()
         from 'config/dev/generalnodea.conf'
-        into "${buildDir}/standalone/nodea"
+        into "${buildDir}/nodes/nodea"
         rename 'generalnodea.conf', 'node.conf'
     }
 
     copy {
-        from createCapsule.outputs.getFiles()
+        from buildCordaJAR.outputs.getFiles()
         from 'config/dev/generalnodeb.conf'
-        into "${buildDir}/standalone/nodeb"
+        into "${buildDir}/nodes/nodeb"
         rename 'generalnodeb.conf', 'node.conf'
     }
 
-    delete("${buildDir}/standalone/runstandalone")
-    def jarName = createCapsule.outputs.getFiles().getSingleFile().getName()
+    delete("${buildDir}/nodes/runnodes")
+    def jarName = buildCordaJAR.outputs.getFiles().getSingleFile().getName()
     copy {
-        from "buildSrc/scripts/runstandalone"
+        from "buildSrc/scripts/runnodes"
         filter { String line -> line.replace("JAR_NAME", jarName) }
         filter(org.apache.tools.ant.filters.FixCrLfFilter.class, eol: org.apache.tools.ant.filters.FixCrLfFilter.CrLf.newInstance("lf"))
-        into "${buildDir}/standalone"
+        into "${buildDir}/nodes"
     }
 
 }

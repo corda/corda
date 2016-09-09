@@ -93,12 +93,14 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
@@ -116,6 +118,7 @@
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-3">Milestone 3</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-2">Milestone 2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-1">Milestone 1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-0">Milestone 0</a></li>
@@ -171,13 +174,52 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
+<div class="section" id="milestone-3">
+<h2>Milestone 3<a class="headerlink" href="#milestone-3" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">More work on preparing for the testnet:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Corda is now a standalone app server that loads &#8220;CorDapps&#8221; into itself as plugins. Whilst the existing IRS
+and trader demos still exist for now, these will soon be removed and there will only be a single Corda node
+program. Note that the node is a single, standalone jar file that is easier to execute than the demos.</li>
+<li>Project Vega (shared SIMM modelling for derivative portfolios) has already been converted to be a CorDapp.</li>
+<li>Significant work done on making the node persist its wallet data to a SQL backend, with more on the way.</li>
+<li>Upgrades and refactorings of the core transaction types in preparation for the incoming sandboxing work.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">The Clauses API that seeks to make writing smart contracts easier has gone through another design iteration,
+with the result that clauses are now cleaner and more composable.</p>
+</li>
+<li><p class="first">Improvements to the protocol API for finalising transactions (notarising, transmitting and storing).</p>
+</li>
+<li><p class="first">Lots of work done on an MQ based client API.</p>
+</li>
+<li><p class="first">Improvements to the developer site:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The developer site has been re-read from start to finish and refreshed for M3 so there should be no obsolete
+texts or references anywhere.</li>
+<li>The Corda non-technical white paper is now a part of the developer site and git repository. The LaTeX source is
+also provided so if you spot any issues with it, you can send us patches.</li>
+<li>There is a new section on how to write CorDapps.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Further R&amp;D work by Sofus Mortensen in the experimental module on a new &#8216;universal&#8217; contract language.</p>
+</li>
+<li><p class="first">SSL for the REST API and webapp server can now be configured.</p>
+</li>
+</ul>
+</div>
 <div class="section" id="milestone-2">
 <h2>Milestone 2<a class="headerlink" href="#milestone-2" title="Permalink to this headline">¶</a></h2>
 <ul>
 <li><p class="first">Big improvements to the interest rate swap app:</p>
 <blockquote>
 <div><ul class="simple">
-<li>A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
+<li>A new web app demonstrating the IRS contract has been added. This can x``be used as an example for how to interact with
 the Corda API from the web.</li>
 <li>Simplifications to the way the demo is used from the command line.</li>
 <li><a class="reference internal" href="contract-irs.html"><span class="doc">Detailed documentation on how the contract works and can be used</span></a> has been written.</li>
@@ -239,10 +281,11 @@ delete the import lines that no longer work and let IntelliJ replace them with t
 <li>The <code class="docutils literal"><span class="pre">arg</span></code> method in the test DSL is now called <code class="docutils literal"><span class="pre">command</span></code> to be consistent with the rest of the data model.</li>
 <li>The messaging APIs have changed somewhat to now use a new <code class="docutils literal"><span class="pre">TopicSession</span></code> object. These APIs will continue to change
 in the upcoming releases.</li>
+<li>Clauses now have default values provided for <code class="docutils literal"><span class="pre">ifMatched</span></code>, <code class="docutils literal"><span class="pre">ifNotMatched</span></code> and <code class="docutils literal"><span class="pre">requiredCommands</span></code>.</li>
 </ul>
 <p>New documentation:</p>
 <ul class="simple">
-<li><a class="reference internal" href="contract-catalogue.html"><span class="doc">Platform contracts</span></a></li>
+<li><a class="reference internal" href="contract-catalogue.html"><span class="doc">Contract catalogue</span></a></li>
 <li><a class="reference internal" href="contract-irs.html"><span class="doc">Interest Rate Swaps</span></a></li>
 <li><a class="reference internal" href="tutorial-test-dsl.html"><span class="doc">Writing a contract test</span></a></li>
 </ul>

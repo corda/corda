@@ -2,10 +2,11 @@ package com.r3corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
-import com.r3corda.core.contracts.SignedTransaction
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.CordaPluginRegistry
@@ -20,6 +21,7 @@ import com.r3corda.core.seconds
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.api.APIServer
 import com.r3corda.node.services.api.*
 import com.r3corda.node.services.config.NodeConfiguration
@@ -49,13 +51,14 @@ import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase
 import org.slf4j.Logger
-import java.io.Closeable
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -67,7 +70,7 @@ import java.util.*
 // TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val networkMapService: NodeInfo?,
+abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val networkMapService: SingleMessageRecipient?,
                             val advertisedServices: Set<ServiceType>, val platformClock: Clock): SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
@@ -106,7 +109,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val protocolLogicRefFactory: ProtocolLogicRefFactory get() = protocolLogicFactory
 
         override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-            return smm.add(loggerName, logic)
+            return smm.add(loggerName, logic).resultFuture
         }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) =
@@ -134,7 +137,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var scheduler: SchedulerService
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     val customServices: ArrayList<Any> = ArrayList()
-    protected val closeOnStop: ArrayList<Closeable> = ArrayList()
+    protected val runOnStop: ArrayList<Runnable> = ArrayList()
 
     /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
     inline fun <reified T: Any> findService() = customServices.filterIsInstance<T>().single()
@@ -164,8 +167,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val storageServices = initialiseStorageService(dir)
         storage = storageServices.first
         checkpointStorage = storageServices.second
-        net = makeMessagingService()
         netMapCache = InMemoryNetworkMapCache()
+        net = makeMessagingService()
         wallet = makeWalletService()
 
         identity = makeIdentityService()
@@ -188,6 +191,14 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 listOf(tokenizableServices),
                 checkpointStorage,
                 serverThread)
+        if (serverThread is ExecutorService) {
+            runOnStop += Runnable {
+                // We wait here, even though any in-flight messages should have been drained away because the
+                // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
+                // arbitrary and might be inappropriate.
+                MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, TimeUnit.SECONDS)
+            }
+        }
 
         inNodeWalletMonitorService = makeWalletMonitorService() // Note this HAS to be after smm is set
         buildAdvertisedServices()
@@ -200,6 +211,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         ScheduledActivityObserver(services)
 
         startMessagingService()
+        runOnStop += Runnable { net.stop() }
         _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
         smm.start()
@@ -213,7 +225,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             val (toClose, database) = configureDatabase(props)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             log.info("Connected to ${database.vendor} database.")
-            closeOnStop += toClose
+            runOnStop += Runnable { toClose.close() }
         }
     }
 
@@ -256,7 +268,9 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         if (NetworkMapService.Type in serviceTypes) makeNetworkMapService()
 
         val notaryServiceType = serviceTypes.singleOrNull { it.isSubTypeOf(NotaryService.Type) }
-        if (notaryServiceType != null) makeNotaryService(notaryServiceType)
+        if (notaryServiceType != null) {
+            inNodeNotaryService = makeNotaryService(notaryServiceType)
+        }
     }
 
     /**
@@ -264,11 +278,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
      * updates) if one has been supplied.
      */
     private fun registerWithNetworkMap(): ListenableFuture<Unit> {
-        require(networkMapService == null || NetworkMapService.Type in networkMapService.advertisedServices) {
+        require(networkMapService != null || NetworkMapService.Type in advertisedServices) {
             "Initial network map address must indicate a node that provides a network map service"
         }
         services.networkMapCache.addNode(info)
-        if (networkMapService != null && networkMapService != info) {
+        if (networkMapService != null) {
             // Only register if we are pointed at a network map service and it's not us.
             // TODO: Return a future so the caller knows these operations may not have completed yet, and can monitor if needed
             updateRegistration(networkMapService, AddOrRemove.ADD)
@@ -278,7 +292,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         if (inNodeNetworkMapService == null)
             return noNetworkMapConfigured()
         // Register for updates, even if we're the one running the network map.
-        return services.networkMapCache.addMapService(net, info, true, null)
+        return services.networkMapCache.addMapService(net, info.address, true, null)
     }
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
@@ -288,7 +302,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 "has any other map node been configured.")
     }
 
-    private fun updateRegistration(serviceInfo: NodeInfo, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
+    private fun updateRegistration(networkMapAddr: SingleMessageRecipient, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
         // Register this node against the network
         val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, networkMapSeq++, type, expires)
@@ -300,7 +314,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         net.runOnNextMessage(REGISTER_PROTOCOL_TOPIC, sessionID, RunOnCallerThread) { message ->
             future.set(message.data.deserialize())
         }
-        net.send(message, serviceInfo.address)
+        net.send(message, networkMapAddr)
 
         return future
     }
@@ -311,21 +325,22 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
     }
 
-    open protected fun makeNotaryService(type: ServiceType) {
+    open protected fun makeNotaryService(type: ServiceType): NotaryService {
         val uniquenessProvider = InMemoryUniquenessProvider()
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
-        inNodeNotaryService = when (type) {
-            is SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
-            is ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
-            else -> null
+        return when (type) {
+            SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
+            ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
+            else -> {
+                throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
+            }
         }
     }
 
     protected open fun makeIdentityService(): IdentityService {
         val service = InMemoryIdentityService()
-        if (networkMapService != null)
-            service.registerIdentity(networkMapService.identity)
+
         service.registerIdentity(storage.myLegalIdentity)
 
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }
@@ -350,11 +365,12 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         // to indicate "Please shut down gracefully" vs "Shut down now".
         // Meanwhile, we let the remote service send us updates until the acknowledgment buffer overflows and it
         // unsubscribes us forcibly, rather than blocking the shutdown process.
-        net.stop()
-        // Stop in opposite order to starting
-        for (toClose in closeOnStop.reversed()) {
-            toClose.close()
+
+        // Run shutdown hooks in opposite order to starting
+        for (toRun in runOnStop.reversed()) {
+            toRun.run()
         }
+        runOnStop.clear()
     }
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal

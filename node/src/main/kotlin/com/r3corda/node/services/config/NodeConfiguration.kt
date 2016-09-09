@@ -3,6 +3,7 @@ package com.r3corda.node.services.config
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
@@ -89,12 +90,6 @@ class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : N
     override val dataSourceProperties: Properties by config
 }
 
-class NameServiceConfig(conf: Config) {
-    val hostServiceLocally: Boolean by conf
-    val address: HostAndPort by conf
-    val identity: String by conf
-}
-
 class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val basedir: Path by conf
     override val myLegalName: String by conf
@@ -103,32 +98,30 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val keyStorePassword: String by conf
     override val trustStorePassword: String by conf
     override val dataSourceProperties: Properties by conf
+    val useHTTPS: Boolean by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
     val messagingServerAddress: HostAndPort? = if (conf.hasPath("messagingServerAddress")) HostAndPort.fromString(conf.getString("messagingServerAddress")) else null
+    val networkMapAddress: HostAndPort? = if (conf.hasPath("networkMapAddress")) HostAndPort.fromString(conf.getString("networkMapAddress")) else null
     val hostNotaryServiceLocally: Boolean by conf
     val extraAdvertisedServiceIds: String by conf
-    val mapService: NameServiceConfig = NameServiceConfig(conf.getConfig("mapService"))
     val clock: Clock = NodeClock()
 
     fun createNode(): Node {
-        val networkMapTarget = ArtemisMessagingClient.makeRecipient(mapService.address)
         val advertisedServices = mutableSetOf<ServiceType>()
-        if (mapService.hostServiceLocally) advertisedServices.add(NetworkMapService.Type)
         if (hostNotaryServiceLocally) advertisedServices.add(SimpleNotaryService.Type)
         if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
             for (serviceId in extraAdvertisedServiceIds.split(",")) {
                 advertisedServices.add(object : ServiceType(serviceId) {})
             }
         }
-        // TODO Node startup should not need a full NodeInfo for the remote NetworkMapService provider as bootstrap
-        val networkMapBootstrapIdentity = Party(mapService.identity, generateKeyPair().public)
-        val networkMapAddress: NodeInfo? = if (mapService.hostServiceLocally) null else NodeInfo(networkMapTarget, networkMapBootstrapIdentity, setOf(NetworkMapService.Type))
+        if (networkMapAddress == null) advertisedServices.add(NetworkMapService.Type)
+        val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress)
         return Node(basedir.toAbsolutePath().normalize(),
                 artemisAddress,
                 webAddress,
                 this,
-                networkMapAddress,
+                networkMapMessageAddress,
                 advertisedServices,
                 clock,
                 messagingServerAddress

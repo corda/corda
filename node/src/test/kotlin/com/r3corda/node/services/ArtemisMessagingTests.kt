@@ -1,13 +1,15 @@
 package com.r3corda.node.services
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.testing.freeLocalHostAndPort
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.testing.freeLocalHostAndPort
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Rule
@@ -25,6 +27,7 @@ class ArtemisMessagingTests {
 
     val hostAndPort = freeLocalHostAndPort()
     val topic = "platform.self"
+    val identity = generateKeyPair()
     val config = object : NodeConfiguration {
         override val myLegalName: String = "me"
         override val exportJMXto: String = ""
@@ -35,6 +38,8 @@ class ArtemisMessagingTests {
 
     var messagingClient: ArtemisMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
+
+    val networkMapCache = InMemoryNetworkMapCache()
 
     @After
     fun cleanUp() {
@@ -98,16 +103,15 @@ class ArtemisMessagingTests {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    private fun createMessagingClient(server: HostAndPort = hostAndPort,
-                                      local: HostAndPort = hostAndPort): ArtemisMessagingClient {
-        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, local, AffinityExecutor.SAME_THREAD).apply {
+    private fun createMessagingClient(server: HostAndPort = hostAndPort): ArtemisMessagingClient {
+        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, identity.public, AffinityExecutor.SAME_THREAD).apply {
             configureWithDevSSLCertificate()
             messagingClient = this
         }
     }
 
     private fun createMessagingServer(local: HostAndPort = hostAndPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(temporaryFolder.newFolder().toPath(), config, local).apply {
+        return ArtemisMessagingServer(temporaryFolder.newFolder().toPath(), config, local, networkMapCache).apply {
             configureWithDevSSLCertificate()
             messagingServer = this
         }

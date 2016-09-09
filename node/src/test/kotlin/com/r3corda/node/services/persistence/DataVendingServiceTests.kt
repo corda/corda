@@ -5,15 +5,12 @@ import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Issued
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.USD
-import com.r3corda.core.testing.DUMMY_NOTARY
-import com.r3corda.core.testing.MEGA_CORP
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.testing.MEGA_CORP
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 /**
  * Tests for the data vending service.
@@ -41,12 +38,9 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction()
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
-        val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
+        DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
                 walletServiceNode.info, tx)
-
-        // Check it was accepted
         network.runNetwork()
-        notifyPsm.get(1, TimeUnit.SECONDS)
 
         // Check the transaction is in the receiving node
         val actual = walletServiceNode.services.walletService.currentWallet.states.singleOrNull()
@@ -73,13 +67,9 @@ class DataVendingServiceTests {
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction(false)
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
-        val notifyPsm = DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
+        DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
                 walletServiceNode.info, tx)
-
-        // Check it was accepted
         network.runNetwork()
-        val ex = assertFailsWith<java.util.concurrent.ExecutionException> { notifyPsm.get(1, TimeUnit.SECONDS) }
-        assertTrue(ex.cause is DataVending.Service.TransactionRejectedError)
 
         // Check the transaction is not in the receiving node
         assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)

@@ -10,7 +10,7 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.demos.DemoClock
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.node.services.network.MockNetworkMapCache
+import com.r3corda.testing.node.MockNetworkMapCache
 import java.time.LocalDate
 
 /**

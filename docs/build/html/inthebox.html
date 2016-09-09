@@ -88,7 +88,6 @@
                 <p class="caption"><span class="caption-text">Overview</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">What&#8217;s included?</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#contracts">Contracts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#kotlin">Kotlin</a></li>
 </ul>
 </li>
@@ -97,12 +96,13 @@
 <li class="toctree-l1"><a class="reference internal" href="transaction-data-types.html">Data types</a></li>
 <li class="toctree-l1"><a class="reference internal" href="consensus.html">Consensus model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Contracts</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Platform contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
@@ -170,72 +170,30 @@
   <div class="section" id="what-s-included">
 <h1>What&#8217;s included?<a class="headerlink" href="#what-s-included" title="Permalink to this headline">¶</a></h1>
 <p>The Corda prototype currently includes:</p>
-<ul>
-<li><p class="first">A peer to peer network with message persistence and delivery retries.</p>
-</li>
-<li><p class="first">Key data structures for defining contracts and states.</p>
-</li>
-<li><dl class="first docutils">
-<dt>Smart contracts:</dt>
-<dd><ul class="first last simple">
-<li>Cash</li>
-<li>Cash obligations</li>
-<li>Interest rate swaps</li>
-<li>Commercial paper (implemented in both Java and Kotlin for comparison)</li>
-</ul>
-</dd>
-</dl>
-</li>
-<li><p class="first">Algorithms that work with them, such as serialising, hashing, signing, and verification of the signatures.</p>
-</li>
-<li><p class="first">API documentation and tutorials (what you&#8217;re reading).</p>
-</li>
-<li><p class="first">A business process orchestration framework.</p>
-</li>
-<li><p class="first">Notary infrastructure for precise timestamping, and elimination of double spending without a blockchain.</p>
-</li>
-<li><p class="first">A simple REST API.</p>
-</li>
+<ul class="simple">
+<li>A peer to peer network with message persistence and delivery retries.</li>
+<li>Key data structures for defining contracts and states.</li>
+<li>Smart contracts, which you can find in the <a class="reference internal" href="contract-catalogue.html"><span class="doc">Contract catalogue</span></a>.</li>
+<li>Algorithms that work with them, such as serialising, hashing, signing, and verification of the signatures.</li>
+<li>API documentation and tutorials (what you&#8217;re reading).</li>
+<li>A business process orchestration framework.</li>
+<li>Notary infrastructure for precise timestamping, and elimination of double spending without a blockchain.</li>
+<li>A simple REST API, and a web app demo that uses it to present a frontend for IRS trading.</li>
 </ul>
 <p>Some things it does not currently include but should gain later are:</p>
 <ul class="simple">
 <li>Sandboxing, distribution or publication of smart contract code</li>
-<li>Database persistence</li>
 <li>A user interface for administration</li>
-<li>Many other things</li>
 </ul>
 <p>The prototype&#8217;s goal is rapid exploration of ideas. Therefore in places it takes shortcuts that a production system
 would not in order to boost productivity:</p>
 <ul class="simple">
 <li>It uses an object graph serialization framework instead of a well specified, vendor neutral protocol.</li>
-<li>It uses the default, out of the box Apache Artemis MQ protocol instead of AMQP/1.0 (although switching should be easy)</li>
-<li>There is no inter-node SSL or other encryption yet.</li>
+<li>There&#8217;s currently no permissioning framework.</li>
+<li>Some privacy techniques aren&#8217;t implemented yet.</li>
+<li>It uses an embedded SQL database and doesn&#8217;t yet have connectivity support for mainstream SQL vendors (Oracle,
+Postgres, MySQL, SQL Server etc).</li>
 </ul>
-<div class="section" id="contracts">
-<h2>Contracts<a class="headerlink" href="#contracts" title="Permalink to this headline">¶</a></h2>
-<p>The primary goal of this prototype is to implement various kinds of contracts and verify that useful business logic
-can be expressed with the data model, developing and refining an API along the way. To that end there are currently
-four contracts in the repository:</p>
-<ol class="arabic simple">
-<li>Cash</li>
-<li>Commercial paper</li>
-<li>Nettable obligations</li>
-<li>Interest rate swaps</li>
-</ol>
-<p><code class="docutils literal"><span class="pre">Cash</span></code> implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
-identified by some <em>deposit reference</em>. A deposit reference is an opaque byte array which is usable by
-the issuing party for internal bookkeeping purposes.</p>
-<p>Cash states are <em>fungible</em> with each other (can be merged and split arbitrarily) if they use the same currency,
-party and deposit reference.</p>
-<p><code class="docutils literal"><span class="pre">CommercialPaper</span></code> implements an asset with a <em>face value</em> denominated in a certain currency, which may be redeemed at
-the issuing party after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
-at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
-contract is implemented twice, once in Java and once in a language called Kotlin.</p>
-<p><code class="docutils literal"><span class="pre">InterestRateSwap</span></code> implements a vanilla OTC same currency bilateral fixed / floating leg swap. For further details,
-see <span class="xref doc">irs</span></p>
-<p><code class="docutils literal"><span class="pre">Obligation</span></code> implements a bilaterally or multi-laterally nettable, fungible obligation that can default.</p>
-<p>Each contract comes with unit tests.</p>
-</div>
 <div class="section" id="kotlin">
 <h2>Kotlin<a class="headerlink" href="#kotlin" title="Permalink to this headline">¶</a></h2>
 <p>Corda is written in a language called <a class="reference external" href="https://kotlinlang.org/">Kotlin</a>. Kotlin is a language that targets the JVM

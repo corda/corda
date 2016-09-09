@@ -11,13 +11,15 @@ import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.core.utilities.trace
 import java.math.BigDecimal
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.SignatureException
 import java.time.Duration
 
 /**
@@ -98,15 +100,11 @@ object TwoPartyDealProtocol {
         fun verifyPartialTransaction(untrustedPartialTX: UntrustworthyData<SignedTransaction>): SignedTransaction {
             progressTracker.currentStep = VERIFYING
 
-            untrustedPartialTX.validate { stx ->
+            untrustedPartialTX.unwrap { stx ->
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val missingSigs = stx.verifySignatures(throwIfSignaturesAreMissing = false)
-                if (missingSigs != setOf(myKeyPair.public, notaryNode.identity.owningKey))
-                    throw SignatureException("The set of missing signatures is not as expected: $missingSigs")
-
-                val wtx: WireTransaction = stx.tx
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.identity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)
@@ -242,7 +240,7 @@ object TwoPartyDealProtocol {
             val handshake = receive<Handshake<U>>(sessionID)
 
             progressTracker.currentStep = VERIFYING
-            handshake.validate {
+            handshake.unwrap {
                 return validateHandshake(it)
             }
         }
@@ -254,7 +252,7 @@ object TwoPartyDealProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromPrimary>(otherSide, theirSessionID, sessionID, stx).validate { it }
+            return sendAndReceive<SignaturesFromPrimary>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
         }
 
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

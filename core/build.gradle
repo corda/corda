@@ -40,6 +40,7 @@ dependencies {
 
     // Bring in the MockNode infrastructure for writing protocol unit tests.
     testCompile project(":node")
+    testCompile project(":test-utils")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -54,6 +55,9 @@ dependencies {
 
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
+
+    compile 'com.pholser:junit-quickcheck-core:0.6'
+    compile 'com.pholser:junit-quickcheck-generators:0.6'
 
     // Guava: Google utilities library.
     compile "com.google.guava:guava:19.0"

@@ -1,7 +1,7 @@
 package com.r3corda.core.node
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.contracts.TransactionResolutionException
 import com.r3corda.core.contracts.TransactionState

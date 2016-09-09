@@ -1,9 +1,16 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.contracts.*
+import com.r3corda.core.contracts.ContractState
+import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.contracts.StateRef
+import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.core.utilities.UntrustworthyData
+import com.r3corda.protocols.NotaryChangeProtocol.Acceptor
+import com.r3corda.protocols.NotaryChangeProtocol.Instigator
 import java.security.PublicKey
 
 /**
@@ -61,18 +68,25 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
          * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
          */
         @Suspendable
-        override fun verifyProposal(proposal: AbstractStateReplacementProtocol.Proposal<Party>) {
-            val newNotary = proposal.modification
-            val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.identity == newNotary }
-            require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
+        override fun verifyProposal(maybeProposal: UntrustworthyData<AbstractStateReplacementProtocol.Proposal<Party>>): AbstractStateReplacementProtocol.Proposal<Party> {
+            return maybeProposal.unwrap { proposal ->
+                val newNotary = proposal.modification
+                val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.identity == newNotary }
+                require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
 
-            val state = proposal.stateRef
-            val proposedTx = proposal.stx.tx
-            require(proposedTx.inputs.contains(state)) { "The proposed state $state is not in the proposed transaction inputs" }
+                val state = proposal.stateRef
+                val proposedTx = proposal.stx.tx
+                require(state in proposedTx.inputs) { "The proposed state $state is not in the proposed transaction inputs" }
+                require(proposedTx.type.javaClass == TransactionType.NotaryChange::class.java) {
+                    "The proposed transaction is not a notary change transaction."
+                }
 
-            // An example requirement
-            val blacklist = listOf("Evil Notary")
-            require(!blacklist.contains(newNotary.name)) { "The proposed new notary $newNotary is not trusted by the party" }
+                // An example requirement
+                val blacklist = listOf("Evil Notary")
+                require(!blacklist.contains(newNotary.name)) { "The proposed new notary $newNotary is not trusted by the party" }
+
+                proposal
+            }
         }
     }
 }

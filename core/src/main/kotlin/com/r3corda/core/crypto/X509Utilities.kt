@@ -36,7 +36,9 @@ object X509Utilities {
 
     val SIGNATURE_ALGORITHM = "SHA256withECDSA"
     val KEY_GENERATION_ALGORITHM = "ECDSA"
-    val ECDSA_CURVE = "secp256k1" // TLS implementations only support standard SEC2 curves, although internally Corda uses newer EDDSA keys
+    // TLS implementations only support standard SEC2 curves, although internally Corda uses newer EDDSA keys.
+    // Also browsers like Chrome don't seem to support the secp256k1, only the secp256r1 curve.
+    val ECDSA_CURVE = "secp256r1"
 
     val KEYSTORE_TYPE = "JKS"
     val CA_CERT_ALIAS = "CA Cert"

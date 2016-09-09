@@ -2,13 +2,12 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.checkedAdd
-import com.r3corda.core.contracts.LedgerTransaction
-import com.r3corda.core.contracts.SignedTransaction
-import com.r3corda.core.contracts.WireTransaction
-import com.r3corda.core.contracts.toLedgerTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.util.*
 
 // TODO: This code is currently unit tested by TwoPartyTradeProtocolTests, it should have its own tests.
@@ -33,6 +32,39 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
     companion object {
         private fun dependencyIDs(wtx: WireTransaction) = wtx.inputs.map { it.txhash }.toSet()
+
+        private fun topologicalSort(transactions: Collection<SignedTransaction>): List<SignedTransaction> {
+            // Construct txhash -> dependent-txs map
+            val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
+            transactions.forEach { tx ->
+                tx.tx.inputs.forEach { input ->
+                    // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
+                    forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(tx)
+                }
+            }
+
+            val visited = HashSet<SecureHash>(transactions.size)
+            val result = ArrayList<SignedTransaction>(transactions.size)
+
+            fun visit(transaction: SignedTransaction) {
+                if (transaction.id !in visited) {
+                    visited.add(transaction.id)
+                    forwardGraph[transaction.id]?.forEach {
+                        visit(it)
+                    }
+                    result.add(transaction)
+                }
+            }
+
+            transactions.forEach {
+                visit(it)
+            }
+
+            result.reverse()
+            require(result.size == transactions.size)
+            return result
+        }
+
     }
 
     class ExcessivelyLargeTransactionGraph() : Exception()
@@ -61,7 +93,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
 
     @Suspendable
     override fun call(): List<LedgerTransaction> {
-        val newTxns: Iterable<SignedTransaction> = downloadDependencies(txHashes)
+        val newTxns: Iterable<SignedTransaction> = topologicalSort(downloadDependencies(txHashes))
 
         // For each transaction, verify it and insert it into the database. As we are iterating over them in a
         // depth-first order, we should not encounter any verification failures due to missing data. If we fail
@@ -83,7 +115,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         // be a clearer API if we do that. But for consistency with the other c'tor we currently do not.
         //
         // If 'stx' is set, then 'wtx' is the contents (from the c'tor).
-        stx?.verifySignatures()
+        val wtx = stx?.verifySignatures() ?: wtx
         wtx?.let {
             fetchMissingAttachments(listOf(it))
             val ltx = it.toLedgerTransaction(serviceHub)
@@ -97,7 +129,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
     override val topic: String get() = throw UnsupportedOperationException()
 
     @Suspendable
-    private fun downloadDependencies(depsToCheck: Set<SecureHash>): List<SignedTransaction> {
+    private fun downloadDependencies(depsToCheck: Set<SecureHash>): Collection<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth
         // first traversal across the dependency graph.
         //
@@ -147,7 +179,7 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
                 throw ExcessivelyLargeTransactionGraph()
         }
 
-        return resultQ.values.reversed()
+        return resultQ.values
     }
 
     /**

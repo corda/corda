@@ -12,6 +12,7 @@ import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.node.services.api.ServiceHubInternal
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ExecutionException
 
 /**
  * A ProtocolStateMachine instance is a suspendable fiber that delegates all actual logic to a [ProtocolLogic] instance.
@@ -28,7 +29,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient lateinit override var serviceHub: ServiceHubInternal
-    @Transient internal lateinit var suspendAction: (FiberRequest) -> Unit
+    @Transient internal lateinit var suspendAction: (ProtocolIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: () -> Unit
     @Transient internal var receivedPayload: Any? = null
 
@@ -43,13 +44,18 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
-    val resultFuture: ListenableFuture<R> get() {
+    override val resultFuture: ListenableFuture<R> get() {
         return _resultFuture ?: run {
             val f = SettableFuture.create<R>()
             _resultFuture = f
             return f
         }
     }
+    /**
+     * Unique ID for the deserialized instance protocol state machine. This is NOT maintained across a state machine
+     * being serialized and then deserialized.
+     */
+    override val machineId: Long get() = this.id
 
     init {
         logic.psm = this
@@ -62,7 +68,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
         } catch (t: Throwable) {
             actionOnEnd()
             _resultFuture?.setException(t)
-            throw t
+            throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception
@@ -71,43 +77,40 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
         return result
     }
 
-    @Suspendable @Suppress("UNCHECKED_CAST")
-    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): UntrustworthyData<T> {
-        suspend(with)
+    @Suspendable
+    private fun <T : Any> suspendAndExpectReceive(receiveRequest: ReceiveRequest<T>): UntrustworthyData<T> {
+        suspend(receiveRequest)
         check(receivedPayload != null) { "Expected to receive something" }
-        val untrustworthy = UntrustworthyData(receivedPayload as T)
+        val untrustworthy = UntrustworthyData(receiveRequest.receiveType.cast(receivedPayload))
         receivedPayload = null
         return untrustworthy
     }
 
-    @Suspendable @Suppress("UNCHECKED_CAST")
+    @Suspendable
     override fun <T : Any> sendAndReceive(topic: String,
                                           destination: Party,
                                           sessionIDForSend: Long,
                                           sessionIDForReceive: Long,
                                           payload: Any,
-                                          recvType: Class<T>): UntrustworthyData<T> {
-        val result = FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, payload, recvType)
-        return suspendAndExpectReceive(result)
+                                          receiveType: Class<T>): UntrustworthyData<T> {
+        return suspendAndExpectReceive(SendAndReceive(topic, destination, payload, sessionIDForSend, receiveType, sessionIDForReceive))
     }
 
     @Suspendable
-    override fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T> {
-        val result = FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
-        return suspendAndExpectReceive(result)
+    override fun <T : Any> receive(topic: String, sessionIDForReceive: Long, receiveType: Class<T>): UntrustworthyData<T> {
+        return suspendAndExpectReceive(ReceiveOnly(topic, receiveType, sessionIDForReceive))
     }
 
     @Suspendable
     override fun send(topic: String, destination: Party, sessionID: Long, payload: Any) {
-        val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, payload)
-        suspend(result)
+        suspend(SendOnly(destination, topic, payload, sessionID))
     }
 
     @Suspendable
-    private fun suspend(with: FiberRequest) {
+    private fun suspend(protocolIORequest: ProtocolIORequest) {
         parkAndSerialize { fiber, serializer ->
             try {
-                suspendAction(with)
+                suspendAction(protocolIORequest)
             } catch (t: Throwable) {
                 // Do not throw exception again - Quasar completely bins it.
                 logger.warn("Captured exception which was swallowed by Quasar", t)

@@ -4,10 +4,10 @@ import com.google.common.net.HostAndPort
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.hours
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.*
 import kotlin.system.exitProcess
 
 private val log: Logger = LoggerFactory.getLogger("RatesFixDemo")
@@ -37,9 +38,6 @@ fun main(args: Array<String>) {
     val networkAddressArg = parser.accepts("network-address").withRequiredArg().required()
     val dirArg = parser.accepts("directory").withRequiredArg().defaultsTo("rate-fix-demo-data")
     val networkMapAddrArg = parser.accepts("network-map").withRequiredArg().required()
-    val networkMapIdentityArg = parser.accepts("network-map-identity-file").withRequiredArg().required()
-    val oracleAddrArg = parser.accepts("oracle").withRequiredArg().required()
-    val oracleIdentityArg = parser.accepts("oracle-identity-file").withRequiredArg().required()
 
     val fixOfArg = parser.accepts("fix-of").withRequiredArg().defaultsTo("ICE LIBOR 2016-03-16 1M")
     val expectedRateArg = parser.accepts("expected-rate").withRequiredArg().defaultsTo("0.67")
@@ -56,14 +54,7 @@ fun main(args: Array<String>) {
     LogHelper.setLevel("+RatesFixDemo", "-org.apache.activemq")
 
     val dir = Paths.get(options.valueOf(dirArg))
-    val networkMapAddr = ArtemisMessagingClient.makeRecipient(options.valueOf(networkMapAddrArg))
-    val networkMapIdentity = Files.readAllBytes(Paths.get(options.valueOf(networkMapIdentityArg))).deserialize<Party>()
-    val networkMapAddress = NodeInfo(networkMapAddr, networkMapIdentity, setOf(NetworkMapService.Type, NotaryService.Type))
-
-    // Load oracle stuff (in lieu of having a network map service)
-    val oracleAddr = ArtemisMessagingClient.makeRecipient(options.valueOf(oracleAddrArg))
-    val oracleIdentity = Files.readAllBytes(Paths.get(options.valueOf(oracleIdentityArg))).deserialize<Party>()
-    val oracleNode = NodeInfo(oracleAddr, oracleIdentity)
+    val networkMapAddr = ArtemisMessagingClient.makeNetworkMapAddress(HostAndPort.fromString(options.valueOf(networkMapAddrArg)))
 
     val fixOf: FixOf = NodeInterestRates.parseFixOf(options.valueOf(fixOfArg))
     val expectedRate = BigDecimal(options.valueOf(expectedRateArg))
@@ -71,27 +62,29 @@ fun main(args: Array<String>) {
 
     // Bring up node.
     val advertisedServices: Set<ServiceType> = emptySet()
-    val myNetAddr = ArtemisMessagingClient.toHostAndPort(options.valueOf(networkAddressArg))
+    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg))
     val config = object : NodeConfiguration {
         override val myLegalName: String = "Rate fix demo node"
         override val exportJMXto: String = "http"
         override val nearestCity: String = "Atlantis"
         override val keyStorePassword: String = "cordacadevpass"
         override val trustStorePassword: String = "trustpass"
+        override val dataSourceProperties: Properties = makeTestDataSourceProperties()
     }
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddress,
+    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddr,
             advertisedServices, DemoClock()).setup().start() }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]
+    val rateOracle = node.services.networkMapCache.ratesOracleNodes[0]
 
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionType.General.Builder(notaryNode.identity)
     tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.keyManagement.freshKey().public), notaryNode.identity))
-    val protocol = RatesFixProtocol(tx, oracleNode.identity, fixOf, expectedRate, rateTolerance)
-    node.smm.add("demo.ratefix", protocol).get()
+    val protocol = RatesFixProtocol(tx, rateOracle.identity, fixOf, expectedRate, rateTolerance)
+    node.services.startProtocol("demo.ratefix", protocol).get()
     node.stop()
 
     // Show the user the output.

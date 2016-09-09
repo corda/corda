@@ -8,22 +8,28 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
+import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.testing.*
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.protocols.TwoPartyTradeProtocol
+import com.r3corda.testing.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -56,14 +62,14 @@ class TwoPartyTradeProtocolTests {
                           otherSide: Party, assetToSell: StateAndRef<OwnableState>, price: Amount<Currency>,
                           myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
         val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, assetToSell, price, myKeyPair, buyerSessionID)
-        return smm.add("${TwoPartyTradeProtocol.TOPIC}.seller", seller)
+        return smm.add("${TwoPartyTradeProtocol.TOPIC}.seller", seller).resultFuture
     }
 
     private fun runBuyer(smm: StateMachineManager, notaryNode: NodeInfo,
                          otherSide: Party, acceptablePrice: Amount<Currency>, typeToBuy: Class<out OwnableState>,
                          sessionID: Long): ListenableFuture<SignedTransaction> {
         val buyer = TwoPartyTradeProtocol.Buyer(otherSide, notaryNode.identity, acceptablePrice, typeToBuy, sessionID)
-        return smm.add("${TwoPartyTradeProtocol.TOPIC}.buyer", buyer)
+        return smm.add("${TwoPartyTradeProtocol.TOPIC}.buyer", buyer).resultFuture
     }
 
     @Before
@@ -88,12 +94,12 @@ class TwoPartyTradeProtocolTests {
         ledger {
 
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
-            val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
+            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
+            val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, null).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey, notaryNode.storage.myLegalIdentityKey)
 
@@ -134,17 +140,17 @@ class TwoPartyTradeProtocolTests {
     fun `shutdown and restore`() {
         ledger {
             val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-            val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
-            var bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
+            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
+            var bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
 
             val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.Handle
-            val networkMapAddr = notaryNode.info
+            val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages
 
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, null).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -197,7 +203,7 @@ class TwoPartyTradeProtocolTests {
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
             bobNode = net.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
-                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                     advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                     return MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id, BOB_KEY)
                 }
@@ -224,10 +230,10 @@ class TwoPartyTradeProtocolTests {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(networkMapAddr: NodeInfo?, name: String, keyPair: KeyPair): MockNetwork.MockNode {
+    private fun makeNodeWithTracking(networkMapAddr: SingleMessageRecipient?, name: String, keyPair: KeyPair): MockNetwork.MockNode {
         // Create a node in the mock network ...
         return net.createNode(networkMapAddr, -1, object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: NodeInfo?,
+            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     // That constructs the storage service object in a customised way ...
@@ -245,8 +251,8 @@ class TwoPartyTradeProtocolTests {
     @Test
     fun `check dependencies of sale asset are resolved`() {
         val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-        val aliceNode = makeNodeWithTracking(notaryNode.info, ALICE.name, ALICE_KEY)
-        val bobNode = makeNodeWithTracking(notaryNode.info, BOB.name, BOB_KEY)
+        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
+        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
 
         ledger(aliceNode.services) {
 
@@ -262,7 +268,7 @@ class TwoPartyTradeProtocolTests {
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
-                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, notaryNode.info.identity, attachmentID).second
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID).second
             val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             val buyerSessionID = random63BitValue()
@@ -366,14 +372,14 @@ class TwoPartyTradeProtocolTests {
             expectedMessageSubstring: String
     ) {
         val notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
-        val aliceNode = net.createPartyNode(notaryNode.info, ALICE.name, ALICE_KEY)
-        val bobNode = net.createPartyNode(notaryNode.info, BOB.name, BOB_KEY)
+        val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
+        val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
         val bobKey = bobNode.keyManagement.freshKey()
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public).second
         val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.storage.myLegalIdentity.owningKey,
-                1200.DOLLARS `issued by` issuer, notaryNode.info.identity, null).second
+                1200.DOLLARS `issued by` issuer, null).second
 
         insertFakeTransactions(bobsBadCash, bobNode.services, bobNode.storage.myLegalIdentityKey, bobNode.storage.myLegalIdentityKey)
         insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
@@ -479,13 +485,12 @@ class TwoPartyTradeProtocolTests {
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,
-            notary: Party,
             attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
         val ap = transaction {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
-            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue(notary) }
+            command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)
                 timestamp(time = TEST_TX_TIME)
             if (attachmentID != null)
@@ -522,6 +527,4 @@ class TwoPartyTradeProtocolTests {
         data class Add(val transaction: SignedTransaction) : TxRecord
         data class Get(val id: SecureHash) : TxRecord
     }
-
-
 }

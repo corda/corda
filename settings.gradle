@@ -3,5 +3,7 @@ include 'contracts'
 include 'contracts:isolated'
 include 'core'
 include 'node'
+include 'client'
 include 'experimental'
+include 'test-utils'
 

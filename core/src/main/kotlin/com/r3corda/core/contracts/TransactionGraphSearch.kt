@@ -2,6 +2,8 @@ package com.r3corda.core.contracts
 
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.ReadOnlyTransactionStorage
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import java.util.*
 import java.util.concurrent.Callable
 

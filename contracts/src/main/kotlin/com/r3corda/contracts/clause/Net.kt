@@ -5,8 +5,7 @@ import com.r3corda.contracts.asset.Obligation
 import com.r3corda.contracts.asset.extractAmountsDue
 import com.r3corda.contracts.asset.sumAmountsDue
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.MatchBehaviour
-import com.r3corda.core.contracts.clauses.SingleClause
+import com.r3corda.core.contracts.clauses.Clause
 import java.security.PublicKey
 
 /**
@@ -43,25 +42,25 @@ data class MultilateralNetState<P>(
  * Clause for netting contract states. Currently only supports obligation contract.
  */
 // TODO: Make this usable for any nettable contract states
-open class NetClause<P> : SingleClause {
-    override val ifNotMatched: MatchBehaviour
-        get() = MatchBehaviour.CONTINUE
-    override val ifMatched: MatchBehaviour
-        get() = MatchBehaviour.END
-    override val requiredCommands: Set<Class<out CommandData>>
-        get() = setOf(Obligation.Commands.Net::class.java)
+open class NetClause<C: CommandData, P> : Clause<ContractState, C, Unit>() {
+    override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")
-    override fun verify(tx: TransactionForContract, commands: Collection<AuthenticatedObject<CommandData>>): Set<CommandData> {
-        val command = commands.requireSingleCommand<Obligation.Commands.Net>()
+    override fun verify(tx: TransactionForContract,
+                        inputs: List<ContractState>,
+                        outputs: List<ContractState>,
+                        commands: List<AuthenticatedObject<C>>,
+                        groupingKey: Unit?): Set<C> {
+        val matchedCommands: List<AuthenticatedObject<C>> = commands.filter { it.value is NetCommand }
+        val command = matchedCommands.requireSingleCommand<Obligation.Commands.Net>()
         val groups = when (command.value.type) {
             NetType.CLOSE_OUT -> tx.groupStates { it: Obligation.State<P> -> it.bilateralNetState }
             NetType.PAYMENT -> tx.groupStates { it: Obligation.State<P> -> it.multilateralNetState }
         }
-        for ((inputs, outputs, key) in groups) {
-            verifyNetCommand(inputs, outputs, command, key)
+        for ((groupInputs, groupOutputs, key) in groups) {
+            verifyNetCommand(groupInputs, groupOutputs, command, key)
         }
-        return setOf(command.value)
+        return matchedCommands.map { it.value }.toSet()
     }
 
     /**
@@ -70,7 +69,7 @@ open class NetClause<P> : SingleClause {
     @VisibleForTesting
     fun verifyNetCommand(inputs: List<Obligation.State<P>>,
                          outputs: List<Obligation.State<P>>,
-                         command: AuthenticatedObject<Obligation.Commands.Net>,
+                         command: AuthenticatedObject<NetCommand>,
                          netState: NetState<P>) {
         val template = netState.template
         // Create two maps of balances from obligors to beneficiaries, one for input states, the other for output states.

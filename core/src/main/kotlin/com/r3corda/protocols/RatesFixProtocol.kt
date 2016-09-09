@@ -3,8 +3,8 @@ package com.r3corda.protocols
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.FixOf
-import com.r3corda.core.contracts.TransactionBuilder
-import com.r3corda.core.contracts.WireTransaction
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
@@ -85,7 +85,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
         val req = SignRequest(wtx, serviceHub.storageService.myLegalIdentity, sessionID)
         val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, 0, sessionID, req)
 
-        return resp.validate { sig ->
+        return resp.unwrap { sig ->
             check(sig.signer == oracle)
             tx.checkSignature(sig)
             sig
@@ -100,7 +100,7 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
         // TODO: add deadline to receive
         val resp = sendAndReceive<ArrayList<Fix>>(oracle, 0, sessionID, req)
 
-        return resp.validate {
+        return resp.unwrap {
             val fix = it.first()
             // Check the returned fix is for what we asked for.
             check(fix.of == fixOf)

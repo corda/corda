@@ -12,6 +12,7 @@ import com.r3corda.core.math.InterpolatorFactory
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.AcceptsFileUpload

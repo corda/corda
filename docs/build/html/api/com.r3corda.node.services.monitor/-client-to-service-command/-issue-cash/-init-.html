@@ -1,0 +1,34 @@
+<HTML>
+<HEAD>
+<title>ClientToServiceCommand.IssueCash.<init> - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.node.services.monitor</a>&nbsp;/&nbsp;<a href="../index.html">ClientToServiceCommand</a>&nbsp;/&nbsp;<a href="index.html">IssueCash</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
+<br/>
+<h1>&lt;init&gt;</h1>
+<code><span class="identifier">IssueCash</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.monitor.ClientToServiceCommand.IssueCash$<init>(java.util.Currency, com.r3corda.core.serialization.OpaqueBytes, kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party, java.util.UUID)/currency">currency</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.monitor.ClientToServiceCommand.IssueCash$<init>(java.util.Currency, com.r3corda.core.serialization.OpaqueBytes, kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party, java.util.UUID)/issueRef">issueRef</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.monitor.ClientToServiceCommand.IssueCash$<init>(java.util.Currency, com.r3corda.core.serialization.OpaqueBytes, kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party, java.util.UUID)/pennies">pennies</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.monitor.ClientToServiceCommand.IssueCash$<init>(java.util.Currency, com.r3corda.core.serialization.OpaqueBytes, kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party, java.util.UUID)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.monitor.ClientToServiceCommand.IssueCash$<init>(java.util.Currency, com.r3corda.core.serialization.OpaqueBytes, kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party, java.util.UUID)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.monitor.ClientToServiceCommand.IssueCash$<init>(java.util.Currency, com.r3corda.core.serialization.OpaqueBytes, kotlin.Long, java.security.PublicKey, com.r3corda.core.crypto.Party, java.util.UUID)/id">id</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/UUID.html"><span class="identifier">UUID</span></a>&nbsp;<span class="symbol">=</span>&nbsp;UUID.randomUUID()<span class="symbol">)</span></code><br/>
+<p>Issue cash state objects.</p>
+<h3>Parameters</h3>
+<a name="currency"></a>
+<code>currency</code> - the currency to issue.<br/>
+<br/>
+<a name="issueRef"></a>
+<code>issueRef</code> - the reference to specify on the issuance, used to differentiate pools of cash. Convention is
+to use the single byte "0x01" as a default.<br/>
+<br/>
+<a name="pennies"></a>
+<code>pennies</code> - the amount to issue, in the smallest unit of the currency.<br/>
+<br/>
+<a name="recipient"></a>
+<code>recipient</code> - the public key of the recipient.<br/>
+<br/>
+<a name="notary"></a>
+<code>notary</code> - the notary to use for this transaction.<br/>
+<br/>
+<a name="id"></a>
+<code>id</code> - the ID to be provided in events resulting from this request.<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

@@ -7,7 +7,7 @@
 <a href="../../../index.html">com.r3corda.contracts.asset</a>&nbsp;/&nbsp;<a href="../../index.html">Cash</a>&nbsp;/&nbsp;<a href="../index.html">Clauses</a>&nbsp;/&nbsp;<a href=".">ConserveAmount</a><br/>
 <br/>
 <h1>ConserveAmount</h1>
-<code><span class="keyword">class </span><span class="identifier">ConserveAmount</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html"><span class="identifier">AbstractConserveAmount</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">ConserveAmount</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../../com.r3corda.contracts.clause/-abstract-conserve-amount/index.html"><span class="identifier">AbstractConserveAmount</span></a><span class="symbol">&lt;</span><a href="../../-state/index.html"><span class="identifier">State</span></a><span class="symbol">,</span>&nbsp;<a href="../../-commands/index.html"><span class="identifier">Commands</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code><br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -21,29 +21,14 @@
 </tr>
 </tbody>
 </table>
-<h3>Inherited Properties</h3>
+<h3>Inherited Functions</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="../../../../com.r3corda.contracts.clause/-abstract-conserve-amount/if-matched.html">ifMatched</a></td>
+<a href="../../../../com.r3corda.contracts.clause/-abstract-conserve-amount/to-string.html">toString</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ifMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is not matches</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../../../com.r3corda.contracts.clause/-abstract-conserve-amount/if-not-matched.html">ifNotMatched</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ifNotMatched</span><span class="symbol">: </span><a href="../../../../com.r3corda.core.contracts.clauses/-match-behaviour/index.html"><span class="identifier">MatchBehaviour</span></a></code><p>Behaviour if this clause is matched</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="../../../../com.r3corda.contracts.clause/-abstract-conserve-amount/required-commands.html">requiredCommands</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Classes for commands which must ALL be present in transaction for this clause to be triggered</p>
-</td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toString</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -5,6 +5,10 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc_main.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc_main.iml" group="buildSrc" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/buildSrc_test.iml" filepath="$PROJECT_DIR$/.idea/modules/buildSrc_test.iml" group="buildSrc" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/client/client.iml" filepath="$PROJECT_DIR$/.idea/modules/client/client.iml" group="client" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/client/client_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/client/client_integrationTest.iml" group="client" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/client/client_main.iml" filepath="$PROJECT_DIR$/.idea/modules/client/client_main.iml" group="client" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/client/client_test.iml" filepath="$PROJECT_DIR$/.idea/modules/client/client_test.iml" group="client" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts.iml" group="contracts" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts_main.iml" group="contracts" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/contracts_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/contracts_test.iml" group="contracts" />
@@ -18,12 +22,16 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node.iml" group="node" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_main.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_main.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_test.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_test.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_integrationTest.iml" group="r3prototyping" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_main.iml" group="r3prototyping" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/r3prototyping_test.iml" filepath="$PROJECT_DIR$/.idea/modules/r3prototyping_test.iml" group="r3prototyping" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils.iml" group="test-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_main.iml" group="test-utils" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" filepath="$PROJECT_DIR$/.idea/modules/test-utils/test-utils_test.iml" group="test-utils" />
     </modules>
   </component>
 </project>

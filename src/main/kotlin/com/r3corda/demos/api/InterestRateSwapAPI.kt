@@ -1,7 +1,7 @@
 package com.r3corda.demos.api
 
 import com.r3corda.contracts.InterestRateSwap
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.failure
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.linearHeadsOfType

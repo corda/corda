@@ -7,6 +7,7 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
 import rx.Observable
@@ -22,9 +23,6 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 open class InMemoryWalletService(protected val services: ServiceHub) : SingletonSerializeAsToken(), WalletService {
-    class ClashingThreads(threads: Set<SecureHash>, transactions: Iterable<WireTransaction>) :
-            Exception("There are multiple linear head states after processing transactions $transactions. The clashing thread(s): $threads")
-
     open protected val log = loggerFor<InMemoryWalletService>()
 
     // Variables inside InnerState are protected with a lock by the ThreadBox and aren't in scope unless you're
@@ -46,9 +44,9 @@ open class InMemoryWalletService(protected val services: ServiceHub) : Singleton
     /**
      * Returns a snapshot of the heads of LinearStates.
      */
-    override val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
+    override val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
         get() = currentWallet.let { wallet ->
-            wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.data.thread }.mapValues { it.value }
+            wallet.states.filterStatesOfType<LinearState>().associateBy { it.state.data.linearId }.mapValues { it.value }
         }
 
     override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
@@ -76,14 +74,6 @@ open class InMemoryWalletService(protected val services: ServiceHub) : Singleton
                 val (wallet, delta) = walletAndDelta.first.update(tx, ourKeys)
                 val combinedDelta = delta + walletAndDelta.second
                 Pair(wallet, combinedDelta)
-            }
-
-            // TODO: we need to remove the clashing threads concepts and support potential duplicate threads
-            //       because two different nodes can have two different sets of threads and so currently it's possible
-            //       for only one party to have a clash which interferes with determinism of the transactions.
-            val clashingThreads = walletAndNetDelta.first.clashingThreads
-            if (!clashingThreads.isEmpty()) {
-                throw ClashingThreads(clashingThreads, txns)
             }
 
             wallet = walletAndNetDelta.first
@@ -132,24 +122,5 @@ open class InMemoryWalletService(protected val services: ServiceHub) : Singleton
         }
 
         return Pair(Wallet(newStates), change)
-    }
-
-    companion object {
-
-        // Returns the set of LinearState threads that clash in the wallet
-        val Wallet.clashingThreads: Set<SecureHash> get() {
-            val clashingThreads = HashSet<SecureHash>()
-            val threadsSeen = HashSet<SecureHash>()
-            for (linearState in states.filterStatesOfType<LinearState>()) {
-                val thread = linearState.state.data.thread
-                if (threadsSeen.contains(thread)) {
-                    clashingThreads.add(thread)
-                } else {
-                    threadsSeen.add(thread)
-                }
-            }
-            return clashingThreads
-        }
-
     }
 }

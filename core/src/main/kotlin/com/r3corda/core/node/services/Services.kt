@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.transactions.WireTransaction
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -85,13 +86,13 @@ interface WalletService {
     /**
      * Returns a snapshot of the heads of LinearStates.
      */
-    val linearHeads: Map<SecureHash, StateAndRef<LinearState>>
+    val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
 
     // TODO: When KT-10399 is fixed, rename this and remove the inline version below.
 
     /** Returns the [linearHeads] only when the type of the state would be considered an 'instanceof' the given type. */
     @Suppress("UNCHECKED_CAST")
-    fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<SecureHash, StateAndRef<T>> {
+    fun <T : LinearState> linearHeadsOfType_(stateType: Class<T>): Map<UniqueIdentifier, StateAndRef<T>> {
         return linearHeads.filterValues { stateType.isInstance(it.state.data) }.mapValues { StateAndRef(it.value.state as TransactionState<T>, it.value.ref) }
     }
 

@@ -1,6 +1,6 @@
 package com.r3corda.node.services.persistence
 
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.TransactionStorage
 import com.r3corda.core.serialization.deserialize

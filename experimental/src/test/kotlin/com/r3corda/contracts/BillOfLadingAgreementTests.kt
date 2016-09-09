@@ -2,8 +2,11 @@ package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.testing.MockServices
-import com.r3corda.core.testing.*
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.testing.node.MockServices
+import com.r3corda.testing.*
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -79,7 +82,7 @@ class BillOfLadingAgreementTests {
      // @Test // TODO: Fix Test
     fun transferAndEndorseGenerationMethod() {
 
-        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx: TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -93,7 +96,7 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun transferAndEndorseGenerationMethod_MissingBeneficiarySignature() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx: TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -105,7 +108,7 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun transferAndEndorseGenerationMethod_MissingOwnerSignature() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx: TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -117,7 +120,7 @@ class BillOfLadingAgreementTests {
 
    // @Test // TODO Fix Test
     fun transferPossessionGenerationMethod() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx: TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
@@ -129,7 +132,7 @@ class BillOfLadingAgreementTests {
 
     @Test(expected = IllegalStateException::class)
     fun transferPossessionGenerationMethod_Unsigned() {
-        val ptx:TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        val ptx: TransactionBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY)
         val sr = StateAndRef(
                 TransactionState(Bill, DUMMY_NOTARY),
                 StateRef(SecureHash.randomSHA256(), Random().nextInt(32))

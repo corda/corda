@@ -2,7 +2,7 @@ package com.r3corda.node.services.persistence
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.contracts.SignedTransaction
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.failure
 import com.r3corda.core.messaging.MessagingService
@@ -47,34 +47,21 @@ object DataVending {
         companion object {
             val logger = loggerFor<DataVending.Service>()
 
-            /** Topic for messages notifying a node of a new transaction */
-            val NOTIFY_TX_PROTOCOL_TOPIC = "platform.wallet.notify_tx"
-
+            /**
+             * Notify a node of a transaction. Normally any notarisation required would happen before this is called.
+             */
             fun notify(net: MessagingService,
                        myIdentity: Party,
                        recipient: NodeInfo,
-                       transaction: SignedTransaction): ListenableFuture<Unit> {
-                val future = SettableFuture.create<Unit>()
+                       transaction: SignedTransaction) {
                 val sessionID = random63BitValue()
-                net.runOnNextMessage(NOTIFY_TX_PROTOCOL_TOPIC, sessionID) { msg ->
-                    // TODO: Can we improve/simplify the response from the remote node?
-                    val data = msg.data.deserialize<NotifyTxResponseMessage>()
-                    if (data.accepted) {
-                        future.set(Unit)
-                    } else {
-                        future.setException(TransactionRejectedError("Transaction $transaction rejected by remote party ${recipient.identity}"))
-                    }
-                }
-                val msg = NotifyTxRequestMessage(transaction, myIdentity, sessionID)
-                net.send(net.createMessage(TopicSession(NOTIFY_TX_PROTOCOL_TOPIC, 0), msg.serialize().bits), recipient.address)
-                return future
+                val msg = BroadcastTransactionProtocol.NotifyTxRequestMessage(transaction, emptySet(), myIdentity, sessionID)
+                net.send(net.createMessage(TopicSession(BroadcastTransactionProtocol.TOPIC, 0), msg.serialize().bits), recipient.address)
             }
         }
 
         val storage = services.storageService
 
-        data class NotifyTxRequestMessage(val tx: SignedTransaction, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
-        data class NotifyTxResponseMessage(val accepted: Boolean)
         class TransactionRejectedError(msg: String) : Exception(msg)
 
         init {
@@ -86,34 +73,25 @@ object DataVending {
                     { req: FetchDataProtocol.Request -> handleAttachmentRequest(req) },
                     { message, e -> logger.error("Failure processing data vending request.", e) }
             )
-            addMessageHandler(NOTIFY_TX_PROTOCOL_TOPIC,
-                    { req: NotifyTxRequestMessage -> handleTXNotification(req) },
+            addMessageHandler(BroadcastTransactionProtocol.TOPIC,
+                    { req: BroadcastTransactionProtocol.NotifyTxRequestMessage -> handleTXNotification(req) },
                     { message, e -> logger.error("Failure processing data vending request.", e) }
             )
         }
 
-        private fun handleTXNotification(req: NotifyTxRequestMessage): Unit {
+        private fun handleTXNotification(req: BroadcastTransactionProtocol.NotifyTxRequestMessage): Unit {
             // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
             //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
 
             // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
             //       cash without from unknown parties?
 
-            try {
-                services.startProtocol(NOTIFY_TX_PROTOCOL_TOPIC, ResolveTransactionsProtocol(req.tx, req.replyToParty))
-                    .success {
-                        services.recordTransactions(req.tx)
-                        val resp = NotifyTxResponseMessage(true)
-                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
-                        net.send(msg, req.getReplyTo(services.networkMapCache))
-                    }.failure { throwable ->
-                        val resp = NotifyTxResponseMessage(false)
-                        val msg = net.createMessage(NOTIFY_TX_PROTOCOL_TOPIC, req.sessionID, resp.serialize().bits)
-                        net.send(msg, req.getReplyTo(services.networkMapCache))
-                    }
-            } catch(t: Exception) {
-                // Already handled by the hooks on the future, ignore
-            }
+            services.startProtocol("Resolving transactions", ResolveTransactionsProtocol(req.tx, req.replyToParty))
+                .success {
+                    services.recordTransactions(req.tx)
+                }.failure { throwable ->
+                    logger.warn("Received invalid transaction ${req.tx.id} from ${req.replyToParty}", throwable)
+                }
         }
 
         private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {
