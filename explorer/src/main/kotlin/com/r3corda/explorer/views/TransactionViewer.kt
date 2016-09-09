@@ -56,6 +56,7 @@ class TransactionViewer: View() {
     // Bottom half (details)
     private val contractStatesTitledPane: TitledPane by fxid("ContractStatesTitledPane")
 
+    private val contractStatesInputsCountLabel: Label by fxid("ContractStatesInputsCountLabel")
     private val contractStatesInputStatesTable: TableView<StateNode> by fxid("ContractStatesInputStatesTable")
     private val contractStatesInputStatesId: TableColumn<StateNode, String> by fxid("ContractStatesInputStatesId")
     private val contractStatesInputStatesType: TableColumn<StateNode, Class<out ContractState>> by fxid("ContractStatesInputStatesType")
@@ -64,6 +65,7 @@ class TransactionViewer: View() {
     private val contractStatesInputStatesAmount: TableColumn<StateNode, Long> by fxid("ContractStatesInputStatesAmount")
     private val contractStatesInputStatesEquiv: TableColumn<StateNode, Amount<Currency>> by fxid("ContractStatesInputStatesEquiv")
 
+    private val contractStatesOutputsCountLabel: Label by fxid("ContractStatesOutputsCountLabel")
     private val contractStatesOutputStatesTable: TableView<StateNode> by fxid("ContractStatesOutputStatesTable")
     private val contractStatesOutputStatesId: TableColumn<StateNode, String> by fxid("ContractStatesOutputStatesId")
     private val contractStatesOutputStatesType: TableColumn<StateNode, Class<out ContractState>> by fxid("ContractStatesOutputStatesType")
@@ -79,6 +81,8 @@ class TransactionViewer: View() {
     private val lowLevelEventsTable: TableView<ServiceToClientEvent> by fxid("LowLevelEventsTable")
     private val lowLevelEventsTimestamp: TableColumn<ServiceToClientEvent, Instant> by fxid("LowLevelEventsTimestamp")
     private val lowLevelEventsEvent: TableColumn<ServiceToClientEvent, ServiceToClientEvent> by fxid("LowLevelEventsEvent")
+
+    private val matchingTransactionsLabel: Label by fxid("MatchingTransactionsLabel")
 
     private val gatheredTransactionDataList: ObservableList<out GatheredTransactionData>
             by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
@@ -216,6 +220,7 @@ class TransactionViewer: View() {
 
     private fun wireUpStatesTable(
             states: ObservableList<StateNode>,
+            statesCountLabel: Label,
             statesTable: TableView<StateNode>,
             statesId: TableColumn<StateNode, String>,
             statesType: TableColumn<StateNode, Class<out ContractState>>,
@@ -224,6 +229,8 @@ class TransactionViewer: View() {
             statesAmount: TableColumn<StateNode, Long>,
             statesEquiv: TableColumn<StateNode, Amount<Currency>>
     ) {
+        statesCountLabel.textProperty().bind(EasyBind.map(Bindings.size(states)) { "$it" })
+
         Bindings.bindContent(statesTable.items, states)
 
         statesId.setCellValueFactory { ReadOnlyObjectWrapper(it.value.stateRef.toString()) }
@@ -329,6 +336,7 @@ class TransactionViewer: View() {
         // Contract states
         wireUpStatesTable(
                 inputStateNodes,
+                contractStatesInputsCountLabel,
                 contractStatesInputStatesTable,
                 contractStatesInputStatesId,
                 contractStatesInputStatesType,
@@ -339,6 +347,7 @@ class TransactionViewer: View() {
         )
         wireUpStatesTable(
                 outputStateNodes,
+                contractStatesOutputsCountLabel,
                 contractStatesOutputStatesTable,
                 contractStatesOutputStatesId,
                 contractStatesOutputStatesType,
@@ -361,5 +370,9 @@ class TransactionViewer: View() {
         lowLevelEventsTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / lowLevelEventsTable.columns.size).toInt()
         }
+
+        matchingTransactionsLabel.textProperty().bind(EasyBind.map(Bindings.size(viewerNodes)) {
+            "$it matching transaction${if (it == 1) "" else "s"}"
+        })
     }
 }

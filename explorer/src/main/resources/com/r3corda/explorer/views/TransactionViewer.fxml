@@ -11,6 +11,7 @@
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -39,7 +40,7 @@
             </ImageView>
          </children>
       </StackPane>
-      <SplitPane fx:id="TopSplitPane" dividerPositions="0.5, 0.5, 0.5" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
+      <SplitPane fx:id="TopSplitPane" dividerPositions="0.3, 0.6, 0.7" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
          <items>
             <TableView fx:id="TransactionViewTable" prefHeight="200.0" prefWidth="200.0">
               <columns>
@@ -60,11 +61,12 @@
                      <items>
                         <VBox prefHeight="200.0" prefWidth="100.0">
                            <children>
-                              <Label text="Inputs: 23">
-                                 <padding>
-                                    <Insets bottom="5.0" top="5.0" />
-                                 </padding>
-                              </Label>
+                              <HBox spacing="5.0">
+                                 <children>
+                                    <Label text="Inputs:" />
+                                    <Label fx:id="ContractStatesInputsCountLabel" text="Label" />
+                                 </children>
+                              </HBox>
                               <TableView fx:id="ContractStatesInputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                                 <columns>
                                   <TableColumn fx:id="ContractStatesInputStatesId" prefWidth="75.0" text="ID" />
@@ -87,14 +89,12 @@
                         </VBox>
                         <VBox prefHeight="200.0" prefWidth="100.0">
                            <children>
-                              <Label text="Outputs: 24">
-                                 <VBox.margin>
-                                    <Insets top="5.0" />
-                                 </VBox.margin>
-                                 <padding>
-                                    <Insets bottom="5.0" />
-                                 </padding>
-                              </Label>
+                              <HBox spacing="5.0">
+                                 <children>
+                                    <Label text="Outputs:" />
+                                    <Label fx:id="ContractStatesOutputsCountLabel" text="Label" />
+                                 </children>
+                              </HBox>
                               <TableView fx:id="ContractStatesOutputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                                  <columns>
                                     <TableColumn fx:id="ContractStatesOutputStatesId" prefWidth="75.0" text="ID" />
@@ -136,6 +136,10 @@
             </TitledPane>
          </items>
       </SplitPane>
-      <Label text="133 matching transaction(s)" />
+      <HBox>
+         <children>
+            <Label fx:id="MatchingTransactionsLabel" text="matching transaction(s)" />
+         </children>
+      </HBox>
    </children>
 </VBox>

@@ -32,7 +32,7 @@ class Header : View() {
             when (it) {
                 SelectedView.Home -> "Home"
                 SelectedView.Cash -> "Cash"
-                SelectedView.Transaction -> "Transaction"
+                SelectedView.Transaction -> "Transactions"
                 null -> "Home"
             }
         })
