@@ -91,13 +91,13 @@ inline fun <E> replicate(number: Int, expectation: (Int) -> ExpectCompose<E>): E
  * @param expectCompose The DSL we expect to match against the stream of events.
  */
 fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) =
-        genericExpectEvents(
+        serialize().genericExpectEvents(
                 isStrict = isStrict,
-                stream = { function: (E) -> Unit ->
+                stream = { action: (E) -> Unit ->
                     val lock = object {}
                     subscribe { event ->
                         synchronized(lock) {
-                            function(event)
+                            action(event)
                         }
                     }
                 },
@@ -113,8 +113,8 @@ fun <E : Any> Observable<E>.expectEvents(isStrict: Boolean = true, expectCompose
 fun <E : Any> Iterable<E>.expectEvents(isStrict: Boolean = true, expectCompose: () -> ExpectCompose<E>) =
         genericExpectEvents(
                 isStrict = isStrict,
-                stream = { function: (E) -> Unit ->
-                    forEach(function)
+                stream = { action: (E) -> Unit ->
+                    forEach(action)
                 },
                 expectCompose = expectCompose
         )
@@ -132,6 +132,16 @@ fun <S, E : Any> S.genericExpectEvents(
         expectCompose: () -> ExpectCompose<E>
 ) {
     val finishFuture = SettableFuture<Unit>()
+    /**
+     * Internally we create a "lazy" state automaton. The outgoing edges are state.getExpectedEvents() modulo additional
+     * matching logic. When an event comes we extract the first edge that matches using state.nextState(event), which
+     * returns the next state and the piece of dsl to be run on the event. If nextState() returns null it means the event
+     * didn't match at all, in this case we either fail (if isStrict=true) or carry on with the same state (if isStrict=false)
+     *
+     * TODO Think about pre-compiling the state automaton, possibly introducing regexp constructs. This requires some
+     * thinking, as the [parallel] construct blows up the state space factorially, so we need some clever lazy expansion
+     * of states.
+     */
     var state = ExpectComposeState.fromExpectCompose(expectCompose())
     stream { event ->
         if (state is ExpectComposeState.Finished) {
@@ -153,8 +163,10 @@ fun <S, E : Any> S.genericExpectEvents(
             }
         } else {
             state = next.second
+            val expectClosure = next.first
+            // Now run the matching piece of dsl
             try {
-                next.first()
+                expectClosure()
             } catch (exception: Exception) {
                 finishFuture.setException(exception)
             }
@@ -167,31 +179,36 @@ fun <S, E : Any> S.genericExpectEvents(
 }
 
 sealed class ExpectCompose<out E> {
-    internal class Single<E>(val expect: Expect<E>) : ExpectCompose<E>()
-    internal class Sequential<E>(val sequence: List<ExpectCompose<E>>) : ExpectCompose<E>()
-    internal class Parallel<E>(val parallel: List<ExpectCompose<E>>) : ExpectCompose<E>()
+    internal class Single<out E, T : E>(val expect: Expect<E, T>) : ExpectCompose<E>()
+    internal class Sequential<out E>(val sequence: List<ExpectCompose<E>>) : ExpectCompose<E>()
+    internal class Parallel<out E>(val parallel: List<ExpectCompose<E>>) : ExpectCompose<E>()
 }
 
-internal data class Expect<in E>(
-        val clazz: Class<in E>,
-        val match: (E) -> Boolean,
-        val expectClosure: (E) -> Unit
+internal data class Expect<out E, T : E>(
+        val clazz: Class<T>,
+        val match: (T) -> Boolean,
+        val expectClosure: (T) -> Unit
 )
 
 private sealed class ExpectComposeState<E : Any> {
 
     abstract fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>?
-    abstract fun getExpectedEvents(): List<Class<in E>>
+    abstract fun getExpectedEvents(): List<Class<out E>>
 
     class Finished<E : Any> : ExpectComposeState<E>() {
         override fun nextState(event: E) = null
-        override fun getExpectedEvents(): List<Class<in E>> = listOf()
+        override fun getExpectedEvents(): List<Class<E>> = listOf()
     }
-    class Single<E : Any>(val single: ExpectCompose.Single<E>) : ExpectComposeState<E>() {
+    class Single<E : Any, T : E>(val single: ExpectCompose.Single<E, T>) : ExpectComposeState<E>() {
         override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? =
-                if (single.expect.clazz.isAssignableFrom(event.javaClass) && single.expect.match(event)) {
+                if (single.expect.clazz.isAssignableFrom(event.javaClass)) {
                     @Suppress("UNCHECKED_CAST")
-                    Pair({ single.expect.expectClosure(event) }, Finished())
+                    val coercedEvent = event as T
+                    if (single.expect.match(event)) {
+                        Pair({ single.expect.expectClosure(coercedEvent) }, Finished())
+                    } else {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -252,7 +269,12 @@ private sealed class ExpectComposeState<E : Any> {
     companion object {
         fun <E : Any> fromExpectCompose(expectCompose: ExpectCompose<E>): ExpectComposeState<E> {
             return when (expectCompose) {
-                is ExpectCompose.Single -> Single(expectCompose)
+                is ExpectCompose.Single<E, *> -> {
+                    // This coercion should not be needed but kotlin can't reason about existential type variables(T)
+                    // so here we're coercing T into E (even though T is invariant).
+                    @Suppress("UNCHECKED_CAST")
+                    Single(expectCompose as ExpectCompose.Single<E, E>)
+                }
                 is ExpectCompose.Sequential -> {
                     if (expectCompose.sequence.size > 0) {
                         Sequential(expectCompose, 0, fromExpectCompose(expectCompose.sequence[0]))
