@@ -14,7 +14,6 @@ import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.node.log
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.statemachine.StateMachineManager
@@ -95,7 +94,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
                 try {
                     when (req) {
                         is ClientToServiceCommand.IssueCash -> issueCash(req)
-                        is ClientToServiceCommand.PayCash -> initatePayment(req)
+                        is ClientToServiceCommand.PayCash -> initiatePayment(req)
                         is ClientToServiceCommand.ExitCash -> exitCash(req)
                         else -> throw IllegalArgumentException("Unknown request type ${req.javaClass.name}")
                     }
@@ -153,7 +152,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     }
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
-    private fun initatePayment(req: ClientToServiceCommand.PayCash): TransactionBuildResult {
+    private fun initiatePayment(req: ClientToServiceCommand.PayCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
