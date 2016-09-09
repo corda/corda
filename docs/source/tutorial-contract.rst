@@ -787,7 +787,7 @@ In future, we will consider the concept of a *covenant*. This is where the encum
 the encumbered state. For example, a cash state may be encumbered with a *domicile* encumbrance, which checks the domicile of
 the identity of the owner that the cash state is being moved to, in order to uphold sanction screening regulations, and prevent
 cash being paid to parties domiciled in e.g. North Korea. In this case, the encumbrance should be permanently attached to
-the all future cash states stemmimg from this one.
+the all future cash states stemming from this one.
 
 We will also consider marking states that are capable of being encumbrances as such. This will prevent states being used
 as encumbrances inadvertently. For example, the time-lock above would be usable as an encumbrance, but it makes no sense to
