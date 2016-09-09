@@ -15,8 +15,8 @@ import static com.r3corda.testing.CoreTestUtils.*;
 public class CashTestsJava {
     private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
     private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
-    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1());
-    private final Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2());
+    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1(), null);
+    private final Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2(), null);
 
     @Test
     public void trivial() {
@@ -26,7 +26,7 @@ public class CashTestsJava {
                 tx.failsWith("the amounts balance");
 
                 tx.tweak(tw -> {
-                    tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), getDUMMY_PUBKEY_2()));
+                    tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), getDUMMY_PUBKEY_2(), null));
                     return tw.failsWith("the amounts balance");
                 });
 

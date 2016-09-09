@@ -101,4 +101,12 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
     class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {
         override fun toString(): String = "Found unexpected notary change in transaction. Tx notary: ${tx.notary}, found: ${outputNotary}"
     }
+    class TransactionMissingEncumbranceException(tx: LedgerTransaction, val missing: Int, val inOut: Direction) : TransactionVerificationException(tx, null) {
+        override val message: String?
+            get() = "Missing required encumbrance ${missing} in ${inOut}"
+    }
+    enum class Direction {
+        INPUT,
+        OUTPUT
+    }
 }
