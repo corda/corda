@@ -40,6 +40,9 @@ dependencies {
 
     // Unit testing helpers.
     compile 'junit:junit:4.12'
+
+    // Guava: Google test library (collections test suite)
+    compile "com.google.guava:guava-testlib:19.0"
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
