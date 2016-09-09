@@ -219,3 +219,44 @@ fun extractZipFile(zipPath: Path, toPath: Path) {
 // TODO: Generic csv printing utility for clases.
 
 val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
+
+/** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
+operator fun Path.div(other: String): Path = resolve(other)
+
+/** Representation of an operation that may have thrown an error. */
+data class ErrorOr<out A> private constructor(val value: A?, val error: Throwable?) {
+    constructor(value: A) : this(value, null)
+
+    companion object {
+        /** Runs the given lambda and wraps the result. */
+        inline fun <T> catch(body: () -> T): ErrorOr<T> = try { ErrorOr(body()) } catch (t: Throwable) { ErrorOr.of(t) }
+        fun of(t: Throwable) = ErrorOr(null, t)
+    }
+
+    fun <T> match(onValue: (A) -> T, onError: (Throwable) -> T): T {
+        if (value != null) {
+            return onValue(value)
+        } else {
+            return onError(error!!)
+        }
+    }
+
+    fun getOrThrow(): A {
+        if (value != null) {
+            return value
+        } else {
+            throw error!!
+        }
+    }
+
+    // Functor
+    fun <B> map(function: (A) -> B) = ErrorOr(value?.let(function), error)
+
+    // Applicative
+    fun <B, C> combine(other: ErrorOr<B>, function: (A, B) -> C): ErrorOr<C> {
+        return ErrorOr(value?.let { a -> other.value?.let { b -> function(a, b) } }, error ?: other.error)
+    }
+
+    // Monad
+    fun <B> bind(function: (A) -> ErrorOr<B>) = value?.let(function) ?: ErrorOr.of(error!!)
+}

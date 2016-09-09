@@ -1,5 +1,6 @@
 package com.r3corda.client.mock
 
+import com.r3corda.core.ErrorOr
 import java.util.*
 
 /**
@@ -54,7 +55,7 @@ class Generator<out A>(val generate: (Random) -> ErrorOr<A>) {
     companion object {
         fun <A> pure(value: A) = Generator { ErrorOr(value) }
         fun <A> impure(valueClosure: () -> A) = Generator { ErrorOr(valueClosure()) }
-        fun <A> fail(error: Exception) = Generator<A> { ErrorOr(error) }
+        fun <A> fail(error: Exception) = Generator<A> { ErrorOr.of(error) }
 
         // Alternative
         fun <A> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).bind { generators[it] }
@@ -85,10 +86,11 @@ class Generator<out A>(val generate: (Random) -> ErrorOr<A>) {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
-                if (element.value != null) {
-                    result.add(element.value)
+                val v = element.value
+                if (v != null) {
+                    result.add(v)
                 } else {
-                    return@Generator ErrorOr(element.error!!)
+                    return@Generator ErrorOr.of(element.error!!)
                 }
             }
             ErrorOr(result)
@@ -99,11 +101,12 @@ class Generator<out A>(val generate: (Random) -> ErrorOr<A>) {
 fun <A> Generator.Companion.oneOf(list: List<A>) = intRange(0, list.size - 1).map { list[it] }
 
 fun <A> Generator<A>.generateOrFail(random: Random, numberOfTries: Int = 1): A {
-    var error: Exception? = null
+    var error: Throwable? = null
     for (i in 0 .. numberOfTries - 1) {
         val result = generate(random)
-        if (result.value != null) {
-            return result.value
+        val v = result.value
+        if (v != null) {
+            return v
         } else {
             error = result.error
         }
@@ -146,8 +149,9 @@ fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Genera
                 ErrorOr(Unit)
             }
         }
-        if (errorOr.error != null) {
-            return@Generator ErrorOr(errorOr.error)
+        val e = errorOr.error
+        if (e != null) {
+            return@Generator ErrorOr.of(e)
         }
     }
     ErrorOr(result)
