@@ -1,4 +1,4 @@
-package com.r3corda.node.services.clientapi
+package com.r3corda.demos.api
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.RetryableException
@@ -49,7 +49,7 @@ object NodeInterestRates {
      */
     class Plugin : CordaPluginRegistry() {
         override val requiredProtocols: Map<String, Set<String>> = mapOf(Pair(TwoPartyDealProtocol.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
-        override val servicePlugins: List<Class<*>> = listOf(NodeInterestRates.Service::class.java)
+        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 
     /**

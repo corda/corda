@@ -8,6 +8,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
+import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
@@ -374,7 +375,10 @@ object TwoPartyDealProtocol {
             val newDeal = deal
 
             val ptx = TransactionType.General.Builder(txState.notary)
-            val addFixing = object : RatesFixProtocol(ptx, serviceHub.networkMapCache.ratesOracleNodes[0].identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+
+            val oracle = serviceHub.networkMapCache.get(initiation.oracleType).first()
+
+            val addFixing = object : RatesFixProtocol(ptx, oracle.identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload), fix)
@@ -423,7 +427,7 @@ object TwoPartyDealProtocol {
 
 
     /** Used to set up the session between [Floater] and [Fixer] */
-    data class FixingSessionInitiation(val sessionID: Long, val party: Party, val sender: Party, val timeout: Duration)
+    data class FixingSessionInitiation(val sessionID: Long, val party: Party, val sender: Party, val timeout: Duration, val oracleType: ServiceType)
 
     /**
      * This protocol looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.
@@ -451,11 +455,13 @@ object TwoPartyDealProtocol {
             progressTracker.nextStep()
             val dealToFix = serviceHub.loadState(ref)
             // TODO: this is not the eventual mechanism for identifying the parties
-            val sortedParties = (dealToFix.data as FixableDealState).parties.sortedBy { it.name }
+            val fixableDeal = (dealToFix.data as FixableDealState)
+            val sortedParties = fixableDeal.parties.sortedBy { it.name }
+            val oracleType = fixableDeal.oracleType
             if (sortedParties[0].name == serviceHub.storageService.myLegalIdentity.name) {
                 // Generate sessionID
                 val sessionID = random63BitValue()
-                val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.storageService.myLegalIdentity, timeout)
+                val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.storageService.myLegalIdentity, timeout, oracleType)
 
                 // Send initiation to other side to launch one side of the fixing protocol (the Fixer).
                 send(sortedParties[1], DEFAULT_SESSION_ID, initation)

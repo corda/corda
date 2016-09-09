@@ -1,28 +1,23 @@
 package com.r3corda.demos
 
 import com.google.common.net.HostAndPort
+import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.testing.node.makeTestDataSourceProperties
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
+import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.internal.Node
-import com.r3corda.node.services.clientapi.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingClient
-import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.protocols.RatesFixProtocol
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import joptsimple.OptionParser
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import kotlin.system.exitProcess
@@ -78,7 +73,7 @@ fun main(args: Array<String>) {
             advertisedServices, DemoClock()).setup().start() }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]
-    val rateOracle = node.services.networkMapCache.ratesOracleNodes[0]
+    val rateOracle = node.services.networkMapCache.get(InterestRateSwap.OracleType).first()
 
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionType.General.Builder(notaryNode.identity)

@@ -28,8 +28,6 @@ interface NetworkMapCache {
     val networkMapNodes: List<NodeInfo>
     /** A list of nodes that advertise a notary service */
     val notaryNodes: List<NodeInfo>
-    /** A list of nodes that advertise a rates oracle service */
-    val ratesOracleNodes: List<NodeInfo>
     /** A list of all nodes the cache is aware of */
     val partyNodes: List<NodeInfo>
     /** Tracks changes to the network map cache */

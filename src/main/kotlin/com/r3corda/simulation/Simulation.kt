@@ -10,7 +10,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.services.clientapi.NodeInterestRates
+import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -109,7 +109,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     object RatesOracleFactory : MockNetwork.Factory {
         override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(com.r3corda.node.services.clientapi.NodeInterestRates.Type))
+            require(advertisedServices.contains(NodeInterestRates.Type))
             val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
                 override val myLegalName: String = "Rates Service Provider"
                 override val exportJMXto: String = ""
@@ -121,7 +121,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
-                    findService<com.r3corda.node.services.clientapi.NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
+                    findService<NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
                     return this
                 }
             }
@@ -156,7 +156,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             = network.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = com.r3corda.node.services.transactions.SimpleNotaryService.Type) as SimulatedNode
     val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info.address, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = network.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = com.r3corda.node.services.clientapi.NodeInterestRates.Type) as SimulatedNode
+            = network.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)

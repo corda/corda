@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.clauses.Clause
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
+import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.OpaqueBytes
@@ -301,6 +302,11 @@ interface FixableDealState : DealState {
      * When is the next fixing and what is the fixing for?
      */
     fun nextFixingOf(): FixOf?
+
+    /**
+     * What oracle service to use for the fixing
+     */
+    val oracleType: ServiceType
 
     /**
      * Generate a fixing command for this deal and fix.

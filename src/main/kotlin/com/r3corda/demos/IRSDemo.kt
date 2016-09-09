@@ -21,7 +21,7 @@ import com.r3corda.demos.utilities.putJson
 import com.r3corda.demos.utilities.uploadFile
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
-import com.r3corda.node.services.clientapi.NodeInterestRates
+import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.ArtemisMessagingClient

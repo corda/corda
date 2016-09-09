@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
@@ -186,6 +187,8 @@ class FloatingRatePaymentEvent(date: LocalDate,
  */
 class InterestRateSwap() : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
+
+    object OracleType : ServiceType("corda.interest_rates")
 
     /**
      * This Common area contains all the information that is not leg specific.
@@ -652,6 +655,9 @@ class InterestRateSwap() : Contract {
     ) : FixableDealState, SchedulableState {
 
         override val contract = IRS_PROGRAM_ID
+
+        override val oracleType: ServiceType
+            get() = OracleType
 
         override val ref = common.tradeID
 
