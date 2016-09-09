@@ -2,7 +2,9 @@ package com.r3corda.core.contracts
 
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.testing.*
+import com.r3corda.core.utilities.DUMMY_PUBKEY_1
+import com.r3corda.core.utilities.DUMMY_PUBKEY_2
+import com.r3corda.testing.*
 import org.junit.Test
 import java.security.PublicKey
 import java.time.Instant
