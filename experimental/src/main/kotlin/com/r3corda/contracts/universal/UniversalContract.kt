@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.TransactionBuilder
+import com.sun.tools.corba.se.idl.InvalidArgument
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
@@ -39,19 +40,11 @@ class UniversalContract : Contract {
         class Issue : TypeOnlyCommandData(), Commands
     }
 
-    fun <T> eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<T>): T = when (expr) {
-        is Const -> expr.value
-        else -> throw Error("Unable to evaluate")
-    }
-
-    fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<LocalDate>): LocalDate = when (expr) {
-        is Const -> expr.value
-        else -> throw Error("Unable to evaluate")
-    }
     fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<Instant>): Instant = when (expr) {
         is Const -> expr.value
         else -> throw Error("Unable to evaluate")
     }
+
     fun eval(tx: TransactionForContract, expr: Perceivable<Boolean>): Boolean = when (expr) {
         is PerceivableAnd -> eval(tx, expr.left) && eval(tx, expr.right)
         is PerceivableOr -> eval(tx, expr.right) || eval(tx, expr.right)
@@ -63,7 +56,6 @@ class UniversalContract : Contract {
         }
         else -> throw NotImplementedError("eval - Boolean - " + expr.javaClass.name)
     }
-
 
     fun eval(tx: TransactionForContract, expr: Perceivable<BigDecimal>): BigDecimal =
             when (expr) {
@@ -102,41 +94,6 @@ class UniversalContract : Contract {
                 else -> throw NotImplementedError("eval - BigDecimal - " + expr.javaClass.name)
             }
 
-    fun reduce(tx: TransactionForContract, expr: Perceivable<BigDecimal>): Perceivable<BigDecimal> = when (expr) {
-        is PerceivableOperation -> {
-            val left = reduce(tx, expr.left)
-            val right = reduce(tx, expr.right)
-            if (left is Const && right is Const)
-                when (expr.op) {
-                //Operation.DIV -> Const( left.value / right.value )
-                    Operation.MINUS -> Const(left.value - right.value)
-                    Operation.PLUS -> Const(left.value + right.value)
-                //Operation.TIMES -> Const( left.value * right.value )
-                    else -> throw NotImplementedError("reduce - " + expr.op.name)
-                }
-            else
-                PerceivableOperation(left, expr.op, right)
-        }
-        is UnaryPlus -> {
-            val amount = reduce(tx, expr.arg)
-            if (amount is Const) {
-                if (amount.value > BigDecimal.ZERO)
-                    amount
-                else
-                    Const(BigDecimal.ZERO)
-            } else
-                UnaryPlus(amount)
-        }
-        is Interest -> Interest(reduce(tx, expr.amount), expr.dayCountConvention, reduce(tx, expr.interest), expr.start, expr.end)
-        else -> expr
-    }
-
-    fun checkAndReduce(tx: TransactionForContract, arrangement: Arrangement): Arrangement = when (arrangement) {
-        is Transfer -> Transfer(reduce(tx, arrangement.amount), arrangement.currency, arrangement.from, arrangement.to)
-        is And -> And(arrangement.arrangements.map { checkAndReduce(tx, it) }.toSet())
-        else -> arrangement
-    }
-
     fun validateImmediateTransfers(tx: TransactionForContract, arrangement: Arrangement): Arrangement = when (arrangement) {
         is Transfer -> {
             val amount = eval(tx, arrangement.amount)
@@ -145,6 +102,32 @@ class UniversalContract : Contract {
         }
         is And -> And(arrangement.arrangements.map { validateImmediateTransfers(tx, it) }.toSet())
         else -> arrangement
+    }
+
+    // todo: think about multi layered rollouts
+    fun reduceRollOut(rollOut: RollOut) : Arrangement {
+        val start = rollOut.startDate
+        val end = rollOut.endDate
+
+        // todo: calendar + rolling conventions
+        val schedule = BusinessCalendar.createGenericSchedule(start, rollOut.frequency, noOfAdditionalPeriods = 1, endDate = end)
+
+        val next = schedule.first() // fail if no dates
+
+        val newRollOut = RollOut(next, end, rollOut.frequency, rollOut.template)
+
+        return replaceNext(rollOut.template, newRollOut )
+    }
+
+    fun replaceNext(arrangement: Arrangement, nextReplacement: RollOut) : Arrangement {
+        return when (arrangement) {
+            is Or -> Or(arrangement.actions.map { replaceNext(it, nextReplacement)!! as Action }.toSet())
+            is And -> And(arrangement.arrangements.map { replaceNext(it, nextReplacement) }.toSet())
+            is Action -> Action( arrangement.name, arrangement.condition, arrangement.actors, replaceNext(arrangement.arrangement, nextReplacement))
+            is Transfer -> arrangement
+            is Zero -> arrangement
+            else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
+        }
     }
 
     override fun verify(tx: TransactionForContract) {
@@ -160,7 +143,14 @@ class UniversalContract : Contract {
         when (value) {
             is Commands.Action -> {
                 val inState = tx.inputs.single() as State
-                val actions = actions(inState.details)
+                val arr = when (inState.details)  {
+                    is Or -> inState.details
+                    is Action -> inState.details
+                    is RollOut -> reduceRollOut(inState.details)
+                    else -> throw InvalidArgument("Unexpected arrangement, " + tx.inputs.single())
+                }
+
+                val actions = actions(arr)
 
                 val action = actions[value.name] ?: throw IllegalArgumentException("Failed requirement: action must be defined")
 
@@ -229,8 +219,8 @@ class UniversalContract : Contract {
     }
 
     fun <T> replaceFixing(tx: TransactionForContract, perceivable: Perceivable<T>,
-                          fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> =
-            when (perceivable) {
+                          fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> {
+            return when (perceivable) {
                 is Const -> perceivable
                 is UnaryPlus -> UnaryPlus(replaceFixing(tx, perceivable.arg, fixings, unusedFixings))
                 is PerceivableOperation -> PerceivableOperation(replaceFixing(tx, perceivable.left, fixings, unusedFixings),
@@ -244,6 +234,7 @@ class UniversalContract : Contract {
                 } else perceivable
                 else -> throw NotImplementedError("replaceFixing - " + perceivable.javaClass.name)
             }
+    }
 
     fun replaceFixing(tx: TransactionForContract, arr: Action,
                       fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>) =
@@ -256,6 +247,7 @@ class UniversalContract : Contract {
                 is Zero -> arr
                 is Transfer -> Transfer(replaceFixing(tx, arr.amount, fixings, unusedFixings), arr.currency, arr.from, arr.to)
                 is Or -> Or(arr.actions.map { replaceFixing(tx, it, fixings, unusedFixings) }.toSet())
+                is RollOut -> RollOut(arr.startDate, arr.endDate, arr.frequency, replaceFixing(tx, arr.template, fixings, unusedFixings))
                 else -> throw NotImplementedError("replaceFixing - " + arr.javaClass.name)
             }
 

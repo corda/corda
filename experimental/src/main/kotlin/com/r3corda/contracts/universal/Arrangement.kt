@@ -4,6 +4,7 @@ import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -49,7 +50,7 @@ data class Or(val actions: Set<Action>) : Arrangement
 
 
 // Roll out of arrangement
-data class RollOut(val startDate: String, val endDate: String, val frequency: Frequency, val template: Arrangement) : Arrangement
+data class RollOut(val startDate: LocalDate, val endDate: LocalDate, val frequency: Frequency, val template: Arrangement) : Arrangement
 
 
 // Continuation of roll out

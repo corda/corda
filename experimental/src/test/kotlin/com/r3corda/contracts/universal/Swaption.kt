@@ -45,7 +45,7 @@ class Swaption {
 
 
     val elegant_contract = arrange {
-        rollOut("01/04/2015", "01/04/2025", Frequency.Quarterly) {
+        rollOut("01/04/2015".ld, "01/04/2025".ld, Frequency.Quarterly) {
             (highStreetBank or acmeCorp).may {
                 "proceed".givenThat(after(start)) {
                     highStreetBank.gives(acmeCorp, libor(notional, start, end), currency)
@@ -63,7 +63,7 @@ class Swaption {
     val strike = 1.2
 
     val tarf = arrange {
-        rollOut("01/04/2015", "01/04/2016", Frequency.Quarterly, object {
+        rollOut("01/04/2015".ld, "01/04/2016".ld, Frequency.Quarterly, object {
             val cap = variable(150.K)
         }) {
             acmeCorp.may {
@@ -86,7 +86,7 @@ class Swaption {
     }
 
     val tarf2 = arrange {
-        rollOut("01/04/2015", "01/04/2016", Frequency.Quarterly, object {
+        rollOut("01/04/2015".ld, "01/04/2016".ld, Frequency.Quarterly, object {
             val uses = variable(4)
         }) {
             acmeCorp.may {

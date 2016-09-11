@@ -1,8 +1,10 @@
 package com.r3corda.contracts.universal
 
+import com.r3corda.core.contracts.BusinessCalendar
 import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -23,19 +25,19 @@ val zero = Zero()
 open class ContractBuilder {
     val contracts = mutableListOf<Arrangement>()
 
-    fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency) : Transfer {
+    fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency): Transfer {
         val c = Transfer(const(amount), currency, this, beneficiary)
-        contracts.add( c )
+        contracts.add(c)
         return c
     }
 
-    fun Party.gives(beneficiary: Party, amount: Perceivable<BigDecimal>, currency: Currency) : Transfer {
+    fun Party.gives(beneficiary: Party, amount: Perceivable<BigDecimal>, currency: Currency): Transfer {
         val c = Transfer(amount, currency, this, beneficiary)
-        contracts.add( c )
+        contracts.add(c)
         return c
     }
 
-    fun Party.may(init: ActionBuilder.() -> Unit) : Or {
+    fun Party.may(init: ActionBuilder.() -> Unit): Or {
         val b = ActionBuilder(setOf(this))
         b.init()
         val c = Or(b.actions.toSet())
@@ -43,11 +45,23 @@ open class ContractBuilder {
         return c
     }
 
-    fun Set<Party>.may(init: ActionBuilder.() -> Unit) : Or {
+    fun Set<Party>.may(init: ActionBuilder.() -> Unit): Or {
         val b = ActionBuilder(this)
         b.init()
         val c = Or(b.actions.toSet())
         contracts.add(c)
+        return c
+    }
+
+
+    infix fun Or.or(ors: Or): Or {
+        assert(ors.actions.size == 1)
+        assert(contracts[contracts.lastIndex-1] == this)
+        assert(contracts[contracts.lastIndex] == ors)
+        contracts.removeAt(contracts.lastIndex)
+
+        val c = Or(this.actions + ors.actions.single())
+        contracts[contracts.lastIndex] = c
         return c
     }
 
@@ -56,27 +70,31 @@ open class ContractBuilder {
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not allowed")
     fun Action(@Suppress("UNUSED_PARAMETER") name: String, @Suppress("UNUSED_PARAMETER") condition: Perceivable<Boolean>,
-               @Suppress("UNUSED_PARAMETER") actors: Set<Party>, @Suppress("UNUSED_PARAMETER") arrangement: Arrangement) {}
+               @Suppress("UNUSED_PARAMETER") actors: Set<Party>, @Suppress("UNUSED_PARAMETER") arrangement: Arrangement) {
+    }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun<T> String.anytime(@Suppress("UNUSED_PARAMETER") ignore: T ) {}
+    fun <T> String.anytime(@Suppress("UNUSED_PARAMETER") ignore: T) {
+    }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun<T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore: T ) {}
+    fun <T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore: T) {
+    }
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
-    fun<T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore1: T, @Suppress("UNUSED_PARAMETER") ignore2: T ) {}
+    fun <T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore1: T, @Suppress("UNUSED_PARAMETER") ignore2: T) {
+    }
 
-  /*  fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
-        contracts.add( Transfer(amount, currency, this, beneficiary))
-    }*/
+    /*  fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
+          contracts.add( Transfer(amount, currency, this, beneficiary))
+      }*/
 
-    infix fun Arrangement.and(arrangement: Arrangement) = And( setOf(this, arrangement) )
-    infix fun Action.or(arrangement: Action) = Or( setOf(this, arrangement) )
-    infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
-    infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
+    infix fun Arrangement.and(arrangement: Arrangement) = And(setOf(this, arrangement))
+    infix fun Action.or(arrangement: Action) = Or(setOf(this, arrangement))
+//    infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
+//    infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
 
-    fun rollOut(startDate: String, endDate: String, frequency: Frequency, init: RollOutBuilder<Dummy>.() -> Unit) : RollOut {
+    fun rollOut(startDate: LocalDate, endDate: LocalDate, frequency: Frequency, init: RollOutBuilder<Dummy>.() -> Unit): RollOut {
         val b = RollOutBuilder(startDate, endDate, frequency, Dummy())
         b.init()
         val c = b.final()
@@ -84,13 +102,15 @@ open class ContractBuilder {
         return c
     }
 
-    fun <T> rollOut(startDate: String, endDate: String, frequency: Frequency, vars: T, init: RollOutBuilder<T>.() -> Unit) : RollOut {
+    fun <T> rollOut(startDate: LocalDate, endDate: LocalDate, frequency: Frequency, vars: T, init: RollOutBuilder<T>.() -> Unit): RollOut {
         val b = RollOutBuilder(startDate, endDate, frequency, vars)
         b.init()
         val c = b.final()
         contracts.add(c)
         return c
     }
+
+    val String.ld: LocalDate get() = BusinessCalendar.parseDateFromString(this)
 
     open fun final() =
             when (contracts.size) {
@@ -99,6 +119,7 @@ open class ContractBuilder {
                 else -> And(contracts.toSet())
             }
 }
+
 
 interface GivenThatResolve {
     fun resolve(contract: Arrangement)
@@ -139,7 +160,7 @@ data class Parameter<T>(val initialValue: T) : Perceivable<T>
 
 fun<T> variable(v: T) = Parameter<T>(v)
 
-class RollOutBuilder<T>(val startDate: String, val endDate: String, val frequency: Frequency, val vars: T) : ContractBuilder() {
+class RollOutBuilder<T>(val startDate: LocalDate, val endDate: LocalDate, val frequency: Frequency, val vars: T) : ContractBuilder() {
 
     val start = StartDate()
     val end = EndDate()
