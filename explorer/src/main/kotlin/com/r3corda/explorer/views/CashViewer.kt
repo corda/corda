@@ -59,22 +59,22 @@ class CashViewer : View() {
     // Inject UI elements
     override val root: SplitPane by fxml()
 
-    val topSplitPane: SplitPane by fxid("TopSplitPane")
+    val topSplitPane: SplitPane by fxid()
     // Left pane
-    val leftPane: VBox by fxid("LeftPane")
-    val searchCriteriaTextField: TextField by fxid("SearchCriteriaTextField")
-    val searchCancelImageView: ImageView by fxid("SearchCancelImageView")
-    val totalMatchingLabel: Label by fxid("TotalMatchingLabel")
-    val cashViewerTable: TreeTableView<ViewerNode> by fxid("CashViewerTable")
-    val cashViewerTableIssuerCurrency: TreeTableColumn<ViewerNode, String> by fxid("CashViewerTableIssuerCurrency")
-    val cashViewerTableLocalCurrency: TreeTableColumn<ViewerNode, Amount<Currency>?> by fxid("CashViewerTableLocalCurrency")
-    val cashViewerTableEquiv: TreeTableColumn<ViewerNode, Amount<Currency>?> by fxid("CashViewerTableEquiv")
+    val leftPane: VBox by fxid()
+    val searchCriteriaTextField: TextField by fxid()
+    val searchCancelImageView: ImageView by fxid()
+    val totalMatchingLabel: Label by fxid()
+    val cashViewerTable: TreeTableView<ViewerNode> by fxid()
+    val cashViewerTableIssuerCurrency: TreeTableColumn<ViewerNode, String> by fxid()
+    val cashViewerTableLocalCurrency: TreeTableColumn<ViewerNode, Amount<Currency>?> by fxid()
+    val cashViewerTableEquiv: TreeTableColumn<ViewerNode, Amount<Currency>?> by fxid()
 
     // Right pane
-    val rightPane: VBox by fxid("RightPane")
-    val totalPositionsLabel: Label by fxid("TotalPositionsLabel")
-    val equivSumLabel: Label by fxid("EquivSumLabel")
-    val cashStatesList: ListView<StateRow> by fxid("CashStatesList")
+    val rightPane: VBox by fxid()
+    val totalPositionsLabel: Label by fxid()
+    val equivSumLabel: Label by fxid()
+    val cashStatesList: ListView<StateRow> by fxid()
 
     // Inject observables
     val cashStates by observableList(ContractStateModel::cashStates)
@@ -186,12 +186,12 @@ class CashViewer : View() {
     ) : UIComponent() {
         override val root: HBox by fxml("CashStateViewer.fxml")
 
-        val equivLabel: Label by fxid("EquivLabel")
-        val stateIdValueLabel: Label by fxid("StateIdValueLabel")
-        val issuerValueLabel: Label by fxid("IssuerValueLabel")
-        val originatedValueLabel: Label by fxid("OriginatedValueLabel")
-        val amountValueLabel: Label by fxid("AmountValueLabel")
-        val equivValueLabel: Label by fxid("EquivValueLabel")
+        val equivLabel: Label by fxid()
+        val stateIdValueLabel: Label by fxid()
+        val issuerValueLabel: Label by fxid()
+        val originatedValueLabel: Label by fxid()
+        val amountValueLabel: Label by fxid()
+        val equivValueLabel: Label by fxid()
 
         val equivAmount: ObservableValue<Amount<Currency>> = EasyBind.map(reportingExchange) {
             it.second(stateRow.stateAndRef.state.data.amount.withoutIssuer())

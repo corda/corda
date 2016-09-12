@@ -20,16 +20,16 @@
                <children>
                   <HBox alignment="CENTER_LEFT" spacing="5.0" HBox.hgrow="ALWAYS">
                      <children>
-                        <VBox fx:id="SectionIconContainer" alignment="CENTER">
+                        <VBox fx:id="sectionIconContainer" alignment="CENTER">
                            <children>
-                              <ImageView fx:id="SectionIcon" fitHeight="30.0" fitWidth="30.0" pickOnBounds="true" preserveRatio="true">
+                              <ImageView fx:id="sectionIcon" fitHeight="30.0" fitWidth="30.0" pickOnBounds="true" preserveRatio="true">
                                  <image>
                                     <Image url="@../../images/home.png" />
                                  </image>
                               </ImageView>
                            </children>
                         </VBox>
-                        <Label id="headline" fx:id="SectionLabel" text="Home" />
+                        <Label id="headline" fx:id="sectionLabel" text="Home" />
                      </children>
                      <padding>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
@@ -37,8 +37,8 @@
                   </HBox>
                   <HBox alignment="TOP_RIGHT" spacing="5.0">
                      <children>
-                        <Button fx:id="DebugNextButton" mnemonicParsing="false" text="Next" />
-                        <Button fx:id="DebugGoStopButton" mnemonicParsing="false" text="!!!" />
+                        <Button fx:id="debugNextButton" mnemonicParsing="false" text="Next" />
+                        <Button fx:id="debugGoStopButton" mnemonicParsing="false" text="!!!" />
                         <SplitMenuButton mnemonicParsing="false" text="DRUTTER">
                           <items>
                             <MenuItem mnemonicParsing="false" text="Sign out" />
@@ -52,7 +52,7 @@
                               </ImageView>
                            </graphic>
                         </SplitMenuButton>
-                        <Button fx:id="SettingsButton" mnemonicParsing="false" text="Settings">
+                        <Button fx:id="settingsButton" mnemonicParsing="false" text="Settings">
                            <graphic>
                               <ImageView fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true">
                                  <image>

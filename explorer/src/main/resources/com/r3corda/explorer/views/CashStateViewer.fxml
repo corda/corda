@@ -12,16 +12,16 @@
             <Label text="Issuer" />
             <Label text="Originated" wrapText="true" />
             <Label text="Amount" wrapText="true" />
-            <Label fx:id="EquivLabel" text="USD" wrapText="true" />
+            <Label fx:id="equivLabel" text="USD" wrapText="true" />
          </children>
       </VBox>
       <VBox HBox.hgrow="ALWAYS">
          <children>
-            <Label fx:id="StateIdValueLabel" text="39043-329090-390091" />
-            <Label fx:id="IssuerValueLabel" styleClass="counterparty" text="C-03820 HSBC GROUP PLC" />
-            <Label fx:id="OriginatedValueLabel" text="2018-04-27 11:34 UTC" />
-            <Label fx:id="AmountValueLabel" text="GBP 0.00" wrapText="true" />
-            <Label fx:id="EquivValueLabel" text="0.00" wrapText="true" />
+            <Label fx:id="stateIdValueLabel" text="39043-329090-390091" />
+            <Label fx:id="issuerValueLabel" styleClass="counterparty" text="C-03820 HSBC GROUP PLC" />
+            <Label fx:id="originatedValueLabel" text="2018-04-27 11:34 UTC" />
+            <Label fx:id="amountValueLabel" text="GBP 0.00" wrapText="true" />
+            <Label fx:id="equivValueLabel" text="0.00" wrapText="true" />
          </children>
       </VBox>
    </children>

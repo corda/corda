@@ -1,19 +1,19 @@
-#TopLevel.root {
+#topLevel.root {
     -fx-background-image:url('../images/r3bg.png');
     -fx-background-size: cover;
     -fx-background-repeat:no-repeat;
     -fx-base:white;
 }
 
-#CashViewer {
+#cashViewer {
     -fx-background-color: transparent;
 }
 
-#CashViewerTable {
+#cashViewerTable {
     -fx-background-color: transparent;
 }
 
-#CashViewerTable .tree-table-row-cell {
+#cashViewerTable .tree-table-row-cell {
     -fx-background-color: transparent;
 }
 

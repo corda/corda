@@ -14,16 +14,16 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<SplitPane fx:id="TopSplitPane" dividerPositions="0.5" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+<SplitPane fx:id="topSplitPane" dividerPositions="0.5" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
    <items>
-      <VBox fx:id="LeftPane" spacing="5.0" styleClass="root">
+      <VBox fx:id="leftPane" spacing="5.0" styleClass="root">
          <children>
             <StackPane alignment="CENTER_RIGHT">
                <VBox.margin>
                   <Insets />
                </VBox.margin>
                <children>
-                  <TextField id="search" fx:id="SearchCriteriaTextField" promptText="Search by issuer/currency" styleClass="search">
+                  <TextField id="search" fx:id="searchCriteriaTextField" promptText="Search by issuer/currency" styleClass="search">
                      <opaqueInsets>
                         <Insets />
                      </opaqueInsets>
@@ -34,7 +34,7 @@
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                      </padding>
                   </TextField>
-                  <ImageView fx:id="SearchCancelImageView" fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
+                  <ImageView fx:id="searchCancelImageView" fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
                      <image>
                         <Image url="@../../images/clear_inactive.png" />
                      </image>
@@ -44,21 +44,21 @@
                   </ImageView>
                </children>
             </StackPane>
-            <Label fx:id="TotalMatchingLabel" alignment="BOTTOM_LEFT" text="Total 15 matching issuer(s)" wrapText="true">
+            <Label fx:id="totalMatchingLabel" alignment="BOTTOM_LEFT" text="Total 15 matching issuer(s)" wrapText="true">
                <VBox.margin>
                   <Insets bottom="5.0" right="10.0" top="5.0" />
                </VBox.margin>
             </Label>
-            <TreeTableView fx:id="CashViewerTable" showRoot="false" VBox.vgrow="ALWAYS">
+            <TreeTableView fx:id="cashViewerTable" showRoot="false" VBox.vgrow="ALWAYS">
               <columns>
-                <TreeTableColumn fx:id="CashViewerTableIssuerCurrency" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="100.0" styleClass="first-column" text="Issuer/Currency" />
-                <TreeTableColumn fx:id="CashViewerTableLocalCurrency" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="132.0" text="Local currency">
+                <TreeTableColumn fx:id="cashViewerTableIssuerCurrency" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="100.0" styleClass="first-column" text="Issuer/Currency" />
+                <TreeTableColumn fx:id="cashViewerTableLocalCurrency" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="132.0" text="Local currency">
                      <styleClass>
                         <String fx:value="monetary-value" />
                         <String fx:value="second-column" />
                      </styleClass>
                   </TreeTableColumn>
-                  <TreeTableColumn fx:id="CashViewerTableEquiv" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="72.0" styleClass="monetary-value" text="Equiv" />
+                  <TreeTableColumn fx:id="cashViewerTableEquiv" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="72.0" styleClass="monetary-value" text="Equiv" />
               </columns>
             </TreeTableView>
          </children>
@@ -66,12 +66,12 @@
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </padding>
       </VBox>
-      <VBox fx:id="RightPane" spacing="5.0">
+      <VBox fx:id="rightPane" spacing="5.0">
          <children>
             <Button mnemonicParsing="false" text="&gt;&gt;" />
-            <Label fx:id="TotalPositionsLabel" styleClass="subline" text="Total 18 position(s)" />
-            <Label fx:id="EquivSumLabel" styleClass="headline" text="USD 394.6k" />
-            <ListView fx:id="CashStatesList" VBox.vgrow="ALWAYS" />
+            <Label fx:id="totalPositionsLabel" styleClass="subline" text="Total 18 position(s)" />
+            <Label fx:id="equivSumLabel" styleClass="headline" text="USD 394.6k" />
+            <ListView fx:id="cashStatesList" VBox.vgrow="ALWAYS" />
          </children>
          <opaqueInsets>
             <Insets />

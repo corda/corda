@@ -14,7 +14,7 @@ import tornadofx.View
 
 class TopLevel : View() {
     override val root: VBox by fxml()
-    val selection: BorderPane by fxid("SelectionBorderPane")
+    val selectionBorderPane: BorderPane by fxid()
 
     private val header: Header by inject()
     private val home: Home by inject()
@@ -35,8 +35,8 @@ class TopLevel : View() {
     val selectedView: ObjectProperty<SelectedView> by objectProperty(TopLevelModel::selectedView)
 
     init {
-        VBox.setVgrow(selection, Priority.ALWAYS)
-        selection.centerProperty().bind(EasyBind.map(selectedView) { getView(it) })
+        VBox.setVgrow(selectionBorderPane, Priority.ALWAYS)
+        selectionBorderPane.centerProperty().bind(EasyBind.map(selectedView) { getView(it) })
 
         primaryStage.addEventHandler(KeyEvent.KEY_RELEASED) { keyEvent ->
             if (keyEvent.code == KeyCode.ESCAPE) {

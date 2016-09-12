@@ -15,11 +15,11 @@ import tornadofx.View
 class Header : View() {
     override val root: VBox by fxml()
 
-    private val sectionIcon: ImageView by fxid("SectionIcon")
-    private val sectionIconContainer: VBox by fxid("SectionIconContainer")
-    private val sectionLabel: Label by fxid("SectionLabel")
-    private val debugNextButton: Button by fxid("DebugNextButton")
-    private val debugGoStopButton: Button by fxid("DebugGoStopButton")
+    private val sectionIcon: ImageView by fxid()
+    private val sectionIconContainer: VBox by fxid()
+    private val sectionLabel: Label by fxid()
+    private val debugNextButton: Button by fxid()
+    private val debugGoStopButton: Button by fxid()
 
     private val selectedView: ObservableValue<SelectedView> by observableValue(TopLevelModel::selectedView)
 

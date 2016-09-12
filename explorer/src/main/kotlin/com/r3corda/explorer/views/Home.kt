@@ -26,11 +26,11 @@ import java.util.*
 class Home : View() {
     override val root: TilePane by fxml()
 
-    private val ourCashPane: TitledPane by fxid("OurCashPane")
-    private val ourCashLabel: Label by fxid("OurCashLabel")
+    private val ourCashPane: TitledPane by fxid()
+    private val ourCashLabel: Label by fxid()
 
-    private val ourTransactionsPane: TitledPane by fxid("OurTransactionsPane")
-    private val ourTransactionsLabel: Label by fxid("OurTransactionsLabel")
+    private val ourTransactionsPane: TitledPane by fxid()
+    private val ourTransactionsLabel: Label by fxid()
 
     private val selectedView: WritableValue<SelectedView> by writableValue(TopLevelModel::selectedView)
     private val cashStates: ObservableList<StateAndRef<Cash.State>> by observableList(ContractStateModel::cashStates)

@@ -40,23 +40,23 @@
             </ImageView>
          </children>
       </StackPane>
-      <SplitPane fx:id="TopSplitPane" dividerPositions="0.3, 0.6, 0.7" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
+      <SplitPane fx:id="topSplitPane" dividerPositions="0.3, 0.6, 0.7" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
          <items>
-            <TableView fx:id="TransactionViewTable" prefHeight="200.0" prefWidth="200.0">
+            <TableView fx:id="transactionViewTable" prefHeight="200.0" prefWidth="200.0">
               <columns>
-                <TableColumn fx:id="TransactionViewFiberId" prefWidth="187.0" text="Fiber ID" />
-                  <TableColumn fx:id="TransactionViewClientUuid" prefWidth="75.0" text="Client UUID" />
-                  <TableColumn fx:id="TransactionViewTransactionStatus" prefWidth="75.0" text="Transaction status" />
-                  <TableColumn fx:id="TransactionViewProtocolStatus" prefWidth="75.0" text="Protocol status" />
-                  <TableColumn fx:id="TransactionViewStateMachineStatus" prefWidth="75.0" text="SM Status" />
-                  <TableColumn fx:id="TransactionViewCommandTypes" prefWidth="75.0" text="Command type(s)" />
-                  <TableColumn fx:id="TransactionViewTotalValueEquiv" prefWidth="75.0" styleClass="monetary-value" text="Total value (USD equiv)" />
+                <TableColumn fx:id="transactionViewFiberId" prefWidth="187.0" text="Fiber ID" />
+                  <TableColumn fx:id="transactionViewClientUuid" prefWidth="75.0" text="Client UUID" />
+                  <TableColumn fx:id="transactionViewTransactionStatus" prefWidth="75.0" text="Transaction status" />
+                  <TableColumn fx:id="transactionViewProtocolStatus" prefWidth="75.0" text="Protocol status" />
+                  <TableColumn fx:id="transactionViewStateMachineStatus" prefWidth="75.0" text="SM Status" />
+                  <TableColumn fx:id="transactionViewCommandTypes" prefWidth="75.0" text="Command type(s)" />
+                  <TableColumn fx:id="transactionViewTotalValueEquiv" prefWidth="75.0" styleClass="monetary-value" text="Total value (USD equiv)" />
               </columns>
                <columnResizePolicy>
                   <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
                </columnResizePolicy>
             </TableView>
-          <TitledPane fx:id="ContractStatesTitledPane" animated="false" text="Contract states">
+          <TitledPane fx:id="contractStatesTitledPane" animated="false" text="Contract states">
                <content>
                   <SplitPane dividerPositions="0.5" prefHeight="160.0" prefWidth="200.0">
                      <items>
@@ -65,22 +65,22 @@
                               <HBox spacing="5.0">
                                  <children>
                                     <Label text="Inputs:" />
-                                    <Label fx:id="ContractStatesInputsCountLabel" text="Label" />
+                                    <Label fx:id="contractStatesInputsCountLabel" text="Label" />
                                  </children>
                               </HBox>
-                              <TableView fx:id="ContractStatesInputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                              <TableView fx:id="contractStatesInputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                                 <columns>
-                                  <TableColumn fx:id="ContractStatesInputStatesId" prefWidth="75.0" text="ID" />
-                                  <TableColumn fx:id="ContractStatesInputStatesType" prefWidth="75.0" text="Type" />
-                                    <TableColumn fx:id="ContractStatesInputStatesOwner" prefWidth="75.0" text="Owner" />
-                                    <TableColumn fx:id="ContractStatesInputStatesLocalCurrency" prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
-                                    <TableColumn fx:id="ContractStatesInputStatesAmount" prefWidth="75.0" text="Amount">
+                                  <TableColumn fx:id="contractStatesInputStatesId" prefWidth="75.0" text="ID" />
+                                  <TableColumn fx:id="contractStatesInputStatesType" prefWidth="75.0" text="Type" />
+                                    <TableColumn fx:id="contractStatesInputStatesOwner" prefWidth="75.0" text="Owner" />
+                                    <TableColumn fx:id="contractStatesInputStatesLocalCurrency" prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
+                                    <TableColumn fx:id="contractStatesInputStatesAmount" prefWidth="75.0" text="Amount">
                                        <styleClass>
                                           <String fx:value="second-column" />
                                           <String fx:value="monetary-value" />
                                        </styleClass>
                                     </TableColumn>
-                                    <TableColumn fx:id="ContractStatesInputStatesEquiv" prefWidth="75.0" text="USD Equiv" />
+                                    <TableColumn fx:id="contractStatesInputStatesEquiv" prefWidth="75.0" text="USD Equiv" />
                                 </columns>
                                  <columnResizePolicy>
                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -93,22 +93,22 @@
                               <HBox spacing="5.0">
                                  <children>
                                     <Label text="Outputs:" />
-                                    <Label fx:id="ContractStatesOutputsCountLabel" text="Label" />
+                                    <Label fx:id="contractStatesOutputsCountLabel" text="Label" />
                                  </children>
                               </HBox>
-                              <TableView fx:id="ContractStatesOutputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                              <TableView fx:id="contractStatesOutputStatesTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                                  <columns>
-                                    <TableColumn fx:id="ContractStatesOutputStatesId" prefWidth="75.0" text="ID" />
-                                    <TableColumn fx:id="ContractStatesOutputStatesType" prefWidth="75.0" text="Type" />
-                                    <TableColumn fx:id="ContractStatesOutputStatesOwner" prefWidth="75.0" text="Owner" />
-                                    <TableColumn fx:id="ContractStatesOutputStatesLocalCurrency" prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
-                                    <TableColumn fx:id="ContractStatesOutputStatesAmount" prefWidth="75.0" text="Amount">
+                                    <TableColumn fx:id="contractStatesOutputStatesId" prefWidth="75.0" text="ID" />
+                                    <TableColumn fx:id="contractStatesOutputStatesType" prefWidth="75.0" text="Type" />
+                                    <TableColumn fx:id="contractStatesOutputStatesOwner" prefWidth="75.0" text="Owner" />
+                                    <TableColumn fx:id="contractStatesOutputStatesLocalCurrency" prefWidth="75.0" styleClass="first-column" text="Local Ccy" />
+                                    <TableColumn fx:id="contractStatesOutputStatesAmount" prefWidth="75.0" text="Amount">
                                        <styleClass>
                                           <String fx:value="second-column" />
                                           <String fx:value="monetary-value" />
                                        </styleClass>
                                     </TableColumn>
-                                    <TableColumn fx:id="ContractStatesOutputStatesEquiv" prefWidth="75.0" text="USD Equiv" />
+                                    <TableColumn fx:id="contractStatesOutputStatesEquiv" prefWidth="75.0" text="USD Equiv" />
                                  </columns>
                                  <columnResizePolicy>
                                     <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
@@ -120,17 +120,17 @@
                   </SplitPane>
                </content>
             </TitledPane>
-            <TitledPane fx:id="SignaturesTitledPane" animated="false" text="Required signatures">
+            <TitledPane fx:id="signaturesTitledPane" animated="false" text="Required signatures">
                <content>
-                  <ListView fx:id="SignaturesList" />
+                  <ListView fx:id="signaturesList" />
                </content>
             </TitledPane>
-            <TitledPane fx:id="LowLevelEventsTitledPane" animated="false" text="Low level events">
+            <TitledPane fx:id="lowLevelEventsTitledPane" animated="false" text="Low level events">
                <content>
-                  <TableView fx:id="LowLevelEventsTable">
+                  <TableView fx:id="lowLevelEventsTable">
                     <columns>
-                      <TableColumn fx:id="LowLevelEventsTimestamp" prefWidth="102.0" text="Timestamp" />
-                      <TableColumn fx:id="LowLevelEventsEvent" prefWidth="138.0" text="Event" />
+                      <TableColumn fx:id="lowLevelEventsTimestamp" prefWidth="102.0" text="Timestamp" />
+                      <TableColumn fx:id="lowLevelEventsEvent" prefWidth="138.0" text="Event" />
                     </columns>
                   </TableView>
                </content>
@@ -139,7 +139,7 @@
       </SplitPane>
       <HBox>
          <children>
-            <Label fx:id="MatchingTransactionsLabel" text="matching transaction(s)" />
+            <Label fx:id="matchingTransactionsLabel" text="matching transaction(s)" />
          </children>
       </HBox>
    </children>
