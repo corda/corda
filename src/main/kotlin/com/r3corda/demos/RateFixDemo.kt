@@ -11,7 +11,7 @@ import com.r3corda.core.utilities.LogHelper
 import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.protocols.RatesFixProtocol
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import joptsimple.OptionParser
@@ -49,7 +49,7 @@ fun main(args: Array<String>) {
     LogHelper.setLevel("+RatesFixDemo", "-org.apache.activemq")
 
     val dir = Paths.get(options.valueOf(dirArg))
-    val networkMapAddr = ArtemisMessagingClient.makeNetworkMapAddress(HostAndPort.fromString(options.valueOf(networkMapAddrArg)))
+    val networkMapAddr = NodeMessagingClient.makeNetworkMapAddress(HostAndPort.fromString(options.valueOf(networkMapAddrArg)))
 
     val fixOf: FixOf = NodeInterestRates.parseFixOf(options.valueOf(fixOfArg))
     val expectedRate = BigDecimal(options.valueOf(expectedRateArg))
