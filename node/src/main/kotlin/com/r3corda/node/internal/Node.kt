@@ -10,7 +10,7 @@ import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.servlets.AttachmentDownloadServlet
@@ -118,9 +118,9 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             p2pAddr
         }()
         if (networkMapService != null) {
-            return ArtemisMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread)
+            return NodeMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread)
         } else {
-            return ArtemisMessagingClient(dir, configuration, serverAddr, null, serverThread)
+            return NodeMessagingClient(dir, configuration, serverAddr, null, serverThread)
         }
     }
 
@@ -134,7 +134,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         }
 
         // Start up the MQ client.
-        (net as ArtemisMessagingClient).apply {
+        (net as NodeMessagingClient).apply {
             configureWithDevSSLCertificate() // TODO: Client might need a separate certificate
             start()
         }
@@ -266,7 +266,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        (net as ArtemisMessagingClient).run()
+        (net as NodeMessagingClient).run()
     }
 
     // TODO: Do we really need setup?

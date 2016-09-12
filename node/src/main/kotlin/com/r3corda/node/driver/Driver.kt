@@ -10,7 +10,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
@@ -59,12 +59,12 @@ interface DriverDSLExposedInterface {
     fun startNode(providedName: String? = null, advertisedServices: Set<ServiceType> = setOf()): Future<NodeInfo>
 
     /**
-     * Starts an [ArtemisMessagingClient].
+     * Starts an [NodeMessagingClient].
      *
      * @param providedName name of the client, which will be used for creating its directory.
      * @param serverAddress the artemis server to connect to, for example a [Node].
      */
-    fun startClient(providedName: String, serverAddress: HostAndPort): Future<ArtemisMessagingClient>
+    fun startClient(providedName: String, serverAddress: HostAndPort): Future<NodeMessagingClient>
     /**
      * Starts a local [ArtemisMessagingServer] of which there may only be one.
      */
@@ -231,7 +231,7 @@ class DriverDSL(
 
     class State {
         val registeredProcesses = LinkedList<Process>()
-        val clients = LinkedList<ArtemisMessagingClient>()
+        val clients = LinkedList<NodeMessagingClient>()
         var localServer: ArtemisMessagingServer? = null
     }
     private val state = ThreadBox(State())
@@ -324,7 +324,7 @@ class DriverDSL(
     override fun startClient(
             providedName: String,
             serverAddress: HostAndPort
-    ): Future<ArtemisMessagingClient> {
+    ): Future<NodeMessagingClient> {
 
         val nodeConfiguration = NodeConfigurationFromConfig(
                 NodeConfiguration.loadConfig(
@@ -335,7 +335,7 @@ class DriverDSL(
                         )
                 )
         )
-        val client = ArtemisMessagingClient(
+        val client = NodeMessagingClient(
                 Paths.get(baseDirectory, providedName),
                 nodeConfiguration,
                 serverHostPort = serverAddress,
@@ -344,7 +344,7 @@ class DriverDSL(
                 persistentInbox = false // Do not create a permanent queue for our transient UI identity
         )
 
-        return Executors.newSingleThreadExecutor().submit(Callable<ArtemisMessagingClient> {
+        return Executors.newSingleThreadExecutor().submit(Callable<NodeMessagingClient> {
             client.configureWithDevSSLCertificate()
             client.start()
             thread { client.run() }
@@ -386,7 +386,7 @@ class DriverDSL(
     override fun start() {
         startNetworkMapService()
         val networkMapClient = startClient("driver-$networkMapName-client", networkMapAddress).get()
-        val networkMapAddr = ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress)
+        val networkMapAddr = NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
         networkMapCache.addMapService(networkMapClient, networkMapAddr, true)
         networkMapNodeInfo = poll("network map cache for $networkMapName") {
             networkMapCache.partyNodes.forEach {

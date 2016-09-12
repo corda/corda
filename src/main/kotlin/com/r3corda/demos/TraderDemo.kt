@@ -24,7 +24,7 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -135,7 +135,7 @@ fun main(args: Array<String>) {
         null
     } else {
         advertisedServices = emptySet()
-        ArtemisMessagingClient.makeNetworkMapAddress(theirNetAddr)
+        NodeMessagingClient.makeNetworkMapAddress(theirNetAddr)
     }
 
     // And now construct then start the node object. It takes a little while.

@@ -23,11 +23,11 @@ import javax.annotation.concurrent.ThreadSafe
 /**
  * This class implements the [MessagingService] API using Apache Artemis, the successor to their ActiveMQ product.
  * Artemis is a message queue broker and here we run a client connecting to the specified broker instance
- * [ArtemisMessagingServer].
+ * [ArtemisMessagingServer]. It's primarily concerned with peer-to-peer messaging.
  *
  * Message handlers are run on the provided [AffinityExecutor] synchronously, that is, the Artemis callback threads
- * are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given executor
- * through into Artemis and from there, back through to senders.
+ * are blocked until the handler is scheduled and completed. This allows backpressure to propagate from the given
+ * executor through into Artemis and from there, back through to senders.
  *
  * @param serverHostPort The address of the broker instance to connect to (might be running in the same process)
  * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
@@ -37,14 +37,14 @@ import javax.annotation.concurrent.ThreadSafe
  * If false the inbox queue will be transient, which is appropriate for UI clients for example.
  */
 @ThreadSafe
-class ArtemisMessagingClient(directory: Path,
-                             config: NodeConfiguration,
-                             val serverHostPort: HostAndPort,
-                             val myIdentity: PublicKey?,
-                             val executor: AffinityExecutor,
-                             val persistentInbox: Boolean = true) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
+class NodeMessagingClient(directory: Path,
+                          config: NodeConfiguration,
+                          val serverHostPort: HostAndPort,
+                          val myIdentity: PublicKey?,
+                          val executor: AffinityExecutor,
+                          val persistentInbox: Boolean = true) : ArtemisMessagingComponent(directory, config), MessagingServiceInternal {
     companion object {
-        val log = loggerFor<ArtemisMessagingClient>()
+        val log = loggerFor<NodeMessagingClient>()
 
         // This is a "property" attached to an Artemis MQ message object, which contains our own notion of "topic".
         // We should probably try to unify our notion of "topic" (really, just a string that identifies an endpoint

@@ -5,7 +5,7 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.utilities.AffinityExecutor
@@ -36,7 +36,7 @@ class ArtemisMessagingTests {
         override val trustStorePassword: String = "trustpass"
     }
 
-    var messagingClient: ArtemisMessagingClient? = null
+    var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
     val networkMapCache = InMemoryNetworkMapCache()
@@ -103,8 +103,8 @@ class ArtemisMessagingTests {
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
 
-    private fun createMessagingClient(server: HostAndPort = hostAndPort): ArtemisMessagingClient {
-        return ArtemisMessagingClient(temporaryFolder.newFolder().toPath(), config, server, identity.public, AffinityExecutor.SAME_THREAD).apply {
+    private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
+        return NodeMessagingClient(temporaryFolder.newFolder().toPath(), config, server, identity.public, AffinityExecutor.SAME_THREAD).apply {
             configureWithDevSSLCertificate()
             messagingClient = this
         }

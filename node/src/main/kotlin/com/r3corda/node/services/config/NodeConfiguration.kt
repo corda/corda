@@ -8,7 +8,7 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
 import com.r3corda.node.serialization.NodeClock
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.typesafe.config.Config
@@ -116,7 +116,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
             }
         }
         if (networkMapAddress == null) advertisedServices.add(NetworkMapService.Type)
-        val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else ArtemisMessagingClient.makeNetworkMapAddress(networkMapAddress)
+        val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
         return Node(basedir.toAbsolutePath().normalize(),
                 artemisAddress,
                 webAddress,

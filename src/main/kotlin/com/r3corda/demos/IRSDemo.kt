@@ -24,7 +24,7 @@ import com.r3corda.node.internal.Node
 import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.messaging.ArtemisMessagingClient
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.testing.node.MockNetwork
@@ -388,7 +388,7 @@ fun runUploadRates(cliParams: CliParams.UploadRates) = runUploadRates(cliParams.
 
 private fun createRecipient(addr: String): SingleMessageRecipient {
     val hostAndPort = HostAndPort.fromString(addr).withDefaultPort(Node.DEFAULT_PORT)
-    return ArtemisMessagingClient.makeNetworkMapAddress(hostAndPort)
+    return NodeMessagingClient.makeNetworkMapAddress(hostAndPort)
 }
 
 private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient): Node {
