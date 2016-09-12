@@ -245,9 +245,6 @@ class UniversalContract : Contract {
                 val expectedArr = replaceFixing(tx, arr,
                         value.fixes.associateBy({ it.of }, { it.value }), unusedFixes)
 
-                println(expectedArr)
-                println(outState.details)
-
                 // debugCompare(expectedArr, outState.details)
 
                 requireThat {
