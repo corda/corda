@@ -3,6 +3,7 @@ package com.r3corda.contracts.universal
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
@@ -61,3 +62,12 @@ class Continuation() : Arrangement {
         return other is Continuation
     }
 }
+
+// A smart contract template
+// todo: handle parameters
+//
+data class Template(val template: Arrangement)
+
+data class TemplateApplication(val template: SecureHash, val parameters: Map<String, Any>) : Arrangement
+
+data class Context(val arrangement: Arrangement, val parameters: Map<String, Any>) : Arrangement

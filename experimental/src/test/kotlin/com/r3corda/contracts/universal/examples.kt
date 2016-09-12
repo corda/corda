@@ -54,9 +54,9 @@ val european_fx_option = arrange {
     }
 }
 
-val zero_coupon_bond_1 = arrange {
+val contractZeroCouponBond = arrange {
     acmeCorp.may {
-        "execute".givenThat(after("2017-09-01")) {
+        "execute".givenThat(after("2017-11-01")) {
             highStreetBank.gives(acmeCorp, 1.M, USD)
         }
     }

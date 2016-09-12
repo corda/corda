@@ -5,6 +5,7 @@ import com.r3corda.core.contracts.Tenor
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import java.time.Period
 import java.util.*
 
 /**
@@ -30,15 +31,9 @@ data class Const<T>(val value: T) : Perceivable<T> {
         }
         if (other is Const<*>) {
             if (value is BigDecimal && other.value is BigDecimal) {
-                if (this.value.compareTo(other.value) == 0)
-                    return true
-                else
-                    return false
+                return this.value.compareTo(other.value) == 0
             }
-            if(value.equals(other.value))
-                return true
-            else
-                return false
+            return value.equals(other.value)
         }
         return false
     }
@@ -50,6 +45,12 @@ data class Const<T>(val value: T) : Perceivable<T> {
 }
 
 fun<T> const(k: T) = Const(k)
+
+data class Max(val args: Set<Perceivable<BigDecimal>>) : Perceivable<BigDecimal>
+fun max(vararg args: Perceivable<BigDecimal>) = Max(args.toSet())
+
+data class Min(val args: Set<Perceivable<BigDecimal>>) : Perceivable<BigDecimal>
+fun min(vararg args: Perceivable<BigDecimal>) = Min(args.toSet())
 
 //
 class StartDate : Perceivable<Instant> {

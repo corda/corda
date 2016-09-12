@@ -45,7 +45,7 @@ open class ContractBuilder {
         return c
     }
 
-fun Set<Party>.may(init: ActionBuilder.() -> Unit): Actions {
+    fun Set<Party>.may(init: ActionBuilder.() -> Unit): Actions {
         val b = ActionBuilder(this)
         b.init()
         val c = Actions(b.actions.toSet())

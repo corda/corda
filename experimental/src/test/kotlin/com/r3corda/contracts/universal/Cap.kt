@@ -26,7 +26,7 @@ class Cap {
         rollOut("2016-09-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
             (acmeCorp or highStreetBank).may {
                 "exercise".anytime {
-                    val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
+                    val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                     highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
                     next()
@@ -51,7 +51,7 @@ class Cap {
                 rollOut("2016-12-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
                     (acmeCorp or highStreetBank).may {
                         "exercise".anytime {
-                            val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
+                            val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                             val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                             highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
                             next()
@@ -70,7 +70,7 @@ class Cap {
                 rollOut("2016-12-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
                     (acmeCorp or highStreetBank).may {
                         "exercise".anytime {
-                            val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
+                            val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                             val fixed = interest(notional, "act/365", 0.5.bd, start, end)
                             highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
                             next()
@@ -90,15 +90,15 @@ class Cap {
 
     val stateFixed = UniversalContract.State( listOf(DUMMY_NOTARY.owningKey), contractFixed)
 
-    val contractTARN = arrange {
+    val contractLimitedCap = arrange {
         rollOut("2016-04-01".ld, "2017-04-01".ld, Frequency.Quarterly, object {
             val limit = variable(150.K)
         }) {
             (acmeCorp or highStreetBank).may {
                 "exercise".anytime {
-                    val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
+                    val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
                     val fixed = interest(notional, "act/365", 0.5.bd, start, end)
-                    val payout = (floating - fixed).plus()
+                    val payout = min(floating - fixed)
                     highStreetBank.gives(acmeCorp, payout, currency)
                     next(vars.limit to vars.limit - payout)
                 }
@@ -142,39 +142,39 @@ class Cap {
             output { stateFixed }
             timestamp(TEST_TX_TIME_1)
 
-      /*      tweak {
+            tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
 
             tweak {
                 // wrong source
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", tradeDate, Tenor("6M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBORx", tradeDate, Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong date
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate.plusYears(1), Tenor("6M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate.plusYears(1), Tenor("3M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
                 // wrong tenor
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.0.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("9M")), 1.0.bd))) }
 
                 this `fails with` "relevant fixing must be included"
             }
 
             tweak {
-                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("6M")), 1.5.bd))) }
+                command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.5.bd))) }
 
                 this `fails with` "output state does not reflect fix command"
-            }*/
+            }
 
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("6M")), 1.0.bd))) }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("3M")), 1.0.bd))) }
 
             this.verifies()
         }
