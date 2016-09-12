@@ -8,6 +8,7 @@ import com.r3corda.core.contracts.CommandData
 import com.r3corda.core.contracts.withoutIssuer
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.explorer.AmountDiff
@@ -45,6 +46,7 @@ class TransactionViewer: View() {
 
     // Top half (transactions table)
     private val transactionViewTable: TableView<ViewerNode> by fxid()
+    private val transactionViewTransactionId: TableColumn<ViewerNode, String> by fxid()
     private val transactionViewFiberId: TableColumn<ViewerNode, String> by fxid()
     private val transactionViewClientUuid: TableColumn<ViewerNode, String> by fxid()
     private val transactionViewTransactionStatus: TableColumn<ViewerNode, TransactionCreateStatus?> by fxid()
@@ -92,7 +94,9 @@ class TransactionViewer: View() {
     private val myIdentity: ObservableValue<Party> by observableValue(IdentityModel::myIdentity)
 
     data class ViewerNode(
-            val transactionId: ObservableValue<Pair<Long?, UUID?>>,
+            val transactionId: ObservableValue<SecureHash?>,
+            val fiberId: ObservableValue<Long?>,
+            val clientUuid: ObservableValue<UUID?>,
             val originator: ObservableValue<String>,
             val transactionStatus: ObservableValue<TransactionCreateStatus?>,
             val stateMachineStatus: ObservableValue<StateMachineStatus?>,
@@ -111,7 +115,9 @@ class TransactionViewer: View() {
 
     private val viewerNodes = EasyBind.map(gatheredTransactionDataList) {
         ViewerNode(
-                transactionId = EasyBind.combine(it.fiberId, it.uuid) { fiberId, uuid -> Pair(fiberId, uuid) },
+                transactionId = EasyBind.map(it.transaction) { it?.id },
+                fiberId = it.fiberId,
+                clientUuid = it.uuid,
                 originator = EasyBind.map(it.uuid) { uuid ->
                     if (uuid == null) {
                         "Someone"
@@ -284,8 +290,9 @@ class TransactionViewer: View() {
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / transactionViewTable.columns.size).toInt()
         }
 
-        transactionViewFiberId.setCellValueFactory { EasyBind.map (it.value.transactionId) { "${it.first ?: ""}" } }
-        transactionViewClientUuid.setCellValueFactory { EasyBind.map (it.value.transactionId) { "${it.second ?: ""}" } }
+        transactionViewTransactionId.setCellValueFactory { EasyBind.map (it.value.transactionId) { "${it ?: ""}" } }
+        transactionViewFiberId.setCellValueFactory { EasyBind.map (it.value.fiberId) { "${it?: ""}" } }
+        transactionViewClientUuid.setCellValueFactory { EasyBind.map (it.value.clientUuid) { "${it ?: ""}" } }
         transactionViewProtocolStatus.setCellValueFactory { EasyBind.map(it.value.protocolStatus) { "${it ?: ""}" } }
         transactionViewTransactionStatus.setCellValueFactory { it.value.transactionStatus }
         transactionViewTransactionStatus.setCellFactory {

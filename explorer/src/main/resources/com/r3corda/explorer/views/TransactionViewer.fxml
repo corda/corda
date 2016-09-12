@@ -44,6 +44,7 @@
          <items>
             <TableView fx:id="transactionViewTable" prefHeight="200.0" prefWidth="200.0">
               <columns>
+                  <TableColumn fx:id="transactionViewTransactionId" prefWidth="75.0" text="Transaction ID" />
                 <TableColumn fx:id="transactionViewFiberId" prefWidth="187.0" text="Fiber ID" />
                   <TableColumn fx:id="transactionViewClientUuid" prefWidth="75.0" text="Client UUID" />
                   <TableColumn fx:id="transactionViewTransactionStatus" prefWidth="75.0" text="Transaction status" />
