@@ -6,7 +6,6 @@ import com.r3corda.contracts.asset.InsufficientBalanceException
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
-import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.ServiceHub
@@ -119,14 +118,13 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
      * Process a request from a monitor to remove them from the subscribers.
      */
     fun processDeregisterRequest(req: DeregisterRequest) {
-        val message: Message
-        try {
+        val message = try {
             // TODO: Session ID should be managed by the messaging layer, so it handles ensuring that the
             //       request comes from the same endpoint that registered at the start.
             listeners.remove(RegisteredListener(req.replyToRecipient, req.sessionID))
-            message = net.createMessage(DEREGISTER_TOPIC, req.sessionID, DeregisterResponse(true).serialize().bits)
+            net.createMessage(DEREGISTER_TOPIC, req.sessionID, DeregisterResponse(true).serialize().bits)
         } catch (ex: IllegalStateException) {
-            message = net.createMessage(DEREGISTER_TOPIC, req.sessionID, DeregisterResponse(false).serialize().bits)
+            net.createMessage(DEREGISTER_TOPIC, req.sessionID, DeregisterResponse(false).serialize().bits)
         }
         net.send(message, req.replyToRecipient)
     }
@@ -136,17 +134,18 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
      * but currently all requests pass (and there's no access control on wallets, so it has no actual meaning).
      */
     fun processRegisterRequest(req: RegisterRequest) {
-        val message: Message
         try {
-            message = net.createMessage(REGISTER_TOPIC, req.sessionID, RegisterResponse(true).serialize().bits)
             listeners.add(RegisteredListener(req.replyToRecipient, req.sessionID))
             val stateMessage = StateSnapshotMessage(services.walletService.currentWallet.states.map { it.state.data }.toList(),
                     smm.allStateMachines.map { it.javaClass.name })
             net.send(net.createMessage(STATE_TOPIC, DEFAULT_SESSION_ID, stateMessage.serialize().bits), req.replyToRecipient)
+
+            val message = net.createMessage(REGISTER_TOPIC, req.sessionID, RegisterResponse(true).serialize().bits)
+            net.send(message, req.replyToRecipient)
         } catch (ex: IllegalStateException) {
-            message = net.createMessage(REGISTER_TOPIC, req.sessionID, RegisterResponse(false).serialize().bits)
+            val message = net.createMessage(REGISTER_TOPIC, req.sessionID, RegisterResponse(false).serialize().bits)
+            net.send(message, req.replyToRecipient)
         }
-        net.send(message, req.replyToRecipient)
     }
 
     private fun notifyEvent(event: ServiceToClientEvent) = listeners.forEach { monitor ->
