@@ -8,6 +8,7 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.databaseTransaction
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
@@ -217,7 +218,6 @@ class ArtemisMessagingClient(directory: Path,
             state.locked {
                 undeliveredMessages += msg
             }
-
             return false
         }
 
@@ -232,13 +232,20 @@ class ArtemisMessagingClient(directory: Path,
                 // Note that handlers may re-enter this class. We aren't holding any locks and methods like
                 // start/run/stop have re-entrancy assertions at the top, so it is OK.
                 executor.fetchFrom {
-                    handler.callback(msg, handler)
+                    // TODO: we should be able to clean this up if we separate client and server code, but for now
+                    //       interpret persistent as "server" and non-persistent as "client".
+                    if (persistentInbox) {
+                        databaseTransaction {
+                            handler.callback(msg, handler)
+                        }
+                    } else {
+                        handler.callback(msg, handler)
+                    }
                 }
             } catch(e: Exception) {
                 log.error("Caught exception whilst executing message handler for ${msg.topicSession}", e)
             }
         }
-
         return true
     }
 

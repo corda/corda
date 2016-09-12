@@ -11,24 +11,29 @@ import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.core.utilities.LogHelper
 import com.r3corda.testing.node.TestClock
 import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
+import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.testing.ALICE_KEY
 import com.r3corda.testing.node.MockKeyManagementService
+import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.Closeable
 import java.nio.file.FileSystem
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     // Use an in memory file system for testing attachment storage.
@@ -38,15 +43,21 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     val stoppedClock = Clock.fixed(realClock.instant(), realClock.zone)
     val testClock = TestClock(stoppedClock)
 
-    val smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
     val schedulerGatedExecutor = AffinityExecutor.Gate(true)
 
     // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     val factory = ProtocolLogicRefFactory(mapOf(Pair(TestProtocolLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
-    val scheduler: NodeSchedulerService
-    val services: ServiceHub
+    val services: MockServiceHubInternal
+
+    lateinit var scheduler: NodeSchedulerService
+    lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
+    lateinit var dataSource: Closeable
+    lateinit var countDown: CountDownLatch
+    lateinit var smmHasRemovedAllProtocols: CountDownLatch
+
+    var calls: Int = 0
 
     /**
      * Have a reference to this test added to [ServiceHub] so that when the [ProtocolLogic] runs it can access the test instance.
@@ -60,22 +71,37 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     init {
         val kms = MockKeyManagementService(ALICE_KEY)
         val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"))
-        val mockServices = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
+        services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
             override val testReference = this@NodeSchedulerServiceTest
         }
-        services = mockServices
-        scheduler = NodeSchedulerService(mockServices, factory, schedulerGatedExecutor)
-        val mockSMM = StateMachineManager(mockServices, listOf(mockServices), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor)
-        mockServices.smm = mockSMM
     }
-
-    lateinit var countDown: CountDownLatch
-    var calls: Int = 0
 
     @Before
     fun setup() {
         countDown = CountDownLatch(1)
+        smmHasRemovedAllProtocols = CountDownLatch(1)
         calls = 0
+        dataSource = configureDatabase(makeTestDataSourceProperties()).first
+        scheduler = NodeSchedulerService(services, factory, schedulerGatedExecutor)
+        smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
+        val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor)
+        mockSMM.changes.subscribe { change:Triple<ProtocolLogic<*>, AddOrRemove, Long> ->
+            if(change.second==AddOrRemove.REMOVE && mockSMM.allStateMachines.size==0) {
+                smmHasRemovedAllProtocols.countDown()
+            }
+        }
+        services.smm = mockSMM
+    }
+
+    @After
+    fun tearDown() {
+        // We need to make sure the StateMachineManager is done before shutting down executors.
+        if(services.smm.allStateMachines.isNotEmpty()) {
+            smmHasRemovedAllProtocols.await()
+        }
+        smmExecutor.shutdown()
+        smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        dataSource.close()
     }
 
     class TestState(val protocolLogicRef: ProtocolLogicRef, val instant: Instant) : LinearState, SchedulableState {
@@ -109,7 +135,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         assertThat(calls).isEqualTo(0)
         schedulerGatedExecutor.waitAndRun()
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(1)
     }
 
@@ -120,7 +146,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         assertThat(calls).isEqualTo(0)
         schedulerGatedExecutor.waitAndRun()
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(1)
     }
 
@@ -135,7 +161,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         testClock.advanceBy(1.days)
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(1)
     }
 
@@ -151,7 +177,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         testClock.advanceBy(1.days)
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(3)
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
@@ -169,9 +195,10 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         testClock.advanceBy(1.days)
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(1)
         testClock.advanceBy(1.days)
+        backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
     }
@@ -187,7 +214,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         scheduleTX(time, 3)
 
         testClock.advanceBy(1.days)
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(1)
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
@@ -206,7 +233,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
         testClock.advanceBy(1.days)
-        countDown.await(60, TimeUnit.SECONDS)
+        countDown.await()
         assertThat(calls).isEqualTo(3)
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)

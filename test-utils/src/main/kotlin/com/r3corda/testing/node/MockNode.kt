@@ -5,13 +5,21 @@ import com.google.common.util.concurrent.Futures
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.PhysicalLocation
+import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.testing.node.TestTransactionManager
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.keys.E2ETestKeyManagementService
+import com.r3corda.node.services.network.InMemoryNetworkMapService
+import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.network.NodeRegistration
+import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -81,8 +89,27 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeWalletService(): WalletService = InMemoryWalletService(services)
 
+        override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
+
         override fun startMessagingService() {
             // Nothing to do
+        }
+
+        // If the in-memory H2 instance is configured, use that, otherwise mock out the transaction manager.
+        override fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
+            try {
+                super.initialiseDatabasePersistence(insideTransaction)
+            } catch(fallback: DatabaseConfigurationException) {
+                log.info("Using mocked database features.")
+                TransactionManager.manager = TestTransactionManager()
+                insideTransaction()
+            }
+        }
+
+        override fun makeNetworkMapService() {
+            val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+            val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
+            inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
         }
 
         override fun generateKeyPair(): KeyPair = keyPair ?: super.generateKeyPair()

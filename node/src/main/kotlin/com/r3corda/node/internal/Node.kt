@@ -18,9 +18,11 @@ import com.r3corda.node.servlets.Config
 import com.r3corda.node.servlets.DataUploadServlet
 import com.r3corda.node.servlets.ResponseFilter
 import com.r3corda.node.utilities.AffinityExecutor
+import com.r3corda.node.utilities.databaseTransaction
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
+import org.eclipse.jetty.servlet.FilterHolder
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
@@ -33,7 +35,10 @@ import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
 import java.nio.file.Path
 import java.time.Clock
+import java.util.*
 import javax.management.ObjectName
+import javax.servlet.*
+import javax.servlet.http.HttpServletResponse
 import kotlin.concurrent.thread
 
 class ConfigurationException(message: String) : Exception(message)
@@ -231,6 +236,10 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             val jerseyServlet = ServletHolder(container)
             addServlet(jerseyServlet, "/api/*")
             jerseyServlet.initOrder = 0 // Initialise at server start
+
+            // Wrap all API calls in a database transaction.
+            val filterHolder = FilterHolder(DatabaseTransactionFilter())
+            addFilter(filterHolder, "/api/*", EnumSet.of(DispatcherType.REQUEST))
         }
     }
 
@@ -323,5 +332,20 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         f.setLength(0)
         f.write(ourProcessID.toByteArray())
+    }
+
+    // Servlet filter to wrap API requests with a database transaction.
+    private class DatabaseTransactionFilter : Filter {
+        override fun init(filterConfig: FilterConfig?) {
+        }
+
+        override fun destroy() {
+        }
+
+        override fun doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
+            databaseTransaction {
+                chain.doFilter(request, response)
+            }
+        }
     }
 }

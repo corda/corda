@@ -45,10 +45,7 @@ import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.services.wallet.CashBalanceAsMetricsObserver
 import com.r3corda.node.services.wallet.NodeWalletService
-import com.r3corda.node.utilities.ANSIProgressObserver
-import com.r3corda.node.utilities.AddOrRemove
-import com.r3corda.node.utilities.AffinityExecutor
-import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.*
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -125,7 +122,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var wallet: WalletService
-    lateinit var keyManagement: E2ETestKeyManagementService
+    lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeWalletMonitorService: WalletMonitorService? = null
     var inNodeNotaryService: NotaryService? = null
@@ -163,59 +160,61 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         require(!started) { "Node has already been started" }
         log.info("Node starting up ...")
 
-        initialiseDatabasePersistence()
-        val storageServices = initialiseStorageService(dir)
-        storage = storageServices.first
-        checkpointStorage = storageServices.second
-        netMapCache = InMemoryNetworkMapCache()
-        net = makeMessagingService()
-        wallet = makeWalletService()
+        // Do all of this in a database transaction so anything that might need a connection has one.
+        initialiseDatabasePersistence() {
+            val storageServices = initialiseStorageService(dir)
+            storage = storageServices.first
+            checkpointStorage = storageServices.second
+            netMapCache = InMemoryNetworkMapCache()
+            net = makeMessagingService()
+            wallet = makeWalletService()
 
-        identity = makeIdentityService()
+            identity = makeIdentityService()
 
-        // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
-        // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
-        // the identity key. But the infrastructure to make that easy isn't here yet.
-        keyManagement = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
-        api = APIServerImpl(this)
-        scheduler = NodeSchedulerService(services)
+            // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
+            // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
+            // the identity key. But the infrastructure to make that easy isn't here yet.
+            keyManagement = makeKeyManagementService()
+            api = APIServerImpl(this@AbstractNode)
+            scheduler = NodeSchedulerService(services)
 
-        protocolLogicFactory = initialiseProtocolLogicFactory()
+            protocolLogicFactory = initialiseProtocolLogicFactory()
 
-        val tokenizableServices = mutableListOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler)
+            val tokenizableServices = mutableListOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler)
 
-        customServices.clear()
-        customServices.addAll(buildPluginServices(tokenizableServices))
+            customServices.clear()
+            customServices.addAll(buildPluginServices(tokenizableServices))
 
-        // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
-        //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
-        advertisedServices.singleOrNull { it.isSubTypeOf(NotaryService.Type) }?.let {
-            uniquenessProvider = makeUniquenessProvider()
-            tokenizableServices.add(uniquenessProvider!!)
-        }
-
-        smm = StateMachineManager(services,
-                listOf(tokenizableServices),
-                checkpointStorage,
-                serverThread)
-        if (serverThread is ExecutorService) {
-            runOnStop += Runnable {
-                // We wait here, even though any in-flight messages should have been drained away because the
-                // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
-                // arbitrary and might be inappropriate.
-                MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, TimeUnit.SECONDS)
+            // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
+            //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
+            advertisedServices.singleOrNull { it.isSubTypeOf(NotaryService.Type) }?.let {
+                uniquenessProvider = makeUniquenessProvider()
+                tokenizableServices.add(uniquenessProvider!!)
             }
+
+            smm = StateMachineManager(services,
+                    listOf(tokenizableServices),
+                    checkpointStorage,
+                    serverThread)
+            if (serverThread is ExecutorService) {
+                runOnStop += Runnable {
+                    // We wait here, even though any in-flight messages should have been drained away because the
+                    // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
+                    // arbitrary and might be inappropriate.
+                    MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, TimeUnit.SECONDS)
+                }
+            }
+
+            inNodeWalletMonitorService = makeWalletMonitorService() // Note this HAS to be after smm is set
+            buildAdvertisedServices()
+
+            // TODO: this model might change but for now it provides some de-coupling
+            // Add SMM observers
+            ANSIProgressObserver(smm)
+            // Add wallet observers
+            CashBalanceAsMetricsObserver(services)
+            ScheduledActivityObserver(services)
         }
-
-        inNodeWalletMonitorService = makeWalletMonitorService() // Note this HAS to be after smm is set
-        buildAdvertisedServices()
-
-        // TODO: this model might change but for now it provides some de-coupling
-        // Add SMM observers
-        ANSIProgressObserver(smm)
-        // Add wallet observers
-        CashBalanceAsMetricsObserver(services)
-        ScheduledActivityObserver(services)
 
         startMessagingService()
         runOnStop += Runnable { net.stop() }
@@ -226,13 +225,21 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         return this
     }
 
-    private fun initialiseDatabasePersistence() {
+    // Specific class so that MockNode can catch it.
+    class DatabaseConfigurationException(msg: String) : Exception(msg)
+
+    protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
             val (toClose, database) = configureDatabase(props)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             log.info("Connected to ${database.vendor} database.")
             runOnStop += Runnable { toClose.close() }
+            databaseTransaction {
+                insideTransaction()
+            }
+        } else {
+            throw DatabaseConfigurationException("There must be a database configured.")
         }
     }
 
@@ -325,6 +332,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         return future
     }
+
+    protected open fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
 
     open protected fun makeNetworkMapService() {
         val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
