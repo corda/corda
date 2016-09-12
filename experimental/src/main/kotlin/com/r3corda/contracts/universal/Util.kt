@@ -5,10 +5,7 @@ import com.google.common.collect.Sets
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.Frequency
 import com.r3corda.core.crypto.Party
-import com.sun.javaws.exceptions.InvalidArgumentException
 import com.sun.org.apache.xpath.internal.operations.Bool
-import com.sun.tools.corba.se.idl.InvalidArgument
-import com.sun.tools.javadoc.Start
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
@@ -96,7 +93,10 @@ fun actions(arrangement: Arrangement): Map<String, Action> = when (arrangement) 
     is Transfer -> mapOf()
     is Actions -> arrangement.actions.map { it.name to it }.toMap()
     is And -> arrangement.arrangements.map { actions(it) }.fold(mutableMapOf()) { m, x ->
-        x.forEach { s, action -> m[s] = action }
+        x.forEach { entry ->
+            val (s, action) = entry
+            m[s] = action
+        }
         m
     }
     is RollOut -> mapOf()

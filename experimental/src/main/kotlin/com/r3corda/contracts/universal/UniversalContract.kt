@@ -4,7 +4,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.TransactionBuilder
-import com.sun.tools.corba.se.idl.InvalidArgument
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
@@ -174,7 +173,7 @@ class UniversalContract : Contract {
                 val arr = when (inState.details) {
                     is Actions -> inState.details
                     is RollOut -> reduceRollOut(inState.details)
-                    else -> throw InvalidArgument("Unexpected arrangement, " + tx.inputs.single())
+                    else -> throw IllegalArgumentException("Unexpected arrangement, " + tx.inputs.single())
                 }
 
                 val actions = actions(arr)
@@ -238,7 +237,7 @@ class UniversalContract : Contract {
                 val arr = when (inState.details) {
                     is Actions -> inState.details
                     is RollOut -> reduceRollOut(inState.details)
-                    else -> throw InvalidArgument("Unexpected arrangement, " + tx.inputs.single())
+                    else -> throw IllegalArgumentException("Unexpected arrangement, " + tx.inputs.single())
                 }
                 val outState = tx.outputs.single() as State
 
