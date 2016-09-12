@@ -4,7 +4,6 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.WalletService
@@ -12,6 +11,7 @@ import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -92,6 +92,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // There is no need to slow down the unit tests by initialising CityDatabase
         override fun findMyLocation(): PhysicalLocation? = null
+
+        override fun makeUniquenessProvider() = InMemoryUniquenessProvider()
 
         override fun start(): MockNode {
             super.start()
