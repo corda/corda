@@ -6,6 +6,7 @@ import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
+import kotlin.test.assertEquals
 
 /**
  * Created by sofusmortensen on 08/09/16.
@@ -25,10 +26,21 @@ class RollOutTests {
             }
         }
     }
+
+    val contract2 = arrange {
+        rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.Monthly) {
+            (acmeCorp or highStreetBank).may {
+                "transfer".givenThat(after(end)) {
+                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                    next()
+                }
+            }
+        }
+    }
     val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
 
     val contractStep1a = arrange {
-        rollOut("2016-12-01".ld, "2017-09-01".ld, Frequency.Monthly) {
+        rollOut("2016-10-03".ld, "2017-09-01".ld, Frequency.Monthly) {
             (acmeCorp or highStreetBank).may {
                 "transfer".givenThat(after(end)) {
                     highStreetBank.gives(acmeCorp, 10.K, USD)
@@ -45,9 +57,73 @@ class RollOutTests {
     val stateStep1a = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractStep1a)
     val stateStep1b = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractStep1b)
 
+    val contract_transfer1 = arrange {
+        highStreetBank.gives(acmeCorp, 10.K, USD)
+    }
+    val contract_transfer2 = arrange {
+        highStreetBank.gives(acmeCorp, 10.K, USD)
+    }
+    val contract_action1 = arrange {
+        highStreetBank.may {
+            "do it".anytime {
+                highStreetBank.gives(acmeCorp, 10.K, USD)
+            }
+        }
+    }
+    val contract_action2 = arrange {
+        highStreetBank.may {
+            "do it".anytime {
+                highStreetBank.gives(acmeCorp, 10.K, USD)
+            }
+        }
+    }
+    val contract_and1 = arrange {
+        highStreetBank.may {
+            "do it".anytime {
+                highStreetBank.gives(acmeCorp, 10.K, USD)
+            }
+        }
+        acmeCorp.may {
+            "do it".anytime {
+                acmeCorp.gives(momAndPop, 10.K, USD)
+            }
+        }
+        next()
+    }
+    val contract_and2 = arrange {
+        highStreetBank.may {
+            "do it".anytime {
+                highStreetBank.gives(acmeCorp, 10.K, USD)
+            }
+        }
+        acmeCorp.may {
+            "do it".anytime {
+                acmeCorp.gives(momAndPop, 10.K, USD)
+            }
+        }
+        next()
+    }
+
+
+    @Test
+    fun `arrangement equality transfer`() {
+        assertEquals(contract_transfer1, contract_transfer2)
+    }
+    @Test
+    fun `arrangement equality action`() {
+        assertEquals(contract_action1, contract_action2)
+    }
+    @Test
+    fun `arrangement equality and`() {
+        assertEquals(contract_and1, contract_and2)
+    }
+    @Test
+    fun `arrangement equality complex`() {
+        assertEquals(contract, contract2)
+    }
+
     @Test
     fun dateTests() {
-
         val d1 = BusinessCalendar.parseDateFromString("2016-09-10")
     }
 
@@ -78,12 +154,12 @@ class RollOutTests {
             output { stateStep1b }
             timestamp(TEST_TX_TIME_1)
 
-            tweak {
+         /*   tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
-            }
+            }*/
 
-            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("exercise") }
+            command(highStreetBank.owningKey) { UniversalContract.Commands.Action("transfer") }
 
             this.verifies()
         }

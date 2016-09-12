@@ -30,13 +30,15 @@ class Swaption {
                             // etc ...
                         }
                     }
-                } or acmeCorp.may {
+                }
+                acmeCorp.may {
                     "cancel".anytime {
                         acmeCorp.gives(highStreetBank, 10.K, USD)
                     }
                 }
             }
-        } or acmeCorp.may {
+        }
+        acmeCorp.may {
             "cancel".anytime {
                 acmeCorp.gives(highStreetBank, 10.K, USD)
             }
@@ -52,7 +54,8 @@ class Swaption {
                     acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, start, end), currency)
                     next()
                 }
-            } or acmeCorp.may {
+            }
+            acmeCorp.may {
                 "cancel".anytime {
                     acmeCorp.gives(highStreetBank, 10.K, currency)
                 }
@@ -77,7 +80,8 @@ class Swaption {
                         }
                     }
                 }
-            } or (acmeCorp or highStreetBank).may {
+            }
+            (acmeCorp or highStreetBank).may {
                 "proceedWithoutExercise".givenThat(after(end)) {
                     next()
                 }
@@ -100,7 +104,8 @@ class Swaption {
                         }
                     }
                 }
-            } or (acmeCorp or highStreetBank).may {
+            }
+            (acmeCorp or highStreetBank).may {
                 "proceedWithoutExercise".givenThat(after(end)) {
                     next()
                 }

@@ -31,7 +31,7 @@ class Cap {
                     highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
                     next()
                 }
-            } or
+            }
             acmeCorp.may {
                 "skip".anytime {
                     next()
@@ -40,13 +40,15 @@ class Cap {
         }
     }
 
+
+
     val contractFixed = arrange {
         (acmeCorp or highStreetBank).may {
             "exercise".anytime() {
-                val floating1 = interest(notional, "act/365", 1.0.bd, "2016-04-01", "2016-07-01")
-                val fixed1 = interest(notional, "act/365", 0.5.bd, "2016-04-01", "2016-07-01")
+                val floating1 = interest(notional, "act/365", 1.0.bd, "2016-09-01", "2016-12-01")
+                val fixed1 = interest(notional, "act/365", 0.5.bd, "2016-09-01", "2016-12-01")
                 highStreetBank.gives(acmeCorp, (floating1 - fixed1).plus(), currency)
-                rollOut("2016-07-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
+                rollOut("2016-12-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
                     (acmeCorp or highStreetBank).may {
                         "exercise".anytime {
                             val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
@@ -54,16 +56,18 @@ class Cap {
                             highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
                             next()
                         }
-                    } or acmeCorp.may {
+                    }
+                    acmeCorp.may {
                         "skip".anytime {
                             next()
                         }
                     }
                 }
             }
-        } or acmeCorp.may {
+        }
+        acmeCorp.may {
             "skip".anytime {
-                rollOut("2016-07-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
+                rollOut("2016-12-01".ld, "2017-04-01".ld, Frequency.Quarterly) {
                     (acmeCorp or highStreetBank).may {
                         "exercise".anytime {
                             val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("6M")), start, end)
@@ -71,7 +75,8 @@ class Cap {
                             highStreetBank.gives(acmeCorp, (floating - fixed).plus(), currency)
                             next()
                         }
-                    } or acmeCorp.may {
+                    }
+                    acmeCorp.may {
                         "skip".anytime {
                             next()
                         }
@@ -97,7 +102,8 @@ class Cap {
                     highStreetBank.gives(acmeCorp, payout, currency)
                     next(vars.limit to vars.limit - payout)
                 }
-            } or acmeCorp.may {
+            }
+            acmeCorp.may {
                 "skip".anytime {
                     next()
                 }
@@ -125,13 +131,18 @@ class Cap {
     }
 
     @Test
+    fun `print debugging`() {
+        // debugprint(contract)
+    }
+
+    @Test
     fun `fixing`() {
         transaction {
             input { stateStart }
             output { stateFixed }
             timestamp(TEST_TX_TIME_1)
 
-            tweak {
+      /*      tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
                 this `fails with` "action must be defined"
             }
@@ -161,7 +172,7 @@ class Cap {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("6M")), 1.5.bd))) }
 
                 this `fails with` "output state does not reflect fix command"
-            }
+            }*/
 
             command(highStreetBank.owningKey) { UniversalContract.Commands.Fix(listOf(com.r3corda.core.contracts.Fix(FixOf("LIBOR", tradeDate, Tenor("6M")), 1.0.bd))) }
 

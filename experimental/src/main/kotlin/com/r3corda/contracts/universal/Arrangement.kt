@@ -35,18 +35,15 @@ data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency,
 data class And(val arrangements: Set<Arrangement>) : Arrangement
 
 
-// An action combinator. This declares a named action that can be taken by anyone of the actors given that
-// _condition_ is met. If the action is performed the arrangement state transitions into the specified arrangement.
 data class Action(val name: String, val condition: Perceivable<Boolean>,
-                  val actors: Set<Party>, val arrangement: Arrangement) : Arrangement {
-    constructor(name: String, condition: Perceivable<Boolean>,
-                actor: Party, arrangement: Arrangement)
-    : this(name, condition, setOf(actor), arrangement)
-}
+                  val actors: Set<Party>, val arrangement: Arrangement)
 
+// An action combinator. This declares a list of named action that can be taken by anyone of the actors given that
+// _condition_ is met. If the action is performed the arrangement state transitions into the specified arrangement.
+data class Actions(val actions: Set<Action>) : Arrangement
 
-// only actions can be or'ed togetherA combinator that can only be used on action arrangements. This means only one of the action can be executed. Should any one action be executed, all other actions are discarded.
-data class Or(val actions: Set<Action>) : Arrangement
+//    constructor(name: String, condition: Perceivable<Boolean>,
+// actor: Party, arrangement: Arrangement)
 
 
 // Roll out of arrangement

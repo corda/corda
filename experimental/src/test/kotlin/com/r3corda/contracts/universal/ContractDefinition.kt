@@ -32,7 +32,8 @@ class ContractDefinition {
             "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
                 highStreetBank.gives(acmeCorp, 1.M, USD)
             }
-        } or highStreetBank.may {
+        }
+        highStreetBank.may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }
@@ -46,7 +47,8 @@ class ContractDefinition {
                 highStreetBank.gives(acmeCorp, 1.M, EUR)
                 acmeCorp.gives(highStreetBank, 1200.K, USD)
             }
-        } or highStreetBank.may {
+        }
+        highStreetBank.may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }
@@ -64,7 +66,8 @@ class ContractDefinition {
                     }
                 }
             }
-        } or highStreetBank.may {
+        }
+        highStreetBank.may {
             "expire".givenThat(after("2017-09-01")) {
                 zero
             }

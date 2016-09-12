@@ -37,31 +37,19 @@ open class ContractBuilder {
         return c
     }
 
-    fun Party.may(init: ActionBuilder.() -> Unit): Or {
+    fun Party.may(init: ActionBuilder.() -> Unit): Actions {
         val b = ActionBuilder(setOf(this))
         b.init()
-        val c = Or(b.actions.toSet())
+        val c = Actions(b.actions.toSet())
         contracts.add(c)
         return c
     }
 
-    fun Set<Party>.may(init: ActionBuilder.() -> Unit): Or {
+fun Set<Party>.may(init: ActionBuilder.() -> Unit): Actions {
         val b = ActionBuilder(this)
         b.init()
-        val c = Or(b.actions.toSet())
+        val c = Actions(b.actions.toSet())
         contracts.add(c)
-        return c
-    }
-
-
-    infix fun Or.or(ors: Or): Or {
-        assert(ors.actions.size == 1)
-        assert(contracts[contracts.lastIndex-1] == this)
-        assert(contracts[contracts.lastIndex] == ors)
-        contracts.removeAt(contracts.lastIndex)
-
-        val c = Or(this.actions + ors.actions.single())
-        contracts[contracts.lastIndex] = c
         return c
     }
 
@@ -90,9 +78,23 @@ open class ContractBuilder {
       }*/
 
     infix fun Arrangement.and(arrangement: Arrangement) = And(setOf(this, arrangement))
-    infix fun Action.or(arrangement: Action) = Or(setOf(this, arrangement))
-//    infix fun Or.or(arrangement: Action) = Or( this.actions.plusElement(arrangement) )
-//    infix fun Or.or(ors: Or) = Or( this.actions.plus(ors.actions) )
+
+    val start = StartDate()
+    val end = EndDate()
+
+    fun next(): Continuation {
+        val c = Continuation()
+        contracts.add(c)
+        return c
+    }
+
+    fun <T1> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>) = Continuation()
+    fun <T1, T2> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>,
+                      @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>) = Continuation()
+
+    fun <T1, T2, T3> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>,
+                          @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>,
+                          @Suppress("UNUSED_PARAMETER") p3: kotlin.Pair<Parameter<T3>, Perceivable<T3>>) = Continuation()
 
     fun rollOut(startDate: LocalDate, endDate: LocalDate, frequency: Frequency, init: RollOutBuilder<Dummy>.() -> Unit): RollOut {
         val b = RollOutBuilder(startDate, endDate, frequency, Dummy())
@@ -161,22 +163,10 @@ data class Parameter<T>(val initialValue: T) : Perceivable<T>
 fun<T> variable(v: T) = Parameter<T>(v)
 
 class RollOutBuilder<T>(val startDate: LocalDate, val endDate: LocalDate, val frequency: Frequency, val vars: T) : ContractBuilder() {
-
-    val start = StartDate()
-    val end = EndDate()
-
-    fun next() = Continuation()
-
-    fun<T1> next( @Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>) = Continuation()
-    fun<T1, T2> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>,
-                     @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>) = Continuation()
-    fun<T1, T2, T3> next(@Suppress("UNUSED_PARAMETER") p1: kotlin.Pair<Parameter<T1>, Perceivable<T1>>,
-                         @Suppress("UNUSED_PARAMETER") p2: kotlin.Pair<Parameter<T2>, Perceivable<T2>>,
-                         @Suppress("UNUSED_PARAMETER") p3: kotlin.Pair<Parameter<T3>, Perceivable<T3>>) = Continuation()
-
     override fun final() =
             RollOut(startDate, endDate, frequency, super.final())
 }
+
 
 
 class Dummy {}

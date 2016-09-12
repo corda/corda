@@ -46,7 +46,8 @@ val european_fx_option = arrange {
         "exercise".givenThat(before("2017-09-01")) {
             fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD, acmeCorp, highStreetBank)
         }
-    } or (acmeCorp or highStreetBank).may {
+    }
+    (acmeCorp or highStreetBank).may {
         "expire".anytime {
             zero
         }
@@ -84,7 +85,8 @@ val no_touch = arrange {
         "execute".givenThat(after("2017-09-01")) {
             highStreetBank.gives(acmeCorp, 1.M, USD)
         }
-    } or highStreetBank.may {
+    }
+    highStreetBank.may {
         "knock out".givenThat(EUR/USD gt 1.3)
     }
 }
@@ -94,7 +96,8 @@ val one_touch = arrange {
         "expire".givenThat(after("2017-09-01")) {
             zero
         }
-    } or acmeCorp.may {
+    }
+    acmeCorp.may {
         "knock in".givenThat(EUR / USD gt 1.3) {
             highStreetBank.gives(acmeCorp, 1.M, USD)
         }

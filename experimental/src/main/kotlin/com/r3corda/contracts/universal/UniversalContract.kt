@@ -8,7 +8,6 @@ import com.sun.tools.corba.se.idl.InvalidArgument
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
-import java.time.LocalDate
 
 /**
  * Created by sofusmortensen on 23/05/16.
@@ -40,8 +39,10 @@ class UniversalContract : Contract {
         class Issue : TypeOnlyCommandData(), Commands
     }
 
-    fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<Instant>): Instant = when (expr) {
+    fun eval(@Suppress("UNUSED_PARAMETER") tx: TransactionForContract, expr: Perceivable<Instant>): Instant? = when (expr) {
         is Const -> expr.value
+        is StartDate -> null
+        is EndDate -> null
         else -> throw Error("Unable to evaluate")
     }
 
@@ -112,23 +113,50 @@ class UniversalContract : Contract {
         // todo: calendar + rolling conventions
         val schedule = BusinessCalendar.createGenericSchedule(start, rollOut.frequency, noOfAdditionalPeriods = 1, endDate = end)
 
-        val next = schedule.first() // fail if no dates
+        val nextStart = schedule.first()
+        // todo: look into schedule for final dates
 
-        val newRollOut = RollOut(next, end, rollOut.frequency, rollOut.template)
+        // todo: we may have to save original start date in order to roll out correctly
+        val newRollOut = RollOut(nextStart, end, rollOut.frequency, rollOut.template)
 
-        return replaceNext(rollOut.template, newRollOut )
+        val arr = replaceStartEnd(rollOut.template, start.toInstant(), nextStart.toInstant())
+
+        return replaceNext(arr, newRollOut )
     }
 
-    fun replaceNext(arrangement: Arrangement, nextReplacement: RollOut) : Arrangement {
-        return when (arrangement) {
-            is Or -> Or(arrangement.actions.map { replaceNext(it, nextReplacement)!! as Action }.toSet())
-            is And -> And(arrangement.arrangements.map { replaceNext(it, nextReplacement) }.toSet())
-            is Action -> Action( arrangement.name, arrangement.condition, arrangement.actors, replaceNext(arrangement.arrangement, nextReplacement))
-            is Transfer -> arrangement
-            is Zero -> arrangement
-            else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
-        }
-    }
+    fun<T> replaceStartEnd(p: Perceivable<T>, start: Instant, end: Instant) : Perceivable<T> =
+            when (p) {
+                is Const -> p
+                is TimePerceivable -> TimePerceivable( p.cmp, replaceStartEnd(p.instant, start, end) ) as Perceivable<T>
+                is EndDate -> const(end) as Perceivable<T>
+                is StartDate -> const(start) as Perceivable<T>
+                is UnaryPlus -> UnaryPlus( replaceStartEnd(p.arg, start, end) )
+                is PerceivableOperation -> PerceivableOperation<T>( replaceStartEnd(p.left, start, end), p.op, replaceStartEnd(p.right, start, end) )
+                is Interest -> Interest( replaceStartEnd(p.amount, start, end), p.dayCountConvention, replaceStartEnd(p.interest, start, end), replaceStartEnd(p.start, start, end), replaceStartEnd(p.end, start, end) ) as Perceivable<T>
+                is Fixing -> Fixing( p.source, replaceStartEnd(p.date, start, end), p.tenor) as Perceivable<T>
+                else -> throw NotImplementedError("replaceStartEnd " + p.javaClass.name)
+            }
+
+    fun replaceStartEnd(arrangement: Arrangement, start: Instant, end: Instant) : Arrangement =
+            when (arrangement) {
+                is And -> And(arrangement.arrangements.map { replaceStartEnd(it, start, end) }.toSet())
+                is Zero -> arrangement
+                is Transfer -> Transfer( replaceStartEnd(arrangement.amount, start, end), arrangement.currency, arrangement.from, arrangement.to)
+                is Actions -> Actions( arrangement.actions.map { Action(it.name, replaceStartEnd(it.condition, start, end), it.actors, replaceStartEnd(it.arrangement, start, end) ) }.toSet())
+                is Continuation -> arrangement
+                else -> throw NotImplementedError("replaceStartEnd " + arrangement.javaClass.name)
+            }
+
+    fun replaceNext(arrangement: Arrangement, nextReplacement: RollOut) : Arrangement =
+            when (arrangement) {
+                is Actions -> Actions(arrangement.actions.map { Action(it.name, it.condition, it.actors, replaceNext(it.arrangement, nextReplacement)) }.toSet())
+                is And -> And(arrangement.arrangements.map { replaceNext(it, nextReplacement) }.toSet())
+                is Transfer -> arrangement
+                is Zero -> arrangement
+                is Continuation -> nextReplacement
+                else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
+            }
+
 
     override fun verify(tx: TransactionForContract) {
 
@@ -143,9 +171,8 @@ class UniversalContract : Contract {
         when (value) {
             is Commands.Action -> {
                 val inState = tx.inputs.single() as State
-                val arr = when (inState.details)  {
-                    is Or -> inState.details
-                    is Action -> inState.details
+                val arr = when (inState.details) {
+                    is Actions -> inState.details
                     is RollOut -> reduceRollOut(inState.details)
                     else -> throw InvalidArgument("Unexpected arrangement, " + tx.inputs.single())
                 }
@@ -153,6 +180,12 @@ class UniversalContract : Contract {
                 val actions = actions(arr)
 
                 val action = actions[value.name] ?: throw IllegalArgumentException("Failed requirement: action must be defined")
+
+                // todo: not sure this is necessary??
+                val rest = extractRemainder(arr, action)
+
+                // for now - let's assume not
+                assert(rest is Zero)
 
                 requireThat {
                     "action must be timestamped" by (tx.timestamp != null)
@@ -169,12 +202,12 @@ class UniversalContract : Contract {
                         val outState = tx.outputs.single() as State
                         requireThat {
                             "output state must match action result state" by (arrangement.equals(outState.details))
+                            "output state must match action result state" by (rest == zero)
                         }
                     }
                     0 -> throw IllegalArgumentException("must have at least one out state")
                     else -> {
-
-                        var allContracts = And(tx.outputs.map { (it as State).details }.toSet())
+                        val allContracts = And(tx.outputs.map { (it as State).details }.toSet())
 
                         requireThat {
                             "output states must match action result state" by (arrangement.equals(allContracts))
@@ -202,16 +235,26 @@ class UniversalContract : Contract {
             }
             is Commands.Fix -> {
                 val inState = tx.inputs.single() as State
+                val arr = when (inState.details) {
+                    is Actions -> inState.details
+                    is RollOut -> reduceRollOut(inState.details)
+                    else -> throw InvalidArgument("Unexpected arrangement, " + tx.inputs.single())
+                }
                 val outState = tx.outputs.single() as State
 
                 val unusedFixes = value.fixes.map { it.of }.toMutableSet()
-                val arr = replaceFixing(tx, inState.details,
+                val expectedArr = replaceFixing(tx, arr,
                         value.fixes.associateBy({ it.of }, { it.value }), unusedFixes)
+
+                println(expectedArr)
+                println(outState.details)
+
+                // debugCompare(expectedArr, outState.details)
 
                 requireThat {
                     "relevant fixing must be included" by unusedFixes.isEmpty()
                     "output state does not reflect fix command" by
-                            (arr.equals(outState.details))
+                            (expectedArr.equals(outState.details))
                 }
             }
             else -> throw IllegalArgumentException("Unrecognised command")
@@ -219,8 +262,8 @@ class UniversalContract : Contract {
     }
 
     fun <T> replaceFixing(tx: TransactionForContract, perceivable: Perceivable<T>,
-                          fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> {
-            return when (perceivable) {
+                          fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Perceivable<T> =
+            when (perceivable) {
                 is Const -> perceivable
                 is UnaryPlus -> UnaryPlus(replaceFixing(tx, perceivable.arg, fixings, unusedFixings))
                 is PerceivableOperation -> PerceivableOperation(replaceFixing(tx, perceivable.left, fixings, unusedFixings),
@@ -228,13 +271,15 @@ class UniversalContract : Contract {
                 is Interest -> Interest(replaceFixing(tx, perceivable.amount, fixings, unusedFixings),
                         perceivable.dayCountConvention, replaceFixing(tx, perceivable.interest, fixings, unusedFixings),
                         perceivable.start, perceivable.end) as Perceivable<T>
-                is Fixing -> if (fixings.containsKey(FixOf(perceivable.source, eval(tx, perceivable.date).toLocalDate(), perceivable.tenor))) {
-                    unusedFixings.remove(FixOf(perceivable.source, eval(tx, perceivable.date).toLocalDate(), perceivable.tenor))
-                    Const(fixings[FixOf(perceivable.source, eval(tx, perceivable.date).toLocalDate(), perceivable.tenor)]!!) as Perceivable<T>
-                } else perceivable
+                is Fixing -> {
+                    val dt = eval(tx, perceivable.date)
+                    if (dt != null && fixings.containsKey(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))) {
+                        unusedFixings.remove(FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor))
+                        Const(fixings[FixOf(perceivable.source, dt.toLocalDate(), perceivable.tenor)]!!) as Perceivable<T>
+                    } else perceivable
+                }
                 else -> throw NotImplementedError("replaceFixing - " + perceivable.javaClass.name)
             }
-    }
 
     fun replaceFixing(tx: TransactionForContract, arr: Action,
                       fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>) =
@@ -245,9 +290,11 @@ class UniversalContract : Contract {
                       fixings: Map<FixOf, BigDecimal>, unusedFixings: MutableSet<FixOf>): Arrangement =
             when (arr) {
                 is Zero -> arr
+                is And -> And(arr.arrangements.map { replaceFixing(tx, it, fixings, unusedFixings) }.toSet())
                 is Transfer -> Transfer(replaceFixing(tx, arr.amount, fixings, unusedFixings), arr.currency, arr.from, arr.to)
-                is Or -> Or(arr.actions.map { replaceFixing(tx, it, fixings, unusedFixings) }.toSet())
+                is Actions -> Actions( arr.actions.map { Action(it.name, it.condition, it.actors, replaceFixing(tx, it.arrangement, fixings, unusedFixings) ) }.toSet())
                 is RollOut -> RollOut(arr.startDate, arr.endDate, arr.frequency, replaceFixing(tx, arr.template, fixings, unusedFixings))
+                is Continuation -> arr
                 else -> throw NotImplementedError("replaceFixing - " + arr.javaClass.name)
             }
 
