@@ -26,7 +26,7 @@ sealed class ServiceToClientEvent(val time: Instant) {
             val label: String,
             val addOrRemove: AddOrRemove
     ) : ServiceToClientEvent(time) {
-        override fun toString() = "StateMachine(${addOrRemove.name})"
+        override fun toString() = "StateMachine($label, ${addOrRemove.name})"
     }
     class Progress(time: Instant, val fiberId: Long, val message: String) : ServiceToClientEvent(time) {
         override fun toString() = "Progress($message)"

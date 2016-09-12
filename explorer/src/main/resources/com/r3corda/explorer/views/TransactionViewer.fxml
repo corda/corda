@@ -44,10 +44,11 @@
          <items>
             <TableView fx:id="TransactionViewTable" prefHeight="200.0" prefWidth="200.0">
               <columns>
-                <TableColumn fx:id="TransactionViewTransactionId" prefWidth="187.0" text="Transaction ID" />
-                <TableColumn fx:id="TransactionViewOriginator" prefWidth="174.0" text="Originator" />
+                <TableColumn fx:id="TransactionViewFiberId" prefWidth="187.0" text="Fiber ID" />
+                  <TableColumn fx:id="TransactionViewClientUuid" prefWidth="75.0" text="Client UUID" />
                   <TableColumn fx:id="TransactionViewTransactionStatus" prefWidth="75.0" text="Transaction status" />
-                  <TableColumn fx:id="TransactionViewStatusUpdated" prefWidth="75.0" text="Status updated" />
+                  <TableColumn fx:id="TransactionViewProtocolStatus" prefWidth="75.0" text="Protocol status" />
+                  <TableColumn fx:id="TransactionViewStateMachineStatus" prefWidth="75.0" text="SM Status" />
                   <TableColumn fx:id="TransactionViewCommandTypes" prefWidth="75.0" text="Command type(s)" />
                   <TableColumn fx:id="TransactionViewTotalValueEquiv" prefWidth="75.0" styleClass="monetary-value" text="Total value (USD equiv)" />
               </columns>

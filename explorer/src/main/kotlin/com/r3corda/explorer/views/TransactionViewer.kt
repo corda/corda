@@ -6,7 +6,6 @@ import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.Amount
 import com.r3corda.core.contracts.CommandData
 import com.r3corda.core.contracts.withoutIssuer
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
@@ -46,10 +45,11 @@ class TransactionViewer: View() {
 
     // Top half (transactions table)
     private val transactionViewTable: TableView<ViewerNode> by fxid("TransactionViewTable")
-    private val transactionViewTransactionId: TableColumn<ViewerNode, String> by fxid("TransactionViewTransactionId")
-    private val transactionViewOriginator: TableColumn<ViewerNode, String> by fxid("TransactionViewOriginator")
-    private val transactionViewTransactionStatus: TableColumn<ViewerNode, Pair<TransactionCreateStatus?, ProtocolStatus?>> by fxid("TransactionViewTransactionStatus")
-    private val transactionViewStatusUpdated: TableColumn<ViewerNode, Instant> by fxid("TransactionViewStatusUpdated")
+    private val transactionViewFiberId: TableColumn<ViewerNode, String> by fxid("TransactionViewFiberId")
+    private val transactionViewClientUuid: TableColumn<ViewerNode, String> by fxid("TransactionViewClientUuid")
+    private val transactionViewTransactionStatus: TableColumn<ViewerNode, TransactionCreateStatus?> by fxid("TransactionViewTransactionStatus")
+    private val transactionViewProtocolStatus: TableColumn<ViewerNode, String> by fxid("TransactionViewProtocolStatus")
+    private val transactionViewStateMachineStatus: TableColumn<ViewerNode, StateMachineStatus?> by fxid("TransactionViewStateMachineStatus")
     private val transactionViewCommandTypes: TableColumn<ViewerNode, String> by fxid("TransactionViewCommandTypes")
     private val transactionViewTotalValueEquiv: TableColumn<ViewerNode, AmountDiff<Currency>> by fxid("TransactionViewTotalValueEquiv")
 
@@ -94,7 +94,9 @@ class TransactionViewer: View() {
     data class ViewerNode(
             val transactionId: ObservableValue<Pair<Long?, UUID?>>,
             val originator: ObservableValue<String>,
-            val transactionStatus: ObservableValue<Pair<TransactionCreateStatus?, ProtocolStatus?>>,
+            val transactionStatus: ObservableValue<TransactionCreateStatus?>,
+            val stateMachineStatus: ObservableValue<StateMachineStatus?>,
+            val protocolStatus: ObservableValue<ProtocolStatus?>,
             val statusUpdated: ObservableValue<Instant>,
             val commandTypes: ObservableValue<Collection<Class<CommandData>>>,
             val totalValueEquiv: ObservableValue<AmountDiff<Currency>?>,
@@ -117,9 +119,9 @@ class TransactionViewer: View() {
                         "Us"
                     }
                 },
-                transactionStatus = EasyBind.combine(it.status, it.protocolStatus) { status, protocolStatus ->
-                    Pair(status, protocolStatus)
-                },
+                transactionStatus = it.status,
+                protocolStatus = it.protocolStatus,
+                stateMachineStatus = it.stateMachineStatus,
                 statusUpdated = it.lastUpdate,
                 commandTypes = EasyBind.map(it.transaction) {
                     val commands = mutableSetOf<Class<CommandData>>()
@@ -282,23 +284,15 @@ class TransactionViewer: View() {
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / transactionViewTable.columns.size).toInt()
         }
 
-        transactionViewTransactionId.setCellValueFactory {
-            EasyBind.map(it.value.transactionId) {
-                val (fiberId, uuid) = it
-                if (fiberId == null && uuid == null) {
-                    "???"
-                } else {
-                    (uuid?.toString() ?: "") + (fiberId?.let { "[$it]" } ?: "")
-                }
-            }
-        }
-        transactionViewOriginator.setCellValueFactory { it.value.originator }
+        transactionViewFiberId.setCellValueFactory { EasyBind.map (it.value.transactionId) { "${it.first ?: ""}" } }
+        transactionViewClientUuid.setCellValueFactory { EasyBind.map (it.value.transactionId) { "${it.second ?: ""}" } }
+        transactionViewProtocolStatus.setCellValueFactory { EasyBind.map(it.value.protocolStatus) { "${it ?: ""}" } }
         transactionViewTransactionStatus.setCellValueFactory { it.value.transactionStatus }
         transactionViewTransactionStatus.setCellFactory {
-            object : TableCell<ViewerNode, Pair<TransactionCreateStatus?, ProtocolStatus?>>() {
+            object : TableCell<ViewerNode, TransactionCreateStatus?>() {
                 val label = Label()
                 override fun updateItem(
-                        value: Pair<TransactionCreateStatus?, ProtocolStatus?>?,
+                        value: TransactionCreateStatus?,
                         empty: Boolean
                 ) {
                     super.updateItem(value, empty)
@@ -307,23 +301,43 @@ class TransactionViewer: View() {
                         text = null
                     } else {
                         graphic = label
-                        val backgroundFill = when (value.first) {
+                        val backgroundFill = when (value) {
                             is TransactionCreateStatus.Started -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
                             is TransactionCreateStatus.Failed -> BackgroundFill(Color.SALMON, CornerRadii.EMPTY, Insets.EMPTY)
                             null -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
                         }
                         label.background = Background(backgroundFill)
-                        label.text = if (value.first == null && value.second == null) {
-                            "???"
-                        } else {
-                            (value.first?.toString() ?: "") + (value.second?.let { "[${it.toString()}]" } ?: "")
+                        label.text = "$value"
+                    }
+                }
+            }
+        }
+        transactionViewStateMachineStatus.setCellValueFactory { it.value.stateMachineStatus }
+        transactionViewStateMachineStatus.setCellFactory {
+            object : TableCell<ViewerNode, StateMachineStatus?>() {
+                val label = Label()
+                override fun updateItem(
+                        value: StateMachineStatus?,
+                        empty: Boolean
+                ) {
+                    super.updateItem(value, empty)
+                    if (value == null || empty) {
+                        graphic = null
+                        text = null
+                    } else {
+                        graphic = label
+                        val backgroundFill = when (value) {
+                            is StateMachineStatus.Added -> BackgroundFill(Color.LIGHTYELLOW, CornerRadii.EMPTY, Insets.EMPTY)
+                            is StateMachineStatus.Removed -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
+                            null -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
                         }
+                        label.background = Background(backgroundFill)
+                        label.text = "$value"
                     }
                 }
             }
         }
 
-        transactionViewStatusUpdated.setCellValueFactory { it.value.statusUpdated }
         transactionViewCommandTypes.setCellValueFactory {
             EasyBind.map(it.value.commandTypes) { it.map { it.simpleName }.joinToString(",") }
         }

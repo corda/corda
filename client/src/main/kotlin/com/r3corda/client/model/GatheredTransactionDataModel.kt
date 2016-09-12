@@ -16,8 +16,8 @@ import java.util.UUID
 interface GatheredTransactionData {
     val fiberId: ObservableValue<Long?>
     val uuid: ObservableValue<UUID?>
-    val protocolName: ObservableValue<String?>
     val protocolStatus: ObservableValue<ProtocolStatus?>
+    val stateMachineStatus: ObservableValue<StateMachineStatus?>
     val transaction: ObservableValue<LedgerTransaction?>
     val status: ObservableValue<TransactionCreateStatus?>
     val lastUpdate: ObservableValue<Instant>
@@ -30,17 +30,19 @@ sealed class TransactionCreateStatus(val message: String?) {
     override fun toString(): String = message ?: javaClass.simpleName
 }
 
-sealed class ProtocolStatus(val status: String?) {
-    object Added: ProtocolStatus(null)
-    object Removed: ProtocolStatus(null)
-    class InProgress(status: String): ProtocolStatus(status)
-    override fun toString(): String = status ?: javaClass.simpleName
+data class ProtocolStatus(
+        val status: String
+)
+sealed class StateMachineStatus(val stateMachineName: String) {
+    class Added(stateMachineName: String): StateMachineStatus(stateMachineName)
+    class Removed(stateMachineName: String): StateMachineStatus(stateMachineName)
+    override fun toString(): String = "${javaClass.simpleName}($stateMachineName)"
 }
 
 data class GatheredTransactionDataWritable(
         override val fiberId: SimpleObjectProperty<Long?> = SimpleObjectProperty(null),
         override val uuid: SimpleObjectProperty<UUID?> = SimpleObjectProperty(null),
-        override val protocolName: SimpleObjectProperty<String?> = SimpleObjectProperty(null),
+        override val stateMachineStatus: SimpleObjectProperty<StateMachineStatus?> = SimpleObjectProperty(null),
         override val protocolStatus: SimpleObjectProperty<ProtocolStatus?> = SimpleObjectProperty(null),
         override val transaction: SimpleObjectProperty<LedgerTransaction?> = SimpleObjectProperty(null),
         override val status: SimpleObjectProperty<TransactionCreateStatus?> = SimpleObjectProperty(null),
@@ -81,10 +83,9 @@ class GatheredTransactionDataModel {
                                         fiberId = serviceToClientEvent.fiberId,
                                         lastUpdate = serviceToClientEvent.time,
                                         tweak = {
-                                            protocolName.set(serviceToClientEvent.label)
-                                            protocolStatus.set(when (serviceToClientEvent.addOrRemove) {
-                                                AddOrRemove.ADD -> ProtocolStatus.Added
-                                                AddOrRemove.REMOVE -> ProtocolStatus.Removed
+                                            stateMachineStatus.set(when (serviceToClientEvent.addOrRemove) {
+                                                AddOrRemove.ADD -> StateMachineStatus.Added(serviceToClientEvent.label)
+                                                AddOrRemove.REMOVE -> StateMachineStatus.Removed(serviceToClientEvent.label)
                                             })
                                         }
                                 )
@@ -94,7 +95,7 @@ class GatheredTransactionDataModel {
                                         fiberId = serviceToClientEvent.fiberId,
                                         lastUpdate = serviceToClientEvent.time,
                                         tweak = {
-                                            protocolStatus.set(ProtocolStatus.InProgress(serviceToClientEvent.message))
+                                            protocolStatus.set(ProtocolStatus(serviceToClientEvent.message))
                                         }
                                 )
                             }
