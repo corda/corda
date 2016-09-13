@@ -7,7 +7,6 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.messaging.MessageRecipients
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
@@ -16,11 +15,12 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.protocols.ServiceRequestMessage
 import kotlinx.support.jdk8.collections.compute
-import org.slf4j.LoggerFactory
 import java.security.PrivateKey
 import java.security.SignatureException
 import java.time.Instant
@@ -60,7 +60,7 @@ interface NetworkMapService {
         // Base topic for messages acknowledging pushed updates
         val PUSH_ACK_PROTOCOL_TOPIC = "platform.network_map.push_ack"
 
-        val logger = LoggerFactory.getLogger(NetworkMapService::class.java)
+        val logger = loggerFor<NetworkMapService>()
     }
 
     val nodes: List<NodeInfo>
@@ -82,8 +82,7 @@ interface NetworkMapService {
 }
 
 @ThreadSafe
-class InMemoryNetworkMapService(net: MessagingService, home: NodeRegistration, cache: NetworkMapCache) :
-        AbstractNetworkMapService(net, cache) {
+class InMemoryNetworkMapService(services: ServiceHubInternal, home: NodeRegistration) : AbstractNetworkMapService(services) {
 
     override val registeredNodes: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
@@ -100,7 +99,7 @@ class InMemoryNetworkMapService(net: MessagingService, home: NodeRegistration, c
  * subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.
  */
 @ThreadSafe
-abstract class AbstractNetworkMapService(net: MessagingService, val cache: NetworkMapCache) : NetworkMapService, AbstractNodeService(net, cache) {
+abstract class AbstractNetworkMapService(services: ServiceHubInternal) : NetworkMapService, AbstractNodeService(services) {
     protected abstract val registeredNodes: MutableMap<Party, NodeRegistrationInfo>
 
     // Map from subscriber address, to most recently acknowledged update map version.
@@ -277,11 +276,11 @@ abstract class AbstractNetworkMapService(net: MessagingService, val cache: Netwo
             when (change.type) {
                 AddOrRemove.ADD -> {
                     NetworkMapService.logger.info("Added node ${node.address} to network map")
-                    cache.addNode(change.node)
+                    services.networkMapCache.addNode(change.node)
                 }
                 AddOrRemove.REMOVE -> {
                     NetworkMapService.logger.info("Removed node ${node.address} from network map")
-                    cache.removeNode(change.node)
+                    services.networkMapCache.removeNode(change.node)
                 }
             }
 

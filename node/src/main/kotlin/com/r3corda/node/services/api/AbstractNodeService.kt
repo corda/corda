@@ -1,9 +1,7 @@
 package com.r3corda.node.services.api
 
 import com.r3corda.core.messaging.Message
-import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
@@ -14,7 +12,9 @@ import javax.annotation.concurrent.ThreadSafe
  * Abstract superclass for services that a node can host, which provides helper functions.
  */
 @ThreadSafe
-abstract class AbstractNodeService(val net: MessagingService, val networkMapCache: NetworkMapCache) : SingletonSerializeAsToken() {
+abstract class AbstractNodeService(val services: ServiceHubInternal) : SingletonSerializeAsToken() {
+
+    val net: MessagingServiceInternal get() = services.networkService
 
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
@@ -36,7 +36,7 @@ abstract class AbstractNodeService(val net: MessagingService, val networkMapCach
                 // If the return type R is Unit, then do not send a response
                 if (response.javaClass != Unit.javaClass) {
                     val msg = net.createMessage(topic, request.sessionID, response.serialize().bits)
-                    net.send(msg, request.getReplyTo(networkMapCache))
+                    net.send(msg, request.getReplyTo(services.networkMapCache))
                 }
             } catch(e: Exception) {
                 exceptionConsumer(message, e)

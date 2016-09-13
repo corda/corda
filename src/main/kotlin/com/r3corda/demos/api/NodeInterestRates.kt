@@ -55,7 +55,7 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(services: ServiceHubInternal) : AcceptsFileUpload, AbstractNodeService(services.networkService, services.networkMapCache) {
+    class Service(services: ServiceHubInternal) : AcceptsFileUpload, AbstractNodeService(services) {
         val ss = services.storageService
         val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey, services.clock)
 

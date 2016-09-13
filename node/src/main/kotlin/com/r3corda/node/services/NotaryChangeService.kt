@@ -17,7 +17,7 @@ object NotaryChange {
      * A service that monitors the network for requests for changing the notary of a state,
      * and immediately runs the [NotaryChangeProtocol] if the auto-accept criteria are met.
      */
-    class Service(val services: ServiceHubInternal) : AbstractNodeService(services.networkService, services.networkMapCache) {
+    class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
         init {
             addMessageHandler(NotaryChangeProtocol.TOPIC,
                     { req: AbstractStateReplacementProtocol.Handshake -> handleChangeNotaryRequest(req) }

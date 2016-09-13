@@ -1,19 +1,15 @@
 package com.r3corda.node.services.persistence
 
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.failure
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.TopicSession
-import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.success
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
@@ -43,7 +39,7 @@ object DataVending {
     // TODO:  I don't like that this needs ServiceHubInternal, but passing in a state machine breaks MockServices because
 //        the state machine isn't set when this is constructed. [NodeSchedulerService] has the same problem, and both
 //        should be fixed at the same time.
-    class Service(val services: ServiceHubInternal) : AbstractNodeService(services.networkService, services.networkMapCache) {
+    class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
         companion object {
             val logger = loggerFor<DataVending.Service>()
 

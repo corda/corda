@@ -11,14 +11,13 @@ import com.r3corda.core.node.services.WalletService
 import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.testing.node.TestTransactionManager
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NodeRegistration
-import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
+import com.r3corda.node.utilities.AddOrRemove
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -109,7 +108,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun makeNetworkMapService() {
             val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
             val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
-            inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
+            inNodeNetworkMapService = InMemoryNetworkMapService(services, reg)
         }
 
         override fun generateKeyPair(): KeyPair = keyPair ?: super.generateKeyPair()

@@ -338,15 +338,15 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     open protected fun makeNetworkMapService() {
         val expires = platformClock.instant() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, Long.MAX_VALUE, AddOrRemove.ADD, expires)
-        inNodeNetworkMapService = InMemoryNetworkMapService(net, reg, services.networkMapCache)
+        inNodeNetworkMapService = InMemoryNetworkMapService(services, reg)
     }
 
     open protected fun makeNotaryService(type: ServiceType): NotaryService {
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
         return when (type) {
-            SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider!!, services.networkMapCache)
-            ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider!!, services.networkMapCache)
+            SimpleNotaryService.Type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider!!)
+            ValidatingNotaryService.Type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider!!)
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
@@ -374,7 +374,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
     protected open fun makeWalletService(): WalletService = NodeWalletService(services)
 
-    protected open fun makeWalletMonitorService(): WalletMonitorService = WalletMonitorService(net, smm, services)
+    protected open fun makeWalletMonitorService(): WalletMonitorService = WalletMonitorService(services, smm)
 
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the

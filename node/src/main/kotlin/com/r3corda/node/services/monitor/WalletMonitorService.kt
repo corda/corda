@@ -7,8 +7,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.messaging.MessageRecipients
-import com.r3corda.core.messaging.MessagingService
-import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.protocols.ProtocolLogic
@@ -17,6 +15,7 @@ import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
+import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.protocols.BroadcastTransactionProtocol
@@ -39,8 +38,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: Clients need to be able to indicate whether they support interactivity (no point in sending requests for input
 //       to a monitoring tool)
 @ThreadSafe
-class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, val services: ServiceHub)
-    : AbstractNodeService(net, services.networkMapCache) {
+class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineManager) : AbstractNodeService(services) {
     companion object {
         val REGISTER_TOPIC = "platform.wallet_monitor.register"
         val DEREGISTER_TOPIC = "platform.wallet_monitor.deregister"
@@ -149,8 +147,7 @@ class WalletMonitorService(net: MessagingService, val smm: StateMachineManager, 
     }
 
     private fun notifyEvent(event: ServiceToClientEvent) = listeners.forEach { monitor ->
-        net.send(net.createMessage(IN_EVENT_TOPIC, monitor.sessionID, event.serialize().bits),
-                monitor.recipients)
+        net.send(net.createMessage(IN_EVENT_TOPIC, monitor.sessionID, event.serialize().bits), monitor.recipients)
     }
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
