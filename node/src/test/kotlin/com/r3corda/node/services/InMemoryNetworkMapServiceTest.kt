@@ -1,18 +1,30 @@
 package com.r3corda.node.services
 
-import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.protocols.ProtocolLogic
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
+import com.r3corda.core.map
+import com.r3corda.core.messaging.TopicSession
+import com.r3corda.core.messaging.runOnNextMessage
+import com.r3corda.core.messaging.send
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
+import com.r3corda.node.services.network.NetworkMapService.*
+import com.r3corda.node.services.network.NetworkMapService.Companion.FETCH_PROTOCOL_TOPIC
+import com.r3corda.node.services.network.NetworkMapService.Companion.PUSH_ACK_PROTOCOL_TOPIC
+import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
+import com.r3corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.protocols.ServiceRequestMessage
 import com.r3corda.testing.node.MockNetwork
+import com.r3corda.testing.node.MockNetwork.MockNode
 import org.junit.Before
 import org.junit.Test
 import java.security.PrivateKey
 import java.time.Instant
+import java.util.concurrent.Future
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -36,7 +48,7 @@ class InMemoryNetworkMapServiceTest {
 
         // Confirm the service contains only its own node
         assertEquals(1, service.nodes.count())
-        assertNull(service.processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
+        assertNull(service.processQueryRequest(QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
 
         // Register the second node
         var seq = 1L
@@ -44,64 +56,22 @@ class InMemoryNetworkMapServiceTest {
         val nodeKey = registerNode.storage.myLegalIdentityKey
         val addChange = NodeRegistration(registerNode.info, seq++, AddOrRemove.ADD, expires)
         val addWireChange = addChange.toWire(nodeKey.private)
-        service.processRegistrationChangeRequest(NetworkMapService.RegistrationRequest(addWireChange, mapServiceNode.info.address, Long.MIN_VALUE))
+        service.processRegistrationChangeRequest(RegistrationRequest(addWireChange, mapServiceNode.info.address, Long.MIN_VALUE))
         assertEquals(2, service.nodes.count())
-        assertEquals(mapServiceNode.info, service.processQueryRequest(NetworkMapService.QueryIdentityRequest(mapServiceNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
+        assertEquals(mapServiceNode.info, service.processQueryRequest(QueryIdentityRequest(mapServiceNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
 
         // Re-registering should be a no-op
-        service.processRegistrationChangeRequest(NetworkMapService.RegistrationRequest(addWireChange, mapServiceNode.info.address, Long.MIN_VALUE))
+        service.processRegistrationChangeRequest(RegistrationRequest(addWireChange, mapServiceNode.info.address, Long.MIN_VALUE))
         assertEquals(2, service.nodes.count())
 
         // Confirm that de-registering the node succeeds and drops it from the node lists
         val removeChange = NodeRegistration(registerNode.info, seq, AddOrRemove.REMOVE, expires)
         val removeWireChange = removeChange.toWire(nodeKey.private)
-        assert(service.processRegistrationChangeRequest(NetworkMapService.RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
-        assertNull(service.processQueryRequest(NetworkMapService.QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
+        assert(service.processRegistrationChangeRequest(RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
+        assertNull(service.processQueryRequest(QueryIdentityRequest(registerNode.info.identity, mapServiceNode.info.address, Long.MIN_VALUE)).node)
 
         // Trying to de-register a node that doesn't exist should fail
-        assert(!service.processRegistrationChangeRequest(NetworkMapService.RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
-    }
-
-    class TestAcknowledgePSM(val server: NodeInfo, val mapVersion: Int) : ProtocolLogic<Unit>() {
-        override val topic: String get() = NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC
-        @Suspendable
-        override fun call() {
-            val req = NetworkMapService.UpdateAcknowledge(mapVersion, serviceHub.networkService.myAddress)
-            send(server.identity, 0, req)
-        }
-    }
-
-    class TestFetchPSM(val server: NodeInfo, val subscribe: Boolean, val ifChangedSinceVersion: Int? = null)
-    : ProtocolLogic<Collection<NodeRegistration>?>() {
-        override val topic: String get() = NetworkMapService.FETCH_PROTOCOL_TOPIC
-        @Suspendable
-        override fun call(): Collection<NodeRegistration>? {
-            val sessionID = random63BitValue()
-            val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVersion, serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.FetchMapResponse>(server.identity, 0, sessionID, req).unwrap { it.nodes }
-        }
-    }
-
-    class TestRegisterPSM(val server: NodeInfo, val reg: NodeRegistration, val privateKey: PrivateKey)
-    : ProtocolLogic<NetworkMapService.RegistrationResponse>() {
-        override val topic: String get() = NetworkMapService.REGISTER_PROTOCOL_TOPIC
-        @Suspendable
-        override fun call(): NetworkMapService.RegistrationResponse {
-            val sessionID = random63BitValue()
-            val req = NetworkMapService.RegistrationRequest(reg.toWire(privateKey), serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.RegistrationResponse>(server.identity, 0, sessionID, req).unwrap { it }
-        }
-    }
-
-    class TestSubscribePSM(val server: NodeInfo, val subscribe: Boolean)
-    : ProtocolLogic<NetworkMapService.SubscribeResponse>() {
-        override val topic: String get() = NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC
-        @Suspendable
-        override fun call(): NetworkMapService.SubscribeResponse {
-            val sessionID = random63BitValue()
-            val req = NetworkMapService.SubscribeRequest(subscribe, serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<NetworkMapService.SubscribeResponse>(server.identity, 0, sessionID, req).unwrap { it }
-        }
+        assert(!service.processRegistrationChangeRequest(RegistrationRequest(removeWireChange, mapServiceNode.info.address, Long.MIN_VALUE)).success)
     }
 
     @Test
@@ -113,7 +83,7 @@ class InMemoryNetworkMapServiceTest {
 
         // Confirm all nodes have registered themselves
         network.runNetwork()
-        var fetchPsm = registerNode.services.startProtocol(NetworkMapService.FETCH_PROTOCOL_TOPIC, TestFetchPSM(mapServiceNode.info, false))
+        var fetchPsm = fetchMap(registerNode, mapServiceNode, false)
         network.runNetwork()
         assertEquals(2, fetchPsm.get()?.count())
 
@@ -122,12 +92,12 @@ class InMemoryNetworkMapServiceTest {
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val seq = 2L
         val reg = NodeRegistration(registerNode.info, seq, AddOrRemove.REMOVE, expires)
-        val registerPsm = registerNode.services.startProtocol(NetworkMapService.REGISTER_PROTOCOL_TOPIC, TestRegisterPSM(mapServiceNode.info, reg, nodeKey.private))
+        val registerPsm = registration(registerNode, mapServiceNode, reg, nodeKey.private)
         network.runNetwork()
         assertTrue(registerPsm.get().success)
 
         // Now only map service node should be registered
-        fetchPsm = registerNode.services.startProtocol(NetworkMapService.FETCH_PROTOCOL_TOPIC, TestFetchPSM(mapServiceNode.info, false))
+        fetchPsm = fetchMap(registerNode, mapServiceNode, false)
         network.runNetwork()
         assertEquals(mapServiceNode.info, fetchPsm.get()?.filter { it.type == AddOrRemove.ADD }?.map { it.node }?.single())
     }
@@ -139,8 +109,7 @@ class InMemoryNetworkMapServiceTest {
 
         // Test subscribing to updates
         network.runNetwork()
-        val subscribePsm = registerNode.services.startProtocol(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC,
-                TestSubscribePSM(mapServiceNode.info, true))
+        val subscribePsm = subscribe(registerNode, mapServiceNode, true)
         network.runNetwork()
         subscribePsm.get()
 
@@ -161,10 +130,8 @@ class InMemoryNetworkMapServiceTest {
         assertEquals(1, service.getUnacknowledgedCount(registerNode.info.address, startingMapVersion + 1))
 
         // Send in an acknowledgment and verify the count goes down
-        val acknowledgePsm = registerNode.services.startProtocol(NetworkMapService.PUSH_ACK_PROTOCOL_TOPIC,
-                TestAcknowledgePSM(mapServiceNode.info, startingMapVersion + 1))
+        updateAcknowlege(registerNode, mapServiceNode, startingMapVersion + 1)
         network.runNetwork()
-        acknowledgePsm.get()
 
         assertEquals(0, service.getUnacknowledgedCount(registerNode.info.address, startingMapVersion + 1))
 
@@ -181,4 +148,25 @@ class InMemoryNetworkMapServiceTest {
             }
         }
     }
+
+    private fun registration(registerNode: MockNode, mapServiceNode: MockNode, reg: NodeRegistration, privateKey: PrivateKey): ListenableFuture<RegistrationResponse> {
+        val req = RegistrationRequest(reg.toWire(privateKey), registerNode.services.networkService.myAddress, random63BitValue())
+        return registerNode.sendAndReceive<RegistrationResponse>(REGISTER_PROTOCOL_TOPIC, mapServiceNode, req)
+    }
+
+    private fun subscribe(registerNode: MockNode, mapServiceNode: MockNode, subscribe: Boolean): ListenableFuture<SubscribeResponse> {
+        val req = SubscribeRequest(subscribe, registerNode.services.networkService.myAddress, random63BitValue())
+        return registerNode.sendAndReceive<SubscribeResponse>(SUBSCRIPTION_PROTOCOL_TOPIC, mapServiceNode, req)
+    }
+
+    private fun updateAcknowlege(registerNode: MockNode, mapServiceNode: MockNode, mapVersion: Int) {
+        val req = UpdateAcknowledge(mapVersion, registerNode.services.networkService.myAddress)
+        registerNode.send(PUSH_ACK_PROTOCOL_TOPIC, mapServiceNode, req)
+    }
+
+    private fun fetchMap(registerNode: MockNode, mapServiceNode: MockNode, subscribe: Boolean, ifChangedSinceVersion: Int? = null): Future<Collection<NodeRegistration>?> {
+        val req = FetchMapRequest(subscribe, ifChangedSinceVersion, registerNode.services.networkService.myAddress, random63BitValue())
+        return registerNode.sendAndReceive<FetchMapResponse>(FETCH_PROTOCOL_TOPIC, mapServiceNode, req).map { it.nodes }
+    }
+
 }

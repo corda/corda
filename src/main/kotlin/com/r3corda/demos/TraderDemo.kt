@@ -13,27 +13,26 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.protocols.HandshakeMessage
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
 import joptsimple.OptionParser
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
@@ -208,15 +207,20 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // next stage in our building site, we will just auto-generate fake trades to give our nodes something to do.
     //
     // As the seller initiates the two-party trade protocol, here, we will be the buyer.
-    node.services.networkService.addMessageHandler(DEMO_TOPIC, DEFAULT_SESSION_ID) { message, registration ->
-        // We use a simple scenario-specific wrapper protocol to make things happen.
-        val otherSide = message.data.deserialize<Party>()
-        val buyer = TraderDemoProtocolBuyer(otherSide, attachmentsPath, amount)
-        node.services.startProtocol("demo.buyer", buyer)
+    object : AbstractNodeService(node.services) {
+        init {
+            addProtocolHandler(DEMO_TOPIC, "demo.buyer") { handshake: TraderDemoHandshake ->
+                TraderDemoProtocolBuyer(handshake.replyToParty, attachmentsPath, amount)
+            }
+        }
     }
 }
 
 // We create a couple of ad-hoc test protocols that wrap the two party trade protocol, to give us the demo logic.
+
+private data class TraderDemoHandshake(override val replyToParty: Party,
+                                       override val sendSessionID: Long = random63BitValue(),
+                                       override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
 private val DEMO_TOPIC = "initiate.demo.trade"
 
@@ -231,21 +235,17 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
 
     @Suspendable
     override fun call() {
-        // The session ID disambiguates the test trade.
-        val sessionID = random63BitValue()
         progressTracker.currentStep = STARTING_BUY
-        send(otherSide, 0, sessionID)
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val buyer = TwoPartyTradeProtocol.Buyer(
                 otherSide,
                 notary.identity,
                 amount,
-                CommercialPaper.State::class.java,
-                sessionID)
+                CommercialPaper.State::class.java)
 
         // This invokes the trading protocol and out pops our finished transaction.
-        val tradeTX: SignedTransaction = subProtocol(buyer)
+        val tradeTX: SignedTransaction = subProtocol(buyer, inheritParentSessions = true)
         // TODO: This should be moved into the protocol itself.
         serviceHub.recordTransactions(listOf(tradeTX))
 
@@ -306,7 +306,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
     override fun call(): SignedTransaction {
         progressTracker.currentStep = ANNOUNCING
 
-        val sessionID = sendAndReceive<Long>(otherSide, 0, 0, serviceHub.storageService.myLegalIdentity).unwrap { it }
+        send(otherSide, TraderDemoHandshake(serviceHub.storageService.myLegalIdentity))
 
         progressTracker.currentStep = SELF_ISSUING
 
@@ -316,9 +316,14 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
 
         progressTracker.currentStep = TRADING
 
-        val seller = TwoPartyTradeProtocol.Seller(otherSide, notary, commercialPaper, amount, cpOwnerKey,
-                sessionID, progressTracker.getChildProgressTracker(TRADING)!!)
-        val tradeTX: SignedTransaction = subProtocol(seller)
+        val seller = TwoPartyTradeProtocol.Seller(
+                otherSide,
+                notary,
+                commercialPaper,
+                amount,
+                cpOwnerKey,
+                progressTracker.getChildProgressTracker(TRADING)!!)
+        val tradeTX: SignedTransaction = subProtocol(seller, inheritParentSessions = true)
         serviceHub.recordTransactions(listOf(tradeTX))
 
         return tradeTX

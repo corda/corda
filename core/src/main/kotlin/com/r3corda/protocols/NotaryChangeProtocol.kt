@@ -53,10 +53,8 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
     }
 
     class Acceptor(otherSide: Party,
-                   sessionIdForSend: Long,
-                   sessionIdForReceive: Long,
                    override val progressTracker: ProgressTracker = tracker())
-    : AbstractStateReplacementProtocol.Acceptor<Party>(otherSide, sessionIdForSend, sessionIdForReceive) {
+    : AbstractStateReplacementProtocol.Acceptor<Party>(otherSide) {
 
         override val topic: String get() = TOPIC
 

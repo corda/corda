@@ -7,6 +7,8 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.UntrustworthyData
+import com.r3corda.protocols.FetchDataProtocol.DownloadedVsRequestedDataMismatch
+import com.r3corda.protocols.FetchDataProtocol.HashNotFound
 import java.util.*
 
 /**
@@ -33,7 +35,10 @@ abstract class FetchDataProtocol<T : NamedByHash, in W : Any>(
     class HashNotFound(val requested: SecureHash) : BadAnswer()
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
 
-    data class Request(val hashes: List<SecureHash>, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
+    data class Request(val hashes: List<SecureHash>,
+                       override val replyToParty: Party,
+                       override val sendSessionID: Long = random63BitValue(),
+                       override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     @Suspendable
@@ -46,10 +51,9 @@ abstract class FetchDataProtocol<T : NamedByHash, in W : Any>(
         } else {
             logger.trace("Requesting ${toFetch.size} dependency(s) for verification")
 
-            val sid = random63BitValue()
-            val fetchReq = Request(toFetch, serviceHub.storageService.myLegalIdentity, sid)
+            val fetchReq = Request(toFetch, serviceHub.storageService.myLegalIdentity)
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
-            val maybeItems = sendAndReceive<ArrayList<W?>>(otherSide, 0, sid, fetchReq)
+            val maybeItems = sendAndReceive<ArrayList<W?>>(otherSide, fetchReq)
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(maybeItems, toFetch)
             maybeWriteToDisk(downloaded)

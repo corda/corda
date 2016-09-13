@@ -9,7 +9,6 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.TransactionBuilder
@@ -58,19 +57,17 @@ object TwoPartyTradeProtocol {
     class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
-            val sellerOwnerKey: PublicKey,
-            val sessionID: Long
+            val sellerOwnerKey: PublicKey
     )
 
     class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
                                val notarySig: DigitalSignature.LegallyIdentifiable)
 
-    open class Seller(val otherSide: Party,
+    open class Seller(val otherParty: Party,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
                       val myKeyPair: KeyPair,
-                      val buyerSessionID: Long,
                       override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
 
         companion object {
@@ -109,12 +106,10 @@ object TwoPartyTradeProtocol {
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
-            val sessionID = random63BitValue()
-
             // Make the first message we'll send to kick off the protocol.
-            val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
+            val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public)
 
-            val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, buyerSessionID, sessionID, hello)
+            val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
             progressTracker.currentStep = VERIFYING
 
@@ -127,7 +122,7 @@ object TwoPartyTradeProtocol {
 
                 // Download and check all the things that this transaction depends on and verify it is contract-valid,
                 // even though it is missing signatures.
-                subProtocol(ResolveTransactionsProtocol(wtx, otherSide))
+                subProtocol(ResolveTransactionsProtocol(wtx, otherParty))
 
                 if (wtx.outputs.map { it.data }.sumCashBy(myKeyPair.public).withoutIssuer() != price)
                     throw IllegalArgumentException("Transaction is not sending us the right amount of cash")
@@ -159,16 +154,15 @@ object TwoPartyTradeProtocol {
 
             logger.trace { "Built finished transaction, sending back to secondary!" }
 
-            send(otherSide, buyerSessionID, SignaturesFromSeller(ourSignature, notarySignature))
+            send(otherParty, SignaturesFromSeller(ourSignature, notarySignature))
             return fullySigned
         }
     }
 
-    open class Buyer(val otherSide: Party,
+    open class Buyer(val otherParty: Party,
                      val notary: Party,
                      val acceptablePrice: Amount<Currency>,
-                     val typeToBuy: Class<out OwnableState>,
-                     val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
+                     val typeToBuy: Class<out OwnableState>) : ProtocolLogic<SignedTransaction>() {
 
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
 
@@ -189,7 +183,7 @@ object TwoPartyTradeProtocol {
             val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
             val stx = signWithOurKeys(cashSigningPubKeys, ptx)
 
-            val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
+            val signatures = swapSignaturesWithSeller(stx)
 
             logger.trace { "Got signatures from seller, verifying ... " }
 
@@ -204,7 +198,7 @@ object TwoPartyTradeProtocol {
         private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
-            val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
+            val maybeTradeRequest = receive<SellerTradeInfo>(otherParty)
 
             progressTracker.currentStep = VERIFYING
             maybeTradeRequest.unwrap {
@@ -213,8 +207,6 @@ object TwoPartyTradeProtocol {
                 val assetTypeName = asset.javaClass.name
                 logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
-                // Check the start message for acceptability.
-                check(it.sessionID > 0)
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
                 if (!typeToBuy.isInstance(asset))
@@ -222,20 +214,20 @@ object TwoPartyTradeProtocol {
 
                 // Check the transaction that contains the state which is being resolved.
                 // We only have a hash here, so if we don't know it already, we have to ask for it.
-                subProtocol(ResolveTransactionsProtocol(setOf(it.assetForSale.ref.txhash), otherSide))
+                subProtocol(ResolveTransactionsProtocol(setOf(it.assetForSale.ref.txhash), otherParty))
 
                 return it
             }
         }
 
         @Suspendable
-        private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+        private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
             progressTracker.currentStep = SWAPPING_SIGNATURES
             logger.trace { "Sending partially signed transaction to seller" }
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
+            return sendAndReceive<SignaturesFromSeller>(otherParty, stx).unwrap { it }
         }
 
         private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

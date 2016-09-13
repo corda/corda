@@ -2,12 +2,18 @@ package com.r3corda.testing.node
 
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.messaging.TopicSession
+import com.r3corda.core.messaging.runOnNextMessage
+import com.r3corda.core.messaging.send
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.WalletService
+import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.testing.InMemoryWalletService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
@@ -18,6 +24,7 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.protocols.ServiceRequestMessage
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import java.nio.file.Files
@@ -130,6 +137,25 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
+
+        fun send(topic: String, target: MockNode, payload: Any) {
+            services.networkService.send(TopicSession(topic), payload, target.info.address)
+        }
+
+        inline fun <reified T : Any> receive(topic: String, sessionId: Long): ListenableFuture<T> {
+            val receive = SettableFuture.create<T>()
+            services.networkService.runOnNextMessage(topic, sessionId) {
+                receive.set(it.data.deserialize<T>())
+            }
+            return receive
+        }
+
+        inline fun <reified T : Any> sendAndReceive(topic: String,
+                                                    target: MockNode,
+                                                    payload: ServiceRequestMessage): ListenableFuture<T> {
+            send(topic, target, payload)
+            return receive(topic, payload.sessionID)
+        }
     }
 
     /** Returns a node, optionally created by the passed factory method. */

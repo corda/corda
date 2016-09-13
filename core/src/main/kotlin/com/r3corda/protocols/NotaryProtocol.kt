@@ -1,10 +1,6 @@
 package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.core.contracts.StateRef
-import com.r3corda.core.contracts.Timestamp
-import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
@@ -13,11 +9,12 @@ import com.r3corda.core.messaging.Ack
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessException
 import com.r3corda.core.node.services.UniquenessProvider
-import com.r3corda.core.noneOrSingle
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.serialize
+import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
 import java.security.PublicKey
@@ -56,14 +53,10 @@ object NotaryProtocol {
             notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) { "Input states must have the same Notary" }
 
-            val sendSessionID = random63BitValue()
-            val receiveSessionID = random63BitValue()
-
-            val handshake = Handshake(serviceHub.storageService.myLegalIdentity, sendSessionID, receiveSessionID)
-            sendAndReceive<Ack>(notaryParty, 0, receiveSessionID, handshake)
+            sendAndReceive<Ack>(notaryParty, Handshake(serviceHub.storageService.myLegalIdentity))
 
             val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
-            val response = sendAndReceive<Result>(notaryParty, sendSessionID, receiveSessionID, request)
+            val response = sendAndReceive<Result>(notaryParty, request)
 
             val notaryResult = validateResponse(response)
             return notaryResult.sig ?: throw NotaryException(notaryResult.error!!)
@@ -96,8 +89,6 @@ object NotaryProtocol {
      * TODO: the notary service should only be able to see timestamp commands and inputs
      */
     open class Service(val otherSide: Party,
-                       val sendSessionID: Long,
-                       val receiveSessionID: Long,
                        val timestampChecker: TimestampChecker,
                        val uniquenessProvider: UniquenessProvider) : ProtocolLogic<Unit>() {
 
@@ -105,7 +96,7 @@ object NotaryProtocol {
 
         @Suspendable
         override fun call() {
-            val (stx, reqIdentity) = receive<SignRequest>(receiveSessionID).unwrap { it }
+            val (stx, reqIdentity) = sendAndReceive<SignRequest>(otherSide, Ack).unwrap { it }
             val wtx = stx.tx
 
             val result = try {
@@ -119,7 +110,7 @@ object NotaryProtocol {
                 Result.withError(e.error)
             }
 
-            send(otherSide, sendSessionID, result)
+            send(otherSide, result)
         }
 
         private fun validateTimestamp(tx: WireTransaction) {
@@ -157,10 +148,9 @@ object NotaryProtocol {
         }
     }
 
-    data class Handshake(
-            override  val replyToParty: Party,
-            val sendSessionID: Long,
-            override val sessionID: Long) : PartyRequestMessage
+    data class Handshake(override val replyToParty: Party,
+                         override val sendSessionID: Long = random63BitValue(),
+                         override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     /** TODO: The caller must authenticate instead of just specifying its identity */
     data class SignRequest(val tx: SignedTransaction, val callerIdentity: Party)
@@ -174,19 +164,15 @@ object NotaryProtocol {
 
     interface Factory {
         fun create(otherSide: Party,
-                   sendSessionID: Long,
-                   receiveSessionID: Long,
                    timestampChecker: TimestampChecker,
                    uniquenessProvider: UniquenessProvider): Service
     }
 
     object DefaultFactory : Factory {
         override fun create(otherSide: Party,
-                            sendSessionID: Long,
-                            receiveSessionID: Long,
                             timestampChecker: TimestampChecker,
                             uniquenessProvider: UniquenessProvider): Service {
-            return Service(otherSide, sendSessionID, receiveSessionID, timestampChecker, uniquenessProvider)
+            return Service(otherSide, timestampChecker, uniquenessProvider)
         }
     }
 }

@@ -6,6 +6,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
+import com.r3corda.testing.connectProtocols
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
@@ -49,10 +50,12 @@ class StateMachineManagerTests {
     @Test
     fun `protocol suspended just after receiving payload`() {
         val topic = "send-and-receive"
-        val sessionID = random63BitValue()
         val payload = random63BitValue()
-        node1.smm.add("test", SendProtocol(topic, node2.info.identity, sessionID, payload))
-        node2.smm.add("test", ReceiveProtocol(topic, sessionID))
+        val sendProtocol = SendProtocol(topic, node2.info.identity, payload)
+        val receiveProtocol = ReceiveProtocol(topic, node1.info.identity)
+        connectProtocols(sendProtocol, receiveProtocol)
+        node1.smm.add("test", sendProtocol)
+        node2.smm.add("test", receiveProtocol)
         net.runNetwork()
         node2.stop()
         val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveProtocol>(node1.info.address)
@@ -90,19 +93,19 @@ class StateMachineManagerTests {
     }
 
 
-    private class SendProtocol(override val topic: String, val destination: Party, val sessionID: Long, val payload: Any) : ProtocolLogic<Unit>() {
+    private class SendProtocol(override val topic: String, val otherParty: Party, val payload: Any) : ProtocolLogic<Unit>() {
         @Suspendable
-        override fun call() = send(destination, sessionID, payload)
+        override fun call() = send(otherParty, payload)
     }
 
 
-    private class ReceiveProtocol(override val topic: String, val sessionID: Long) : NonTerminatingProtocol() {
+    private class ReceiveProtocol(override val topic: String, val otherParty: Party) : NonTerminatingProtocol() {
 
         @Transient var receivedPayload: Any? = null
 
         @Suspendable
         override fun doCall() {
-            receivedPayload = receive<Any>(sessionID).unwrap { it }
+            receivedPayload = receive<Any>(otherParty).unwrap { it }
         }
     }
 

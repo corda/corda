@@ -3,12 +3,12 @@ package com.r3corda.protocols
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.Fix
 import com.r3corda.core.contracts.FixOf
-import com.r3corda.core.transactions.TransactionBuilder
-import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.transactions.TransactionBuilder
+import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.suggestInterestRateAnnouncementTimeWindow
 import com.r3corda.protocols.RatesFixProtocol.FixOutOfRange
@@ -47,8 +47,16 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
 
-    data class QueryRequest(val queries: List<FixOf>, override val replyToParty: Party, override val sessionID: Long, val deadline: Instant) : PartyRequestMessage
-    data class SignRequest(val tx: WireTransaction, override val replyToParty: Party, override val sessionID: Long) : PartyRequestMessage
+    data class QueryRequest(val queries: List<FixOf>,
+                            val deadline: Instant,
+                            override val replyToParty: Party,
+                            override val sendSessionID: Long = random63BitValue(),
+                            override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
+
+    data class SignRequest(val tx: WireTransaction,
+                           override val replyToParty: Party,
+                           override val sendSessionID: Long = random63BitValue(),
+                           override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     @Suspendable
     override fun call() {
@@ -80,10 +88,9 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     @Suspendable
     private fun sign(): DigitalSignature.LegallyIdentifiable {
-        val sessionID = random63BitValue()
         val wtx = tx.toWireTransaction()
-        val req = SignRequest(wtx, serviceHub.storageService.myLegalIdentity, sessionID)
-        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, 0, sessionID, req)
+        val req = SignRequest(wtx, serviceHub.storageService.myLegalIdentity)
+        val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, req)
 
         return resp.unwrap { sig ->
             check(sig.signer == oracle)
@@ -94,11 +101,10 @@ open class RatesFixProtocol(protected val tx: TransactionBuilder,
 
     @Suspendable
     private fun query(): Fix {
-        val sessionID = random63BitValue()
         val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name, fixOf.forDay).end
-        val req = QueryRequest(listOf(fixOf), serviceHub.storageService.myLegalIdentity, sessionID, deadline)
+        val req = QueryRequest(listOf(fixOf), deadline, serviceHub.storageService.myLegalIdentity)
         // TODO: add deadline to receive
-        val resp = sendAndReceive<ArrayList<Fix>>(oracle, 0, sessionID, req)
+        val resp = sendAndReceive<ArrayList<Fix>>(oracle, req)
 
         return resp.unwrap {
             val fix = it.first()

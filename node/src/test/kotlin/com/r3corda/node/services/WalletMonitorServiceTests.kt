@@ -1,33 +1,36 @@
 package com.r3corda.node.services
 
-import co.paralleluniverse.fibers.Suspendable
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
-import com.r3corda.core.messaging.MessageHandlerRegistration
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.Wallet
-import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.DUMMY_NOTARY
-import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
-import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.monitor.*
+import com.r3corda.node.services.monitor.WalletMonitorService.Companion.IN_EVENT_TOPIC
+import com.r3corda.node.services.monitor.WalletMonitorService.Companion.REGISTER_TOPIC
 import com.r3corda.node.utilities.AddOrRemove
-import com.r3corda.testing.*
+import com.r3corda.testing.expect
+import com.r3corda.testing.expectEvents
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.testing.node.MockNetwork.MockNode
+import com.r3corda.testing.parallel
+import com.r3corda.testing.sequence
 import org.junit.Before
 import org.junit.Test
-import rx.subjects.PublishSubject
 import rx.subjects.ReplaySubject
-import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * Unit tests for the wallet monitoring service.
@@ -43,32 +46,13 @@ class WalletMonitorServiceTests {
     /**
      * Authenticate the register node with the monitor service node.
      */
-    private fun authenticate(monitorServiceNode: MockNetwork.MockNode, registerNode: MockNetwork.MockNode): Long {
+    private fun authenticate(monitorServiceNode: MockNode, registerNode: MockNode): Long {
         network.runNetwork()
-        val sessionID = random63BitValue()
-        val authenticatePsm = registerNode.services.startProtocol(WalletMonitorService.REGISTER_TOPIC,
-                TestRegisterPSM(monitorServiceNode.info, sessionID))
+        val sessionId = random63BitValue()
+        val authenticatePsm = register(registerNode, monitorServiceNode, sessionId)
         network.runNetwork()
         authenticatePsm.get(1, TimeUnit.SECONDS)
-        return sessionID
-    }
-
-    class TestReceiveWalletUpdatePSM(val sessionID: Long)
-    : ProtocolLogic<ServiceToClientEvent.OutputState>() {
-        override val topic: String get() = WalletMonitorService.IN_EVENT_TOPIC
-        @Suspendable
-        override fun call(): ServiceToClientEvent.OutputState
-            = receive<ServiceToClientEvent.OutputState>(sessionID).unwrap { it }
-    }
-
-    class TestRegisterPSM(val server: NodeInfo, val sessionID: Long)
-    : ProtocolLogic<RegisterResponse>() {
-        override val topic: String get() = WalletMonitorService.REGISTER_TOPIC
-        @Suspendable
-        override fun call(): RegisterResponse {
-            val req = RegisterRequest(serviceHub.networkService.myAddress, sessionID)
-            return sendAndReceive<RegisterResponse>(server.identity, 0, sessionID, req).unwrap { it }
-        }
+        return sessionId
     }
 
     /**
@@ -79,9 +63,7 @@ class WalletMonitorServiceTests {
         val (monitorServiceNode, registerNode) = network.createTwoNodes()
 
         network.runNetwork()
-        val sessionID = random63BitValue()
-        val authenticatePsm = registerNode.services.startProtocol(WalletMonitorService.REGISTER_TOPIC,
-                TestRegisterPSM(monitorServiceNode.info, sessionID))
+        val authenticatePsm = register(registerNode, monitorServiceNode, random63BitValue())
         network.runNetwork()
         val result = authenticatePsm.get(1, TimeUnit.SECONDS)
         assertTrue(result.success)
@@ -94,8 +76,7 @@ class WalletMonitorServiceTests {
     fun `event received`() {
         val (monitorServiceNode, registerNode) = network.createTwoNodes()
         val sessionID = authenticate(monitorServiceNode, registerNode)
-        var receivePsm = registerNode.services.startProtocol(WalletMonitorService.IN_EVENT_TOPIC,
-                TestReceiveWalletUpdatePSM(sessionID))
+        var receivePsm = receiveWalletUpdate(registerNode, sessionID)
         var expected = Wallet.Update(emptySet(), emptySet())
         monitorServiceNode.inNodeWalletMonitorService!!.notifyWalletUpdate(expected)
         network.runNetwork()
@@ -104,8 +85,7 @@ class WalletMonitorServiceTests {
         assertEquals(expected.produced, actual.produced)
 
         // Check that states are passed through correctly
-        receivePsm = registerNode.services.startProtocol(WalletMonitorService.IN_EVENT_TOPIC,
-                TestReceiveWalletUpdatePSM(sessionID))
+        receivePsm = receiveWalletUpdate(registerNode, sessionID)
         val consumed = setOf(StateRef(SecureHash.randomSHA256(), 0))
         val producedState = TransactionState(DummyContract.SingleOwnerState(newSecureRandom().nextInt(), DUMMY_PUBKEY_1), DUMMY_NOTARY)
         val produced = setOf(StateAndRef(producedState, StateRef(SecureHash.randomSHA256(), 0)))
@@ -125,7 +105,7 @@ class WalletMonitorServiceTests {
         val events = ReplaySubject.create<ServiceToClientEvent>()
         val ref = OpaqueBytes(ByteArray(1) {1})
 
-        registerNode.net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
+        registerNode.net.addMessageHandler(IN_EVENT_TOPIC, sessionID) { msg, reg ->
             events.onNext(msg.data.deserialize<ServiceToClientEvent>())
         }
 
@@ -178,7 +158,7 @@ class WalletMonitorServiceTests {
         val quantity = 1000L
         val events = ReplaySubject.create<ServiceToClientEvent>()
 
-        registerNode.net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
+        registerNode.net.addMessageHandler(IN_EVENT_TOPIC, sessionID) { msg, reg ->
             events.onNext(msg.data.deserialize<ServiceToClientEvent>())
         }
 
@@ -240,4 +220,14 @@ class WalletMonitorServiceTests {
             )
         }
     }
+
+    private fun register(registerNode: MockNode, monitorServiceNode: MockNode, sessionId: Long): ListenableFuture<RegisterResponse> {
+        val req = RegisterRequest(registerNode.services.networkService.myAddress, sessionId)
+        return registerNode.sendAndReceive<RegisterResponse>(REGISTER_TOPIC, monitorServiceNode, req)
+    }
+
+    private fun receiveWalletUpdate(registerNode: MockNode, sessionId: Long): ListenableFuture<ServiceToClientEvent.OutputState> {
+        return registerNode.receive<ServiceToClientEvent.OutputState>(IN_EVENT_TOPIC, sessionId)
+    }
+
 }

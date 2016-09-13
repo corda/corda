@@ -1,12 +1,11 @@
 package com.r3corda.node.services
 
-import com.r3corda.core.messaging.Ack
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.AbstractStateReplacementProtocol
 import com.r3corda.protocols.NotaryChangeProtocol
-
+import com.r3corda.protocols.NotaryChangeProtocol.TOPIC
 
 object NotaryChange {
     class Plugin : CordaPluginRegistry() {
@@ -19,18 +18,9 @@ object NotaryChange {
      */
     class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
         init {
-            addMessageHandler(NotaryChangeProtocol.TOPIC,
-                    { req: AbstractStateReplacementProtocol.Handshake -> handleChangeNotaryRequest(req) }
-            )
-        }
-
-        private fun handleChangeNotaryRequest(req: AbstractStateReplacementProtocol.Handshake): Ack {
-            val protocol = NotaryChangeProtocol.Acceptor(
-                    req.replyToParty,
-                    req.sessionID,
-                    req.sessionIdForSend)
-            services.startProtocol(NotaryChangeProtocol.TOPIC, protocol)
-            return Ack
+            addProtocolHandler(TOPIC, TOPIC) { req: AbstractStateReplacementProtocol.Handshake ->
+                NotaryChangeProtocol.Acceptor(req.replyToParty)
+            }
         }
     }
 }

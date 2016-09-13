@@ -2,12 +2,15 @@ package com.r3corda.demos.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.protocols.HandshakeMessage
 import com.r3corda.testing.node.MockNetworkMapCache
 import java.util.concurrent.TimeUnit
 
@@ -19,7 +22,12 @@ object ExitServerProtocol {
     // Will only be enabled if you install the Handler
     @Volatile private var enabled = false
 
-    data class ExitMessage(val exitCode: Int)
+    // This is not really a HandshakeMessage but needs to be so that the send uses the default session ID. This will
+    // resolve itself when the protocol session stuff is done.
+    data class ExitMessage(val exitCode: Int,
+                           override val replyToParty: Party,
+                           override val sendSessionID: Long = random63BitValue(),
+                           override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     class Plugin: CordaPluginRegistry() {
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
@@ -50,10 +58,8 @@ object ExitServerProtocol {
         @Suspendable
         override fun call(): Boolean {
             if (enabled) {
-                val message = ExitMessage(exitCode)
-
                 for (recipient in serviceHub.networkMapCache.partyNodes) {
-                    doNextRecipient(recipient, message)
+                    doNextRecipient(recipient)
                 }
                 // Sleep a little in case any async message delivery to other nodes needs to happen
                 Strand.sleep(1, TimeUnit.SECONDS)
@@ -63,11 +69,11 @@ object ExitServerProtocol {
         }
 
         @Suspendable
-        private fun doNextRecipient(recipient: NodeInfo, message: ExitMessage) {
+        private fun doNextRecipient(recipient: NodeInfo) {
             if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
-                send(recipient.identity, 0, message)
+                send(recipient.identity, ExitMessage(exitCode, recipient.identity))
             }
         }
     }

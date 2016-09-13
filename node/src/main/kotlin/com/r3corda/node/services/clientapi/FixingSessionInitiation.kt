@@ -1,10 +1,11 @@
 package com.r3corda.node.services.clientapi
 
 import com.r3corda.core.node.CordaPluginRegistry
-import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.serialization.deserialize
+import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.TwoPartyDealProtocol
+import com.r3corda.protocols.TwoPartyDealProtocol.FIX_INITIATE_TOPIC
+import com.r3corda.protocols.TwoPartyDealProtocol.FixingSessionInitiation
 
 /**
  * This is a temporary handler required for establishing random sessionIDs for the [Fixer] and [Floater] as part of
@@ -17,12 +18,10 @@ object FixingSessionInitiation {
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 
-    class Service(services: ServiceHubInternal) {
+    class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
         init {
-            services.networkService.addMessageHandler(TwoPartyDealProtocol.FIX_INITIATE_TOPIC, DEFAULT_SESSION_ID) { msg, registration ->
-                val initiation = msg.data.deserialize<TwoPartyDealProtocol.FixingSessionInitiation>()
-                val protocol = TwoPartyDealProtocol.Fixer(initiation)
-                services.startProtocol("fixings", protocol)
+            addProtocolHandler(FIX_INITIATE_TOPIC, "fixings") { initiation: FixingSessionInitiation ->
+                TwoPartyDealProtocol.Fixer(initiation.replyToParty, initiation.oracleType)
             }
         }
     }

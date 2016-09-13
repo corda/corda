@@ -7,7 +7,6 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -48,11 +47,7 @@ object TwoPartyDealProtocol {
     }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-    data class Handshake<out T>(
-            val payload: T,
-            val publicKey: PublicKey,
-            val sessionID: Long
-    )
+    data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
 
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySig: DigitalSignature.LegallyIdentifiable)
 
@@ -80,19 +75,16 @@ object TwoPartyDealProtocol {
 
         abstract val payload: U
         abstract val notaryNode: NodeInfo
-        abstract val otherSide: Party
-        abstract val otherSessionID: Long
+        abstract val otherParty: Party
         abstract val myKeyPair: KeyPair
 
         @Suspendable
         fun getPartialTransaction(): UntrustworthyData<SignedTransaction> {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
-            val sessionID = random63BitValue()
-
             // Make the first message we'll send to kick off the protocol.
-            val hello = Handshake(payload, myKeyPair.public, sessionID)
-            val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, otherSessionID, sessionID, hello)
+            val hello = Handshake(payload, myKeyPair.public)
+            val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
             return maybeSTX
         }
@@ -132,7 +124,7 @@ object TwoPartyDealProtocol {
             // Download and check all the transactions that this transaction depends on, but do not check this
             // transaction itself.
             val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
-            subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherSide))
+            subProtocol(ResolveTransactionsProtocol(dependencyTxIDs, otherParty))
         }
 
         @Suspendable
@@ -156,7 +148,7 @@ object TwoPartyDealProtocol {
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
-                regulators.forEach { send(it.identity, DEFAULT_SESSION_ID, fullySigned) }
+                regulators.forEach { send(it.identity, fullySigned) }
             }
 
             return fullySigned
@@ -181,7 +173,7 @@ object TwoPartyDealProtocol {
 
             logger.trace { "Built finished transaction, sending back to other party!" }
 
-            send(otherSide, otherSessionID, SignaturesFromPrimary(ourSignature, notarySignature))
+            send(otherParty, SignaturesFromPrimary(ourSignature, notarySignature))
             return fullySigned
         }
     }
@@ -207,8 +199,7 @@ object TwoPartyDealProtocol {
 
         override val topic: String get() = DEAL_TOPIC
 
-        abstract val otherSide: Party
-        abstract val sessionID: Long
+        abstract val otherParty: Party
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -218,7 +209,7 @@ object TwoPartyDealProtocol {
             val (ptx, additionalSigningPubKeys) = assembleSharedTX(handshake)
             val stx = signWithOurKeys(additionalSigningPubKeys, ptx)
 
-            val signatures = swapSignaturesWithPrimary(stx, handshake.sessionID)
+            val signatures = swapSignaturesWithPrimary(stx)
 
             logger.trace { "Got signatures from other party, verifying ... " }
 
@@ -238,7 +229,7 @@ object TwoPartyDealProtocol {
         private fun receiveAndValidateHandshake(): Handshake<U> {
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
-            val handshake = receive<Handshake<U>>(sessionID)
+            val handshake = receive<Handshake<U>>(otherParty)
 
             progressTracker.currentStep = VERIFYING
             handshake.unwrap {
@@ -247,13 +238,13 @@ object TwoPartyDealProtocol {
         }
 
         @Suspendable
-        private fun swapSignaturesWithPrimary(stx: SignedTransaction, theirSessionID: Long): SignaturesFromPrimary {
+        private fun swapSignaturesWithPrimary(stx: SignedTransaction): SignaturesFromPrimary {
             progressTracker.currentStep = SWAPPING_SIGNATURES
             logger.trace { "Sending partially signed transaction to other party" }
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive<SignaturesFromPrimary>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
+            return sendAndReceive<SignaturesFromPrimary>(otherParty, stx).unwrap { it }
         }
 
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
@@ -273,11 +264,10 @@ object TwoPartyDealProtocol {
     /**
      * One side of the protocol for inserting a pre-agreed deal.
      */
-    open class Instigator<out T : DealState>(override val otherSide: Party,
+    open class Instigator<out T : DealState>(override val otherParty: Party,
                                              val notary: Party,
                                              override val payload: T,
                                              override val myKeyPair: KeyPair,
-                                             override val otherSessionID: Long,
                                              override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<T>() {
 
         override val notaryNode: NodeInfo get() =
@@ -287,10 +277,9 @@ object TwoPartyDealProtocol {
     /**
      * One side of the protocol for inserting a pre-agreed deal.
      */
-    open class Acceptor<T : DealState>(override val otherSide: Party,
+    open class Acceptor<T : DealState>(override val otherParty: Party,
                                        val notary: Party,
                                        val dealToBuy: T,
-                                       override val sessionID: Long,
                                        override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<T>() {
 
         override fun validateHandshake(handshake: Handshake<T>): Handshake<T> {
@@ -299,8 +288,6 @@ object TwoPartyDealProtocol {
             val otherKey = handshake.publicKey
             logger.trace { "Got deal request for: ${handshake.payload.ref}" }
 
-            // Check the start message for acceptability.
-            check(handshake.sessionID > 0)
             check(dealToBuy == deal)
 
             // We need to substitute in the new public keys for the Parties
@@ -335,11 +322,9 @@ object TwoPartyDealProtocol {
      * of the protocol that is run by the party with the fixed leg of swap deal, which is the basis for deciding
      * who does what in the protocol.
      */
-    class Fixer(val initiation: FixingSessionInitiation, override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<StateRef>() {
-
-        override val sessionID: Long get() = initiation.sessionID
-
-        override val otherSide: Party get() = initiation.sender
+    class Fixer(override val otherParty: Party,
+                val oracleType: ServiceType,
+                override val progressTracker: ProgressTracker = Secondary.tracker()) : Secondary<StateRef>() {
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState
@@ -347,16 +332,12 @@ object TwoPartyDealProtocol {
         override fun validateHandshake(handshake: Handshake<StateRef>): Handshake<StateRef> {
             logger.trace { "Got fixing request for: ${handshake.payload}" }
 
-            // Check the handshake and initiation for acceptability.
-            check(handshake.sessionID > 0)
             txState = serviceHub.loadState(handshake.payload)
             deal = txState.data as FixableDealState
 
             // validate the party that initiated is the one on the deal and that the recipient corresponds with it.
             // TODO: this is in no way secure and will be replaced by general session initiation logic in the future
             val myName = serviceHub.storageService.myLegalIdentity.name
-            val otherParty = deal.parties.filter { it.name != myName }.single()
-            check(otherParty == initiation.party)
             // Also check we are one of the parties
             deal.parties.filter { it.name == myName }.single()
 
@@ -376,7 +357,7 @@ object TwoPartyDealProtocol {
 
             val ptx = TransactionType.General.Builder(txState.notary)
 
-            val oracle = serviceHub.networkMapCache.get(initiation.oracleType).first()
+            val oracle = serviceHub.networkMapCache.get(oracleType).first()
 
             val addFixing = object : RatesFixProtocol(ptx, oracle.identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
@@ -401,7 +382,6 @@ object TwoPartyDealProtocol {
      * does what in the protocol.
      */
     class Floater(override val payload: StateRef,
-                  override val otherSessionID: Long,
                   override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<StateRef>() {
         @Suppress("UNCHECKED_CAST")
         internal val dealToFix: StateAndRef<FixableDealState> by TransientProperty {
@@ -415,8 +395,8 @@ object TwoPartyDealProtocol {
             return serviceHub.keyManagementService.toKeyPair(publicKey)
         }
 
-        override val otherSide: Party get() {
-            // TODO: what happens if there's no node?  Move to messaging taking Party and then handled in messaging layer
+        override val otherParty: Party get() {
+            // TODO otherParty is sortedParties[1] from FixingRoleDecider.call and so can be passed in as a c'tor param
             val myName = serviceHub.storageService.myLegalIdentity.name
             return dealToFix.state.data.parties.filter { it.name != myName }.single()
         }
@@ -427,7 +407,11 @@ object TwoPartyDealProtocol {
 
 
     /** Used to set up the session between [Floater] and [Fixer] */
-    data class FixingSessionInitiation(val sessionID: Long, val party: Party, val sender: Party, val timeout: Duration, val oracleType: ServiceType)
+    data class FixingSessionInitiation(val timeout: Duration,
+                                       val oracleType: ServiceType,
+                                       override val replyToParty: Party,
+                                       override val sendSessionID: Long = random63BitValue(),
+                                       override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     /**
      * This protocol looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.
@@ -459,16 +443,15 @@ object TwoPartyDealProtocol {
             val sortedParties = fixableDeal.parties.sortedBy { it.name }
             val oracleType = fixableDeal.oracleType
             if (sortedParties[0].name == serviceHub.storageService.myLegalIdentity.name) {
-                // Generate sessionID
-                val sessionID = random63BitValue()
-                val initation = FixingSessionInitiation(sessionID, sortedParties[0], serviceHub.storageService.myLegalIdentity, timeout, oracleType)
-
+                val initation = FixingSessionInitiation(
+                        timeout,
+                        oracleType,
+                        serviceHub.storageService.myLegalIdentity)
                 // Send initiation to other side to launch one side of the fixing protocol (the Fixer).
-                send(sortedParties[1], DEFAULT_SESSION_ID, initation)
+                send(sortedParties[1], initation)
 
                 // Then start the other side of the fixing protocol.
-                val protocol = Floater(ref, sessionID)
-                subProtocol(protocol)
+                subProtocol(Floater(ref), inheritParentSessions = true)
             }
         }
     }

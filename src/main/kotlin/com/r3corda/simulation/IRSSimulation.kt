@@ -7,14 +7,14 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.RunOnCallerThread
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.UniqueIdentifier
 import com.r3corda.core.failure
 import com.r3corda.core.node.services.linearHeadsOfType
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.success
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.protocols.TwoPartyDealProtocol
+import com.r3corda.testing.connectProtocols
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockIdentityService
 import java.security.KeyPair
@@ -121,10 +121,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         irs.fixedLeg.fixedRatePayer = node1.info.identity
         irs.floatingLeg.floatingRatePayer = node2.info.identity
 
-        val sessionID = random63BitValue()
-
-        val instigator = TwoPartyDealProtocol.Instigator(node2.info.identity, notary.info.identity, irs, nodeAKey!!, sessionID)
-        val acceptor = TwoPartyDealProtocol.Acceptor(node1.info.identity, notary.info.identity, irs, sessionID)
+        val instigator = TwoPartyDealProtocol.Instigator(node2.info.identity, notary.info.identity, irs, nodeAKey!!)
+        val acceptor = TwoPartyDealProtocol.Acceptor(node1.info.identity, notary.info.identity, irs)
+        connectProtocols(instigator, acceptor)
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))

@@ -2,6 +2,7 @@ package com.r3corda.core
 
 import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
@@ -15,6 +16,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.Executor
+import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.withLock
@@ -67,6 +69,7 @@ fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Uni
     }
 }
 
+infix fun <F, T> Future<F>.map(mapper: (F) -> T): Future<T> = Futures.lazyTransform(this) { mapper(it!!) }
 infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = apply { then(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }

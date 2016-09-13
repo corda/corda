@@ -2,12 +2,10 @@ package com.r3corda.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.contracts.ClientToServiceCommand
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.serialization.serialize
-import java.util.*
+import com.r3corda.core.transactions.SignedTransaction
 
 
 /**
@@ -33,12 +31,11 @@ class BroadcastTransactionProtocol(val notarisedTransaction: SignedTransaction,
 
     override val topic: String = TOPIC
 
-    data class NotifyTxRequestMessage(
-            val tx: SignedTransaction,
-            val events: Set<ClientToServiceCommand>,
-            override val replyToParty: Party,
-            override val sessionID: Long
-    ) : PartyRequestMessage
+    data class NotifyTxRequestMessage(val tx: SignedTransaction,
+                                      val events: Set<ClientToServiceCommand>,
+                                      override val replyToParty: Party,
+                                      override val sendSessionID: Long = random63BitValue(),
+                                      override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     @Suspendable
     override fun call() {
@@ -48,9 +45,11 @@ class BroadcastTransactionProtocol(val notarisedTransaction: SignedTransaction,
         // TODO: Messaging layer should handle this broadcast for us (although we need to not be sending
         // session ID, for that to work, as well).
         participants.filter { it != serviceHub.storageService.myLegalIdentity }.forEach { participant ->
-            val sessionID = random63BitValue()
-            val msg = NotifyTxRequestMessage(notarisedTransaction, events, serviceHub.storageService.myLegalIdentity, sessionID)
-            send(participant, 0, msg)
+            val msg = NotifyTxRequestMessage(
+                    notarisedTransaction,
+                    events,
+                    serviceHub.storageService.myLegalIdentity)
+            send(participant, msg)
         }
     }
 }

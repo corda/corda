@@ -7,8 +7,6 @@ import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.messaging.Ack
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.transactions.SignedTransaction
@@ -36,9 +34,9 @@ abstract class AbstractStateReplacementProtocol<T> {
         val stx: SignedTransaction
     }
 
-    data class Handshake(val sessionIdForSend: Long,
-                         override val replyToParty: Party,
-                         override val sessionID: Long) : PartyRequestMessage
+    data class Handshake(override val replyToParty: Party,
+                         override val sendSessionID: Long = random63BitValue(),
+                         override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     abstract class Instigator<out S : ContractState, T>(val originalState: StateAndRef<S>,
                                                         val modification: T,
@@ -77,36 +75,31 @@ abstract class AbstractStateReplacementProtocol<T> {
 
         @Suspendable
         private fun collectSignatures(participants: List<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
-            val sessions = mutableMapOf<NodeInfo, Long>()
-
-            val participantSignatures = participants.map {
+            val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByPublicKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
-                val sessionIdForSend = random63BitValue()
-                sessions[participantNode] = sessionIdForSend
-
-                getParticipantSignature(participantNode, stx, sessionIdForSend)
+                participantNode.identity
             }
 
+            val participantSignatures = parties.map { getParticipantSignature(it, stx) }
+
             val allSignatures = participantSignatures + getNotarySignature(stx)
-            sessions.forEach { send(it.key.identity, it.value, allSignatures) }
+            parties.forEach { send(it, allSignatures) }
 
             return allSignatures
         }
 
         @Suspendable
-        private fun getParticipantSignature(node: NodeInfo, stx: SignedTransaction, sessionIdForSend: Long): DigitalSignature.WithKey {
-            val sessionIdForReceive = random63BitValue()
+        private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
             val proposal = assembleProposal(originalState.ref, modification, stx)
 
-            val handshake = Handshake(sessionIdForSend, serviceHub.storageService.myLegalIdentity, sessionIdForReceive)
-            sendAndReceive<Ack>(node.identity, 0, sessionIdForReceive, handshake)
+            send(party, Handshake(serviceHub.storageService.myLegalIdentity))
 
-            val response = sendAndReceive<Result>(node.identity, sessionIdForSend, sessionIdForReceive, proposal)
+            val response = sendAndReceive<Result>(party, proposal)
             val participantSignature = response.unwrap {
                 if (it.sig == null) throw StateReplacementException(it.error!!)
                 else {
-                    check(it.sig.by == node.identity.owningKey) { "Not signed by the required participant" }
+                    check(it.sig.by == party.owningKey) { "Not signed by the required participant" }
                     it.sig.verifyWithECDSA(stx.txBits)
                     it.sig
                 }
@@ -123,9 +116,7 @@ abstract class AbstractStateReplacementProtocol<T> {
     }
 
     abstract class Acceptor<T>(val otherSide: Party,
-                                  val sessionIdForSend: Long,
-                                  val sessionIdForReceive: Long,
-                                  override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
+                               override val progressTracker: ProgressTracker = tracker()) : ProtocolLogic<Unit>() {
 
         companion object {
             object VERIFYING : ProgressTracker.Step("Verifying state replacement proposal")
@@ -140,7 +131,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         @Suspendable
         override fun call() {
             progressTracker.currentStep = VERIFYING
-            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(sessionIdForReceive)
+            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
             try {
                 val stx: SignedTransaction = maybeProposal.unwrap { verifyProposal(maybeProposal).stx }
                 verifyTx(stx)
@@ -163,7 +154,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             val mySignature = sign(stx)
             val response = Result.noError(mySignature)
-            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, sessionIdForSend, sessionIdForReceive, response)
+            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, response)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
@@ -180,7 +171,7 @@ abstract class AbstractStateReplacementProtocol<T> {
         private fun reject(e: StateReplacementRefused) {
             progressTracker.currentStep = REJECTING
             val response = Result.withError(e)
-            send(otherSide, sessionIdForSend, response)
+            send(otherSide, response)
         }
 
         /**

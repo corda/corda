@@ -1,12 +1,12 @@
 package com.r3corda.node.services.transactions
 
-import com.r3corda.core.messaging.Ack
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessProvider
 import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.NotaryProtocol
+import com.r3corda.protocols.NotaryProtocol.TOPIC
 
 /**
  * A Notary service acts as the final signer of a transaction ensuring two things:
@@ -30,19 +30,9 @@ abstract class NotaryService(services: ServiceHubInternal,
     abstract val protocolFactory: NotaryProtocol.Factory
 
     init {
-        addMessageHandler(NotaryProtocol.TOPIC,
-                { req: NotaryProtocol.Handshake -> processRequest(req) }
-        )
+        addProtocolHandler(TOPIC, TOPIC) { req: NotaryProtocol.Handshake ->
+            protocolFactory.create(req.replyToParty, timestampChecker, uniquenessProvider)
+        }
     }
 
-    private fun processRequest(req: NotaryProtocol.Handshake): Ack {
-        val protocol = protocolFactory.create(
-                req.replyToParty,
-                req.sessionID,
-                req.sendSessionID,
-                timestampChecker,
-                uniquenessProvider)
-        services.startProtocol(NotaryProtocol.TOPIC, protocol)
-        return Ack
-    }
 }

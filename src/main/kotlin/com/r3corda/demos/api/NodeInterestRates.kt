@@ -75,7 +75,10 @@ object NodeInterestRates {
                              * Interest rates become available when they are uploaded via the web as per [DataUploadServlet],
                              * if they haven't already been uploaded that way.
                              */
-                            services.startProtocol("fixing", FixQueryHandler(this, req as RatesFixProtocol.QueryRequest))
+                            req as RatesFixProtocol.QueryRequest
+                            val handler = FixQueryHandler(this, req)
+                            handler.registerSession(req)
+                            services.startProtocol("fixing", handler)
                             Unit
                         }
                     },
@@ -102,7 +105,7 @@ object NodeInterestRates {
             override fun call(): Unit {
                 val answers = service.oracle.query(request.queries, request.deadline)
                 progressTracker.currentStep = SENDING
-                send(request.replyToParty, request.sessionID, answers)
+                send(request.replyToParty, answers)
             }
         }
 

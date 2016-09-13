@@ -6,7 +6,6 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.success
 import com.r3corda.core.transactions.SignedTransaction
@@ -50,8 +49,7 @@ object DataVending {
                        myIdentity: Party,
                        recipient: NodeInfo,
                        transaction: SignedTransaction) {
-                val sessionID = random63BitValue()
-                val msg = BroadcastTransactionProtocol.NotifyTxRequestMessage(transaction, emptySet(), myIdentity, sessionID)
+                val msg = BroadcastTransactionProtocol.NotifyTxRequestMessage(transaction, emptySet(), myIdentity)
                 net.send(net.createMessage(TopicSession(BroadcastTransactionProtocol.TOPIC, 0), msg.serialize().bits), recipient.address)
             }
         }
@@ -65,29 +63,29 @@ object DataVending {
                     { req: FetchDataProtocol.Request -> handleTXRequest(req) },
                     { message, e -> logger.error("Failure processing data vending request.", e) }
             )
+
             addMessageHandler(FetchAttachmentsProtocol.TOPIC,
                     { req: FetchDataProtocol.Request -> handleAttachmentRequest(req) },
                     { message, e -> logger.error("Failure processing data vending request.", e) }
             )
-            addMessageHandler(BroadcastTransactionProtocol.TOPIC,
-                    { req: BroadcastTransactionProtocol.NotifyTxRequestMessage -> handleTXNotification(req) },
-                    { message, e -> logger.error("Failure processing data vending request.", e) }
-            )
-        }
 
-        private fun handleTXNotification(req: BroadcastTransactionProtocol.NotifyTxRequestMessage): Unit {
             // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
             //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
-
             // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
             //       cash without from unknown parties?
-
-            services.startProtocol("Resolving transactions", ResolveTransactionsProtocol(req.tx, req.replyToParty))
-                .success {
-                    services.recordTransactions(req.tx)
-                }.failure { throwable ->
-                    logger.warn("Received invalid transaction ${req.tx.id} from ${req.replyToParty}", throwable)
-                }
+            addProtocolHandler(
+                    BroadcastTransactionProtocol.TOPIC,
+                    "Resolving transactions",
+                    { req: BroadcastTransactionProtocol.NotifyTxRequestMessage ->
+                        ResolveTransactionsProtocol(req.tx, req.replyToParty)
+                    },
+                    { future, req ->
+                        future.success {
+                            services.recordTransactions(req.tx)
+                        }.failure { throwable ->
+                            logger.warn("Received invalid transaction ${req.tx.id} from ${req.replyToParty}", throwable)
+                        }
+                    })
         }
 
         private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {

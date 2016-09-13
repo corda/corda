@@ -4,15 +4,19 @@ package com.r3corda.testing
 
 import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
-import com.r3corda.testing.*
 import com.r3corda.core.contracts.StateRef
-import com.r3corda.core.transactions.TransactionBuilder
-import com.r3corda.core.crypto.*
+import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.testing.node.MockIdentityService
-import com.r3corda.testing.node.MockServices
+import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.random63BitValue
+import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
+import com.r3corda.protocols.HandshakeMessage
+import com.r3corda.testing.node.MockIdentityService
+import com.r3corda.testing.node.MockServices
 import java.net.ServerSocket
 import java.security.KeyPair
 import java.security.PublicKey
@@ -124,3 +128,23 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
 ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
+
+
+/**
+ * Connect two protocols together for communication. Both protocols must have a property called otherParty of type Party
+ * which points to the other party in the communication.
+ */
+fun connectProtocols(protocol1: ProtocolLogic<*>, protocol2: ProtocolLogic<*>) {
+
+    data class Handshake(override val replyToParty: Party,
+                         override val sendSessionID: Long,
+                         override val receiveSessionID: Long) : HandshakeMessage
+
+    val sessionId1 = random63BitValue()
+    val sessionId2 = random63BitValue()
+    protocol1.registerSession(Handshake(protocol1.otherParty, sessionId1, sessionId2))
+    protocol2.registerSession(Handshake(protocol2.otherParty, sessionId2, sessionId1))
+}
+
+private val ProtocolLogic<*>.otherParty: Party
+    get() = javaClass.getDeclaredField("otherParty").apply { isAccessible = true }.get(this) as Party

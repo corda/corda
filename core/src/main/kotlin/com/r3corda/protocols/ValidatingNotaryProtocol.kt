@@ -16,10 +16,10 @@ import java.security.SignatureException
  * indeed valid.
  */
 class ValidatingNotaryProtocol(otherSide: Party,
-                               sessionIdForSend: Long,
-                               sessionIdForReceive: Long,
                                timestampChecker: TimestampChecker,
-                               uniquenessProvider: UniquenessProvider) : NotaryProtocol.Service(otherSide, sessionIdForSend, sessionIdForReceive, timestampChecker, uniquenessProvider) {
+                               uniquenessProvider: UniquenessProvider) :
+        NotaryProtocol.Service(otherSide, timestampChecker, uniquenessProvider) {
+
     @Suspendable
     override fun beforeCommit(stx: SignedTransaction, reqIdentity: Party) {
         try {

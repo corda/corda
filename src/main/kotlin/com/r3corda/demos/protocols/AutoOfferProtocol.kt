@@ -2,18 +2,19 @@ package com.r3corda.demos.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.FutureCallback
-import com.google.common.util.concurrent.Futures
 import com.r3corda.core.contracts.DealState
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.CordaPluginRegistry
-import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.serialization.deserialize
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.ProgressTracker
+import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.protocols.HandshakeMessage
 import com.r3corda.protocols.TwoPartyDealProtocol
+import com.r3corda.protocols.TwoPartyDealProtocol.Acceptor
+import com.r3corda.protocols.TwoPartyDealProtocol.DEAL_TOPIC
 
 /**
  * This whole class is really part of a demo just to initiate the agreement of a deal with a simple
@@ -25,23 +26,24 @@ import com.r3corda.protocols.TwoPartyDealProtocol
 object AutoOfferProtocol {
     val TOPIC = "autooffer.topic"
 
-    data class AutoOfferMessage(val otherSide: Party,
-                                val notary: Party,
-                                val otherSessionID: Long, val dealBeingOffered: DealState)
+    data class AutoOfferMessage(val notary: Party,
+                                val dealBeingOffered: DealState,
+                                override val replyToParty: Party,
+                                override val sendSessionID: Long = random63BitValue(),
+                                override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     class Plugin: CordaPluginRegistry() {
         override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
     }
 
 
-    class Service(services: ServiceHubInternal) {
+    class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
 
-        object RECEIVED : ProgressTracker.Step("Received offer")
         object DEALING : ProgressTracker.Step("Starting the deal protocol") {
             override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Primary.tracker()
         }
 
-        fun tracker() = ProgressTracker(RECEIVED, DEALING)
+        fun tracker() = ProgressTracker(DEALING)
 
         class Callback(val success: (SignedTransaction) -> Unit) : FutureCallback<SignedTransaction> {
             override fun onFailure(t: Throwable?) {
@@ -54,20 +56,17 @@ object AutoOfferProtocol {
         }
 
         init {
-            services.networkService.addMessageHandler(TOPIC, DEFAULT_SESSION_ID) { msg, registration ->
+            addProtocolHandler(TOPIC, "$DEAL_TOPIC.seller") { autoOfferMessage: AutoOfferMessage ->
                 val progressTracker = tracker()
-                progressTracker.currentStep = RECEIVED
-                val autoOfferMessage = msg.data.deserialize<AutoOfferMessage>()
                 // Put the deal onto the ledger
                 progressTracker.currentStep = DEALING
-                val seller = TwoPartyDealProtocol.Instigator(autoOfferMessage.otherSide, autoOfferMessage.notary,
-                        autoOfferMessage.dealBeingOffered, services.keyManagementService.freshKey(), autoOfferMessage.otherSessionID, progressTracker.getChildProgressTracker(DEALING)!!)
-                val future = services.startProtocol("${TwoPartyDealProtocol.DEAL_TOPIC}.seller", seller)
-                // This is required because we are doing child progress outside of a subprotocol.  In future, we should just wrap things like this in a protocol to avoid it
-                Futures.addCallback(future, Callback() {
-                    seller.progressTracker.currentStep = ProgressTracker.DONE
-                    progressTracker.currentStep = ProgressTracker.DONE
-                })
+                TwoPartyDealProtocol.Instigator(
+                        autoOfferMessage.replyToParty,
+                        autoOfferMessage.notary,
+                        autoOfferMessage.dealBeingOffered,
+                        services.keyManagementService.freshKey(),
+                        progressTracker.getChildProgressTracker(DEALING)!!
+                )
             }
         }
 
@@ -98,15 +97,15 @@ object AutoOfferProtocol {
         @Suspendable
         override fun call(): SignedTransaction {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
-            val ourSessionID = random63BitValue()
-
             val notary = serviceHub.networkMapCache.notaryNodes.first().identity
             // need to pick which ever party is not us
             val otherParty = notUs(dealToBeOffered.parties).single()
             progressTracker.currentStep = ANNOUNCING
-            send(otherParty, 0, AutoOfferMessage(serviceHub.storageService.myLegalIdentity, notary, ourSessionID, dealToBeOffered))
+            send(otherParty, AutoOfferMessage(notary, dealToBeOffered, serviceHub.storageService.myLegalIdentity))
             progressTracker.currentStep = DEALING
-            val stx = subProtocol(TwoPartyDealProtocol.Acceptor(otherParty, notary, dealToBeOffered, ourSessionID, progressTracker.getChildProgressTracker(DEALING)!!))
+            val stx = subProtocol(
+                    Acceptor(otherParty, notary, dealToBeOffered, progressTracker.getChildProgressTracker(DEALING)!!),
+                    inheritParentSessions = true)
             return stx
         }
 

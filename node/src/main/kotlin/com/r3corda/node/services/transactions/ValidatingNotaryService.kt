@@ -19,11 +19,9 @@ class ValidatingNotaryService(services: ServiceHubInternal,
 
     override val protocolFactory = object : NotaryProtocol.Factory {
         override fun create(otherSide: Party,
-                            sendSessionID: Long,
-                            receiveSessionID: Long,
                             timestampChecker: TimestampChecker,
                             uniquenessProvider: UniquenessProvider): NotaryProtocol.Service {
-            return ValidatingNotaryProtocol(otherSide, sendSessionID, receiveSessionID, timestampChecker, uniquenessProvider)
+            return ValidatingNotaryProtocol(otherSide, timestampChecker, uniquenessProvider)
         }
     }
 }

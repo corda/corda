@@ -24,7 +24,8 @@ class BroadcastTransactionProtocolTest {
                     tx = SignedTransactionGenerator().generate(random, status),
                     events = setOf(),
                     replyToParty = PartyGenerator().generate(random, status),
-                    sessionID = random.nextLong()
+                    sendSessionID = random.nextLong(),
+                    receiveSessionID = random.nextLong()
             )
         }
     }
