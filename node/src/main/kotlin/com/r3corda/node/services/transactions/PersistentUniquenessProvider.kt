@@ -7,16 +7,18 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.UniquenessException
 import com.r3corda.core.node.services.UniquenessProvider
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.utilities.JDBCHashMap
 import com.r3corda.node.utilities.databaseTransaction
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
-/** A a RDBMS backed Uniqueness provider */
+/** A RDBMS backed Uniqueness provider */
 @ThreadSafe
 class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val TABLE_NAME = "notary_commit_log"
+        private val log = loggerFor<PersistentUniquenessProvider>()
     }
 
     /**
@@ -37,11 +39,13 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
                     if (consumingTx != null) conflictingStates[inputState] = consumingTx
                 }
                 if (conflictingStates.isNotEmpty()) {
+                    log.debug("Failure, input states already committed: ${conflictingStates.keys.toString()}")
                     UniquenessProvider.Conflict(conflictingStates)
                 } else {
                     states.forEachIndexed { i, stateRef ->
                         put(stateRef, UniquenessProvider.ConsumingTx(txId, i, callerIdentity))
                     }
+                    log.debug("Successfully committed all input states: $states")
                     null
                 }
             }

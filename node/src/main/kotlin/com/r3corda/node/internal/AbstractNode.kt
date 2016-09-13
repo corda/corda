@@ -333,12 +333,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     open protected fun makeNotaryService(type: ServiceType): NotaryService {
-        val uniquenessProvider = makeUniquenessProvider()
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
         return when (type) {
-            SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
-            ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider, services.networkMapCache)
+            SimpleNotaryService.Type -> SimpleNotaryService(smm, net, timestampChecker, uniquenessProvider!!, services.networkMapCache)
+            ValidatingNotaryService.Type -> ValidatingNotaryService(smm, net, timestampChecker, uniquenessProvider!!, services.networkMapCache)
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
