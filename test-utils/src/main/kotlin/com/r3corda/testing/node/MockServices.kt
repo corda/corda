@@ -2,7 +2,6 @@ package com.r3corda.testing.node
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Attachment
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
@@ -12,6 +11,7 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SingletonSerializeAsToken
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.testing.MEGA_CORP
 import com.r3corda.testing.MINI_CORP
@@ -149,7 +149,7 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
 fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
     val props = Properties()
     props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence")
+    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;DB_CLOSE_ON_EXIT=FALSE")
     props.setProperty("dataSource.user", "sa")
     props.setProperty("dataSource.password", "")
     return props

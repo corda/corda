@@ -3,15 +3,20 @@ package com.r3corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.utilities.UntrustworthyData
+import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.sql.Connection
+import java.sql.SQLException
 import java.util.concurrent.ExecutionException
 
 /**
@@ -63,18 +68,41 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     override fun run(): R {
+        createTransaction()
         val result = try {
             logic.call()
         } catch (t: Throwable) {
+            commitTransaction()
             actionOnEnd()
             _resultFuture?.setException(t)
             throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception
+        commitTransaction()
         actionOnEnd()
         _resultFuture?.set(result)
         return result
+    }
+
+    private fun createTransaction() {
+        // Make sure we have a database transaction
+        TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+        logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}." }
+    }
+
+    private fun commitTransaction() {
+        val transaction = TransactionManager.current()
+        try {
+            logger.trace { "Commiting database transaction $transaction on ${Strand.currentStrand()}." }
+            transaction.commit()
+        } catch (e: SQLException) {
+            // TODO: we will get here if the database is not available.  Think about how to shutdown and restart cleanly.
+            logger.error("Transaction commit failed: ${e.message}", e)
+            System.exit(1)
+        } finally {
+            transaction.close()
+        }
     }
 
     @Suspendable
@@ -108,6 +136,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     @Suspendable
     private fun suspend(protocolIORequest: ProtocolIORequest) {
+        commitTransaction()
         parkAndSerialize { fiber, serializer ->
             try {
                 suspendAction(protocolIORequest)
@@ -118,6 +147,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
                 _resultFuture?.setException(t)
             }
         }
+        createTransaction()
     }
 
 }

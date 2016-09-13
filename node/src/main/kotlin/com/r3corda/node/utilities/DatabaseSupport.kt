@@ -5,9 +5,11 @@ import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import java.io.Closeable
+import java.sql.Connection
 import java.util.*
 
-fun <T> databaseTransaction(statement: Transaction.() -> T): T = org.jetbrains.exposed.sql.transactions.transaction(statement)
+// TODO: Handle commit failure due to database unavailable.  Better to shutdown and await database reconnect/recovery.
+fun <T> databaseTransaction(statement: Transaction.() -> T): T = org.jetbrains.exposed.sql.transactions.transaction(Connection.TRANSACTION_REPEATABLE_READ, 1, statement)
 
 fun configureDatabase(props: Properties): Pair<Closeable, Database> {
     val config = HikariConfig(props)
