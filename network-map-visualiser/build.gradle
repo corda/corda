@@ -23,10 +23,13 @@ sourceCompatibility = 1.5
 repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
     maven {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
     }
-    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
 }
 
 applicationDefaultJvmArgs = ["-javaagent:${rootProject.configurations.quasar.singleFile}"]

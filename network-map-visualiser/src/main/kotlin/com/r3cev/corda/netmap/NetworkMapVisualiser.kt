@@ -11,10 +11,10 @@ package com.r3cev.corda.netmap
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.internal.testing.IRSSimulation
-import com.r3corda.node.internal.testing.MockNetwork
-import com.r3corda.node.internal.testing.Simulation
-import com.r3corda.node.services.network.InMemoryMessagingNetwork
+import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.simulation.IRSSimulation
+import com.r3corda.simulation.Simulation
 import com.r3corda.node.services.network.NetworkMapService
 import javafx.animation.*
 import javafx.application.Application

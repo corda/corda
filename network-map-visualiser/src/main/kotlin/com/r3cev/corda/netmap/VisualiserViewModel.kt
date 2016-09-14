@@ -1,8 +1,8 @@
 package com.r3cev.corda.netmap
 
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.internal.testing.IRSSimulation
-import com.r3corda.node.internal.testing.MockNetwork
+import com.r3corda.testing.node.MockNetwork
+import com.r3corda.simulation.IRSSimulation
 import javafx.animation.*
 import javafx.geometry.Pos
 import javafx.scene.control.Label
