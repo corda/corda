@@ -58,13 +58,20 @@ fun main(args: Array<String>) {
     // Bring up node.
     val advertisedServices: Set<ServiceType> = emptySet()
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg))
+
+    // TODO: create a base class that provides a default implementation
     val config = object : NodeConfiguration {
+
         override val myLegalName: String = "Rate fix demo node"
-        override val exportJMXto: String = "http"
         override val nearestCity: String = "Atlantis"
+        override val emailAddress: String = ""
+        override val devMode: Boolean = true
+        override val exportJMXto: String = "http"
         override val keyStorePassword: String = "cordacadevpass"
         override val trustStorePassword: String = "trustpass"
         override val dataSourceProperties: Properties = makeTestDataSourceProperties()
+        override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+
     }
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)

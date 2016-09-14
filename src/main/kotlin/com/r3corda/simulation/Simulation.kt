@@ -1,10 +1,10 @@
 package com.r3corda.simulation
 
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.CityDatabase
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
@@ -14,7 +14,6 @@ import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
-import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.node.TestClock
@@ -58,13 +57,19 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             val letter = 'A' + counter
             val city = bankLocations[counter++ % bankLocations.size]
-            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
+
+            // TODO: create a base class that provides a default implementation
+            val cfg = object : NodeConfiguration {
+
                 // TODO: Set this back to "Bank of $city" after video day.
                 override val myLegalName: String = "Bank $letter"
-                override val exportJMXto: String = ""
                 override val nearestCity: String = city
+                override val emailAddress: String = ""
+                override val devMode: Boolean = true
+                override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
+                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
             return SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
@@ -76,15 +81,20 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val bankFactory = BankFactory()
 
     object NetworkMapNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork,
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(com.r3corda.node.services.network.NetworkMapService.Type))
-            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
+            require(advertisedServices.contains(NetworkMapService.Type))
+
+            // TODO: create a base class that provides a default implementation
+            val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Network coordination center"
-                override val exportJMXto: String = ""
                 override val nearestCity: String = "Amsterdam"
+                override val emailAddress: String = ""
+                override val devMode: Boolean = true
+                override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
+                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
 
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
@@ -92,30 +102,40 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object NotaryNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(com.r3corda.node.services.transactions.SimpleNotaryService.Type))
-            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
+            require(advertisedServices.contains(SimpleNotaryService.Type))
+
+            // TODO: create a base class that provides a default implementation
+            val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Notary Service"
-                override val exportJMXto: String = ""
                 override val nearestCity: String = "Zurich"
+                override val emailAddress: String = ""
+                override val devMode: Boolean = true
+                override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
+                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
             return SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
     }
 
     object RatesOracleFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             require(advertisedServices.contains(NodeInterestRates.Type))
-            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
+
+            // TODO: create a base class that provides a default implementation
+            val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Rates Service Provider"
-                override val exportJMXto: String = ""
                 override val nearestCity: String = "Madrid"
+                override val emailAddress: String = ""
+                override val devMode: Boolean = true
+                override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
+                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
 
             return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
@@ -129,14 +149,19 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RegulatorFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: com.r3corda.node.services.config.NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            val cfg = object : com.r3corda.node.services.config.NodeConfiguration {
+
+            // TODO: create a base class that provides a default implementation
+            val cfg = object : NodeConfiguration {
                 override val myLegalName: String = "Regulator A"
-                override val exportJMXto: String = ""
                 override val nearestCity: String = "Paris"
+                override val emailAddress: String = ""
+                override val devMode: Boolean = true
+                override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
+                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
 
             val n = object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
@@ -151,9 +176,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val network = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
     val networkMap: SimulatedNode
-            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = com.r3corda.node.services.network.NetworkMapService.Type) as SimulatedNode
+            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = com.r3corda.node.services.transactions.SimpleNotaryService.Type) as SimulatedNode
+            = network.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = SimpleNotaryService.Type) as SimulatedNode
     val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info.address, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
             = network.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode

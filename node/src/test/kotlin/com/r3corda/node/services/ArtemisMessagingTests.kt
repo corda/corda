@@ -28,12 +28,19 @@ class ArtemisMessagingTests {
     val hostAndPort = freeLocalHostAndPort()
     val topic = "platform.self"
     val identity = generateKeyPair()
+
+    // TODO: create a base class that provides a default implementation
     val config = object : NodeConfiguration {
+
         override val myLegalName: String = "me"
-        override val exportJMXto: String = ""
         override val nearestCity: String = "London"
+        override val emailAddress: String = ""
+        override val devMode: Boolean = true
+        override val exportJMXto: String = ""
         override val keyStorePassword: String = "testpass"
         override val trustStorePassword: String = "trustpass"
+        override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+
     }
 
     var messagingClient: NodeMessagingClient? = null
