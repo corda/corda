@@ -21,7 +21,7 @@ import javafx.collections.ObservableListBase
  * The above will create a list that chooses and delegates to the appropriate filtered list based on the type of filter.
  */
 class ChosenList<E>(
-        private val chosenListObservable: ObservableValue<ObservableList<out E>>
+        private val chosenListObservable: ObservableValue<out ObservableList<out E>>
 ): ObservableListBase<E>() {
 
     private var currentList = chosenListObservable.value
