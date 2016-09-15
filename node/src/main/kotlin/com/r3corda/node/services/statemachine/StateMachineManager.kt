@@ -14,6 +14,7 @@ import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.serialization.*
+import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.Checkpoint
@@ -73,6 +74,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
     private val totalStartedProtocols = metrics.counter("Protocols.Started")
     private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
+    private var started = false
 
     // Context for tokenized services in checkpoints
     private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo())
@@ -118,13 +120,23 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     }
 
     fun start() {
-        checkpointStorage.checkpoints.forEach { restoreFromCheckpoint(it) }
+        checkpointStorage.checkpoints.forEach { createFiberForCheckpoint(it) }
+        serviceHub.networkMapCache.mapServiceRegistered.then(executor) {
+            synchronized(started) {
+                started = true
+                stateMachines.forEach { restartFiber(it.key, it.value) }
+            }
+        }
     }
 
-    private fun restoreFromCheckpoint(checkpoint: Checkpoint) {
-        val fiber = deserializeFiber(checkpoint.serialisedFiber)
-        initFiber(fiber, { checkpoint })
+    private fun createFiberForCheckpoint(checkpoint: Checkpoint) {
+        if (!checkpoint.fiberCreated) {
+            val fiber = deserializeFiber(checkpoint.serialisedFiber)
+            initFiber(fiber, { checkpoint })
+        }
+    }
 
+    private fun restartFiber(fiber: ProtocolStateMachineImpl<*>, checkpoint: Checkpoint) {
         if (checkpoint.request is ReceiveRequest<*>) {
             val topicSession = checkpoint.request.receiveTopicSession
             fiber.logger.info("Restored ${fiber.logic} - it was previously waiting for message of type ${checkpoint.request.receiveType.name} on $topicSession")
@@ -179,7 +191,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
     }
 
-    private fun initFiber(psm: ProtocolStateMachineImpl<*>, startingCheckpoint: () -> Checkpoint) {
+    private fun initFiber(psm: ProtocolStateMachineImpl<*>, startingCheckpoint: () -> Checkpoint): Checkpoint {
         psm.serviceHub = serviceHub
         psm.suspendAction = { request ->
             psm.logger.trace { "Suspended fiber ${psm.id} ${psm.logic}" }
@@ -194,8 +206,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
             totalFinishedProtocols.inc()
             notifyChangeObservers(psm, AddOrRemove.REMOVE)
         }
-        stateMachines[psm] = startingCheckpoint()
+        val checkpoint = startingCheckpoint()
+        checkpoint.fiberCreated = true
+        totalStartedProtocols.inc()
+        stateMachines[psm] = checkpoint
         notifyChangeObservers(psm, AddOrRemove.ADD)
+        return checkpoint
     }
 
     /**
@@ -206,17 +222,22 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
         val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
         // Need to add before iterating in case of immediate completion
-        initFiber(fiber) {
+        val checkpoint = initFiber(fiber) {
             val checkpoint = Checkpoint(serializeFiber(fiber), null, null)
-            checkpointStorage.addCheckpoint(checkpoint)
             checkpoint
         }
+        checkpointStorage.addCheckpoint(checkpoint)
+        synchronized(started) { // If we are not started then our checkpoint will be picked up during start
+            if (!started) {
+                return fiber
+            }
+        }
+
         try {
             executor.executeASAP {
                 iterateStateMachine(fiber, null) {
                     fiber.start()
                 }
-                totalStartedProtocols.inc()
             }
         } catch (e: ExecutionException) {
             // There are two ways we can take exceptions in this method:

@@ -13,6 +13,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class StateMachineManagerTests {
 
@@ -62,12 +64,71 @@ class StateMachineManagerTests {
         assertThat(restoredProtocol.receivedPayload).isEqualTo(payload)
     }
 
+    @Test
+    fun `protocol added before network map does run after init`() {
+        val node3 = net.createNode(node1.info.address) //create vanilla node
+        val protocol = ProtocolNoBlocking()
+        node3.smm.add("test", protocol)
+        assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        net.runNetwork() // Allow network map messages to flow
+        assertEquals(true, protocol.protocolStarted) // Now we should have run the protocol
+    }
+
+    @Test
+    fun `protocol added before network map will be init checkpointed`() {
+        var node3 = net.createNode(node1.info.address) //create vanilla node
+        val protocol = ProtocolNoBlocking()
+        node3.smm.add("test", protocol)
+        assertEquals(false, protocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        node3.stop()
+
+        node3 = net.createNode(node1.info.address, forcedID = node3.id)
+        val restoredProtocol = node3.smm.findStateMachines(ProtocolNoBlocking::class.java).single().first
+        assertEquals(false, restoredProtocol.protocolStarted) // Not started yet as no network activity has been allowed yet
+        net.runNetwork() // Allow network map messages to flow
+        node3.smm.executor.flush()
+        assertEquals(true, restoredProtocol.protocolStarted) // Now we should have run the protocol and hopefully cleared the init checkpoint
+        node3.stop()
+
+        // Now it is completed the protocol should leave no Checkpoint.
+        node3 = net.createNode(node1.info.address, forcedID = node3.id)
+        net.runNetwork() // Allow network map messages to flow
+        node3.smm.executor.flush()
+        assertTrue(node3.smm.findStateMachines(ProtocolNoBlocking::class.java).isEmpty())
+    }
+
+    @Test
+    fun `protocol loaded from checkpoint will respond to messages from before start`() {
+        val topic = "send-and-receive"
+        val payload = random63BitValue()
+        val sendProtocol = SendProtocol(topic, node2.info.identity, payload)
+        val receiveProtocol = ReceiveProtocol(topic, node1.info.identity)
+        connectProtocols(sendProtocol, receiveProtocol)
+        node2.smm.add("test", receiveProtocol) // Prepare checkpointed receive protocol
+        node2.stop() // kill receiver
+        node1.smm.add("test", sendProtocol) // now generate message to spool up and thus come in ahead of messages for NetworkMapService
+        val restoredProtocol = node2.restartAndGetRestoredProtocol<ReceiveProtocol>(node1.info.address)
+        assertThat(restoredProtocol.receivedPayload).isEqualTo(payload)
+    }
+
     private inline fun <reified P : NonTerminatingProtocol> MockNode.restartAndGetRestoredProtocol(networkMapAddress: SingleMessageRecipient? = null): P {
         val servicesArray = advertisedServices.toTypedArray()
         val node = mockNet.createNode(networkMapAddress, id, advertisedServices = *servicesArray)
+        mockNet.runNetwork() // allow NetworkMapService messages to stabilise and thus start the state machine
         return node.smm.findStateMachines(P::class.java).single().first
     }
 
+
+    private class ProtocolNoBlocking : ProtocolLogic<Unit>() {
+        @Transient var protocolStarted = false
+
+        @Suspendable
+        override fun call() {
+            protocolStarted = true
+        }
+
+        override val topic: String get() = throw UnsupportedOperationException()
+    }
 
     private class ProtocolWithoutCheckpoints : NonTerminatingProtocol() {
 
