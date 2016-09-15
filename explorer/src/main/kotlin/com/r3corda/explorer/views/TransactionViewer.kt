@@ -86,13 +86,17 @@ class TransactionViewer: View() {
 
     private val matchingTransactionsLabel: Label by fxid()
 
+    // Inject data
     private val gatheredTransactionDataList: ObservableList<out GatheredTransactionData>
             by observableListReadOnly(GatheredTransactionDataModel::gatheredTransactionDataList)
     private val reportingExchange: ObservableValue<Pair<Currency, (Amount<Currency>) -> Amount<Currency>>>
             by observableValue(ReportingCurrencyModel::reportingExchange)
-
     private val myIdentity: ObservableValue<Party> by observableValue(IdentityModel::myIdentity)
 
+    /**
+     * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
+     * have the data.
+     */
     data class ViewerNode(
             val transactionId: ObservableValue<SecureHash?>,
             val fiberId: ObservableValue<Long?>,
@@ -108,16 +112,25 @@ class TransactionViewer: View() {
             val allEvents: ObservableList<out ServiceToClientEvent>
     )
 
+    /**
+     * Holds information about a single input/output state, to be displayed in the [contractStatesTitledPane]
+     */
     data class StateNode(
             val transactionState: TransactionState<*>,
             val stateRef: StateRef
     )
 
+    /**
+     * We map the gathered data about transactions almost one-to-one to the nodes.
+     */
     private val viewerNodes = EasyBind.map(gatheredTransactionDataList) {
         ViewerNode(
                 transactionId = EasyBind.map(it.transaction) { it?.id },
                 fiberId = it.fiberId,
                 clientUuid = it.uuid,
+                /**
+                 * We can't really do any better based on uuid, we need to store explicit data for this TODO
+                 */
                 originator = EasyBind.map(it.uuid) { uuid ->
                     if (uuid == null) {
                         "Someone"
@@ -144,6 +157,9 @@ class TransactionViewer: View() {
         )
     }
 
+    /**
+     * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
+     */
     private fun calculateTotalEquiv(
             relevantPublicKeys: Set<PublicKey>,
             reportingCurrency: Currency,
@@ -165,6 +181,9 @@ class TransactionViewer: View() {
         return AmountDiff.fromLong(sum, reportingCurrency)
     }
 
+    /**
+     * The detail panes are only filled out if a transaction is selected
+     */
     private val selectedViewerNode = transactionViewTable.singleRowSelection()
     private val selectedTransaction = EasyBind.monadic(selectedViewerNode).flatMap<LedgerTransaction?, SingleRowSelection<ViewerNode>> {
         when (it) {
@@ -199,15 +218,16 @@ class TransactionViewer: View() {
         }
     })
 
-
-    private val noLowLevelEvents = FXCollections.emptyObservableList<ServiceToClientEvent>()
     private val lowLevelEvents = ChosenList(EasyBind.map(selectedViewerNode) {
         when (it) {
-            is SingleRowSelection.None -> noLowLevelEvents
+            is SingleRowSelection.None -> FXCollections.emptyObservableList<ServiceToClientEvent>()
             is SingleRowSelection.Selected -> it.node.allEvents
         }
     })
 
+    /**
+     * We only display the detail panes if there is a node selected.
+     */
     private val allNodesShown = FXCollections.observableArrayList<Node>(
             transactionViewTable,
             contractStatesTitledPane,
@@ -226,6 +246,9 @@ class TransactionViewer: View() {
                 }
             })
 
+    /**
+     * Both input and output state tables look the same, so we each up with [wireUpStatesTable]
+     */
     private fun wireUpStatesTable(
             states: ObservableList<StateNode>,
             statesCountLabel: Label,
@@ -295,6 +318,7 @@ class TransactionViewer: View() {
         transactionViewClientUuid.setCellValueFactory { EasyBind.map (it.value.clientUuid) { "${it ?: ""}" } }
         transactionViewProtocolStatus.setCellValueFactory { EasyBind.map(it.value.protocolStatus) { "${it ?: ""}" } }
         transactionViewTransactionStatus.setCellValueFactory { it.value.transactionStatus }
+        // TODO reduce clutter
         transactionViewTransactionStatus.setCellFactory {
             object : TableCell<ViewerNode, TransactionCreateStatus?>() {
                 val label = Label()
@@ -319,6 +343,7 @@ class TransactionViewer: View() {
                 }
             }
         }
+        // TODO reduce clutter
         transactionViewStateMachineStatus.setCellValueFactory { it.value.stateMachineStatus }
         transactionViewStateMachineStatus.setCellFactory {
             object : TableCell<ViewerNode, StateMachineStatus?>() {
