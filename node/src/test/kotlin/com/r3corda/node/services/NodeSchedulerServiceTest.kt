@@ -34,6 +34,7 @@ import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.*
+import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     // Use an in memory file system for testing attachment storage.
@@ -160,7 +161,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         assertThat(calls).isEqualTo(0)
         testClock.advanceBy(1.days)
         backgroundExecutor.shutdown()
-        backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        assertTrue(backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS))
         countDown.await()
         assertThat(calls).isEqualTo(1)
     }
@@ -180,7 +181,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         countDown.await()
         assertThat(calls).isEqualTo(3)
         backgroundExecutor.shutdown()
-        backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        assertTrue(backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS))
     }
 
     @Test
@@ -193,14 +194,13 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         assertThat(calls).isEqualTo(0)
         scheduleTX(time + 1.days, 3)
 
-        backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         testClock.advanceBy(1.days)
         countDown.await()
         assertThat(calls).isEqualTo(1)
-        testClock.advanceBy(1.days)
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
+        testClock.advanceBy(1.days)
         backgroundExecutor.shutdown()
-        backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        assertTrue(backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS))
     }
 
     @Test
@@ -217,7 +217,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         countDown.await()
         assertThat(calls).isEqualTo(1)
         backgroundExecutor.shutdown()
-        backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        assertTrue(backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS))
     }
 
     @Test
@@ -236,7 +236,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         countDown.await()
         assertThat(calls).isEqualTo(3)
         backgroundExecutor.shutdown()
-        backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        assertTrue(backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS))
     }
 
     @Test
@@ -251,7 +251,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         testClock.advanceBy(1.days)
         assertThat(calls).isEqualTo(0)
         backgroundExecutor.shutdown()
-        backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS)
+        assertTrue(backgroundExecutor.awaitTermination(60, TimeUnit.SECONDS))
     }
 
     private fun scheduleTX(instant: Instant, increment: Int = 1): ScheduledStateRef? {
