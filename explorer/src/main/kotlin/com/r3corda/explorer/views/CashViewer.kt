@@ -82,6 +82,9 @@ class CashViewer : View() {
     val reportingExchange: ObservableValue<Pair<Currency, (Amount<Currency>) -> Amount<Currency>>>
             by observableValue(ReportingCurrencyModel::reportingExchange)
 
+    /**
+     * This holds the data for each row in the TreeTable.
+     */
     sealed class ViewerNode {
         object Root : ViewerNode()
         class IssuerNode(
@@ -96,6 +99,15 @@ class CashViewer : View() {
         ) : ViewerNode()
     }
 
+    /**
+     * We allow filtering by both issuer and currency. We do this by filtering by both at the same time and picking the
+     * one which produces more results, which seems to work, as the set of currency strings don't really overlap with
+     * issuer strings.
+     */
+
+    /**
+     * Holds the filtering criterion based on the input text
+     */
     private val filterCriteria = EasyBind.map(searchCriteriaTextField.textProperty()) { text ->
         if (text == "") {
             FilterCriteria.All
@@ -104,6 +116,11 @@ class CashViewer : View() {
         }
     }
 
+    /**
+     * Filter cash states based on issuer.
+     *
+     * TODO add a ObservableList<A>.filter(Observable<Bool>) extension method
+     */
     private val issueFilteredCashStates = FilteredList(cashStates).apply {
         predicateProperty().bind(EasyBind.map(filterCriteria) { filterCriteria ->
             Predicate<StateAndRef<Cash.State>> {
@@ -112,6 +129,9 @@ class CashViewer : View() {
         })
     }
 
+    /**
+     * Now filter cash states based on currency.
+     */
     private val currencyFilteredCashStates = FilteredList(cashStates).apply {
         predicateProperty().bind(EasyBind.map(filterCriteria) { filterCriteria ->
             Predicate<StateAndRef<Cash.State>> {
@@ -120,12 +140,16 @@ class CashViewer : View() {
         })
     }
 
-
+    /**
+     * Now we pick which one to use.
+     */
     enum class FilterMethod {
         Issue,
         Currency
     }
-
+    /**
+     * TODO come up with an easier way of expressing this.
+     */
     private val filterMethod = Bindings.createObjectBinding({
         if (issueFilteredCashStates.size > currencyFilteredCashStates.size) {
             FilterMethod.Issue
@@ -134,6 +158,11 @@ class CashViewer : View() {
         }
     }, arrayOf(filterCriteria))
 
+    /**
+     * Finally we bind the actual result states.
+     *
+     * TODO perhaps we can collapse some of the above to reduce code size
+     */
     private val filteredCashStates = ChosenList<StateAndRef<Cash.State>>(EasyBind.map(filterMethod) {
         when (it) {
             FilterMethod.Issue -> issueFilteredCashStates
@@ -142,21 +171,48 @@ class CashViewer : View() {
         }
     })
 
+    /**
+     * This is where we aggregate the list of cash states into the TreeTable structure.
+     */
     val cashViewerIssueNodes: ObservableList<TreeItem<ViewerNode.IssuerNode>> =
+            /**
+             * First we group the states based on the issuer. [memberStates] is all states holding currency issued by [issuer]
+             */
             AggregatedList(filteredCashStates, { it.state.data.amount.token.issuer.party }) { issuer, memberStates ->
+                /**
+                 * Next we create subgroups based on currency. [memberStates] here is all states holding currency [currency] issued by [issuer] above.
+                 * Note that these states will not be displayed in the TreeTable, only summed , but rather in the side pane if the user clicks on the row.
+                 */
                 val currencyNodes = AggregatedList(memberStates, { it.state.data.amount.token.product }) { currency, memberStates ->
+                    /**
+                     * We sum the states in the subgroup, to be displayed in the "Local currency column"
+                     *
+                     * TODO reduce clutter here
+                     */
                     val sumAmount = EasyBind.map(
                             Bindings.createLongBinding({
                                 memberStates.stream().collect(Collectors.summingLong { it.state.data.amount.quantity })
                             }, arrayOf(memberStates))
                     ) { sum -> Amount(sum.toLong(), currency) }
 
+                    /**
+                     * We exchange the sum to the reporting currency, to be displayed in the "<currency> Equiv" column.
+                     */
                     val equivSumAmount = EasyBind.combine(sumAmount, reportingExchange) { sum, exchange ->
                         exchange.second(sum)
                     }
+                    /**
+                     * Finally assemble the actual TreeTable Currency node.
+                     */
                     TreeItem(ViewerNode.CurrencyNode(sumAmount, equivSumAmount, memberStates))
                 }
 
+                /**
+                 * Now that we have all nodes per currency, we sum the exchanged amounts, to be displayed in the
+                 * "<currency> Equiv" column, this time on the issuer level.
+                 *
+                 * TODO reduce clutter
+                 */
                 val equivSumAmount =
                         EasyBind.combine(
                                 EasyBind.combine(EasyBind.map(currencyNodes, { it.value.equivAmount })) {
@@ -167,20 +223,38 @@ class CashViewer : View() {
                             Amount(sum.toLong(), currency)
                         }
 
+                /**
+                 * Assemble the Issuer node.
+                 */
                 val treeItem = TreeItem(ViewerNode.IssuerNode(issuer, equivSumAmount, memberStates))
+
+                /**
+                 * Bind the children in the TreeTable structure.
+                 *
+                 * TODO Perhaps we shouldn't do this here, but rather have a generic way of binding nodes to the treetable once.
+                 */
                 treeItem.isExpanded = true
                 @Suppress("UNCHECKED_CAST")
                 Bindings.bindContent(treeItem.children as ObservableList<TreeItem<out ViewerNode>>, currencyNodes)
                 treeItem
             }
 
+    /**
+     * Now we build up the Observables needed for the side pane, given that the user clicks on a row.
+     */
     val selectedViewerNode = cashViewerTable.singleRowSelection()
 
+    /**
+     * Holds data for a single state, to be displayed in the list in the side pane.
+     */
     data class StateRow (
         val originated: LocalDateTime,
         val stateAndRef: StateAndRef<Cash.State>
     )
 
+    /**
+     * A small class describing the graphics of a single state.
+     */
     inner class StateRowGraphic(
             val stateRow: StateRow
     ) : UIComponent() {
@@ -211,6 +285,10 @@ class CashViewer : View() {
         }
     }
 
+    /**
+     * The list of states related to the current selection. If none or the root is selected it's empty, if an issuer or
+     * currency node is selected it's the relevant states.
+     */
     private val noSelectionStates = FXCollections.observableArrayList<StateAndRef<Cash.State>>()
     private val selectedViewerNodeStates = ChosenList<StateAndRef<Cash.State>>(EasyBind.map(selectedViewerNode) { selection ->
         when (selection) {
@@ -224,6 +302,9 @@ class CashViewer : View() {
         }
     })
 
+    /**
+     * We re-display the exchanged sum amount, if we have a selection.
+     */
     private val noSelectionSumEquiv = EasyBind.map(reportingCurrency) { Amount(0, it) }
     private val selectedViewerNodeSumEquiv = EasyBind.monadic(selectedViewerNode).flatMap { selection ->
         when (selection) {
@@ -237,10 +318,18 @@ class CashViewer : View() {
         }
     }
 
+    /**
+     * We add some extra timestamp data here to the selected states.
+     *
+     * TODO update this once we have actual timestamps.
+     */
     private val stateRows = EasyBind.map(selectedViewerNodeStates) {
         StateRow(LocalDateTime.now(), it)
     }
 
+    /**
+     * We only display the right pane if a node is selected in the TreeTable.
+     */
     private val onlyLeftPaneShown = FXCollections.observableArrayList<Node>(leftPane)
     private val bothPanesShown = FXCollections.observableArrayList<Node>(leftPane, rightPane)
     private val panesShown = ChosenList<Node>(EasyBind.map(selectedViewerNode) {
@@ -261,10 +350,7 @@ class CashViewer : View() {
 
         Bindings.bindContent(topSplitPane.items, panesShown)
 
-        rightPane.visibleProperty().bind(EasyBind.map(selectedViewerNode) {
-            it !is SingleRowSelection.None
-        })
-
+        // TODO reduce clutter
         totalPositionsLabel.textProperty().bind(Bindings.createStringBinding({
             val positionsCount = selectedViewerNodeStates.size
             val plural = if (positionsCount == 1) "" else "s"
@@ -278,6 +364,7 @@ class CashViewer : View() {
 
         Bindings.bindContent(cashStatesList.items, stateRows)
 
+        // TODO reduce clutter
         cashStatesList.setCellFactory {
             object : ListCell<StateRow>() {
                 init {
@@ -296,6 +383,7 @@ class CashViewer : View() {
 
         val cellFactory = AmountFormatter.comma.toTreeTableCellFactory<ViewerNode, Amount<Currency>>()
 
+        // TODO use smart resize
         cashViewerTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / cashViewerTable.columns.size).toInt()
         }
