@@ -71,4 +71,7 @@ dependencies {
     // JFXtras: useful widgets including a calendar control.
     compile 'org.jfxtras:jfxtras-agenda:8.0-r5'
     compile 'org.jfxtras:jfxtras-font-roboto:8.0-r5'
+
+    // Humanize: formatting
+    compile 'com.github.mfornos:humanize-icu:1.2.2'
 }

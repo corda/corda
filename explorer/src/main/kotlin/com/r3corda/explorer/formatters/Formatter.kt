@@ -1,6 +1,6 @@
 package com.r3corda.explorer.formatters
 
 
-interface Formatter<T> {
+interface Formatter<in T> {
     fun format(value: T): String
 }

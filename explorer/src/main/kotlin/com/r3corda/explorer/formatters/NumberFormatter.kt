@@ -8,18 +8,15 @@ class NumberFormatter {
         private val doubleCommaFormatter = DecimalFormat("#,###.00")
         private val integralCommaFormatter = DecimalFormat("#,###")
 
-        val doubleComma = object : Formatter<Double> {
-            override fun format(value: Double) =
-                    doubleCommaFormatter.format(value)
+        private val _integralComma: Formatter<Any> = object : Formatter<Any> {
+            override fun format(value: Any) = integralCommaFormatter.format(value)
         }
 
-        val longComma = object : Formatter<Long> {
-            override fun format(value: Long) =
-                    integralCommaFormatter.format(value)
+        val doubleComma = object : Formatter<Double> {
+            override fun format(value: Double) = doubleCommaFormatter.format(value)
         }
-        val intComma = object : Formatter<Int> {
-            override fun format(value: Int) =
-                    integralCommaFormatter.format(value)
-        }
+
+        val numberComma: Formatter<Number> = _integralComma
+        val longComma: Formatter<Long> = _integralComma
     }
 }

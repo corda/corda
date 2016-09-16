@@ -1,6 +1,7 @@
 package com.r3corda.explorer.views
 
 import com.r3corda.client.fxutils.AmountBindings
+import com.r3corda.client.fxutils.map
 import com.r3corda.client.model.*
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.StateAndRef
@@ -40,15 +41,15 @@ class Home : View() {
     private val exchangeRate: ObservableValue<ExchangeRate> by observableValue(ExchangeRateModel::exchangeRate)
 
     private val sumAmount = AmountBindings.sumAmountExchange(
-            EasyBind.map(cashStates) { it.state.data.amount.withoutIssuer() },
+            cashStates.map { it.state.data.amount.withoutIssuer() },
             reportingCurrency,
             exchangeRate
     )
 
     init {
-        val formatter = AmountFormatter.currency(AmountFormatter.kmb(NumberFormatter.doubleComma))
+        val formatter = AmountFormatter.currency(AmountFormatter.compact)
 
-        ourCashLabel.textProperty().bind(EasyBind.map(sumAmount) { formatter.format(it) })
+        ourCashLabel.textProperty().bind(sumAmount.map { formatter.format(it) })
         ourCashPane.setOnMouseClicked { clickEvent ->
             if (clickEvent.button == MouseButton.PRIMARY) {
                 selectedView.value = SelectedView.Cash
@@ -56,9 +57,7 @@ class Home : View() {
         }
 
         ourTransactionsLabel.textProperty().bind(
-                Bindings.createStringBinding({
-                    NumberFormatter.intComma.format(gatheredTransactionDataList.size)
-                }, arrayOf(gatheredTransactionDataList))
+                Bindings.size(gatheredTransactionDataList).map { NumberFormatter.numberComma.format(it) }
         )
         ourTransactionsPane.setOnMouseClicked { clickEvent ->
             if (clickEvent.button == MouseButton.PRIMARY) {

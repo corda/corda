@@ -302,7 +302,7 @@ class CashViewer : View() {
             "Total $it position$plural"
         })
 
-        val equivSumLabelFormatter = AmountFormatter.currency(AmountFormatter.kmb(NumberFormatter.doubleComma))
+        val equivSumLabelFormatter = AmountFormatter.currency(AmountFormatter.compact)
         equivSumLabel.textProperty().bind(selectedViewerNodeSumEquiv.map {
             equivSumLabelFormatter.format(it)
         })
