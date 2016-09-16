@@ -71,7 +71,6 @@ Read on to learn:
 
    release-process
    release-notes
-   visualiser
    codestyle
    building-the-docs
 
