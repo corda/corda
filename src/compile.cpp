@@ -5140,6 +5140,14 @@ loop:
         PROTECT(t, bootstrapArray);
 
         if (isLambda(t, c->loader(), bootstrapArray, invocation)) {
+          if (bc->hostVM == 0) {
+            throwNew(t,
+                     GcVirtualMachineError::Type,
+                     "lambda expression encountered, but host VM is not "
+                     "available; use -hostvm option to bootimage-generator to "
+                     "fix this");
+          }
+
           JNIEnv* e;
           if (bc->hostVM->vtable->AttachCurrentThread(bc->hostVM, &e, 0) == 0) {
             e->vtable->PushLocalFrame(e, 256);
