@@ -1,10 +1,12 @@
 package com.r3corda.client.fxutils
 
 import javafx.beans.InvalidationListener
+import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
+import org.eclipse.jetty.server.Authentication
 import java.util.*
 
 /**
@@ -20,21 +22,30 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
      *
      * Note that because of the bookkeeping required for this map, any remove operation and any add operation that
      * inserts to the middle of the list will be O(N) as we need to scan the map and shift indices accordingly.
+     *
+     * Note also that we're wrapping each ObservableValue, this is required because we want to support reusing of
+     * ObservableValues and we need each to have a different hash.
      */
-    val indexMap = HashMap<ObservableValue<out A>, Pair<Int, InvalidationListener>>()
+    class WrappedObservableValue<A>(
+            val observableValue: ObservableValue<A>
+    )
+    val indexMap = HashMap<WrappedObservableValue<out A>, Pair<Int, ChangeListener<A>>>()
     init {
         sourceList.forEachIndexed { index, observableValue ->
-            indexMap[observableValue] = Pair(index, createListener(observableValue))
+            val wrappedObservableValue = WrappedObservableValue(observableValue)
+            indexMap[wrappedObservableValue] = Pair(index, createListener(wrappedObservableValue))
         }
     }
 
-    private fun createListener(observableValue: ObservableValue<out A>): InvalidationListener {
-        return InvalidationListener {
-            val currentIndex = indexMap[observableValue]!!.first
+    private fun createListener(wrapped: WrappedObservableValue<out A>): ChangeListener<A> {
+        val listener = ChangeListener<A> { _observableValue, oldValue, newValue ->
+            val currentIndex = indexMap[wrapped]!!.first
             beginChange()
-            nextAdd(currentIndex, currentIndex + 1)
+            nextReplace(currentIndex, currentIndex + 1, listOf(oldValue))
             endChange()
         }
+        wrapped.observableValue.addListener(listener)
+        return listener
     }
 
     override fun sourceChanged(c: ListChangeListener.Change<out ObservableValue<out A>>) {
@@ -51,17 +62,17 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
             } else {
                 val removed = c.removed
                 if (removed.size != 0) {
-                    val removeStart = indexMap[removed.first()]!!.first
-                    val removeEnd = indexMap[removed.last()]!!.first + 1
-                    require(removeStart < removeEnd)
-                    val removeRange = removeEnd - removeStart
+                    // TODO this assumes that if wasAdded() == true then we are adding elements to the getFrom() position
+                    val removeStart = c.from
+                    val removeRange = c.removed.size
+                    val removeEnd = c.from + removeRange
                     val iterator = indexMap.iterator()
                     for (entry in iterator) {
-                        val (observableValue, pair) = entry
+                        val (wrapped, pair) = entry
                         val (index, listener) = pair
                         if (index >= removeStart) {
                             if (index < removeEnd) {
-                                observableValue.removeListener(listener)
+                                wrapped.observableValue.removeListener(listener)
                                 iterator.remove()
                             } else {
                                 // Shift indices
@@ -87,7 +98,8 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
                         }
                     }
                     c.addedSubList.forEachIndexed { sublistIndex, observableValue ->
-                        indexMap[observableValue] = Pair(addStart + sublistIndex, createListener(observableValue))
+                        val wrapped = WrappedObservableValue(observableValue)
+                        indexMap[wrapped] = Pair(addStart + sublistIndex, createListener(wrapped))
                     }
                     nextAdd(addStart, addEnd)
                 }
