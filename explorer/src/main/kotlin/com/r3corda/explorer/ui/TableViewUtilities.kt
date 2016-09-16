@@ -3,6 +3,8 @@ package com.r3corda.explorer.ui
 import com.r3corda.explorer.formatters.Formatter
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
+import javafx.scene.Node
+import javafx.scene.control.ListCell
 import javafx.scene.control.TableCell
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
@@ -54,3 +56,21 @@ fun <S> TableView<S>.singleRowSelection() = Bindings.createObjectBinding({
         SingleRowSelection.Selected(selectionModel.selectedItems[0])
     }
 }, arrayOf(selectionModel.selectedItems))
+
+fun <S, T> TableColumn<S, T>.setCustomCellFactory(toNode: (T) -> Node) {
+    setCellFactory {
+        object : TableCell<S, T>() {
+            init {
+                text = null
+            }
+            override fun updateItem(value: T?, empty: Boolean) {
+                super.updateItem(value, empty)
+                graphic = if (value != null && !empty) {
+                    toNode(value)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+}

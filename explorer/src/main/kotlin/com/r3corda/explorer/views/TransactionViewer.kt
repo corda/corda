@@ -1,11 +1,8 @@
 package com.r3corda.explorer.views
 
-import com.r3corda.client.fxutils.ChosenList
+import com.r3corda.client.fxutils.*
 import com.r3corda.client.model.*
 import com.r3corda.contracts.asset.Cash
-import com.r3corda.core.contracts.Amount
-import com.r3corda.core.contracts.CommandData
-import com.r3corda.core.contracts.withoutIssuer
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
@@ -21,7 +18,6 @@ import com.r3corda.explorer.sign
 import com.r3corda.explorer.ui.*
 import com.r3corda.node.services.monitor.ServiceToClientEvent
 import javafx.beans.binding.Bindings
-import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
@@ -123,15 +119,15 @@ class TransactionViewer: View() {
     /**
      * We map the gathered data about transactions almost one-to-one to the nodes.
      */
-    private val viewerNodes = EasyBind.map(gatheredTransactionDataList) {
+    private val viewerNodes = gatheredTransactionDataList.map {
         ViewerNode(
-                transactionId = EasyBind.map(it.transaction) { it?.id },
+                transactionId = it.transaction.map { it?.id },
                 fiberId = it.fiberId,
                 clientUuid = it.uuid,
                 /**
                  * We can't really do any better based on uuid, we need to store explicit data for this TODO
                  */
-                originator = EasyBind.map(it.uuid) { uuid ->
+                originator = it.uuid.map { uuid ->
                     if (uuid == null) {
                         "Someone"
                     } else {
@@ -142,57 +138,31 @@ class TransactionViewer: View() {
                 protocolStatus = it.protocolStatus,
                 stateMachineStatus = it.stateMachineStatus,
                 statusUpdated = it.lastUpdate,
-                commandTypes = EasyBind.map(it.transaction) {
+                commandTypes = it.transaction.map {
                     val commands = mutableSetOf<Class<CommandData>>()
                     it?.commands?.forEach {
                         commands.add(it.value.javaClass)
                     }
                     commands
                 },
-                totalValueEquiv = EasyBind.combine(myIdentity, reportingExchange, it.transaction) { identity, exchange, transaction ->
-                    transaction?.let { calculateTotalEquiv(setOf(identity.owningKey), exchange.first, exchange.second, transaction) }
-                },
+                totalValueEquiv = ::calculateTotalEquiv.lift(myIdentity, reportingExchange, it.transaction),
                 transaction = it.transaction,
                 allEvents = it.allEvents
         )
     }
 
     /**
-     * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
-     */
-    private fun calculateTotalEquiv(
-            relevantPublicKeys: Set<PublicKey>,
-            reportingCurrency: Currency,
-            exchange: (Amount<Currency>) -> Amount<Currency>,
-            transaction: LedgerTransaction): AmountDiff<Currency> {
-        var sum = 0L
-        transaction.inputs.forEach {
-            val contractState = it.state.data
-            if (contractState is Cash.State && relevantPublicKeys.contains(contractState.owner)) {
-                sum -= exchange(contractState.amount.withoutIssuer()).quantity
-            }
-        }
-        transaction.outputs.forEach {
-            val contractState = it.data
-            if (contractState is Cash.State && relevantPublicKeys.contains(contractState.owner)) {
-                sum += exchange(contractState.amount.withoutIssuer()).quantity
-            }
-        }
-        return AmountDiff.fromLong(sum, reportingCurrency)
-    }
-
-    /**
      * The detail panes are only filled out if a transaction is selected
      */
     private val selectedViewerNode = transactionViewTable.singleRowSelection()
-    private val selectedTransaction = EasyBind.monadic(selectedViewerNode).flatMap<LedgerTransaction?, SingleRowSelection<ViewerNode>> {
+    private val selectedTransaction = selectedViewerNode.bind {
         when (it) {
-            is SingleRowSelection.None -> ReadOnlyObjectWrapper(null)
+            is SingleRowSelection.None -> null.lift()
             is SingleRowSelection.Selected -> it.node.transaction
         }
     }
 
-    private val inputStateNodes = ChosenList<StateNode>(EasyBind.map(selectedTransaction) {
+    private val inputStateNodes = ChosenList(selectedTransaction.map {
         if (it == null) {
             FXCollections.emptyObservableList<StateNode>()
         } else {
@@ -200,7 +170,7 @@ class TransactionViewer: View() {
         }
     })
 
-    private val outputStateNodes = ChosenList<StateNode>(EasyBind.map(selectedTransaction) {
+    private val outputStateNodes = ChosenList(selectedTransaction.map {
         if (it == null) {
             FXCollections.emptyObservableList<StateNode>()
         } else {
@@ -210,7 +180,7 @@ class TransactionViewer: View() {
         }
     })
 
-    private val signatures = ChosenList<PublicKey>(EasyBind.map(selectedTransaction) {
+    private val signatures = ChosenList(selectedTransaction.map {
         if (it == null) {
             FXCollections.emptyObservableList<PublicKey>()
         } else {
@@ -218,7 +188,7 @@ class TransactionViewer: View() {
         }
     })
 
-    private val lowLevelEvents = ChosenList(EasyBind.map(selectedViewerNode) {
+    private val lowLevelEvents = ChosenList(selectedViewerNode.map {
         when (it) {
             is SingleRowSelection.None -> FXCollections.emptyObservableList<ServiceToClientEvent>()
             is SingleRowSelection.Selected -> it.node.allEvents
@@ -237,8 +207,8 @@ class TransactionViewer: View() {
     private val onlyTransactionsTableShown = FXCollections.observableArrayList<Node>(
             transactionViewTable
     )
-    private val topSplitPaneNodesShown = ChosenList<Node>(
-            EasyBind.map(selectedViewerNode) { selection ->
+    private val topSplitPaneNodesShown = ChosenList(
+            selectedViewerNode.map { selection ->
                 if (selection is SingleRowSelection.None<*>) {
                     onlyTransactionsTableShown
                 } else {
@@ -260,45 +230,45 @@ class TransactionViewer: View() {
             statesAmount: TableColumn<StateNode, Long>,
             statesEquiv: TableColumn<StateNode, Amount<Currency>>
     ) {
-        statesCountLabel.textProperty().bind(EasyBind.map(Bindings.size(states)) { "$it" })
+        statesCountLabel.textProperty().bind(Bindings.size(states).map { "$it" })
 
         Bindings.bindContent(statesTable.items, states)
 
-        statesId.setCellValueFactory { ReadOnlyObjectWrapper(it.value.stateRef.toString()) }
-        statesType.setCellValueFactory { ReadOnlyObjectWrapper(it.value.transactionState.data.javaClass) }
+        statesId.setCellValueFactory { it.value.stateRef.toString().lift() }
+        statesType.setCellValueFactory { it.value.transactionState.data.javaClass.lift() }
         statesOwner.setCellValueFactory {
             val state = it.value.transactionState.data
             if (state is OwnableState) {
-                ReadOnlyObjectWrapper(state.owner.toStringShort())
+                state.owner.toStringShort().lift()
             } else {
-                ReadOnlyObjectWrapper("???")
+                "???".lift()
             }
         }
         statesLocalCurrency.setCellValueFactory {
             val state = it.value.transactionState.data
             if (state is Cash.State) {
-                ReadOnlyObjectWrapper(state.amount.token.product)
+                state.amount.token.product.lift()
             } else {
-                ReadOnlyObjectWrapper(null)
+                null.lift()
             }
         }
         statesAmount.setCellValueFactory {
             val state = it.value.transactionState.data
             if (state is Cash.State) {
-                ReadOnlyObjectWrapper(state.amount.quantity)
+                state.amount.quantity.lift()
             } else {
-                ReadOnlyObjectWrapper(null)
+                null.lift()
             }
         }
         statesAmount.setCellFactory(NumberFormatter.longComma.toTableCellFactory())
         statesEquiv.setCellValueFactory {
             val state = it.value.transactionState.data
             if (state is Cash.State) {
-                EasyBind.map(reportingExchange) { exchange ->
+                reportingExchange.map { exchange ->
                     exchange.second(state.amount.withoutIssuer())
                 }
             } else {
-                ReadOnlyObjectWrapper(null)
+                null.lift()
             }
         }
     }
@@ -313,65 +283,37 @@ class TransactionViewer: View() {
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / transactionViewTable.columns.size).toInt()
         }
 
-        transactionViewTransactionId.setCellValueFactory { EasyBind.map (it.value.transactionId) { "${it ?: ""}" } }
-        transactionViewFiberId.setCellValueFactory { EasyBind.map (it.value.fiberId) { "${it?: ""}" } }
-        transactionViewClientUuid.setCellValueFactory { EasyBind.map (it.value.clientUuid) { "${it ?: ""}" } }
-        transactionViewProtocolStatus.setCellValueFactory { EasyBind.map(it.value.protocolStatus) { "${it ?: ""}" } }
+        transactionViewTransactionId.setCellValueFactory { it.value.transactionId.map { "${it ?: ""}" } }
+        transactionViewFiberId.setCellValueFactory { it.value.fiberId.map { "${it?: ""}" } }
+        transactionViewClientUuid.setCellValueFactory { it.value.clientUuid.map { "${it ?: ""}" } }
+        transactionViewProtocolStatus.setCellValueFactory { it.value.protocolStatus.map { "${it ?: ""}" } }
         transactionViewTransactionStatus.setCellValueFactory { it.value.transactionStatus }
-        // TODO reduce clutter
-        transactionViewTransactionStatus.setCellFactory {
-            object : TableCell<ViewerNode, TransactionCreateStatus?>() {
-                val label = Label()
-                override fun updateItem(
-                        value: TransactionCreateStatus?,
-                        empty: Boolean
-                ) {
-                    super.updateItem(value, empty)
-                    if (value == null || empty) {
-                        graphic = null
-                        text = null
-                    } else {
-                        graphic = label
-                        val backgroundFill = when (value) {
-                            is TransactionCreateStatus.Started -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
-                            is TransactionCreateStatus.Failed -> BackgroundFill(Color.SALMON, CornerRadii.EMPTY, Insets.EMPTY)
-                            null -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
-                        }
-                        label.background = Background(backgroundFill)
-                        label.text = "$value"
-                    }
-                }
+        transactionViewTransactionStatus.setCustomCellFactory {
+            val label = Label()
+            val backgroundFill = when (it) {
+                is TransactionCreateStatus.Started -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
+                is TransactionCreateStatus.Failed -> BackgroundFill(Color.SALMON, CornerRadii.EMPTY, Insets.EMPTY)
+                null -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
             }
+            label.background = Background(backgroundFill)
+            label.text = "$it"
+            label
         }
-        // TODO reduce clutter
         transactionViewStateMachineStatus.setCellValueFactory { it.value.stateMachineStatus }
-        transactionViewStateMachineStatus.setCellFactory {
-            object : TableCell<ViewerNode, StateMachineStatus?>() {
-                val label = Label()
-                override fun updateItem(
-                        value: StateMachineStatus?,
-                        empty: Boolean
-                ) {
-                    super.updateItem(value, empty)
-                    if (value == null || empty) {
-                        graphic = null
-                        text = null
-                    } else {
-                        graphic = label
-                        val backgroundFill = when (value) {
-                            is StateMachineStatus.Added -> BackgroundFill(Color.LIGHTYELLOW, CornerRadii.EMPTY, Insets.EMPTY)
-                            is StateMachineStatus.Removed -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
-                            null -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
-                        }
-                        label.background = Background(backgroundFill)
-                        label.text = "$value"
-                    }
-                }
+        transactionViewStateMachineStatus.setCustomCellFactory {
+            val label = Label()
+            val backgroundFill = when (it) {
+                is StateMachineStatus.Added -> BackgroundFill(Color.LIGHTYELLOW, CornerRadii.EMPTY, Insets.EMPTY)
+                is StateMachineStatus.Removed -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
+                null -> BackgroundFill(Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY)
             }
+            label.background = Background(backgroundFill)
+            label.text = "$it"
+            label
         }
 
         transactionViewCommandTypes.setCellValueFactory {
-            EasyBind.map(it.value.commandTypes) { it.map { it.simpleName }.joinToString(",") }
+            it.value.commandTypes.map { it.map { it.simpleName }.joinToString(",") }
         }
         transactionViewTotalValueEquiv.setCellValueFactory<ViewerNode, AmountDiff<Currency>> { it.value.totalValueEquiv }
         transactionViewTotalValueEquiv.cellFactory = object : Formatter<AmountDiff<Currency>> {
@@ -411,8 +353,8 @@ class TransactionViewer: View() {
 
         // Low level events
         Bindings.bindContent(lowLevelEventsTable.items, lowLevelEvents)
-        lowLevelEventsTimestamp.setCellValueFactory { ReadOnlyObjectWrapper(it.value.time) }
-        lowLevelEventsEvent.setCellValueFactory { ReadOnlyObjectWrapper(it.value) }
+        lowLevelEventsTimestamp.setCellValueFactory { it.value.time.lift() }
+        lowLevelEventsEvent.setCellValueFactory { it.value.lift() }
         lowLevelEventsTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / lowLevelEventsTable.columns.size).toInt()
         }
@@ -422,3 +364,32 @@ class TransactionViewer: View() {
         })
     }
 }
+
+/**
+ * We calculate the total value by subtracting relevant input states and adding relevant output states, as long as they're cash
+ */
+private fun calculateTotalEquiv(
+        identity: Party,
+        reportingCurrencyExchange: Pair<Currency, (Amount<Currency>) -> Amount<Currency>>,
+        transaction: LedgerTransaction?): AmountDiff<Currency>? {
+    if (transaction == null) {
+        return null
+    }
+    var sum = 0L
+    val (reportingCurrency, exchange) = reportingCurrencyExchange
+    val publicKey = identity.owningKey
+    transaction.inputs.forEach {
+        val contractState = it.state.data
+        if (contractState is Cash.State && publicKey == contractState.owner) {
+            sum -= exchange(contractState.amount.withoutIssuer()).quantity
+        }
+    }
+    transaction.outputs.forEach {
+        val contractState = it.data
+        if (contractState is Cash.State && publicKey == contractState.owner) {
+            sum += exchange(contractState.amount.withoutIssuer()).quantity
+        }
+    }
+    return AmountDiff.fromLong(sum, reportingCurrency)
+}
+

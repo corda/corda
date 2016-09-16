@@ -15,8 +15,6 @@ import com.r3corda.explorer.model.ReportingCurrencyModel
 import com.r3corda.explorer.model.SettingsModel
 import com.r3corda.explorer.ui.*
 import javafx.beans.binding.Bindings
-import javafx.beans.property.ReadOnlyObjectWrapper
-import javafx.beans.property.ReadOnlyStringWrapper
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
@@ -323,16 +321,16 @@ class CashViewer : View() {
         cashViewerTableIssuerCurrency.setCellValueFactory {
             val node = it.value.value
             when (node) {
-                ViewerNode.Root -> ReadOnlyStringWrapper("")
-                is ViewerNode.IssuerNode -> ReadOnlyStringWrapper(node.issuer.toString())
+                ViewerNode.Root -> "".lift()
+                is ViewerNode.IssuerNode -> node.issuer.toString().lift()
                 is ViewerNode.CurrencyNode -> node.amount.map { it.token.toString() }
             }
         }
         cashViewerTableLocalCurrency.setCellValueFactory {
             val node = it.value.value
             when (node) {
-                ViewerNode.Root -> ReadOnlyObjectWrapper(null)
-                is ViewerNode.IssuerNode -> ReadOnlyObjectWrapper(null)
+                ViewerNode.Root -> null.lift()
+                is ViewerNode.IssuerNode -> null.lift()
                 is ViewerNode.CurrencyNode -> node.amount.map { it }
             }
         }
@@ -344,7 +342,7 @@ class CashViewer : View() {
         cashViewerTableEquiv.setCellValueFactory {
             val node = it.value.value
             when (node) {
-                ViewerNode.Root -> ReadOnlyObjectWrapper(null)
+                ViewerNode.Root -> null.lift()
                 is ViewerNode.IssuerNode -> node.sumEquivAmount.map { it }
                 is ViewerNode.CurrencyNode -> node.equivAmount.map { it }
             }
