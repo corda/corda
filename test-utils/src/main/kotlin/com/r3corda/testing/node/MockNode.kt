@@ -1,6 +1,7 @@
 package com.r3corda.testing.node
 
 import com.google.common.jimfs.Jimfs
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -168,13 +169,19 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val path = filesystem.getPath("/nodes/$id")
         if (newNode)
             Files.createDirectories(path.resolve("attachments"))
+
+        // TODO: create a base class that provides a default implementation
         val config = object : NodeConfiguration {
+
             override val myLegalName: String = legalName ?: "Mock Company $id"
-            override val exportJMXto: String = ""
             override val nearestCity: String = "Atlantis"
+            override val emailAddress: String = ""
+            override val devMode: Boolean = true
+            override val exportJMXto: String = ""
             override val keyStorePassword: String = "dummy"
             override val trustStorePassword: String = "trustpass"
             override val dataSourceProperties: Properties get() = if (databasePersistence) makeTestDataSourceProperties("node_$id") else Properties()
+            override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
         }
         val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
         if (start) {

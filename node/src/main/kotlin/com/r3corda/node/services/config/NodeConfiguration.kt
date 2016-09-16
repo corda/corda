@@ -31,9 +31,12 @@ interface NodeSSLConfiguration {
 
 interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: String
-    val exportJMXto: String
     val nearestCity: String
+    val emailAddress: String
+    val exportJMXto: String
     val dataSourceProperties: Properties get() = Properties()
+    val devMode: Boolean
+    val certificateSigningService: HostAndPort
 
     companion object {
         val log = LoggerFactory.getLogger("NodeConfiguration")
@@ -74,6 +77,19 @@ operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
     }
 }
 
+/**
+ * Helper class for optional configurations
+ */
+class OptionalConfig<out T>(val conf: Config, val lambda: () -> T) {
+    operator fun getValue(receiver: Any, metadata: KProperty<*>): T {
+        return if (conf.hasPath(metadata.name)) conf.getValue(receiver, metadata) else lambda()
+    }
+}
+
+fun <T> Config.getOrElse(lambda: () -> T): OptionalConfig<T> {
+    return OptionalConfig(this, lambda)
+}
+
 fun Config.getProperties(path: String): Properties {
     val obj = this.getObject(path)
     val props = Properties()
@@ -85,21 +101,27 @@ fun Config.getProperties(path: String): Properties {
 
 class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : NodeConfiguration {
     override val myLegalName: String by config
-    override val exportJMXto: String by config
     override val nearestCity: String by config
+    override val emailAddress: String by config
+    override val exportJMXto: String by config
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
     override val dataSourceProperties: Properties by config
+    override val devMode: Boolean by config.getOrElse { false }
+    override val certificateSigningService: HostAndPort by config
 }
 
 class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val basedir: Path by conf
     override val myLegalName: String by conf
     override val nearestCity: String by conf
+    override val emailAddress: String by conf
     override val exportJMXto: String = "http"
     override val keyStorePassword: String by conf
     override val trustStorePassword: String by conf
     override val dataSourceProperties: Properties by conf
+    override val devMode: Boolean by conf.getOrElse { false }
+    override val certificateSigningService: HostAndPort by conf
     val useHTTPS: Boolean by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf
