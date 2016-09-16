@@ -223,14 +223,7 @@ class NetworkMapVisualiser : Application() {
 
     private fun reloadStylesheet(stage: Stage) {
         stage.scene.stylesheets.clear()
-
-        // TODO: Improve path resolution to avoid hardcoding a specific user directory.
-        // Enable hot reload without needing to rebuild.
-        val mikesCSS = "/Users/mike/Source/R3/r3dlg-prototyping/network-explorer/src/main/resources/com/r3cev/corda/netmap/styles.css"
-        if (Files.exists(Paths.get(mikesCSS)))
-            stage.scene.stylesheets.add("file://$mikesCSS")
-        else
-            stage.scene.stylesheets.add(NetworkMapVisualiser::class.java.getResource("styles.css").toString())
+        stage.scene.stylesheets.add(NetworkMapVisualiser::class.java.getResource("styles.css").toString())
     }
 
     private fun bindSidebar() {
