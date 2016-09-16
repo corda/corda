@@ -12,10 +12,10 @@ import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.node.services.wallet.NodeWalletService
 import com.r3corda.node.utilities.configureDatabase
+import com.r3corda.node.utilities.databaseTransaction
+import com.r3corda.testing.*
 import com.r3corda.testing.node.MockServices
 import com.r3corda.testing.node.makeTestDataSourceProperties
-import com.r3corda.testing.DummyLinearContract
-import com.r3corda.testing.*
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
@@ -36,13 +36,16 @@ class WalletWithCashTest {
     fun setUp() {
         LogHelper.setLevel(NodeWalletService::class)
         dataSource = configureDatabase(makeTestDataSourceProperties()).first
-        services = object : MockServices() {
-            override val walletService: WalletService = NodeWalletService(this)
+        databaseTransaction {
+            services = object : MockServices() {
+                override val walletService: WalletService = NodeWalletService(this)
 
-            override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                for (stx in txs) {
-                    storageService.validatedTransactions.addTransaction(stx)
-                    walletService.notify(stx.tx)
+                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+                    for (stx in txs) {
+                        storageService.validatedTransactions.addTransaction(stx)
+                    }
+                    // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
+                    walletService.notifyAll(txs.map { it.tx })
                 }
             }
         }
@@ -56,102 +59,111 @@ class WalletWithCashTest {
 
     @Test
     fun splits() {
-        // Fix the PRNG so that we get the same splits every time.
-        services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+        databaseTransaction {
+            // Fix the PRNG so that we get the same splits every time.
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-        val w = wallet.currentWallet
-        assertEquals(3, w.states.toList().size)
+            val w = wallet.currentWallet
+            assertEquals(3, w.states.toList().size)
 
-        val state = w.states.toList()[0].state.data as Cash.State
-        assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-        assertEquals(services.key.public, state.owner)
+            val state = w.states.toList()[0].state.data as Cash.State
+            assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
+            assertEquals(services.key.public, state.owner)
 
-        assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
-        assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
-    }
-
-    @Test
-    fun basics() {
-        // A tx that sends us money.
-        val freshKey = services.keyManagementService.freshKey()
-        val usefulTX = TransactionType.General.Builder(null).apply {
-            Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
-            signWith(MEGA_CORP_KEY)
-        }.toSignedTransaction()
-        val myOutput = usefulTX.toLedgerTransaction(services).outRef<Cash.State>(0)
-
-        // A tx that spends our money.
-        val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-            Cash().generateSpend(this, 80.DOLLARS, BOB_PUBKEY, listOf(myOutput))
-            signWith(freshKey)
-            signWith(DUMMY_NOTARY_KEY)
-        }.toSignedTransaction()
-
-        // A tx that doesn't send us anything.
-        val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-            Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
-            signWith(MEGA_CORP_KEY)
-            signWith(DUMMY_NOTARY_KEY)
-        }.toSignedTransaction()
-
-        assertNull(wallet.currentWallet.cashBalances[USD])
-        wallet.notify(usefulTX.tx)
-        assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
-        wallet.notify(irrelevantTX.tx)
-        assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
-        wallet.notify(spendTX.tx)
-        assertEquals(20.DOLLARS, wallet.currentWallet.cashBalances[USD])
-
-        // TODO: Flesh out these tests as needed.
-    }
-
-
-    @Test
-    fun branchingLinearStatesFailsToVerify() {
-        val freshKey = services.keyManagementService.freshKey()
-        val linearId = UniqueIdentifier()
-
-        // Issue a linear state
-        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-            signWith(freshKey)
-            signWith(DUMMY_NOTARY_KEY)
-        }.toSignedTransaction()
-
-        assertThatThrownBy {
-            dummyIssue.toLedgerTransaction(services).verify()
+            assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[2].state.data as Cash.State).amount)
+            assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w.states.toList()[1].state.data as Cash.State).amount)
         }
     }
 
     @Test
-    fun sequencingLinearStatesWorks() {
-        val freshKey = services.keyManagementService.freshKey()
+    fun `issue and spend total correctly and irrelevant ignored`() {
+        databaseTransaction {
+            // A tx that sends us money.
+            val freshKey = services.keyManagementService.freshKey()
+            val usefulTX = TransactionType.General.Builder(null).apply {
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                signWith(MEGA_CORP_KEY)
+            }.toSignedTransaction()
+            val myOutput = usefulTX.toLedgerTransaction(services).outRef<Cash.State>(0)
 
-        val linearId = UniqueIdentifier()
+            // A tx that spends our money.
+            val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+                Cash().generateSpend(this, 80.DOLLARS, BOB_PUBKEY, listOf(myOutput))
+                signWith(freshKey)
+                signWith(DUMMY_NOTARY_KEY)
+            }.toSignedTransaction()
 
-        // Issue a linear state
-        val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-            signWith(freshKey)
-            signWith(DUMMY_NOTARY_KEY)
-        }.toSignedTransaction()
+            // A tx that doesn't send us anything.
+            val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
+                signWith(MEGA_CORP_KEY)
+                signWith(DUMMY_NOTARY_KEY)
+            }.toSignedTransaction()
 
-        dummyIssue.toLedgerTransaction(services).verify()
+            assertNull(wallet.currentWallet.cashBalances[USD])
+            services.recordTransactions(usefulTX)
+            assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
+            services.recordTransactions(irrelevantTX)
+            assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
+            services.recordTransactions(spendTX)
 
-        wallet.notify(dummyIssue.tx)
-        assertEquals(1, wallet.currentWallet.states.toList().size)
+            assertEquals(20.DOLLARS, wallet.currentWallet.cashBalances[USD])
 
-        // Move the same state
-        val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-            addInputState(dummyIssue.tx.outRef<LinearState>(0))
-            signWith(DUMMY_NOTARY_KEY)
-        }.toSignedTransaction()
+            // TODO: Flesh out these tests as needed.
+        }
+    }
 
-        dummyIssue.toLedgerTransaction(services).verify()
 
-        wallet.notify(dummyMove.tx)
-        assertEquals(1, wallet.currentWallet.states.toList().size)
+    @Test
+    fun `branching LinearStates fails to verify`() {
+        databaseTransaction {
+            val freshKey = services.keyManagementService.freshKey()
+            val linearId = UniqueIdentifier()
+
+            // Issue a linear state
+            val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                signWith(freshKey)
+                signWith(DUMMY_NOTARY_KEY)
+            }.toSignedTransaction()
+
+            assertThatThrownBy {
+                dummyIssue.toLedgerTransaction(services).verify()
+            }
+        }
+    }
+
+    @Test
+    fun `sequencing LinearStates works`() {
+        databaseTransaction {
+            val freshKey = services.keyManagementService.freshKey()
+
+            val linearId = UniqueIdentifier()
+
+            // Issue a linear state
+            val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                signWith(freshKey)
+                signWith(DUMMY_NOTARY_KEY)
+            }.toSignedTransaction()
+
+            dummyIssue.toLedgerTransaction(services).verify()
+
+            services.recordTransactions(dummyIssue)
+            assertEquals(1, wallet.currentWallet.states.toList().size)
+
+            // Move the same state
+            val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addInputState(dummyIssue.tx.outRef<LinearState>(0))
+                signWith(DUMMY_NOTARY_KEY)
+            }.toSignedTransaction()
+
+            dummyIssue.toLedgerTransaction(services).verify()
+
+            services.recordTransactions(dummyMove)
+            assertEquals(1, wallet.currentWallet.states.toList().size)
+        }
     }
 }

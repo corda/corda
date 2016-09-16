@@ -336,6 +336,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
 
     override fun put(key: K, value: V): V? {
         var oldValue: V? = null
+        var oldSeqNo: Int? = null
         getBucket(key)
         buckets.compute(key.hashCode()) { hashCode, list ->
             val newList = list ?: newBucket()
@@ -344,12 +345,13 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
                 val entry = iterator.next()
                 if (entry.key == key) {
                     oldValue = entry.value
+                    oldSeqNo = entry.seqNo
                     iterator.remove()
                     deleteRecord(entry)
                     break
                 }
             }
-            val seqNo = addRecord(key, value)
+            val seqNo = addRecord(key, value, oldSeqNo)
             val newEntry = NotReallyMutableEntry<K, V>(key, value, seqNo)
             newList.add(newEntry)
             newList
@@ -450,7 +452,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
         }
     }
 
-    private fun addRecord(key: K, value: V): Int {
+    private fun addRecord(key: K, value: V, oldSeqNo: Int?): Int {
         val finalizables = mutableListOf<() -> Unit>()
         try {
             return table.insert {
@@ -458,6 +460,10 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, T : JDBCHashedTable>(val ta
                 val entry = SimpleEntry<K, V>(key, value)
                 addKeyToInsert(it, entry, finalizables)
                 addValueToInsert(it, entry, finalizables)
+                if (oldSeqNo != null) {
+                    it[seqNo] = oldSeqNo
+                    it.generatedKey = oldSeqNo
+                }
             } get table.seqNo
         } finally {
             finalizables.forEach { it() }

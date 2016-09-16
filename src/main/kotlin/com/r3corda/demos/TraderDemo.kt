@@ -27,6 +27,7 @@ import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.HandshakeMessage
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.protocols.TwoPartyTradeProtocol
@@ -198,9 +199,11 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     // Self issue some cash.
     //
     // TODO: At some point this demo should be extended to have a central bank node.
-    node.services.fillWithSomeTestCash(300000.DOLLARS,
-                                       outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
-                                       ownedBy = node.services.keyManagementService.freshKey().public)
+    databaseTransaction {
+        node.services.fillWithSomeTestCash(300000.DOLLARS,
+                outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
+                ownedBy = node.services.keyManagementService.freshKey().public)
+    }
 
     // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
     // via some other system like an exchange or maybe even a manual messaging system like Bloomberg. But for the

@@ -2,6 +2,7 @@ package com.r3corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.messaging.Message
+import com.r3corda.core.messaging.MessageHandlerRegistration
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SingletonSerializeAsToken
@@ -36,8 +37,8 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
     protected inline fun <reified Q : ServiceRequestMessage, reified R : Any>
             addMessageHandler(topic: String,
                               crossinline handler: (Q) -> R,
-                              crossinline exceptionConsumer: (Message, Exception) -> Unit) {
-        net.addMessageHandler(topic, DEFAULT_SESSION_ID, null) { message, r ->
+                              crossinline exceptionConsumer: (Message, Exception) -> Unit): MessageHandlerRegistration {
+        return net.addMessageHandler(topic, DEFAULT_SESSION_ID, null) { message, r ->
             try {
                 val request = message.data.deserialize<Q>()
                 val response = handler(request)
@@ -62,8 +63,8 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
      */
     protected inline fun <reified Q : ServiceRequestMessage, reified R : Any>
             addMessageHandler(topic: String,
-                              crossinline handler: (Q) -> R) {
-        addMessageHandler(topic, handler, { message: Message, exception: Exception -> throw exception })
+                              crossinline handler: (Q) -> R): MessageHandlerRegistration {
+        return addMessageHandler(topic, handler, { message: Message, exception: Exception -> throw exception })
     }
 
     /**

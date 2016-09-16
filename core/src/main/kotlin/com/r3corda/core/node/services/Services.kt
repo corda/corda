@@ -4,7 +4,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.WireTransaction
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -29,13 +28,13 @@ val DEFAULT_SESSION_ID = 0L
  *
  * This abstract class has no references to Cash contracts.
  *
- * [states] Holds the list of states that are *active* and *relevant*.
+ * [states] Holds the states that are *active* and *relevant*.
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
 class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
-    inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
+    inline fun <reified T : ContractState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
     /**
      * Represents an update observed by the Wallet that will be notified to observers.  Include the [StateRef]s of
@@ -57,7 +56,8 @@ class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
             val previouslyConsumed = consumed
             val combined = Wallet.Update(
                     previouslyConsumed + (rhs.consumed - previouslyProduced),
-                    rhs.produced + produced.filter { it.ref !in rhs.consumed })
+                    // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
+                    produced.filter { it.ref !in rhs.consumed }.toSet() + rhs.produced)
             return combined
         }
 
