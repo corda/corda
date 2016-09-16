@@ -72,16 +72,16 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
         val result = try {
             logic.call()
         } catch (t: Throwable) {
-            commitTransaction()
             actionOnEnd()
             _resultFuture?.setException(t)
+            commitTransaction()
             throw ExecutionException(t)
         }
 
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        commitTransaction()
         actionOnEnd()
         _resultFuture?.set(result)
+        commitTransaction()
         return result
     }
 
