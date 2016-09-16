@@ -91,6 +91,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 smmHasRemovedAllProtocols.countDown()
             }
         }
+        mockSMM.start()
         services.smm = mockSMM
     }
 

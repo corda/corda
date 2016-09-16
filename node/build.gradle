@@ -132,6 +132,8 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile 'junit:junit:4.12'
+
+    testCompile "com.nhaarman:mockito-kotlin:0.6.1"
 }
 
 quasarScan.dependsOn('classes', ':core:classes', ':contracts:classes')
