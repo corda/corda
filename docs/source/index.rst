@@ -71,6 +71,7 @@ Read on to learn:
 
    release-process
    release-notes
+   network-simulator
    codestyle
    building-the-docs
 
