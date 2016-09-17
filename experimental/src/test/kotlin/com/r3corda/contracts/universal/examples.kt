@@ -14,9 +14,11 @@ import java.util.*
 // various example arrangements using basic syntax
 
 val cds_contract = arrange {
-    acmeCorp.may {
-        "claim".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
-            highStreetBank.gives(acmeCorp, 1.M, USD)
+    actions {
+        acmeCorp.may {
+            "claim".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
+                highStreetBank.gives(acmeCorp, 1.M, USD)
+            }
         }
     }
 }
@@ -24,49 +26,59 @@ val cds_contract = arrange {
 // fx swap
 // both parties have the right to trigger the exchange of cash flows
 val an_fx_swap = arrange {
-    (acmeCorp or highStreetBank).may {
-        "execute".givenThat(after("2017-09-01")) {
-            highStreetBank.gives(acmeCorp, 1200.K, USD)
-            acmeCorp.gives(highStreetBank, 1.M, EUR)
+    actions {
+        (acmeCorp or highStreetBank).may {
+            "execute".givenThat(after("2017-09-01")) {
+                highStreetBank.gives(acmeCorp, 1200.K, USD)
+                acmeCorp.gives(highStreetBank, 1.M, EUR)
+            }
         }
     }
 }
 
 val american_fx_option = arrange {
-    acmeCorp.may {
-        "exercise".givenThat(before("2017-09-01")) {
-            highStreetBank.gives(acmeCorp, 1200.K, USD)
-            acmeCorp.gives(highStreetBank, 1.M, EUR)
+    actions {
+        acmeCorp.may {
+            "exercise".givenThat(before("2017-09-01")) {
+                highStreetBank.gives(acmeCorp, 1200.K, USD)
+                acmeCorp.gives(highStreetBank, 1.M, EUR)
+            }
         }
     }
 }
 
 val european_fx_option = arrange {
-    acmeCorp.may {
-        "exercise".givenThat(before("2017-09-01")) {
-            fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD, acmeCorp, highStreetBank)
+    actions {
+        acmeCorp.may {
+            "exercise".givenThat(before("2017-09-01")) {
+                fx_swap("2017-09-01", 1.M, 1.2.bd, EUR, USD, acmeCorp, highStreetBank)
+            }
         }
-    }
-    (acmeCorp or highStreetBank).may {
-        "expire".anytime {
-            zero
+        (acmeCorp or highStreetBank).may {
+            "expire".anytime {
+                zero
+            }
         }
     }
 }
 
 val contractZeroCouponBond = arrange {
-    acmeCorp.may {
-        "execute".givenThat(after("2017-11-01")) {
-            highStreetBank.gives(acmeCorp, 1.M, USD)
+    actions {
+        acmeCorp.may {
+            "execute".givenThat(after("2017-11-01")) {
+                highStreetBank.gives(acmeCorp, 1.M, USD)
+            }
         }
     }
 }
 
 // maybe in the presence of negative interest rates you would want other side of contract to be able to take initiative as well
 val zero_coupon_bond_2 = arrange {
-    (acmeCorp or highStreetBank).may {
-        "execute".givenThat(after("2017-09-01")) {
-            highStreetBank.gives(acmeCorp, 1.M, USD)
+    actions {
+        (acmeCorp or highStreetBank).may {
+            "execute".givenThat(after("2017-09-01")) {
+                highStreetBank.gives(acmeCorp, 1.M, USD)
+            }
         }
     }
 }
@@ -81,25 +93,31 @@ val zero_coupon_bond_2 = arrange {
 // Assume observable is using FX fixing
 //
 val no_touch = arrange {
-    (acmeCorp or highStreetBank).may {
-        "execute".givenThat(after("2017-09-01")) {
-            highStreetBank.gives(acmeCorp, 1.M, USD)
+    actions {
+        (acmeCorp or highStreetBank).may {
+            "execute".givenThat(after("2017-09-01")) {
+                highStreetBank.gives(acmeCorp, 1.M, USD)
+            }
         }
-    }
-    highStreetBank.may {
-        "knock out".givenThat(EUR/USD gt 1.3)
+        highStreetBank.may {
+            "knock out".givenThat(EUR / USD gt 1.3) {
+                zero
+            }
+        }
     }
 }
 
 val one_touch = arrange {
-    highStreetBank.may {
-        "expire".givenThat(after("2017-09-01")) {
-            zero
+    actions {
+        highStreetBank.may {
+            "expire".givenThat(after("2017-09-01")) {
+                zero
+            }
         }
-    }
-    acmeCorp.may {
-        "knock in".givenThat(EUR / USD gt 1.3) {
-            highStreetBank.gives(acmeCorp, 1.M, USD)
+        acmeCorp.may {
+            "knock in".givenThat(EUR / USD gt 1.3) {
+                highStreetBank.gives(acmeCorp, 1.M, USD)
+            }
         }
     }
 }

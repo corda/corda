@@ -17,10 +17,11 @@ fun swap(partyA: Party, amountA: BigDecimal, currencyA: Currency, partyB: Party,
 fun fx_swap(expiry: String, notional: BigDecimal, strike: BigDecimal,
             foreignCurrency: Currency, domesticCurrency: Currency,
             partyA: Party, partyB: Party) = arrange {
-
-    (partyA or partyB).may {
-        "execute".givenThat(after(expiry)) {
-            swap(partyA, notional * strike, domesticCurrency, partyB, notional, foreignCurrency)
+    actions {
+        (partyA or partyB).may {
+            "execute".givenThat(after(expiry)) {
+                swap(partyA, notional * strike, domesticCurrency, partyB, notional, foreignCurrency)
+            }
         }
     }
 }

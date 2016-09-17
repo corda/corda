@@ -18,21 +18,26 @@ class RollOutTests {
 
     val contract = arrange {
         rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.Monthly) {
-            (acmeCorp or highStreetBank).may {
-                "transfer".givenThat(after(end)) {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
-                    next()
+            actions {
+                (acmeCorp or highStreetBank).may {
+                    "transfer".givenThat(after(end)) {
+                        highStreetBank.gives(acmeCorp, 10.K, USD)
+                        next()
+                    }
                 }
             }
         }
     }
 
+
     val contract2 = arrange {
         rollOut("2016-09-01".ld, "2017-09-01".ld, Frequency.Monthly) {
-            (acmeCorp or highStreetBank).may {
-                "transfer".givenThat(after(end)) {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
-                    next()
+            actions {
+                (acmeCorp or highStreetBank).may {
+                    "transfer".givenThat(after(end)) {
+                        highStreetBank.gives(acmeCorp, 10.K, USD)
+                        next()
+                    }
                 }
             }
         }
@@ -41,10 +46,12 @@ class RollOutTests {
 
     val contractStep1a = arrange {
         rollOut("2016-10-03".ld, "2017-09-01".ld, Frequency.Monthly) {
-            (acmeCorp or highStreetBank).may {
-                "transfer".givenThat(after(end)) {
-                    highStreetBank.gives(acmeCorp, 10.K, USD)
-                    next()
+            actions {
+                (acmeCorp or highStreetBank).may {
+                    "transfer".givenThat(after(end)) {
+                        highStreetBank.gives(acmeCorp, 10.K, USD)
+                        next()
+                    }
                 }
             }
         }
@@ -64,41 +71,54 @@ class RollOutTests {
         highStreetBank.gives(acmeCorp, 10.K, USD)
     }
     val contract_action1 = arrange {
-        highStreetBank.may {
-            "do it".anytime {
-                highStreetBank.gives(acmeCorp, 10.K, USD)
+        actions {
+            highStreetBank.may {
+                "do it".anytime {
+                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                }
             }
         }
     }
     val contract_action2 = arrange {
-        highStreetBank.may {
-            "do it".anytime {
-                highStreetBank.gives(acmeCorp, 10.K, USD)
+        actions {
+            highStreetBank.may {
+                "do it".anytime {
+                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                }
             }
         }
     }
     val contract_and1 = arrange {
-        highStreetBank.may {
-            "do it".anytime {
-                highStreetBank.gives(acmeCorp, 10.K, USD)
+        actions {
+            highStreetBank.may {
+                "do it".anytime {
+                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                }
             }
         }
-        acmeCorp.may {
-            "do it".anytime {
-                acmeCorp.gives(momAndPop, 10.K, USD)
+        actions {
+            acmeCorp.may {
+                "do it".anytime {
+                    acmeCorp.gives(momAndPop, 10.K, USD)
+                }
             }
         }
         next()
+
     }
     val contract_and2 = arrange {
-        highStreetBank.may {
-            "do it".anytime {
-                highStreetBank.gives(acmeCorp, 10.K, USD)
+        actions {
+            highStreetBank.may {
+                "do it".anytime {
+                    highStreetBank.gives(acmeCorp, 10.K, USD)
+                }
             }
         }
-        acmeCorp.may {
-            "do it".anytime {
-                acmeCorp.gives(momAndPop, 10.K, USD)
+        actions {
+            acmeCorp.may {
+                "do it".anytime {
+                    acmeCorp.gives(momAndPop, 10.K, USD)
+                }
             }
         }
         next()

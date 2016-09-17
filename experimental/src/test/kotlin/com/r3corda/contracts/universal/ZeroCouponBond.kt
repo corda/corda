@@ -12,18 +12,21 @@ import java.time.Instant
 class ZeroCouponBond {
 
     val contract = arrange {
-        (acmeCorp or highStreetBank).may {
-            "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 100.K, GBP)
+        actions {
+            (acmeCorp or highStreetBank).may {
+                "execute".givenThat(after("2017-09-01")) {
+                    highStreetBank.gives(acmeCorp, 100.K, GBP)
+                }
             }
         }
     }
 
-
     val contractMove = arrange {
-        (momAndPop or highStreetBank).may {
-            "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.gives(momAndPop, 100.K, GBP)
+        actions {
+            (momAndPop or highStreetBank).may {
+                "execute".givenThat(after("2017-09-01")) {
+                    highStreetBank.gives(momAndPop, 100.K, GBP)
+                }
             }
         }
     }

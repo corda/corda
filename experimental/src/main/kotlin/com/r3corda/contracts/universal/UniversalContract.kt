@@ -245,7 +245,7 @@ class UniversalContract : Contract {
                 val expectedArr = replaceFixing(tx, arr,
                         value.fixes.associateBy({ it.of }, { it.value }), unusedFixes)
 
-                // debugCompare(expectedArr, outState.details)
+//                debugCompare(expectedArr, outState.details)
 
                 requireThat {
                     "relevant fixing must be included" by unusedFixes.isEmpty()

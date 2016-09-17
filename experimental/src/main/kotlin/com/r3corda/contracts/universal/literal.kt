@@ -22,8 +22,44 @@ val Double.bd: BigDecimal get() = BigDecimal(this)
 
 val zero = Zero()
 
+class ActionsBuilder {
+    private var actions = mutableSetOf<Action>()
+
+    fun final() =
+            if (actions.isEmpty())
+                zero
+            else
+                Actions(actions.toSet())
+
+    fun Party.may(init: ActionBuilder.() -> Action): Action {
+        val builder = ActionBuilder(setOf(this))
+        builder.init()
+        actions.addAll( builder.actions )
+        return builder.actions.first()
+    }
+
+    fun Set<Party>.may(init: ActionBuilder.() -> Action): Action {
+        val builder = ActionBuilder(this)
+        builder.init()
+        actions.addAll( builder.actions )
+
+        return builder.actions.first()
+    }
+
+    infix fun Party.or(party: Party) = setOf(this, party)
+    infix fun Set<Party>.or(party: Party) = this.plus(party)
+}
+
 open class ContractBuilder {
-    val contracts = mutableListOf<Arrangement>()
+    private val contracts = mutableListOf<Arrangement>()
+
+    fun actions(init: ActionsBuilder.() -> Action ) : Arrangement {
+        val b = ActionsBuilder()
+        b.init()
+        val c = b.final()
+        contracts.add(c)
+        return c
+    }
 
     fun Party.gives(beneficiary: Party, amount: BigDecimal, currency: Currency): Transfer {
         val c = Transfer(const(amount), currency, this, beneficiary)
@@ -36,25 +72,6 @@ open class ContractBuilder {
         contracts.add(c)
         return c
     }
-
-    fun Party.may(init: ActionBuilder.() -> Unit): Actions {
-        val b = ActionBuilder(setOf(this))
-        b.init()
-        val c = Actions(b.actions.toSet())
-        contracts.add(c)
-        return c
-    }
-
-    fun Set<Party>.may(init: ActionBuilder.() -> Unit): Actions {
-        val b = ActionBuilder(this)
-        b.init()
-        val c = Actions(b.actions.toSet())
-        contracts.add(c)
-        return c
-    }
-
-    infix fun Party.or(party: Party) = setOf(this, party)
-    infix fun Set<Party>.or(party: Party) = this.plus(party)
 
     @Deprecated(level = DeprecationLevel.ERROR, message = "Not allowed")
     fun Action(@Suppress("UNUSED_PARAMETER") name: String, @Suppress("UNUSED_PARAMETER") condition: Perceivable<Boolean>,
@@ -77,7 +94,7 @@ open class ContractBuilder {
           contracts.add( Transfer(amount, currency, this, beneficiary))
       }*/
 
-    infix fun Arrangement.and(arrangement: Arrangement) = And(setOf(this, arrangement))
+//    infix fun Arrangement.and(arrangement: Arrangement) = And(setOf(this, arrangement))
 
     val start = StartDate()
     val end = EndDate()
@@ -130,10 +147,12 @@ interface GivenThatResolve {
 class ActionBuilder(val actors: Set<Party>) {
     val actions = mutableListOf<Action>()
 
-    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement ) {
+    fun String.givenThat(condition: Perceivable<Boolean>, init: ContractBuilder.() -> Arrangement ) : Action {
         val b = ContractBuilder()
         b.init()
-        actions.add( Action(this, condition, actors, b.final() ) )
+        val a = Action(this, condition, actors, b.final() )
+        actions.add( a )
+        return a
     }
 
     fun String.givenThat(condition: Perceivable<Boolean> ) : GivenThatResolve {
@@ -145,10 +164,12 @@ class ActionBuilder(val actors: Set<Party>) {
         }
     }
 
-    fun String.anytime(init: ContractBuilder.() -> Unit ) {
+    fun String.anytime(init: ContractBuilder.() -> Unit ) : Action {
         val b = ContractBuilder()
         b.init()
-        actions.add( Action(this, const(true), actors, b.final() ) )
+        val a = Action(this, const(true), actors, b.final() )
+        actions.add( a )
+        return a
     }
 }
 

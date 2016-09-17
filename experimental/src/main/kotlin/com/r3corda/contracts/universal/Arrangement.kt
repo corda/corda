@@ -35,7 +35,6 @@ data class Transfer(val amount: Perceivable<BigDecimal>, val currency: Currency,
 // The ``And`` combinator cannot be root in a arrangement.
 data class And(val arrangements: Set<Arrangement>) : Arrangement
 
-
 data class Action(val name: String, val condition: Perceivable<Boolean>,
                   val actors: Set<Party>, val arrangement: Arrangement)
 

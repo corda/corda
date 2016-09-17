@@ -23,17 +23,19 @@ class IRS {
 
     val contract = arrange {
         rollOut("2016-09-01".ld, "2018-09-01".ld, Frequency.Quarterly) {
-            (acmeCorp or highStreetBank).may {
-                val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
-                val fixed = interest(notional, "act/365", 0.5.bd, start, end)
+            actions {
+                (acmeCorp or highStreetBank).may {
+                    val floating = interest(notional, "act/365", fix("LIBOR", start, Tenor("3M")), start, end)
+                    val fixed = interest(notional, "act/365", 0.5.bd, start, end)
 
-                "pay 1".anytime {
-                    highStreetBank.gives(acmeCorp, floating - fixed, currency)
-                    next()
-                }
-                "pay 2".anytime {
-                    highStreetBank.gives(acmeCorp, fixed - floating, currency)
-                    next()
+                    "pay 1".anytime {
+                        highStreetBank.gives(acmeCorp, floating - fixed, currency)
+                        next()
+                    }
+                    "pay 2".anytime {
+                        highStreetBank.gives(acmeCorp, fixed - floating, currency)
+                        next()
+                    }
                 }
             }
         }

@@ -28,48 +28,54 @@ class ContractDefinition {
 
 
     val cds_contract = arrange {
-        acmeCorp.may {
-            "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1.M, USD)
+        actions {
+            acmeCorp.may {
+                "payout".givenThat(acmeCorporationHasDefaulted and before("2017-09-01")) {
+                    highStreetBank.gives(acmeCorp, 1.M, USD)
+                }
             }
-        }
-        highStreetBank.may {
-            "expire".givenThat(after("2017-09-01")) {
-                zero
+            highStreetBank.may {
+                "expire".givenThat(after("2017-09-01")) {
+                    zero
+                }
             }
         }
     }
 
 
     val american_fx_option = arrange {
-        acmeCorp.may {
-            "exercise".anytime {
-                highStreetBank.gives(acmeCorp, 1.M, EUR)
-                acmeCorp.gives(highStreetBank, 1200.K, USD)
+        actions {
+            acmeCorp.may {
+                "exercise".anytime {
+                    highStreetBank.gives(acmeCorp, 1.M, EUR)
+                    acmeCorp.gives(highStreetBank, 1200.K, USD)
+                }
             }
-        }
-        highStreetBank.may {
-            "expire".givenThat(after("2017-09-01")) {
-                zero
+            highStreetBank.may {
+                "expire".givenThat(after("2017-09-01")) {
+                    zero
+                }
             }
         }
     }
 
 
     val european_fx_option = arrange {
-        acmeCorp.may {
-            "exercise".anytime {
-                (acmeCorp or highStreetBank).may {
-                    "execute".givenThat(after("2017-09-01")) {
-                        highStreetBank.gives(acmeCorp, 1.M, EUR)
-                        acmeCorp.gives(highStreetBank, 1200.K, USD)
+        actions {
+            acmeCorp.may {
+                "exercise".anytime {
+                    (acmeCorp or highStreetBank).may {
+                        "execute".givenThat(after("2017-09-01")) {
+                            highStreetBank.gives(acmeCorp, 1.M, EUR)
+                            acmeCorp.gives(highStreetBank, 1200.K, USD)
+                        }
                     }
                 }
             }
-        }
-        highStreetBank.may {
-            "expire".givenThat(after("2017-09-01")) {
-                zero
+            highStreetBank.may {
+                "expire".givenThat(after("2017-09-01")) {
+                    zero
+                }
             }
         }
     }

@@ -38,10 +38,11 @@ data class Const<T>(val value: T) : Perceivable<T> {
         return false
     }
 
-    override fun hashCode(): Int {
-        val h = value!!.hashCode()
-        return h
-    }
+    override fun hashCode(): Int =
+            if (value is BigDecimal)
+                value.toDouble().hashCode()
+            else
+                value!!.hashCode()
 }
 
 fun<T> const(k: T) = Const(k)

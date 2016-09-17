@@ -15,10 +15,12 @@ class FXSwap {
     val TEST_TX_TIME_TOO_EARLY: Instant get() = Instant.parse("2017-08-31T12:00:00.00Z")
 
     val contract = arrange {
-        (acmeCorp or highStreetBank).may {
-            "execute".givenThat(after("2017-09-01")) {
-                highStreetBank.gives(acmeCorp, 1200.K, USD)
-                acmeCorp.gives(highStreetBank, 1.M, EUR)
+        actions {
+            (acmeCorp or highStreetBank).may {
+                "execute".givenThat(after("2017-09-01")) {
+                    highStreetBank.gives(acmeCorp, 1200.K, USD)
+                    acmeCorp.gives(highStreetBank, 1.M, EUR)
+                }
             }
         }
     }
