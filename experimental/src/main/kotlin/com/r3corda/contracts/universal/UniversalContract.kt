@@ -115,12 +115,16 @@ class UniversalContract : Contract {
         val nextStart = schedule.first()
         // todo: look into schedule for final dates
 
-        // todo: we may have to save original start date in order to roll out correctly
-        val newRollOut = RollOut(nextStart, end, rollOut.frequency, rollOut.template)
-
         val arr = replaceStartEnd(rollOut.template, start.toInstant(), nextStart.toInstant())
 
-        return replaceNext(arr, newRollOut )
+        if (nextStart < end) {
+            // todo: we may have to save original start date in order to roll out correctly
+            val newRollOut = RollOut(nextStart, end, rollOut.frequency, rollOut.template)
+            return replaceNext(arr, newRollOut )
+        }
+        else {
+            return removeNext(arr)
+        }
     }
 
     fun<T> replaceStartEnd(p: Perceivable<T>, start: Instant, end: Instant) : Perceivable<T> =
@@ -156,6 +160,21 @@ class UniversalContract : Contract {
                 else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
             }
 
+    fun removeNext(arrangement: Arrangement) : Arrangement =
+            when (arrangement) {
+                is Actions -> Actions(arrangement.actions.map { Action(it.name, it.condition, it.actors, removeNext(it.arrangement)) }.toSet())
+                is And -> {
+                    val a = arrangement.arrangements.map { removeNext(it) }.filter { it != zero }
+                    if (a.count() > 1)
+                        And(a.toSet())
+                    else
+                        a.single()
+                }
+                is Transfer -> arrangement
+                is Zero -> arrangement
+                is Continuation -> zero
+                else -> throw NotImplementedError("replaceNext " + arrangement.javaClass.name)
+            }
 
     override fun verify(tx: TransactionForContract) {
 
