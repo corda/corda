@@ -90,6 +90,14 @@ open class ContractBuilder {
     fun <T> String.givenThat(@Suppress("UNUSED_PARAMETER") ignore1: T, @Suppress("UNUSED_PARAMETER") ignore2: T) {
     }
 
+    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
+    fun Party.may(init: ActionBuilder.() -> Action) {
+    }
+
+    @Deprecated(level = DeprecationLevel.ERROR, message = "Not available")
+    fun Set<Party>.may(init: ActionBuilder.() -> Action) {
+    }
+
     /*  fun Party.gives(beneficiary: Party, amount: Perceivable<Long>, currency: Currency) {
           contracts.add( Transfer(amount, currency, this, beneficiary))
       }*/

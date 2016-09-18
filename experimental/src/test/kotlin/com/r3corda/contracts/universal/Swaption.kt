@@ -22,15 +22,17 @@ class Swaption {
                 "proceed".givenThat(after("01/07/2015")) {
                     highStreetBank.gives(acmeCorp, libor(notional, "01/04/2015", "01/07/2015"), currency)
                     acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/04/2015", "01/07/2015"), currency)
-                    (highStreetBank or acmeCorp).may {
-                        "proceed".givenThat(after("01/10/2015")) {
-                            highStreetBank.gives(acmeCorp, libor(notional, "01/07/2015", "01/10/2015"), currency)
-                            acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
+                    actions {
+                        (highStreetBank or acmeCorp).may {
+                            "proceed".givenThat(after("01/10/2015")) {
+                                highStreetBank.gives(acmeCorp, libor(notional, "01/07/2015", "01/10/2015"), currency)
+                                acmeCorp.gives(highStreetBank, interest(notional, "act/365", coupon, "01/07/2015", "01/10/2015"), currency)
 
-                            actions {
-                                (highStreetBank or acmeCorp).may {
-                                    "dummy".anytime { zero }
-                                    // etc ...
+                                actions {
+                                    (highStreetBank or acmeCorp).may {
+                                        "dummy".anytime { zero }
+                                        // etc ...
+                                    }
                                 }
                             }
                         }

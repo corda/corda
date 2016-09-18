@@ -64,10 +64,12 @@ class ContractDefinition {
         actions {
             acmeCorp.may {
                 "exercise".anytime {
-                    (acmeCorp or highStreetBank).may {
-                        "execute".givenThat(after("2017-09-01")) {
-                            highStreetBank.gives(acmeCorp, 1.M, EUR)
-                            acmeCorp.gives(highStreetBank, 1200.K, USD)
+                    actions {
+                        (acmeCorp or highStreetBank).may {
+                            "execute".givenThat(after("2017-09-01")) {
+                                highStreetBank.gives(acmeCorp, 1.M, EUR)
+                                acmeCorp.gives(highStreetBank, 1200.K, USD)
+                            }
                         }
                     }
                 }
@@ -81,8 +83,52 @@ class ContractDefinition {
     }
 
 
-    @Test
-    fun test() {
+ /*   @Test
+    fun `builder problem - should not compile`() {
+        val arr = arrange {
+            actions {
+                acmeCorp.may {
+                    "execute".anytime {
+                        acmeCorp.may {
+                            "problem".anytime {
+                                highStreetBank.gives(acmeCorp, 1.M, USD)
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
+        assert( arr is Actions )
+
+        if (arr is Actions) {
+            assert( arr.actions.size == 1)
+        }
     }
+*/
+    @Test
+    fun `builder problem - legal`() {
+        val arr = arrange {
+            actions {
+                acmeCorp.may {
+                    "execute".anytime {
+                        actions {
+                            acmeCorp.may {
+                                "problem".anytime {
+                                    highStreetBank.gives(acmeCorp, 1.M, USD)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert( arr is Actions )
+
+        if (arr is Actions) {
+            assert( arr.actions.size == 1)
+        }
+    }
+
 }
