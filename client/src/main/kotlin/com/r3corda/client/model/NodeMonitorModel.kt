@@ -1,6 +1,6 @@
 package com.r3corda.client.model
 
-import com.r3corda.client.WalletMonitorClient
+import com.r3corda.client.NodeMonitorClient
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.NodeInfo
@@ -11,9 +11,9 @@ import rx.Observer
 import rx.subjects.PublishSubject
 
 /**
- * This model exposes raw event streams to and from the [WalletMonitorService] through a [WalletMonitorClient]
+ * This model exposes raw event streams to and from the [NodeMonitorService] through a [NodeMonitorClient]
  */
-class WalletMonitorModel {
+class NodeMonitorModel {
     private val clientToServiceSource = PublishSubject.create<ClientToServiceCommand>()
     val clientToService: Observer<ClientToServiceCommand> = clientToServiceSource
 
@@ -26,13 +26,13 @@ class WalletMonitorModel {
     /**
      * Register for updates to/from a given wallet.
      * @param messagingService The messaging to use for communication.
-     * @param walletMonitorNodeInfo the [Node] to connect to.
+     * @param monitorNodeInfo the [Node] to connect to.
      * TODO provide an unsubscribe mechanism
      */
-    fun register(messagingService: MessagingService, walletMonitorNodeInfo: NodeInfo) {
-        val monitorClient = WalletMonitorClient(
+    fun register(messagingService: MessagingService, monitorNodeInfo: NodeInfo) {
+        val monitorClient = NodeMonitorClient(
                 messagingService,
-                walletMonitorNodeInfo,
+                monitorNodeInfo,
                 clientToServiceSource,
                 serviceToClientSource,
                 snapshotSource

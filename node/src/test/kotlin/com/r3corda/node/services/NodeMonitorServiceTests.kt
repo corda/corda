@@ -14,8 +14,8 @@ import com.r3corda.core.serialization.serialize
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_PUBKEY_1
 import com.r3corda.node.services.monitor.*
-import com.r3corda.node.services.monitor.WalletMonitorService.Companion.IN_EVENT_TOPIC
-import com.r3corda.node.services.monitor.WalletMonitorService.Companion.REGISTER_TOPIC
+import com.r3corda.node.services.monitor.NodeMonitorService.Companion.IN_EVENT_TOPIC
+import com.r3corda.node.services.monitor.NodeMonitorService.Companion.REGISTER_TOPIC
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.testing.expect
 import com.r3corda.testing.expectEvents
@@ -33,9 +33,9 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Unit tests for the wallet monitoring service.
+ * Unit tests for the node monitoring service.
  */
-class WalletMonitorServiceTests {
+class NodeMonitorServiceTests {
     lateinit var network: MockNetwork
 
     @Before
@@ -78,7 +78,7 @@ class WalletMonitorServiceTests {
         val sessionID = authenticate(monitorServiceNode, registerNode)
         var receivePsm = receiveWalletUpdate(registerNode, sessionID)
         var expected = Vault.Update(emptySet(), emptySet())
-        monitorServiceNode.inNodeWalletMonitorService!!.notifyVaultUpdate(expected)
+        monitorServiceNode.inNodeMonitorService!!.notifyVaultUpdate(expected)
         network.runNetwork()
         var actual = receivePsm.get(1, TimeUnit.SECONDS)
         assertEquals(expected.consumed, actual.consumed)
@@ -90,7 +90,7 @@ class WalletMonitorServiceTests {
         val producedState = TransactionState(DummyContract.SingleOwnerState(newSecureRandom().nextInt(), DUMMY_PUBKEY_1), DUMMY_NOTARY)
         val produced = setOf(StateAndRef(producedState, StateRef(SecureHash.randomSHA256(), 0)))
         expected = Vault.Update(consumed, produced)
-        monitorServiceNode.inNodeWalletMonitorService!!.notifyVaultUpdate(expected)
+        monitorServiceNode.inNodeMonitorService!!.notifyVaultUpdate(expected)
         network.runNetwork()
         actual = receivePsm.get(1, TimeUnit.SECONDS)
         assertEquals(expected.produced, actual.produced)
@@ -115,7 +115,7 @@ class WalletMonitorServiceTests {
         // Tell the monitoring service node to issue some cash
         val recipient = monitorServiceNode.services.storageService.myLegalIdentity
         val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, DUMMY_NOTARY)
-        val message = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
+        val message = registerNode.net.createMessage(NodeMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
                 ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, outEvent).serialize().bits)
         registerNode.net.send(message, monitorServiceNode.net.myAddress)
         network.runNetwork()
@@ -166,11 +166,11 @@ class WalletMonitorServiceTests {
 
         // Tell the monitoring service node to issue some cash so we can spend it later
         val issueCommand = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), OpaqueBytes.of(0), recipient, recipient)
-        val issueMessage = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
+        val issueMessage = registerNode.net.createMessage(NodeMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
                 ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, issueCommand).serialize().bits)
         registerNode.net.send(issueMessage, monitorServiceNode.net.myAddress)
         val payCommand = ClientToServiceCommand.PayCash(Amount(quantity, Issued(recipient.ref(0), GBP)), recipient)
-        val payMessage = registerNode.net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
+        val payMessage = registerNode.net.createMessage(NodeMonitorService.OUT_EVENT_TOPIC, DEFAULT_SESSION_ID,
                 ClientToServiceCommandMessage(sessionID, registerNode.net.myAddress, payCommand).serialize().bits)
         registerNode.net.send(payMessage, monitorServiceNode.net.myAddress)
         network.runNetwork()

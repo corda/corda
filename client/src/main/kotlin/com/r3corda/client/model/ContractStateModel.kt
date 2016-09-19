@@ -23,8 +23,8 @@ sealed class StatesModification<out T : ContractState>{
  * This model exposes the list of owned contract states.
  */
 class ContractStateModel {
-    private val serviceToClient: Observable<ServiceToClientEvent> by observable(WalletMonitorModel::serviceToClient)
-    private val snapshot: Observable<StateSnapshotMessage> by observable(WalletMonitorModel::snapshot)
+    private val serviceToClient: Observable<ServiceToClientEvent> by observable(NodeMonitorModel::serviceToClient)
+    private val snapshot: Observable<StateSnapshotMessage> by observable(NodeMonitorModel::snapshot)
     private val outputStates = serviceToClient.ofType(ServiceToClientEvent.OutputState::class.java)
 
     val contractStatesDiff: Observable<StatesModification.Diff<ContractState>> =
