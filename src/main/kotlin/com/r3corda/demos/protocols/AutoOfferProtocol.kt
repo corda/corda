@@ -15,6 +15,7 @@ import com.r3corda.protocols.HandshakeMessage
 import com.r3corda.protocols.TwoPartyDealProtocol
 import com.r3corda.protocols.TwoPartyDealProtocol.Acceptor
 import com.r3corda.protocols.TwoPartyDealProtocol.DEAL_TOPIC
+import com.r3corda.protocols.TwoPartyDealProtocol.Instigator
 
 /**
  * This whole class is really part of a demo just to initiate the agreement of a deal with a simple
@@ -40,7 +41,7 @@ object AutoOfferProtocol {
     class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
 
         object DEALING : ProgressTracker.Step("Starting the deal protocol") {
-            override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Primary.tracker()
+            override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Secondary.tracker()
         }
 
         fun tracker() = ProgressTracker(DEALING)
@@ -60,11 +61,10 @@ object AutoOfferProtocol {
                 val progressTracker = tracker()
                 // Put the deal onto the ledger
                 progressTracker.currentStep = DEALING
-                TwoPartyDealProtocol.Instigator(
+                Acceptor(
                         autoOfferMessage.replyToParty,
                         autoOfferMessage.notary,
                         autoOfferMessage.dealBeingOffered,
-                        services.keyManagementService.freshKey(),
                         progressTracker.getChildProgressTracker(DEALING)!!
                 )
             }
@@ -78,7 +78,7 @@ object AutoOfferProtocol {
             object RECEIVED : ProgressTracker.Step("Received API call")
             object ANNOUNCING : ProgressTracker.Step("Announcing to the peer node")
             object DEALING : ProgressTracker.Step("Starting the deal protocol") {
-                override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Secondary.tracker()
+                override fun childProgressTracker(): ProgressTracker = TwoPartyDealProtocol.Primary.tracker()
             }
 
             // We vend a progress tracker that already knows there's going to be a TwoPartyTradingProtocol involved at some
@@ -103,9 +103,14 @@ object AutoOfferProtocol {
             progressTracker.currentStep = ANNOUNCING
             send(otherParty, AutoOfferMessage(notary, dealToBeOffered, serviceHub.storageService.myLegalIdentity))
             progressTracker.currentStep = DEALING
-            val stx = subProtocol(
-                    Acceptor(otherParty, notary, dealToBeOffered, progressTracker.getChildProgressTracker(DEALING)!!),
-                    inheritParentSessions = true)
+            val instigator = Instigator(
+                    otherParty,
+                    notary,
+                    dealToBeOffered,
+                    serviceHub.keyManagementService.freshKey(),
+                    progressTracker.getChildProgressTracker(DEALING)!!
+            )
+            val stx = subProtocol(instigator, inheritParentSessions = true)
             return stx
         }
 

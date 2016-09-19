@@ -381,7 +381,8 @@ object TwoPartyDealProtocol {
      * is just the "side" of the protocol run by the party with the floating leg as a way of deciding who
      * does what in the protocol.
      */
-    class Floater(override val payload: StateRef,
+    class Floater(override val otherParty: Party,
+                  override val payload: StateRef,
                   override val progressTracker: ProgressTracker = Primary.tracker()) : Primary<StateRef>() {
         @Suppress("UNCHECKED_CAST")
         internal val dealToFix: StateAndRef<FixableDealState> by TransientProperty {
@@ -393,12 +394,6 @@ object TwoPartyDealProtocol {
             val myName = serviceHub.storageService.myLegalIdentity.name
             val publicKey = dealToFix.state.data.parties.filter { it.name == myName }.single().owningKey
             return serviceHub.keyManagementService.toKeyPair(publicKey)
-        }
-
-        override val otherParty: Party get() {
-            // TODO otherParty is sortedParties[1] from FixingRoleDecider.call and so can be passed in as a c'tor param
-            val myName = serviceHub.storageService.myLegalIdentity.name
-            return dealToFix.state.data.parties.filter { it.name != myName }.single()
         }
 
         override val notaryNode: NodeInfo get() =
@@ -451,7 +446,7 @@ object TwoPartyDealProtocol {
                 send(sortedParties[1], initation)
 
                 // Then start the other side of the fixing protocol.
-                subProtocol(Floater(ref), inheritParentSessions = true)
+                subProtocol(Floater(sortedParties[1], ref), inheritParentSessions = true)
             }
         }
     }
