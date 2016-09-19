@@ -1,5 +1,6 @@
 package com.r3corda.core.node.services
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
@@ -32,6 +33,8 @@ interface NetworkMapCache {
     val partyNodes: List<NodeInfo>
     /** Tracks changes to the network map cache */
     val changed: Observable<MapChange>
+    /** Future to track completion of the NetworkMapService registration. */
+    val mapServiceRegistered: ListenableFuture<Unit>
 
     /**
      * A list of nodes that advertise a regulatory service. Identifying the correct regulator for a trade is outside
@@ -97,6 +100,12 @@ interface NetworkMapCache {
      * @param service the network map service to fetch current state from.
      */
     fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit>
+
+    /**
+     * For testing where the network map cache is manipulated marks the service as immediately ready.
+     */
+    @VisibleForTesting
+    fun runWithoutMapService()
 }
 
 sealed class NetworkCacheError : Exception() {

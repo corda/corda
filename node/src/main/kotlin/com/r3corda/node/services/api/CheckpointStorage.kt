@@ -34,4 +34,10 @@ data class Checkpoint(
         val serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
         val request: ProtocolIORequest?,
         val receivedPayload: Any?
-)
+) {
+    // This flag is always false when loaded from storage as it isn't serialised.
+    // It is used to track when the associated fiber has been created, but not necessarily started when
+    // messages for protocols arrive before the system has fully loaded at startup.
+    @Transient
+    var fiberCreated: Boolean = false
+}

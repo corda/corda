@@ -297,10 +297,11 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         }
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may run without any network map service sometimes.
-        if (networkMapService == null && inNodeNetworkMapService == null)
+        if (networkMapService == null && inNodeNetworkMapService == null) {
+            services.networkMapCache.runWithoutMapService()
             return noNetworkMapConfigured()
-        else
-            return registerWithNetworkMap(networkMapService ?: info.address)
+        }
+        return registerWithNetworkMap(networkMapService ?: info.address)
     }
 
     private fun registerWithNetworkMap(networkMapServiceAddress: SingleMessageRecipient): ListenableFuture<Unit> {

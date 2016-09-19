@@ -22,6 +22,7 @@ class MockNetworkMapCache() : com.r3corda.node.services.network.InMemoryNetworkM
         val mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")))
         registeredNodes[mockNodeA.identity] = mockNodeA
         registeredNodes[mockNodeB.identity] = mockNodeB
+        runWithoutMapService()
     }
 
     /**

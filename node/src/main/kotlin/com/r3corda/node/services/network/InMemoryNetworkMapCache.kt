@@ -1,5 +1,6 @@
 package com.r3corda.node.services.network
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
@@ -45,6 +46,9 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         get() = registeredNodes.map { it.value }
     private val _changed = PublishSubject.create<MapChange>()
     override val changed: Observable<MapChange> = _changed
+    private val _registrationFuture = SettableFuture.create<Unit>()
+    override val mapServiceRegistered: ListenableFuture<Unit>
+        get() = _registrationFuture
 
     private var registeredForPush = false
     protected var registeredNodes = Collections.synchronizedMap(HashMap<Party, NodeInfo>())
@@ -82,6 +86,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
         val future = SettableFuture.create<Unit>()
+        _registrationFuture.setFuture(future)
         net.runOnNextMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC, sessionID, MoreExecutors.directExecutor()) { message ->
             val resp = message.data.deserialize<NetworkMapService.FetchMapResponse>()
             // We may not receive any nodes back, if the map hasn't changed since the version specified
@@ -120,6 +125,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
         val future = SettableFuture.create<Unit>()
+        _registrationFuture.setFuture(future)
         net.runOnNextMessage(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC, sessionID, MoreExecutors.directExecutor()) { message ->
             val resp = message.data.deserialize<NetworkMapService.SubscribeResponse>()
             if (resp.confirmed) {
@@ -150,5 +156,10 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
             AddOrRemove.ADD -> addNode(reg.node)
             AddOrRemove.REMOVE -> removeNode(reg.node)
         }
+    }
+
+    @VisibleForTesting
+    override fun runWithoutMapService() {
+        _registrationFuture.set(Unit)
     }
 }
