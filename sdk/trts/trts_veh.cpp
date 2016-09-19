@@ -63,9 +63,9 @@ static bool is_stack_addr(void *address, size_t size)
 {
     thread_data_t *thread_data = get_thread_data();
     size_t stack_base = thread_data->stack_base_addr;
-    size_t stack_top  = thread_data->stack_limit_addr;
+    size_t stack_limit  = thread_data->stack_limit_addr;
     size_t addr = (size_t) address;
-    return (addr <= (addr + size)) && (stack_base >= (addr + size)) && (stack_top <= addr);
+    return (addr <= (addr + size)) && (stack_base >= (addr + size)) && (stack_limit <= addr);
 }
 static bool is_valid_sp(uintptr_t sp)
 {
@@ -219,7 +219,19 @@ extern "C" __attribute__((regparm(1))) void internal_handle_exception(sgx_except
         node = node->next;
     }
 
-    if (size == 0 || (nhead = (uintptr_t *)malloc(size)) == NULL)
+    // There's no exception handler registered
+    if (size == 0)
+    {
+        sgx_spin_unlock(&g_handler_lock);
+
+        //exception cannot be handled
+        thread_data->exception_flag = -1;
+
+        //instruction triggering the exception will be executed again.
+        continue_execution(info);
+    }
+
+    if ((nhead = (uintptr_t *)malloc(size)) == NULL)
     {
         sgx_spin_unlock(&g_handler_lock);
         goto failed_end;
@@ -324,7 +336,8 @@ extern "C" sgx_status_t trts_handle_exception(void *tcs)
 
     size = 0;
 #ifdef SE_GNU64
-    size += 128; // preserve stack for red zone (128 bytes)
+    size += 128; // x86_64 requires a 128-bytes red zone, which begins directly
+                 // after the return addr and includes func's arguments
 #endif
 
     // decrease the stack to give space for info

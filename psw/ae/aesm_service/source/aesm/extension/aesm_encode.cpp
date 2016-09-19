@@ -40,7 +40,6 @@
 #include <openssl/buffer.h>
 #include <openssl/x509v3.h>
 #include <list>
-
 /**
 * Method converts byte containing value from 0x00-0x0F into its corresponding ASCII code, 
 * e.g. converts 0x00 to '0', 0x0A to 'A'. 
@@ -69,7 +68,7 @@ static uint8_t convert_value_to_ascii(uint8_t in)
 * e.g. converts '0' to 0x00, 'A' to 0x0A. 
 *
 * @param in char containing ASCII code (allowed values: '0-9', 'a-f', 'A-F')
-* @param val output parameter containing converted value, if method suceeds.
+* @param val output parameter containing converted value, if method succeeds.
 *
 * @return true if conversion succeeds, false otherwise
 */
@@ -102,6 +101,7 @@ static bool convert_ascii_to_value(uint8_t in, uint8_t& val)
 //The out_size must always be 2*in_size since each byte into encoded by 2 characters
 static bool byte_array_to_hex_string(const uint8_t *in_buf, uint32_t in_size, uint8_t *out_buf, uint32_t out_size)
 {
+    if(in_size>UINT32_MAX/2)return false;
     if(in_buf==NULL||out_buf==NULL|| out_size!=in_size*2 )return false;
 
     for(uint32_t i=0; i< in_size; i++)
@@ -120,6 +120,7 @@ static bool byte_array_to_hex_string(const uint8_t *in_buf, uint32_t in_size, ui
 //The in_size must be even number and equals 2*out_size
 static bool hex_string_to_byte_array(const uint8_t *in_buf, uint32_t in_size, uint8_t *out_buf, uint32_t out_size)
 {
+    if(out_size>UINT32_MAX/2)return false;
     if(in_buf==NULL||out_buf==NULL||out_size*2!=in_size)return false;
 
     for(uint32_t i=0;i<out_size;i++)
@@ -207,17 +208,17 @@ ret_point:
   return ret;
 }
 
-//Function to give an upbound of size of data after BASE64 decoding
+//Function to give an upper bound of size of data after BASE64 decoding
 //@param length: the length in bytes of BASE64 encoded data
-//@return an upbound of length in bytes of decoded data
+//@return an upper bound of length in bytes of decoded data
 static uint32_t get_unbase_64_length(uint32_t length)
 {
     return (length * 3 / 4) + ((length * 3 % 4 > 0) ? 1 : 0 );
 }
 
-//Function to give an upbound of size of data after BASR64 encoding
+//Function to give an upper bound of size of data after BASR64 encoding
 //@param length: the length in bytes of data to be encoded
-//@return an upbound of length in bytes of data after encoding
+//@return an upper bound of length in bytes of data after encoding
 static uint32_t get_base_64_length_upbound(uint32_t length)
 {
     uint32_t extra = (length+9)/10+50;//using enough extra memory
@@ -274,3 +275,4 @@ bool decode_response(const uint8_t *input_buf, uint32_t input_len, uint8_t *resp
         return false;
     return true;
 }
+

@@ -38,8 +38,8 @@
 extern "C" {
 #endif
 
-#define SAMPLE_MAC_SIZE             16  // Message Authentication Code
-                                        // - 16 bytes
+#define SAMPLE_MAC_SIZE             16  /* Message Authentication Code*/
+                                        /* - 16 bytes*/
 typedef uint8_t                     sample_mac_t[SAMPLE_MAC_SIZE];
 
 #ifndef SAMPLE_FEBITSIZE
@@ -59,14 +59,14 @@ typedef struct sample_ec_sign256_t
 #define SAMPLE_SP_TAG_SIZE          16
 
 typedef struct sp_aes_gcm_data_t {
-    uint32_t        payload_size;       //  0: Size of the payload which is
-                                        //     encrypted
-    uint8_t         reserved[12];       //  4: Reserved bits
-    uint8_t	        payload_tag[SAMPLE_SP_TAG_SIZE];
-                                        // 16: AES-GMAC of the plain text,
-                                        //     payload, and the sizes
-    uint8_t         payload[];          // 32: Ciphertext of the payload
-                                        //     followed by the plain text
+    uint32_t        payload_size;       /*  0: Size of the payload which is*/
+                                        /*     encrypted*/
+    uint8_t         reserved[12];       /*  4: Reserved bits*/
+    uint8_t         payload_tag[SAMPLE_SP_TAG_SIZE];
+                                        /* 16: AES-GMAC of the plain text,*/
+                                        /*     payload, and the sizes*/
+    uint8_t         payload[];          /* 32: Ciphertext of the payload*/
+                                        /*     followed by the plain text*/
 } sp_aes_gcm_data_t;
 
 
@@ -75,8 +75,8 @@ typedef struct sp_aes_gcm_data_t {
 #define GID_SIZE 4
 #define PSVN_SIZE 18
 
-// @TODO: Modify at production to use the values specified by the Production
-// IAS API
+/* @TODO: Modify at production to use the values specified by an Production*/
+/* attestation server API*/
 typedef struct ias_platform_info_blob_t
 {
      uint8_t sample_epid_group_status;
@@ -92,7 +92,7 @@ typedef struct ias_platform_info_blob_t
 
 typedef struct sample_ra_att_result_msg_t {
     ias_platform_info_blob_t    platform_info_blob;
-    sample_mac_t                mac;    // mac_smk(attestation_status)
+    sample_mac_t                mac;    /* mac_smk(attestation_status)*/
     sp_aes_gcm_data_t           secret;
 } sample_ra_att_result_msg_t;
 

@@ -38,8 +38,13 @@ source ${SCRIPT_DIR}/installConfig
 
 # Generate the script to preload SGX ptrace library for gdb
 SDK_DST_PATH=${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}
-GDB_SCRIPT=/usr/bin/sgx-gdb
 SDK_LIB_PATH=${SDK_DST_PATH}/${LIB_DIR}
+
+if [ "$1" == "BIN" ]; then
+    GDB_SCRIPT=${SDK_DST_PATH}/bin/sgx-gdb
+else
+    GDB_SCRIPT=/usr/bin/sgx-gdb
+fi
 
 generate_gdb_script()
 {
@@ -65,7 +70,7 @@ shopt -s expand_aliases
 GDB_SGX_PLUGIN_PATH=$SDK_LIB_PATH/gdb-sgx-plugin
 SGX_LIBRARY_PATH=$SDK_LIB_PATH
 export PYTHONPATH=\$GDB_SGX_PLUGIN_PATH
-LD_PRELOAD=\$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/gdb -iex "directory \$GDB_SGX_PLUGIN_PATH" -iex "source \$GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" "\$@"
+LD_PRELOAD=\$SGX_LIBRARY_PATH/libsgx_ptrace.so /usr/bin/gdb -iex "directory \$GDB_SGX_PLUGIN_PATH" -iex "source \$GDB_SGX_PLUGIN_PATH/gdb_sgx_plugin.py" -iex "set environment LD_PRELOAD" -iex "add-auto-load-safe-path /usr/lib" "\$@"
 EOF
 
     chmod +x $GDB_SCRIPT
@@ -73,8 +78,9 @@ EOF
 
 generate_gdb_script
 
-
-cat > $SDK_DST_PATH/uninstall.sh <<EOF
+generate_uninstall_script()
+{
+    cat > $SDK_DST_PATH/uninstall.sh <<EOF
 #!/usr/bin/env bash
 
 if test \$(id -u) -ne 0; then
@@ -86,6 +92,12 @@ fi
 rm -f /usr/lib/libsgx_uae_service_sim.so
 rm -f /usr/lib/libsgx_urts_sim.so
 
+# Removing pkg-config files
+rm -f /usr/lib/pkgconfig/libsgx_uae_service.pc
+rm -f /usr/lib/pkgconfig/libsgx_urts.pc
+rm -f /usr/lib/pkgconfig/libsgx_uae_service_sim.pc
+rm -f /usr/lib/pkgconfig/libsgx_urts_sim.pc
+
 # Removing sgx-gdb script
 rm -f $GDB_SCRIPT
 
@@ -93,11 +105,34 @@ rm -f $GDB_SCRIPT
 rm -fr $SDK_DST_PATH
 
 EOF
+}
+
+generate_uninstall_script_for_bin()
+{
+    cat > $SDK_DST_PATH/uninstall.sh <<EOF
+#!/usr/bin/env bash
+
+# Removing the SDK folder
+rm -fr $SDK_DST_PATH 2> /dev/null
+
+if [ \$? -ne 0 ]; then
+    echo "Superuser privilege is required."
+    exit 1
+fi
+
+EOF
+}
+
+if [ "$1" == "BIN" ]; then
+    generate_uninstall_script_for_bin
+else
+    generate_uninstall_script
+fi
 
 chmod +x $SDK_DST_PATH/uninstall.sh
 
 echo -e "uninstall.sh script generated in $SDK_DST_PATH\n"
-echo -e "Installation successful! The SDK package can be found in $SDK_DST_PATH"
+echo -e "Installation is successful! The SDK package can be found in $SDK_DST_PATH"
 
 rm -fr $SDK_DST_PATH/scripts
 

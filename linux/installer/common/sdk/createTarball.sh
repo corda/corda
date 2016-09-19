@@ -53,6 +53,32 @@ get_arch()
 
 ARCH=$(get_arch)
 
+# Get the configuration for this package
+source ${SCRIPT_DIR}/installConfig.${ARCH}
+
+generate_pkgconfig_files() {
+    local TEMPLATE_FOLDER=${SCRIPT_DIR}/pkgconfig/template
+    local TARGET_FOLDER=${SCRIPT_DIR}/pkgconfig/${ARCH}
+    local VERSION="$1"
+
+    # Create pkgconfig folder for this architecture
+    rm -fr ${TARGET_FOLDER}
+    mkdir -p ${TARGET_FOLDER}
+
+    # Copy the template files into the folder
+    for pkgconfig_file in $(ls -1 ${TEMPLATE_FOLDER}); do
+        sed -e "s:@LIB_FOLDER_NAME@:$LIB_DIR:" \
+            -e "s:@SGX_VERSION@:$VERSION:" \
+            ${TEMPLATE_FOLDER}/$pkgconfig_file > ${TARGET_FOLDER}/$pkgconfig_file
+    done
+}
+
+# Get SGX version
+SGX_VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOT_DIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
+
+# Generate pkgconfig files
+generate_pkgconfig_files $SGX_VERSION
+
 # Fetch the gen_source script
 cp ${LINUX_INSTALLER_COMMON_DIR}/gen_source/gen_source.py ${SCRIPT_DIR}
 
@@ -62,8 +88,6 @@ python ${SCRIPT_DIR}/gen_source.py --bom=BOMs/sdk_${ARCH}.txt --cleanup=false
 python ${SCRIPT_DIR}/gen_source.py --bom=../licenses/BOM_license.txt --cleanup=false
 
 # Create the tarball
-source ${SCRIPT_DIR}/installConfig.${ARCH}
-
 pushd ${INSTALL_PATH} &> /dev/null
 tar -zcvf ${TARBALL_NAME} *
 popd &> /dev/null

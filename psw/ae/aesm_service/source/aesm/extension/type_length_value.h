@@ -29,13 +29,15 @@
  *
  */
 
-
 /**
  * File: type_length_value.h
  * Description: Header file for data structure and macro definition of the TLV, the type length value encoding format of Provision Message
  *
- * Unaligned data will be used and for TLV, no data structure but some macros are used to extract information from TLV (due to var size of some fields)
+ * Unaligned data will be used and for TLV, no data structure but some macros to extract information from TLV(due to var size of some fields)
  * A tlv_info_t structure is defined for decoded TLV header information
+ * special macro to begin with upper case letter and end with lower case letter to indicate it will extract one field from the msg, such as
+ *    EPID_GID_TLV_gid
+ * to extract the gid field from and EPID_GID_TLV
  *
  *To encoding TLV:
  *  i) declare array of tlv_info_t and filling type/version/size of each TLV
@@ -43,20 +45,23 @@
  *  iii) prepare the output buffer in tlv_msg_t (set both msg_buf and msg_size)
  *  iv) call tlv_msg_init to initialize tlv headers of all sub-tlv
  *  v) use function like cipher_text_tlv_get_encrypted_text(...) to get pointer to each payload component
- *  vi) copy corresponding data into each payload
+ *  vi) copy correspondent data into each payload
  *To decoding TLV:
  *  i) initialize tlv_msg_t to input buffer (msg_buf and msg_size)
  *  ii) call read_tlv_info to get correpondent tlv_info_t array
  *  iii) use function like cipher_text_tlv_get_encrypted_text(...) to get pointer to each payload component
  *           or access size field of tlv_info_t directly to get size of payload
- *Usually, there're multiple level of TLVs. 
+ *Usually, there're multiple level of TLVs. To save memory which is critical inside enclave
+ *   we need reuse the memory buffer for all levels of TLV.
  * So in encoding TLV, we need
  *  go through step i) and ii) from inner-most level TLV to out-most level of TLV to define
- *   tlv_info_t of all level of TLVs and get msg size for them 
+ *   tlv_info_t of all level of TLVs and get msg size for them
  *     Usually, the tlv_info_t of outer level is dependent on size of inner level
  *  After that, we could prepare the output buffer which is step iii) according to size of outmost level TLVs
  *   call tlv_msg_init to initialize TLV headers and get start address of payload (where inner TLV will share the memory)
  *      from outmost level to innermost level which is step iv) and v)
+ *   Now we could copy-in correpondent data from innermost level to outermost level and do correpondent encryption if required
+ *      inplace encryption function provided so that no new memory required
  * In decoding TLV, it is simpler, just decode from outmost-level to innermost-level and do decryption if required
  */
 
@@ -70,15 +75,16 @@
 #include "oal/oal.h"
 #include "tlv_common.h"
 #include "se_sig_rl.h"
-#include "se_wrapper.h"
+#include "pce_cert.h"
+#include "sgx_report.h"
 
-#define FOUR_BYTES_SIZE_TYPE       128      /*mask used in type of TLV to indicate that 'size' field uses 4 bytes*/
+#define FOUR_BYTES_SIZE_TYPE 128 /*mask used in type of TLV to indicate that 'size' field uses 4 bytes*/
 
 #ifndef UINT16_MAX
-#define UINT16_MAX                 0xFFFF
+#define UINT16_MAX 0xFFFF
 #endif
 #ifndef UINT32_MAX
-#define UINT32_MAX                 0xFFFFFFFFU
+#define UINT32_MAX 0xFFFFFFFFU
 #endif
 
 #define IS_FOUR_BYTES_SIZE_TYPE(x) (((x)&FOUR_BYTES_SIZE_TYPE)!=0)
@@ -90,28 +96,30 @@ typedef enum _tlv_status_t {
     TLV_INVALID_PARAMETER_ERROR,
     TLV_INVALID_MSG_ERROR,
     TLV_UNKNOWN_ERROR,
-    TLV_MORE_TLVS,                 /*There're more TLVs in the encoded buffer than user's expectation*/
-    TLV_INSUFFICIENT_MEMORY,       /*There'ld be more data in the TLV buffer according to the partially decoded data*/
-    TLV_INVALID_FORMAT,            /*Invalid data format in the TLV buffer to be decoded*/
-    TLV_UNSUPPORTED                /*the feature has not been supported such as version is later than supported version*/
+    TLV_MORE_TLVS,           /*There're more TLVs in the encoded buffer than user's expectation*/
+    TLV_INSUFFICIENT_MEMORY, /*There'ld be more data in the TLV buffer according to the partially decoded data*/
+    TLV_INVALID_FORMAT,      /*Invalid data format in the TLV buffer to be decoded*/
+    TLV_UNSUPPORTED          /*the feature has not been supported such as version is later than supported version*/
 }tlv_status_t;
 
 /*usually, we could initialize header_size by UNKOWN_TLV_HEADER_SIZE
- *but sometimes, we could initialize it by LARGE_TLV_HEADER_SIZE if we want to always use 4 bytes for size even though it is small such as in EPIDSignature TLV*/
-#define UNKNOWN_TLV_HEADER_SIZE    0
-#define TLV_HEADER_SIZE_OFFSET     2
-#define SMALL_TLV_HEADER_SIZE      4
-#define LARGE_TLV_HEADER_SIZE      6
-#define MAX_TLV_HEADER_SIZE        6      /*an upper bound for TLV header size*/
-#define SHORT_TLV_MAX_SIZE         UINT16_MAX
+ * but sometimes, we could initialize it by LARGE_TLV_HEADER_SIZE if we want to always use 4 bytes for size even though it is small such as in EPIDSignature TLV
+ */
+#define UNKNOWN_TLV_HEADER_SIZE 0
+#define TLV_HEADER_SIZE_OFFSET  2
+#define SMALL_TLV_HEADER_SIZE   4
+#define LARGE_TLV_HEADER_SIZE   6
+#define MAX_TLV_HEADER_SIZE     6     /*an upper bound for TLV header size*/
+#define SHORT_TLV_MAX_SIZE      UINT16_MAX
 /*It defines a TLV information
- *All those information is encoded inside a TLV but not in this structure*/
+ *All those information is encoded inside a TLV but not in this structure
+ */
 typedef struct _tlv_info_t{
-    uint8_t  type;                 /*type of tlv must be between 0 and 127 before encoding*/
-    uint8_t  version; 
-    uint16_t header_size;          /*header_size used to easy query begin and end address of TLV*/
-    uint32_t size;                 /* 2 or 4 bytes size after encoding but always 4 bytes in this structure*/
-    uint8_t  *payload;             /*pointer to payload of the TLV*/
+    uint8_t type;         /*type of tlv must be between 0 and 127 before encoding*/
+    uint8_t version;
+    uint16_t header_size; /*header_size used to easy query begin and end address of TLV*/
+    uint32_t size;        /*2 or 4 bytes size after encoding but always 4 bytes in this structure*/
+    uint8_t *payload;     /*pointer to payload of the TLV*/
 }tlv_info_t;
 
 typedef struct _tlv_msg_t{
@@ -119,10 +127,10 @@ typedef struct _tlv_msg_t{
     uint32_t msg_size;
 }tlv_msg_t;
 
-#define SIGRL_CERT_PREFIX_SIZE          (sizeof(se_sig_rl_t)-sizeof(SigRL))             /*size for version and type*/
-#define SIGRL_CERT_HEADER_SIZE          (sizeof(se_sig_rl_t)-sizeof(SigRLEntry))
-#define SIGRL_CERT_SIZE(sigrl_count)    (sizeof(se_sig_rl_t)+((sigrl_count)-1)*sizeof(SigRLEntry)+2*SE_ECDSA_SIGN_SIZE)
-#define EPID_SIGNATURE_HEADER_SIZE      (sizeof(EPIDSignature)-sizeof(NRProof))
+#define SIGRL_CERT_PREFIX_SIZE  (sizeof(se_sig_rl_t)-sizeof(SigRL))    /*size for version and type*/
+#define SIGRL_CERT_HEADER_SIZE  (sizeof(se_sig_rl_t)-sizeof(SigRLEntry))
+#define SIGRL_CERT_SIZE(sigrl_count) (sizeof(se_sig_rl_t)+((sigrl_count)-1)*sizeof(SigRLEntry)+2*SE_ECDSA_SIGN_SIZE)
+#define EPID_SIGNATURE_HEADER_SIZE (sizeof(EPIDSignature)-sizeof(NRProof))
 #define EPID_SIGNATURE_SIZE(sign_count) (sizeof(EPIDSignature)+((sign_count)-1)*sizeof(NRProof))
 
 
@@ -140,13 +148,13 @@ tlv_status_t read_tlv_infos(const tlv_msg_t& msg, uint32_t *tlvs_count, tlv_info
 /*Function to return the header size in encoded TLV buffer*/
 uint32_t get_tlv_header_size(const tlv_info_t *info);
 
-/*Function to return the estimated upper bound of length of TLV in bytes given length in bytes of payload. 
+/*Function to return the estimated upper bound of length of TLV in bytes given length in bytes of payload.
  * Currently, it returns the exact value for TLV encoding, it should not be used for TLV decoding
  *return 0 if there's any error
  */
 inline static uint32_t get_tlv_total_size(size_t payload_size)
 {
-    if(payload_size>UINT16_MAX){/*6 bytes TLV header*/
+    if(payload_size>UINT16_MAX){  /*6 bytes TLV header*/
         if(payload_size>UINT32_MAX-LARGE_TLV_HEADER_SIZE)/*overflow of uint32_t, return 0 to indicate error*/
             return 0;
         return static_cast<uint32_t>(payload_size+LARGE_TLV_HEADER_SIZE);
@@ -157,7 +165,8 @@ inline static uint32_t get_tlv_total_size(size_t payload_size)
 
 
 /*Function to return number in bytes of a msg with some encoded TLVs
- *tlvs_count gives number of TLVs in the msg and infos[i] gives info of the i'th TLV*/
+ *tlvs_count gives number of TLVs in the msg and infos[i] gives info of the i'th TLV
+ */
 uint32_t get_tlv_msg_size(uint32_t tlvs_count, const tlv_info_t infos[]);
 
 /*Function to initialize a msg of some encoded TLVs
@@ -180,15 +189,16 @@ tlv_status_t tlv_msg_init(uint32_t tlvs_count, tlv_info_t infos[], const tlv_msg
  */
 uint32_t tlv_msg_init_one_header(uint8_t msg[MAX_TLV_HEADER_SIZE], tlv_info_t& info);
 
-/*Macro used to crack tlv structure, the pointer type of payload must be uint8_t *
+/*Macro used to crach tlv structure, the pointer type of payload must be uint8_t *
  *The alignment of all types used inside payload should be 1 (which means no alignment)
- *cipher text TLV*/
+ *cipher text TLV
+ */
 #define CIPHER_TEXT_TLV_PAYLOAD_SIZE(text_size)         ((text_size)+1) /*size of payload*/
 #define CIPHER_TEXT_TLV_SIZE(text_size)                 get_tlv_total_size(CIPHER_TEXT_TLV_PAYLOAD_SIZE(text_size)) /*size of TLV*/
-uint8_t *cipher_text_tlv_get_key_id(const tlv_info_t& info);            /*given tlv_info_t, return pointer to key_id*/
-tlv_msg_t cipher_text_tlv_get_encrypted_text(const tlv_info_t& info);   /*given tlv_info_t return tlv_msg for encrypted text so that we could restart decode*/
+uint8_t *cipher_text_tlv_get_key_id(const tlv_info_t& info);          /*given tlv_info_t, return pointer to key_id*/
+tlv_msg_t cipher_text_tlv_get_encrypted_text(const tlv_info_t& info); /*given tlv_info_t return tlv_msg for encrypted text so that we could restart decode*/
 /*block cipher text TLV*/
-#define BLOCK_CIPHER_TEXT_TLV_PAYLOAD_SIZE(text_size)   ((text_size)+IV_SIZE)     /*size of payload*/
+#define BLOCK_CIPHER_TEXT_TLV_PAYLOAD_SIZE(text_size)   ((text_size)+IV_SIZE) /*size of payload*/
 #define BLOCK_CIPHER_TEXT_TLV_SIZE(text_size)           get_tlv_total_size(BLOCK_CIPHER_TEXT_TLV_PAYLOAD_SIZE(text_size)) /*size of TLV*/
 struct _tlv_iv_t;/*an incomplete type for iv only*/
 typedef struct _tlv_iv_t tlv_iv_t;
@@ -240,8 +250,24 @@ psvn_t *epid_sigrl_psvn_tlv_get_psvn(const tlv_info_t& info);
 #define DEVICE_ID_TLV_PAYLOAD_SIZE()                    (sizeof(ppid_t)+sizeof(fmsp_t)+sizeof(psvn_t))
 #define DEVICE_ID_TLV_SIZE()                            get_tlv_total_size(DEVICE_ID_TLV_PAYLOAD_SIZE())
 ppid_t *device_id_tlv_get_ppid(const tlv_info_t& info);
-fmsp_t *device_id_tlv_get_fmsp(const tlv_info_t& info);
-psvn_t *device_id_tlv_get_psvn(const tlv_info_t& info);
+
+/*PPID TLV*/
+#define PPID_TLV_PAYLOAD_SIZE()                         (sizeof(ppid_t))
+#define PPID_TLV_SIZE()                                 get_tlv_total_size(PPID_TLV_PAYLOAD_SIZE())
+
+/*PWK2 TLV*/
+#define PWK2_TLV_PAYLOAD_SIZE()                         (SK_SIZE)
+#define PWK2_TLV_SIZE()                                 get_tlv_total_size(PWK2_TLV_PAYLOAD_SIZE())
+
+/*PlatfromInfo TLV*/
+#define PLATFORM_INFO_TLV_PAYLOAD_SIZE()                (sizeof(bk_platform_info_t))
+#define PLATFORM_INFO_TLV_SIZE()                        get_tlv_total_size(PLATFORM_INFO_TLV_PAYLOAD_SIZE())
+fmsp_t *platform_info_tlv_get_fmsp(const tlv_info_t& info);
+psvn_t *platform_info_tlv_get_psvn(const tlv_info_t& info);
+
+/*SE_REPORT_TLV*/
+#define SE_REPORT_TLV_PAYLOAD_SIZE()                    (sizeof(sgx_report_body_t)+2*ECDSA_SIGN_SIZE)
+#define SE_REPORT_TLV_SIZE()                            (LARGE_TLV_HEADER_SIZE+SE_REPORT_TLV_PAYLOAD_SIZE())
 
 /*PSID TLV*/
 #define PSID_TLV_PAYLOAD_SIZE()                         (sizeof(psid_t))
@@ -257,7 +283,7 @@ psid_t *psid_tlv_get_psid(const tlv_info_t& info);
 #define EPID_SIGNATURE_TLV_SIZE(sign_count)             (LARGE_TLV_HEADER_SIZE+EPID_SIGNATURE_TLV_PAYLOAD_SIZE(sign_count)) /*always use large header size for Signature TLV*/
 
 /*EPID Membership Credential TLV*/
-#define MEMBERSHIP_CREDENTIAL_TLV_PAYLOAD_SIZE()        (sizeof(membertship_credential_with_escrow_t))
+#define MEMBERSHIP_CREDENTIAL_TLV_PAYLOAD_SIZE()        (sizeof(membership_credential_with_escrow_t))
 #define MEMBERSHIP_CREDENTIAL_TLV_SIZE()                get_tlv_total_size(MEMBERSHIP_CREDENTIAL_TLV_PAYLOAD_SIZE())
 PElemStr *membership_credential_tlv_get_x(const tlv_info_t& info);
 G1ElemStr *membership_credential_tlv_get_A(const tlv_info_t& info);
@@ -270,6 +296,12 @@ G1ElemStr *membership_credential_tlv_get_A(const tlv_info_t& info);
 #define ES_SELECTOR_TLV_SIZE()                          get_tlv_total_size(ES_SELECTOR_TLV_PAYLOAD_SIZE())
 uint8_t *es_selector_tlv_get_es_type(const tlv_info_t& info);
 uint8_t *es_selector_tlv_get_selector_id(const tlv_info_t& info);
+
+#define PCE_CERT_TLV_PAYLOAD_SIZE()                     sizeof(pce_tcb_cert_t)
+#define PCE_CERT_TLV_SIZE()                             get_tlv_total_size(PCE_CERT_TLV_PAYLOAD_SIZE())
+
+#define PCE_SIGNATURE_TLV_PAYLOAD_SIZE()                (2*SE_ECDSA_SIGN_SIZE+sizeof(sgx_report_t))
+#define PCE_SIGNATURE_TLV_SIZE()                        get_tlv_total_size(PCE_SIGNATURE_TLV_PAYLOAD_SIZE())
 
 class TLVsMsg{
     uint32_t num_infos;
@@ -294,10 +326,7 @@ protected:
             if(p==NULL){
                 return TLV_OUT_OF_MEMORY_ERROR;
             }
-            if(0!=memcpy_s(p, sizeof(tlv_info_t)*(num_infos+1), infos, sizeof(tlv_info_t)*num_infos)){
-                free(p);
-                return TLV_UNKNOWN_ERROR;
-            }
+            memcpy(p, infos, sizeof(tlv_info_t)*num_infos);
             free(infos);
             infos = p;
             new_info = infos + (num_infos);
@@ -335,6 +364,10 @@ public:
     tlv_status_t add_mac(const uint8_t mac[MAC_SIZE]);
     tlv_status_t add_nonce(const uint8_t *nonce, uint32_t nonce_size);
     tlv_status_t add_epid_gid(const GroupID& gid);
+    tlv_status_t add_platform_info(const bk_platform_info_t& pi);
+    tlv_status_t add_pce_report_sign(const sgx_report_body_t& report, const uint8_t ecdsa_sign[64]);
+    tlv_status_t add_psid(const psid_t *psid);
+    tlv_status_t add_flags(const flags_t *flags);
     tlv_status_t add_es_selector(uint8_t protocol, uint8_t selector_id);
     tlv_status_t add_quote(const uint8_t *quote_data, uint32_t quote_size);
     tlv_status_t add_quote_signature(const uint8_t *quote_signature, uint32_t sign_size);

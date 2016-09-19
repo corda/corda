@@ -476,14 +476,14 @@ DECLARE_LOCAL_FUNC continue_execution
     mov     SE_WORDSIZE*6(%xcx), %xsi
     mov     SE_WORDSIZE*7(%xcx), %xdi
 #ifdef LINUX64
-    mov     SE_WORDSIZE*8(%xcx), %xsi
-    mov     SE_WORDSIZE*9(%xcx), %xsi
-    mov     SE_WORDSIZE*10(%xcx), %xsi
-    mov     SE_WORDSIZE*11(%xcx), %xsi
-    mov     SE_WORDSIZE*12(%xcx), %xsi
-    mov     SE_WORDSIZE*13(%xcx), %xsi
-    mov     SE_WORDSIZE*14(%xcx), %xsi
-    mov     SE_WORDSIZE*15(%xcx), %xsi
+    mov     SE_WORDSIZE*8(%xcx), %r8
+    mov     SE_WORDSIZE*9(%xcx), %r9
+    mov     SE_WORDSIZE*10(%xcx), %r10
+    mov     SE_WORDSIZE*11(%xcx), %r11
+    mov     SE_WORDSIZE*12(%xcx), %r12
+    mov     SE_WORDSIZE*13(%xcx), %r13
+    mov     SE_WORDSIZE*14(%xcx), %r14
+    mov     SE_WORDSIZE*15(%xcx), %r15
     push    SE_WORDSIZE*16(%xcx)
     popf
 #else

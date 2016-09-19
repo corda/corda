@@ -57,6 +57,18 @@
 #include <AEReportAttestationRequest.h>
 #include <AEReportAttestationResponse.h>
 
+#include <AEGetWhiteListSizeRequest.h>
+#include <AEGetWhiteListSizeResponse.h>
+
+#include <AEGetWhiteListRequest.h>
+#include <AEGetWhiteListResponse.h>
+
+#include <AESGXGetExtendedEpidGroupIdRequest.h>
+#include <AESGXGetExtendedEpidGroupIdResponse.h>
+
+#include <AESGXSwitchExtendedEpidGroupRequest.h>
+#include <AESGXSwitchExtendedEpidGroupResponse.h>
+
 #include <SocketTransporter.h>
 #include <ProtobufSerializer.h>
 #include <UnixSocketFactory.h>
@@ -395,3 +407,103 @@ AttestationStatus* AEServicesImpl::ReportAttestationError(const PlatformInfo* pl
     return attestationStatus;
 
 }
+
+WhiteListSize* AEServicesImpl::GetWhiteListSize(uint32_t timeout_msec)
+{
+    AEGetWhiteListSizeRequest*  getWhiteListSizeRequest  = new AEGetWhiteListSizeRequest(timeout_msec);
+    AEGetWhiteListSizeResponse* getWhiteListSizeResponse = new AEGetWhiteListSizeResponse();
+
+    uae_oal_status_t ipc_status = mTransporter->transact(getWhiteListSizeRequest, getWhiteListSizeResponse);
+
+    WhiteListSize* white_list_size = new WhiteListSize();
+    white_list_size->uaeStatus = ipc_status;
+
+    if (ipc_status == UAE_OAL_SUCCESS && getWhiteListSizeResponse->check() == true)
+        white_list_size->white_list_size= getWhiteListSizeResponse->GetWhiteListSize();
+
+    white_list_size->errorCode = getWhiteListSizeResponse->GetErrorCode();
+
+    delete getWhiteListSizeRequest;
+    delete getWhiteListSizeResponse;
+
+    return white_list_size;
+}
+
+PlainData* AEServicesImpl::GetWhiteList(uint32_t white_list_size, uint32_t timeout)
+{
+    AEGetWhiteListRequest* getWhiteListRequest = new AEGetWhiteListRequest(white_list_size, timeout);
+
+    if(getWhiteListRequest->check() == false)
+    {
+        delete getWhiteListRequest;
+        PlainData* whiteList = new PlainData;
+        whiteList->uaeStatus = UAE_OAL_ERROR_UNEXPECTED;
+        return whiteList;
+    }
+
+    AEGetWhiteListResponse* getWhiteListResponse = new AEGetWhiteListResponse();
+
+    uae_oal_status_t ipc_status = mTransporter->transact(getWhiteListRequest, getWhiteListResponse);
+
+    PlainData* whiteList = new PlainData;
+    whiteList->uaeStatus = ipc_status;
+
+    if (ipc_status == UAE_OAL_SUCCESS && getWhiteListResponse->check())
+    {
+        whiteList->length = getWhiteListResponse->GetWhiteListLength();
+
+        if (whiteList->length > 0)
+        {
+            whiteList->data = new uint8_t[whiteList->length];
+            memcpy(whiteList->data, getWhiteListResponse->GetWhiteList(), whiteList->length);
+        }
+    }
+
+    whiteList->errorCode = getWhiteListResponse->GetErrorCode();
+
+    delete getWhiteListRequest;
+    delete getWhiteListResponse;
+
+    return whiteList;
+}
+
+PlainData* AEServicesImpl::SGXSwitchExtendedEpidGroup(uint32_t x_group_id, uint32_t timeout)
+{
+    AESGXSwitchExtendedEpidGroupRequest* switchExtendedEpidGroupRequest   = new AESGXSwitchExtendedEpidGroupRequest(x_group_id, timeout);
+    AESGXSwitchExtendedEpidGroupResponse* switchExtendedEpidGroupResponse = new AESGXSwitchExtendedEpidGroupResponse();
+
+    uae_oal_status_t ipc_status = mTransporter->transact(switchExtendedEpidGroupRequest, switchExtendedEpidGroupResponse);
+
+    PlainData* res = new PlainData;
+    
+    res->errorCode = switchExtendedEpidGroupResponse->GetErrorCode();
+    res->uaeStatus = ipc_status;
+
+    delete switchExtendedEpidGroupRequest;
+    delete switchExtendedEpidGroupResponse;
+
+    return res;
+}
+
+ExtendedEpidGroupId* AEServicesImpl::SGXGetExtendedEpidGroupId(uint32_t timeout_msec)
+{
+    AESGXGetExtendedEpidGroupIdRequest*  getExtendedEpidGroupIdRequest  = new AESGXGetExtendedEpidGroupIdRequest(timeout_msec);
+    AESGXGetExtendedEpidGroupIdResponse* getExtendedEpidGroupIdResponse = new AESGXGetExtendedEpidGroupIdResponse();
+
+    uae_oal_status_t ipc_status = mTransporter->transact(getExtendedEpidGroupIdRequest, getExtendedEpidGroupIdResponse);
+
+    ExtendedEpidGroupId* extended_group_id = new ExtendedEpidGroupId();
+    extended_group_id->uaeStatus = ipc_status;
+
+    if (ipc_status == UAE_OAL_SUCCESS && getExtendedEpidGroupIdResponse->check() == true)
+        extended_group_id->x_group_id= getExtendedEpidGroupIdResponse->GetExtendedEpidGroupId();
+
+    extended_group_id->errorCode = getExtendedEpidGroupIdResponse->GetErrorCode();
+
+    delete getExtendedEpidGroupIdRequest;
+    delete getExtendedEpidGroupIdResponse;
+
+    return extended_group_id;
+}
+
+

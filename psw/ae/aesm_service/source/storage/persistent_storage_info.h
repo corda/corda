@@ -33,7 +33,7 @@
 #define _PERSISTENT_STORAGE_INFO_H_
 #include "oal/aesm_persistent_storage.h"
 
-typedef enum _aesm_location_info_t {AESM_LOCATION_EXE_FOLDER, AESM_LOCATION_DATA} aesm_location_info_t;
+typedef enum _aesm_location_info_t {AESM_LOCATION_EXE_FOLDER, AESM_LOCATION_DATA, AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA} aesm_location_info_t;
 typedef enum _aesm_file_access_type_t {
     AESM_FILE_ACCESS_PATH_ONLY, /*We will only get pathname of the file obj via oal interface but AESM could still access the file via other APIs*/
     AESM_FILE_ACCESS_READ_ONLY, /*Only read the data*/

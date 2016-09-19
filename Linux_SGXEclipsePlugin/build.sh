@@ -11,7 +11,7 @@ TRUNK_HOME=$(cd $(pwd)/../../ ; pwd)
 [ -n "${ECLIPSE_HOME}" ] || { echo "using default ECLIPSE_HOME=${TRUNK_HOME}/eclipse"; ECLIPSE_HOME=${TRUNK_HOME}/eclipse; }
 
 
-BUILD_RELEASE_ID_PREFIX=Linux_SGX_1.5
+BUILD_RELEASE_ID_PREFIX=Linux_SGX_1.6
 
 if [ "$RELEASE_ID" != "${RELEASE_ID%$BUILD_RELEASE_ID_PREFIX*}" ]; then
     echo "$BUILD_RELEASE_ID_PREFIX IS in $RELEASE_ID, so it is an triggered build. Change the RELEASE_ID to an accepted form."
@@ -126,6 +126,51 @@ ${ECLIPSE_HOME}/eclipse -nosplash \
   -installIU org.eclipse.pde.feature.group
 }
 
+function preBuild() {
+  local BUILDDIR="$1"
+  local BUILDDIRWORK="$2"
+  
+  local SITEFILE="$BUILDDIRWORK/sites/site.xml"
+  local FEATUREDIR="$BUILDDIRWORK/features"
+  local FEATUREFILE="feature.xml"
+  local PLUGINDIR="$BUILDDIRWORK/plugins"
+  local PLUGINFILE="META-INF/MANIFEST.MF"  
+
+  local ROOTDIR=$(dirname "$0")"/.."
+  local VERSION=$(awk '/STRFILEVER/ {print $3}' ${ROOTDIR}/common/inc/internal/se_version.h|sed 's/^\"\(.*\)\"$/\1/')
+  VERSION=$(echo "$VERSION" | awk -F'.' '{for(i=1; i<=NF&&i<=3; i++) if(i==1){version=$i} else{version=version"."$i}}; END{print version}')
+
+  if [[ "$VERSION" =~ ^[0-9]{1,}(.[0-9]{1,}){2}$ ]]; then
+    rm -fr "$BUILDDIRWORK"
+    cp -fr "$BUILDDIR" "$BUILDDIRWORK"
+
+    #site.xml
+    sed -i "s#[0-9]\{1,\}\(\.[0-9]\{1,\}\)\{0,2\}\.qualifier#$VERSION\.qualifier#g" "$SITEFILE"
+
+    #feature
+    for DIR in $(ls "$FEATUREDIR"); do
+      sed -i "s#[0-9]\{1,\}\(\.[0-9]\{1,\}\)\{0,2\}\.qualifier#$VERSION\.qualifier#g" "$FEATUREDIR/$DIR/$FEATUREFILE"
+    done
+
+    #plugin
+    for DIR in $(ls "$PLUGINDIR"); do
+      sed -i "s#[0-9]\{1,\}\(\.[0-9]\{1,\}\)\{0,2\}\.qualifier#$VERSION\.qualifier#g" "$PLUGINDIR/$DIR/$PLUGINFILE"
+    done
+  fi
+}
+
+function postBuild() {
+  local BUILDDIR="$1"
+  local BUILDDIRWORK="$2"
+  local UPDATESITEDIR="updatesite"
+  
+  if [[ -d "$BUILDDIRWORK" ]] && [[ -d "$BUILDDIRWORK/$UPDATESITEDIR" ]]; then
+    rm -fr "$BUILDDIR/$UPDATESITEDIR"
+    cp -fr "$BUILDDIRWORK/$UPDATESITEDIR" "$BUILDDIR/$UPDATESITEDIR"
+    rm -fr "$BUILDDIRWORK"
+  fi
+}
+
 function buildPlugin() {
     pwd
 
@@ -136,6 +181,7 @@ function buildPlugin() {
   BASELOCATION="$ECLIPSE_HOME"
   BUILDVERSION="$RELEASE_ID"
   BUILDDIR="$PWD/build_directory"
+  BUILDDIRWORK="$PWD/.build_directory"
   BUILDCONFIG="$PWD/build_config"
   LAUNCHER=`findFirst "$ECLIPSE_HOME"/plugins/org.eclipse.equinox.launcher_*.jar`
   BUILDFILE=`findFirst "$ECLIPSE_HOME"/plugins/org.eclipse.pde.build_*/scripts/build.xml`
@@ -151,7 +197,9 @@ function buildPlugin() {
          "not detected. Found '$BUILDFILE'. Aborting."
     exit 1
   fi
-  
+
+  preBuild "$BUILDDIR" "$BUILDDIRWORK"
+
   #
   # -- Print configuration used and actually execute the build --  
   #
@@ -161,7 +209,7 @@ function buildPlugin() {
   echo "  Build File:   $BUILDFILE"
   echo "  Build Config: $BUILDCONFIG"
   echo "  Base Location: $BASELOCATION"
-  echo "  Build Directory: $BUILDDIR"
+  echo "  Build Directory: $BUILDDIRWORK"
   echo "  Build Version: $BUILDVERSION"
   echo "  Java:         " $(which java)
   java -version
@@ -174,12 +222,13 @@ function buildPlugin() {
     -jar $LAUNCHER \
     -application org.eclipse.ant.core.antRunner \
     -buildfile $BUILDFILE \
-    -DbuildDirectory=$BUILDDIR \
+    -DbuildDirectory=$BUILDDIRWORK \
     -DbaseLocation=$BASELOCATION \
     -Dbuilder=$BUILDCONFIG \
     -DforceContextQualifier=$BUILDVERSION \
       -v -v -v -v 
 
+  postBuild "$BUILDDIR" "$BUILDDIRWORK"
 }
 
 function findFirst() {

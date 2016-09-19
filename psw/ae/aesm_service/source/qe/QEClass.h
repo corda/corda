@@ -66,7 +66,8 @@ public:
         uint32_t sigrl_size,
         sgx_report_t *p_qe_report,
         uint8_t *p_quote,
-        uint32_t quote_size);
+        uint32_t quote_size,
+        uint16_t pce_isv_svn);
 };
 #endif
 

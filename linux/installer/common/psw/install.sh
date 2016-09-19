@@ -122,6 +122,8 @@ rm -f /usr/lib/libsgx_urts.so
 # Removing AESM folder
 rm -fr $PSW_DST_PATH
 
+# Removing AESM user and group
+/usr/sbin/userdel aesmd
 EOF
 
 chmod +x $PSW_DST_PATH/uninstall.sh
@@ -135,7 +137,7 @@ fi
 
 echo -e "\nuninstall.sh script generated in $PSW_DST_PATH\n"
 
-echo -e "Installation successful!"
+echo -e "Installation is successful!"
 
 rm -fr $PSW_DST_PATH/scripts
 

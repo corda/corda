@@ -182,9 +182,32 @@ int CLoader::build_sections(vector<uint8_t> *bitmap)
 {
     int ret = SGX_SUCCESS;
     std::vector<Section*> sections = m_parser.get_sections();
+    uint64_t max_rva =0;
+    Section* last_section = NULL;
 
     for(unsigned int i = 0; i < sections.size() ; i++)
     {
+        
+        
+        
+        if((last_section != NULL) &&
+           (ROUND_TO_PAGE(last_section->virtual_size() + last_section->get_rva()) < ROUND_TO_PAGE(ROUND_TO_PAGE(last_section->virtual_size()) + last_section->get_rva())) &&
+           (ROUND_TO_PAGE(last_section->get_rva() + last_section->virtual_size()) < (sections[i]->get_rva() & (~(SE_PAGE_SIZE - 1)))))
+        {
+            size_t size = SE_PAGE_SIZE;
+            sec_info_t sinfo;
+            memset(&sinfo, 0, sizeof(sinfo));
+            sinfo.flags = last_section->get_si_flags();
+            uint64_t rva = ROUND_TO_PAGE(last_section->get_rva() + last_section->virtual_size());
+            if(SGX_SUCCESS != (ret = build_pages(rva, size, 0, sinfo, ADD_EXTEND_PAGE)))
+                return ret;
+        }
+
+        if(sections[i]->get_rva() > max_rva) 
+        {
+            max_rva = sections[i]->get_rva();
+            last_section = sections[i];
+        }
         //since build_mem_region require the sec_info.rva be page aligned, we need handle the first page.
         //build the first page;
         uint64_t offset = (sections[i]->get_rva() & (SE_PAGE_SIZE -1));
@@ -218,6 +241,22 @@ int CLoader::build_sections(vector<uint8_t> *bitmap)
                 return ret;
             }
         }
+       
+    }
+    
+    
+    
+    
+    if((last_section != NULL) &&
+       (ROUND_TO_PAGE(last_section->virtual_size() + last_section->get_rva()) < ROUND_TO_PAGE(ROUND_TO_PAGE(last_section->virtual_size()) + last_section->get_rva())))
+    {
+        size_t size = SE_PAGE_SIZE;
+        sec_info_t sinfo;
+        memset(&sinfo, 0, sizeof(sinfo));
+        sinfo.flags = last_section->get_si_flags();
+        uint64_t rva = ROUND_TO_PAGE(last_section->get_rva() + last_section->virtual_size());
+        if(SGX_SUCCESS != (ret = build_pages(rva, size, 0, sinfo, ADD_EXTEND_PAGE)))
+            return ret;
     }
 
     return SGX_SUCCESS;

@@ -32,15 +32,13 @@
 enclave{
     include "provision_msg.h"
     trusted {
-        public uint32_t gen_prov_msg1_data_wrapper([in]const psvn_t *psvn, 
-												   [in]const signed_pek_t *pek,
-                                            uint8_t performance_rekey_flag,
-                                            [out] prov_msg1_output_t *msg1_output);
-
-        public uint32_t get_ek2_wrapper([in] const prov_get_ek2_input_t *input,
-                                        [out] prov_get_ek2_output_t *ek2);
+        public uint32_t gen_prov_msg1_data_wrapper([in]const extended_epid_group_blob_t *xegb,
+                                                   [in]const signed_pek_t *pek,
+                                                   [in]const sgx_target_info_t *pce_target_info,
+                                                   [out]sgx_report_t *msg1_output);
 
         public uint32_t proc_prov_msg2_data_wrapper([in]const proc_prov_msg2_blob_input_t *msg2_input,
+                                                    uint8_t performance_rekey_used,
                                                     [user_check]const uint8_t *sigrl, uint32_t sigrl_size,//optional input sigrl in external memory
                                                     [out] gen_prov_msg3_output_t *msg3_fixed_output,
                                                     [user_check]uint8_t *epid_sig, uint32_t epid_sig_buffer_size);//optional output epid signature in external memory directly

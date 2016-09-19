@@ -29,7 +29,6 @@
  *
  */
 
-
 #ifndef _AE_ERROR_H_
 #define _AE_ERROR_H_
 
@@ -86,33 +85,49 @@ typedef enum _ae_error_t{
     LE_INVALID_PRIVILEGE_ERROR               = 41,
     LE_WHITELIST_UNINITIALIZED_ERROR         = 42,
     LE_CALC_LIC_TOKEN_ERROR                  = 43,
+    AESM_NLTP_NO_LTP_BLOB                    =179,
+    AESM_NLTP_DONT_NEED_UPDATE_PAIR_LTP      =180,
+    AESM_NLTP_MAY_NEED_UPDATE_LTP            =181,
+    AESM_NLTP_OLD_EPID11_RLS                 =182,
+    AESM_PCP_NEED_PSE_UPDATE                 =183,
+    AESM_PCP_PSE_CERT_PROVISIONING_ATTESTATION_FAILURE_NEED_EPID_UPDATE           =184,
+    AESM_PCP_PSE_CERT_PROVISIONING_ATTESTATION_FAILURE_MIGHT_NEED_EPID_UPDATE     =185,
+    AESM_PCP_SIMPLE_PSE_CERT_PROVISIONING_ERROR             =186,
+    AESM_PCP_SIMPLE_EPID_PROVISION_ERROR     =187,
+    AESM_NPC_DONT_NEED_PSEP                  =188,
+    AESM_NPC_NO_PSE_CERT                     =189,
+    AESM_NPC_DONT_NEED_UPDATE_PSEP           =190,
+    AESM_NPC_MAY_NEED_UPDATE_PSEP            =191,
+    AESM_NEP_DONT_NEED_EPID_PROVISIONING     =192,
+    AESM_NEP_DONT_NEED_UPDATE_PVEQE          =193,
+    AESM_NEP_PERFORMANCE_REKEY               =194,
+    AESM_NEP_MAY_NEED_UPDATE                 =195,
+    AESM_CP_ATTESTATION_FAILURE              =196,
+    AESM_LTP_PSE_CERT_REVOKED                =197,
+    AESM_LTP_SIMPLE_LTP_ERROR                =198,
+    AESM_PSE_PR_GET_PRIVRL_ERROR             =199,
+    AESM_NETWORK_TIMEOUT                     =200,
 
-    AESM_NLTP_NO_LTP_BLOB                    =178,
-    AESM_NLTP_DONT_NEED_UPDATE_PAIR_LTP      =179,
-    AESM_NLTP_MAY_NEED_UPDATE_LTP            =180,
-    AESM_NLTP_OLD_EPID11_RLS                 =181,
-    AESM_PCP_NEED_PSE_UPDATE                 =182,
-    AESM_PCP_PSE_CERT_PROVISIONING_ATTESTATION_FAILURE_NEED_EPID_UPDATE           =183,
-    AESM_PCP_PSE_CERT_PROVISIONING_ATTESTATION_FAILURE_MIGHT_NEED_EPID_UPDATE     =184,
-    AESM_PCP_SIMPLE_PSE_CERT_PROVISIONING_ERROR             =185,
-    AESM_PCP_SIMPLE_EPID_PROVISION_ERROR     =186,
-    AESM_NPC_DONT_NEED_PSEP                  =187,
-    AESM_NPC_NO_PSE_CERT                     =188,
-    AESM_NPC_DONT_NEED_UPDATE_PSEP           =189,
-    AESM_NPC_MAY_NEED_UPDATE_PSEP            =190,
-    AESM_NEP_DONT_NEED_EPID_PROVISIONING     =191,
-    AESM_NEP_DONT_NEED_UPDATE_PVEQE          =192,
-    AESM_NEP_PERFORMANCE_REKEY               =193,
-    AESM_NEP_MAY_NEED_UPDATE                 =194,
-    AESM_CP_ATTESTATION_FAILURE              =195,
-    AESM_LTP_PSE_CERT_REVOKED                =196,
-    AESM_LTP_SIMPLE_LTP_ERROR                =197,
-    AESM_PSE_PR_GET_PRIVRL_ERROR             =198,
-    AESM_NETWORK_TIMEOUT                     =199,
+    PSW_UPDATE_REQUIRED                      =201,
+    AESM_AE_OUT_OF_EPC                       =202,
 
-    AE_SERVICE_NOT_AVAILABLE                 =200,
+    PVE_PROV_ATTEST_KEY_NOT_FOUND            =203,
+    PVE_INVALID_REPORT                       =204,
+    PVE_XEGDSK_SIGN_ERROR                    =205,
 
-    PSW_UPDATED_REQUIRED                     =201
+    // PCE ERROR CODES
+    PCE_UNEXPECTED_ERROR                     =206,
+    PCE_INVALID_PRIVILEGE                    =207,
+    PCE_INVALID_REPORT                       =208,
+
+    LE_WHITE_LIST_QUERY_BUSY                 =209,
+    AESM_AE_NO_DEVICE                        =210,
+    EXTENDED_GROUP_NOT_AVAILABLE             =211,
+
+    // MORE PSE_OP ERROR CASES
+    PSE_OP_ERROR_KDF_MISMATCH                =212,
+
+    LE_WHITE_LIST_HAS_BEEN_UPDATED           =213,
 } ae_error_t;
 
 #define AE_FAILED(x)    (AE_SUCCESS != (x))

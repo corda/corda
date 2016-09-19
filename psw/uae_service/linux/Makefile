@@ -93,6 +93,14 @@ IPC_SRC  := AECloseSessionRequest.cpp    \
              AEReportAttestationResponse.cpp \
              ProtobufSerializer.cpp \
              AEGetLaunchTokenRequest.cpp  \
+             AEGetWhiteListSizeRequest.cpp \
+             AEGetWhiteListSizeResponse.cpp \
+             AEGetWhiteListRequest.cpp \
+             AEGetWhiteListResponse.cpp \
+             AESGXGetExtendedEpidGroupIdRequest.cpp \
+             AESGXGetExtendedEpidGroupIdResponse.cpp \
+             AESGXSwitchExtendedEpidGroupRequest.cpp \
+             AESGXSwitchExtendedEpidGroupResponse.cpp \
              SocketTransporter.cpp \
              AEGetLaunchTokenResponse.cpp  \
              UnixCommunicationSocket.cpp \

@@ -60,6 +60,7 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/oal/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/protobuf/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pve/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/qe/
+INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/pce/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/storage/
 INCLUDE += -I$(LINUX_PSW_DIR)/ae/data/constants/linux 
 
@@ -72,7 +73,6 @@ INCLUDE += -I$(LINUX_PSW_DIR)/ae/aesm_service/source/epid_provision
 INCLUDE += -I$(LINUX_EXTERNAL_DIR)/epid/inc                        
 
 INCLUDE += -I$(LINUX_EXTERNAL_DIR)/crypto_px/include/              \
-           -I$(LINUX_EXTERNAL_DIR)/tinyxml/                        \
            -I$(LINUX_EXTERNAL_DIR)/                                                 \
            -I$(LINUX_EXTERNAL_DIR)/rdrand \
            -I$(IPC_COMMON_INC_DIR) \
@@ -113,13 +113,12 @@ TRTSLIB := -lsgx_trts
 WHITE_LIST_FILE := $(LINUX_PSW_DIR)/ae/data/prebuilt/white_list_cert_to_be_verify.bin
 
 TCRYPTO_LIBDIR  := $(LINUX_SDK_DIR)/tlibcrypto
-PROTOBUF_LIBDIR := $(LINUX_PROTOBUF)/intel64
 VTUNE_LIBDIR := $(LINUX_EXTERNAL_DIR)/vtune/linux/sdk/src/ittnotify
 RDRAND_LIBDIR :=$(LINUX_EXTERNAL_DIR)/rdrand/src
 RDRAND_MAKEFILE := $(RDRAND_LIBDIR)/Makefile
 
 ifeq ($(ARCH), x86)
-    PROTOBUF_LIBDIR = $(LINUX_PROTOBUF)/ia32
+    VTUNE_LIBDIR = $(LINUX_EXTERNAL_DIR)/vtune/linux/lib32
 endif
 
 
@@ -131,15 +130,11 @@ EXTERNAL_LIB += -L$(LINUX_SE_WRAPPER) -lwrapper -lrt
 EXTERNAL_LIB += -L$(RDRAND_LIBDIR) -lrdrand
 EXTERNAL_LIB += -L$(VTUNE_LIBDIR) -littnotify
 
-vpath %.cpp $(COMMON_DIR)/src $(LINUX_EXTERNAL_DIR)/tinyxml ./source/epid_provision $(LINUX_PSW_DIR)/ae/common  $(AESM_APPLICATION) $(AESM_EXTENSION) $(AESM_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(COMMON_DIR)/src $(TOP_DIR)/sdk/tseal
+vpath %.cpp $(COMMON_DIR)/src ./source/epid_provision $(LINUX_PSW_DIR)/ae/common  $(AESM_APPLICATION) $(AESM_EXTENSION) $(AESM_SRC_DIR) $(IPC_COMMON_PROTO_DIR) $(COMMON_DIR)/src $(TOP_DIR)/sdk/tseal
 vpath %.cc $(IPC_COMMON_PROTO_DIR)
 vpath %.c $(TOP_DIR)/sdk/tlibc/string
 
-COMMON_SRC := tinyxmlparser.cpp            \
-              tinyxmlerror.cpp             \
-              tinyxml.cpp                  \
-              tinystr.cpp                  \
-              ./source/le/LEClass.cpp                  \
+COMMON_SRC := ./source/le/LEClass.cpp                  \
               ./source/oal/aesm_util.cpp                \
               ./source/storage/persistent_storage_table.cpp \
               aesm_logic.cpp  \
@@ -158,8 +153,10 @@ COMMON_SRC := tinyxmlparser.cpp            \
 
 COMMON_SRC += ./source/qe/QEClass.cpp                  \
               ./source/pve/PVEClass.cpp                \
+              ./source/pce/PCEClass.cpp                \
               aesm_encode.cpp              \
               aesm_epid_blob.cpp           \
+              aesm_xegd_blob.cpp            \
               epid_provision_msg1.cpp \
               epid_provision_msg2.cpp \
               epid_provision_msg4.cpp \
@@ -169,6 +166,7 @@ COMMON_SRC += ./source/qe/QEClass.cpp                  \
               ./source/qe/qe_logic.cpp \
               ./source/pve/pve_logic.cpp \
               platform_info_logic.cpp \
+              platform_info_facility.cpp \
               pve_pub_key.cpp \
               pek_pub_key.cpp \
               ./source/network/network_encoding_wrapper.cpp \
@@ -194,6 +192,14 @@ IPC_SRC  :=  $(IPC_COMMON_SRC_DIR)/AECloseSessionRequest.cpp    \
              $(IPC_COMMON_SRC_DIR)/AEGetLaunchTokenRequest.cpp  \
              $(IPC_COMMON_SRC_DIR)/AEGetPsCapRequest.cpp  \
              $(IPC_COMMON_SRC_DIR)/AEGetPsCapResponse.cpp  \
+             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListSizeRequest.cpp \
+             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListSizeResponse.cpp \
+             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListRequest.cpp \
+             $(IPC_COMMON_SRC_DIR)/AEGetWhiteListResponse.cpp \
+             $(IPC_COMMON_SRC_DIR)/AESGXGetExtendedEpidGroupIdRequest.cpp \
+             $(IPC_COMMON_SRC_DIR)/AESGXGetExtendedEpidGroupIdResponse.cpp \
+             $(IPC_COMMON_SRC_DIR)/AESGXSwitchExtendedEpidGroupRequest.cpp \
+             $(IPC_COMMON_SRC_DIR)/AESGXSwitchExtendedEpidGroupResponse.cpp \
              $(IPC_COMMON_SRC_DIR)/AEReportAttestationRequest.cpp \
              $(IPC_COMMON_SRC_DIR)/AEReportAttestationResponse.cpp \
              $(IPC_COMMON_SRC_DIR)/SocketTransporter.cpp \
@@ -257,13 +263,14 @@ $(LIBNAME): $(COMMON_OBJ)
 consttime_memequal.o :consttime_memequal.c
 	$(CC) $(filter-out -O2,$(CFLAGS)) -fPIC -O1 $(INCLUDE) -c $< -o $@
 
-$(APPNAME): $(OBJ) $(LIBNAME) sgx_tcrypto -lrdrand
+$(APPNAME): $(OBJ) $(LIBNAME) sgx_tcrypto -lrdrand urts
 	$(CXX) $(CXXFLAGS) $(OBJ) $(LIBNAME) $(LDUFLAGS) $(EXTERNAL_LIB)   -o $@ -ldl
 $(IPC_SRC): PROTPBUF
 
 ./source/le/LEClass.o: ${AESM_EXTENSION}/launch_enclave_u.c
 ./source/pve/PVEClass.o: ${AESM_EXTENSION}/provision_enclave_u.c
 ./source/qe/QEClass.o: ${AESM_EXTENSION}/quoting_enclave_u.c
+./source/pce/PCEClass.o: ${AESM_EXTENSION}/pce_u.c
 uecall_bridge.o: ${AESM_EXTENSION}/pse_pr_u.c
 
 -lrdrand: $(RDRAND_MAKEFILE)
@@ -288,6 +295,8 @@ ${AESM_EXTENSION}/quoting_enclave_u.c: ${LINUX_PSW_DIR}/ae/qe/quoting_enclave.ed
 ${AESM_EXTENSION}/pse_pr_u.c:  ${LINUX_PSW_DIR}/ae/pse/pse_pr/pse_pr.edl
 	@$(EDGER8R) --untrusted --untrusted-dir ${AESM_EXTENSION} $<
 
+${AESM_EXTENSION}/pce_u.c:  ${LINUX_PSW_DIR}/ae/pce/pce.edl
+	@$(EDGER8R) --untrusted --untrusted-dir ${AESM_EXTENSION} $<
 .PHONY: PROTPBUF
 PROTPBUF:
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR)
@@ -307,12 +316,12 @@ clean:
 	@$(RM) $(APPNAME)
 	@$(RM) $(LIBNAME)
 	$(MAKE) -C $(IPC_COMMON_PROTO_DIR) clean
+	$(MAKE) -C $(LINUX_PSW_DIR)/urts/linux clean
 	@$(RM) source/le/*.o
 	@$(RM) source/pve/*.o
-	@$(RM) source/pve/*.o
+	@$(RM) source/pce/*.o
 	@$(RM) source/network/*.o
 	@$(RM) source/oal/*.o
-	@$(RM) source/qe/*.o
 	@$(RM) source/qe/*.o
 	@$(RM) source/storage/*.o
 	@$(RM) $(AESM_EXTENSION)/*_u.c $(AESM_EXTENSION)/*_u.h

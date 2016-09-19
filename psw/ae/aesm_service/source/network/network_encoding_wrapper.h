@@ -39,7 +39,6 @@
 #include "se_thread.h"
 #include "oal/oal.h"
 #include "se_wrapper.h"
-#include "endpoint_select_info.h"
 
 /*Class for network interface inside AESM*/
 class AESMNetworkEncoding{

@@ -41,38 +41,6 @@
 #include "oal/oal.h"
 #include <assert.h>
 
-#ifdef DBG_LOG
-#define CASE_ENUM_RET_STRING(x) case x: return #x;
-const char *get_tlv_enum_type_t_string(uint8_t type){
-    switch(type){
-        CASE_ENUM_RET_STRING(TLV_CIPHER_TEXT)
-        CASE_ENUM_RET_STRING(TLV_BLOCK_CIPHER_TEXT)
-        CASE_ENUM_RET_STRING(TLV_BLOCK_CIPHER_INFO)
-        CASE_ENUM_RET_STRING(TLV_MESSAGE_AUTHENTICATION_CODE)
-        CASE_ENUM_RET_STRING(TLV_NONCE)
-        CASE_ENUM_RET_STRING(TLV_EPID_GID)
-        CASE_ENUM_RET_STRING(TLV_EPID_SIG_RL)
-        CASE_ENUM_RET_STRING(TLV_EPID_GROUP_CERT)
-        CASE_ENUM_RET_STRING(TLV_DEVICE_ID)
-        CASE_ENUM_RET_STRING(TLV_PS_ID)
-        CASE_ENUM_RET_STRING(TLV_EPID_JOIN_PROOF)
-        CASE_ENUM_RET_STRING(TLV_EPID_SIG)
-        CASE_ENUM_RET_STRING(TLV_EPID_MEMBERSHIP_CREDENTIAL)
-        CASE_ENUM_RET_STRING(TLV_EPID_PSVN)
-        CASE_ENUM_RET_STRING(TLV_QUOTE)
-        CASE_ENUM_RET_STRING(TLV_X509_CERT_TLV)
-        CASE_ENUM_RET_STRING(TLV_X509_CSR_TLV)
-        CASE_ENUM_RET_STRING(TLV_ES_SELECTOR)
-        CASE_ENUM_RET_STRING(TLV_ES_INFORMATION)
-        CASE_ENUM_RET_STRING(TLV_FLAGS)
-        CASE_ENUM_RET_STRING(TLV_QUOTE_SIG)
-        CASE_ENUM_RET_STRING(TLV_PEK)
-        CASE_ENUM_RET_STRING(TLV_SIGNATURE)
-    default:
-        return "Unknown TLV";
-    }
-}
-#endif
 //Function to write tlv header into a msg according to tlv info, the input buffer size should be at least MAX_TLV_HEADER_SIZE
 static tlv_status_t write_tlv_header(uint8_t *msg, const tlv_info_t *info)
 {
@@ -228,19 +196,18 @@ tlv_msg_t block_cipher_tlv_get_encrypted_text(const tlv_info_t& info)
     return tlv_msg;
 }
 
-
-fmsp_t *device_id_tlv_get_fmsp(const tlv_info_t& info)
+fmsp_t *platform_info_tlv_get_fmsp(const tlv_info_t& info)
 {
-    assert(info.type == TLV_DEVICE_ID && info.size == DEVICE_ID_TLV_PAYLOAD_SIZE());
+    assert(info.type == TLV_PLATFORM_INFO && info.size == PLATFORM_INFO_TLV_PAYLOAD_SIZE());
     assert(info.payload!=NULL);
-    return reinterpret_cast<fmsp_t *>(info.payload+sizeof(psvn_t)+sizeof(ppid_t));
+    return reinterpret_cast<fmsp_t *>(info.payload+sizeof(psvn_t)+sizeof(sgx_isv_svn_t)+sizeof(CUR_PCE_ID));
 }
 
-psvn_t *device_id_tlv_get_psvn(const tlv_info_t& info)
+psvn_t *platform_info_tlv_get_psvn(const tlv_info_t& info)
 {
-    assert(info.type == TLV_DEVICE_ID && info.size == DEVICE_ID_TLV_PAYLOAD_SIZE());
+    assert(info.type == TLV_PLATFORM_INFO && info.size == PLATFORM_INFO_TLV_PAYLOAD_SIZE());
     assert(info.payload!=NULL);
-    return reinterpret_cast<psvn_t *>(info.payload+sizeof(ppid_t));
+    return reinterpret_cast<psvn_t *>(info.payload);
 }
 
 
@@ -272,7 +239,7 @@ tlv_status_t TLVsMsg::init_from_tlv_msg(const tlv_msg_t& tlv_msg)
 #ifdef DBG_LOG
             char dbg_str[256];
             aesm_dbg_format_hex(new_info->payload, new_info->size, dbg_str, 256);
-            AESM_DBG_TRACE("Decode One TLV: type %s, size %u, version %d, payload:%s",get_tlv_enum_type_t_string(new_info->type), new_info->size, (int)new_info->version,dbg_str);
+            AESM_DBG_TRACE("Decode One TLV: type (tlv %d), size %u, version %d, payload:%s",new_info->type, new_info->size, (int)new_info->version,dbg_str);
 #endif
         }else{
             return TLV_INVALID_MSG_ERROR;
@@ -327,7 +294,7 @@ tlv_status_t TLVsMsg::alloc_more_buffer(uint32_t new_size, tlv_msg_t& new_buf)
 {\
     char dbg_str[256]; \
     aesm_dbg_format_hex(new_info->payload, new_info->size, dbg_str, 256);\
-    AESM_DBG_INFO("create TLV: type %s, size %u, version %d, payload %s", get_tlv_enum_type_t_string(new_info->type), new_info->size, (int)new_info->version, dbg_str);\
+    AESM_DBG_INFO("create TLV: type (tlv %d), size %u, version %d, payload %s", new_info->type, new_info->size, (int)new_info->version, dbg_str);\
 }
 #else
 #define ADD_TLV_DBG_INFO 
@@ -516,7 +483,6 @@ tlv_status_t TLVsMsg::add_quote_signature(const uint8_t *quote_signature, uint32
     return TLV_SUCCESS;
 }
 
-
 tlv_status_t TLVsMsg::add_es_selector(uint8_t protocol, uint8_t selector_id)
 {
     uint8_t buf[2];
@@ -524,3 +490,52 @@ tlv_status_t TLVsMsg::add_es_selector(uint8_t protocol, uint8_t selector_id)
     buf[1]=selector_id;
     ADD_TLV_BY_DATA_SIZE(TLV_ES_SELECTOR, buf, static_cast<uint32_t>(2*sizeof(uint8_t)))
 }
+
+tlv_status_t TLVsMsg::add_psid(const psid_t *psid)
+{
+    ADD_TLV_BY_DATA_SIZE(TLV_PS_ID, psid, sizeof(psid_t))
+}
+
+tlv_status_t TLVsMsg::add_platform_info(const bk_platform_info_t& pi)
+{
+    ADD_TLV_BY_DATA_SIZE(TLV_PLATFORM_INFO, &pi, sizeof(pi))
+}
+
+tlv_status_t TLVsMsg::add_flags(const flags_t *flags)
+{
+    ADD_TLV_BY_DATA_SIZE(TLV_FLAGS, flags, sizeof(flags_t))
+}
+
+tlv_status_t TLVsMsg::add_pce_report_sign(const sgx_report_body_t& report, const uint8_t ecdsa_sign[64])
+{
+    tlv_info_t one_info;
+    one_info.header_size = LARGE_TLV_HEADER_SIZE;
+    one_info.payload = NULL;
+    one_info.size = sizeof(report)+64;
+    one_info.type = TLV_SE_REPORT;
+    one_info.version = TLV_VERSION_1;
+    uint32_t size = ::calc_one_tlv_size(one_info);
+    tlv_msg_t new_buf;
+    tlv_info_t *new_info = NULL;
+    tlv_status_t ret = alloc_more_buffer(size, new_buf);
+    if(ret!=TLV_SUCCESS){
+        return ret;
+    }
+    ret = create_new_info(new_info);
+    if(ret != TLV_SUCCESS)
+        return ret;
+    if((ret=::tlv_msg_init_one_tlv(&one_info, new_buf))!=TLV_SUCCESS){
+        return ret;
+    }
+    if(memcpy_s(one_info.payload, one_info.size, &report, sizeof(report))!=0){
+        return (TLV_UNKNOWN_ERROR);
+    }
+    if(memcpy_s(one_info.payload+sizeof(report), one_info.size-sizeof(report), ecdsa_sign, 64)!=0){
+        return (TLV_UNKNOWN_ERROR);
+    }
+    if(memcpy_s(new_info, sizeof(*new_info), &one_info, sizeof(one_info))!=0)
+        return TLV_UNKNOWN_ERROR;
+    ADD_TLV_DBG_INFO
+    return TLV_SUCCESS;
+}
+

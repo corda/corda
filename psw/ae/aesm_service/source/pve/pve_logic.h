@@ -39,20 +39,29 @@
 #include "se_thread.h"
 #include "oal/oal.h"
 #include "se_wrapper.h"
+#include "epid_pve_type.h"
 #include <time.h>
 #include <string.h>
 
 typedef struct _endpoint_selection_infos_t endpoint_selection_infos_t;
 
+typedef struct _pve_data_t{
+    uint8_t sk[SK_SIZE];
+    uint8_t xid[XID_SIZE];
+    signed_pek_t pek;
+    bool is_performance_rekey;
+    bool is_backup_retrieval;
+    bk_platform_info_t bpi;
+}pve_data_t;
 class PvEAESMLogic{
 public:
     static aesm_error_t provision(bool performance_rekey_used, uint32_t timeout_usec);
     static aesm_error_t pve_error_postprocess(ae_error_t ae_error);
     static ae_error_t   epid_provision_thread_func(bool  performance_rekey_used); /*call get_epid_provision_thread_status().start(performance_rekey_used) to invoke this function with timeout*/
 private:
-    static ae_error_t update_old_blob(const psvn_t& psvn, const endpoint_selection_infos_t& es_info);
-    static ae_error_t process_pve_msg2(psvn_t& sigrl_psvn, const uint8_t *msg2, uint32_t msg2_size, const endpoint_selection_infos_t& es_info);
-    static ae_error_t process_pve_msg4(const uint8_t *msg4, uint32_t msg4_size, const psvn_t* old_psvn, bool use_ek2, const uint8_t ek2[SK_SIZE]);
+    static ae_error_t update_old_blob(pve_data_t& pve_data, const endpoint_selection_infos_t& es_info);
+    static ae_error_t process_pve_msg2(pve_data_t& pve_data, const uint8_t *msg2, uint32_t msg2_size, const endpoint_selection_infos_t& es_info);
+    static ae_error_t process_pve_msg4(const pve_data_t& pve_data, const uint8_t *msg4, uint32_t msg4_size);
 };
 #endif
 

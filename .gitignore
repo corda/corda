@@ -13,3 +13,7 @@
 *_u.h
 *_t.c
 *_t.h
+
+#output files
+/build/
+/linux/installer/bin/*.bin

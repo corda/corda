@@ -42,3 +42,7 @@ sgx_thread_t sgx_thread_self(void)
     return (sgx_thread_t)get_thread_data();
 }
 
+int sgx_thread_equal(sgx_thread_t a, sgx_thread_t b)
+{
+    return a == b;
+}

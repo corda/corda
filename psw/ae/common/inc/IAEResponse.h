@@ -49,6 +49,10 @@ class AEGetLaunchTokenResponse;
 class AEGetQuoteResponse;
 class AEInitQuoteResponse;
 class AEGetPsCapResponse;
+class AEGetWhiteListSizeResponse;
+class AEGetWhiteListResponse;
+class AESGXGetExtendedEpidGroupIdResponse;
+class AESGXSwitchExtendedEpidGroupResponse;
 
 #include <iostream>
 
@@ -64,6 +68,10 @@ class IAEResponseVisitor
   virtual void visitExchangeReportResponse(AEExchangeReportResponse&) = 0;
   virtual void visitCloseSessionResponse(AECloseSessionResponse&) = 0;
   virtual void visitGetPsCapResponse(AEGetPsCapResponse&) = 0;
+  virtual void visitGetWhiteListSizeResponse(AEGetWhiteListSizeResponse&) = 0;
+  virtual void visitGetWhiteListResponse(AEGetWhiteListResponse&) = 0;
+  virtual void visitSGXGetExtendedEpidGroupIdResponse(AESGXGetExtendedEpidGroupIdResponse&) = 0;
+  virtual void visitSGXSwitchExtendedEpidGroupResponse(AESGXSwitchExtendedEpidGroupResponse&) = 0;
 
   virtual ~IAEResponseVisitor() {};
 };

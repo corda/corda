@@ -60,6 +60,18 @@ class AEGetPsCapResponse;
 class AEReportAttestationRequest;
 class AEReportAttestationResponse;
 
+class AEGetWhiteListSizeRequest;
+class AEGetWhiteListSizeResponse;
+ 
+class AEGetWhiteListRequest;
+class AEGetWhiteListResponse;
+
+class AESGXGetExtendedEpidGroupIdRequest;
+class AESGXGetExtendedEpidGroupIdResponse;
+
+class AESGXSwitchExtendedEpidGroupRequest;
+class AESGXSwitchExtendedEpidGroupResponse;
+
 
 class IAERequest;
 class IAEResponse;
@@ -76,6 +88,10 @@ class ISerializer{
         virtual AEMessage* serialize(AECloseSessionRequest*    request) = 0;
         virtual AEMessage* serialize(AEGetPsCapRequest*        request) = 0;
         virtual AEMessage* serialize(AEReportAttestationRequest* request) = 0;
+        virtual AEMessage* serialize(AEGetWhiteListRequest* request) = 0;
+        virtual AEMessage* serialize(AEGetWhiteListSizeRequest* request) = 0;
+        virtual AEMessage* serialize(AESGXGetExtendedEpidGroupIdRequest* request) = 0;
+        virtual AEMessage* serialize(AESGXSwitchExtendedEpidGroupRequest* request) = 0;
 
         //response serializers
         virtual AEMessage* serialize(AEInitQuoteResponse*       response)  = 0;
@@ -87,6 +103,10 @@ class ISerializer{
         virtual AEMessage* serialize(AECloseSessionResponse*    response) = 0;
         virtual AEMessage* serialize(AEGetPsCapResponse*        response) = 0;
         virtual AEMessage* serialize(AEReportAttestationResponse* response) = 0;
+        virtual AEMessage* serialize(AEGetWhiteListSizeResponse* response) = 0;
+        virtual AEMessage* serialize(AEGetWhiteListResponse*     response) = 0;
+        virtual AEMessage* serialize(AESGXGetExtendedEpidGroupIdResponse* response) = 0;
+        virtual AEMessage* serialize(AESGXSwitchExtendedEpidGroupResponse* response) = 0;
 
         //request inflater -> will inflate request objects by unmarshaling communication level data (this will be used by server)
         virtual IAERequest* inflateRequest(AEMessage* message) = 0;
@@ -101,7 +121,10 @@ class ISerializer{
         virtual bool inflateResponse(AEMessage* message, AECloseSessionResponse*    response) = 0;
         virtual bool inflateResponse(AEMessage* message, AEGetPsCapResponse*        response) = 0;
         virtual bool inflateResponse(AEMessage* message, AEReportAttestationResponse* response) = 0;
-
+        virtual bool inflateResponse(AEMessage* message, AEGetWhiteListSizeResponse* response) = 0;
+        virtual bool inflateResponse(AEMessage* message, AEGetWhiteListResponse* response) = 0;
+        virtual bool inflateResponse(AEMessage* message, AESGXGetExtendedEpidGroupIdResponse* response) = 0;
+        virtual bool inflateResponse(AEMessage* message, AESGXSwitchExtendedEpidGroupResponse* response) = 0;
 
         virtual ~ISerializer() {}
 };

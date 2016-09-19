@@ -34,20 +34,32 @@
 #include "se_types.h"
 #include "sgx_tseal.h"
 #include "aeerror.h"
-#include "tlv_common.h"
 #include "se_thread.h"
 #include "internal/se_rwlock.h"
 #include "oal/oal.h"
 #include "se_wrapper.h"
 #include <time.h>
 #include <string.h>
+#include "tlv_common.h"
 #include "AEClass.h"
 #include "aesm_logic.h"
 
+#define AESM_DATA_SERVER_URL_INFOS          'A'
 #define AESM_DATA_ENDPOINT_SELECTION_INFOS  'B'
+#define AESM_DATA_SERVER_URL_VERSION_1       1
+#define AESM_DATA_SERVER_URL_VERSION         2
 #define AESM_DATA_ENDPOINT_SELECTION_VERSION 1
 #pragma pack(1)
 #include "aesm_config.h"
+
+/*Struct for PCE based url information which will be installed by PSW Installer*/
+typedef struct _aesm_server_url_infos_t{
+    uint8_t aesm_data_type;
+    uint8_t aesm_data_version;
+    char endpoint_url[MAX_PATH]; /*URL for endpoint selection protocol server*/
+    char pse_rl_url[MAX_PATH];   /*URL to retrieve PSE rovocation List*/
+    char pse_ocsp_url[MAX_PATH]; 
+}aesm_server_url_infos_t;
 
 /*Struct for data to save endpoint selection protocol result into persistent data storage*/
 typedef struct _endpoint_selection_infos_t{
@@ -61,26 +73,32 @@ typedef struct _endpoint_selection_infos_t{
 /*An interface to provide the endpoint selection protocol and also provide some URLs (result of ES protocol or some static url)
  *Singleton class used to provide a singleton instance in memory and lock used so that it could be shared by PvE/PSEPR
  *EndpointSelectionInfo::instance().start_protocol(...) could be used to get endpoint selection result
- *   It will restart the ES protocol to get updated data. If the protocol fails, it may resue existing endpoint selection protocol result in persistent storage
+ *   It will restart the ES protocol to get updated data. If the protocol fails, it may reuse existing endpoint selection protocol result in persistent storage
  */
 class EndpointSelectionInfo: public Singleton<EndpointSelectionInfo>{
     CLASS_UNCOPYABLE(EndpointSelectionInfo);
     friend class Singleton<EndpointSelectionInfo>;
 private:
-    AESMLogicMutex      _es_lock;             /*lock used since the data will be accessed by two different components: PSEPR and PVE*/
-    aesm_config_infos_t _server_urls;         /*some readonly urls */
-    bool                _is_server_url_valid; /*Set it to true when field _server_urls is valid*/
-    bool                _is_server_url_loaded;/*Set it to true after trying to read _server_urls from persistent storage. If _is_server_url_valid is false but this field is true, it means there're problem in persistent storage access*/
+    AESMLogicMutex _es_lock;              /*lock used since the data will be accessed by two different components: PSEPR and PVE*/
+    aesm_config_infos_t _config_urls;     /*some readonly urls not related to XEGD*/
+    aesm_server_url_infos_t _server_urls; /*XEGD based readonly url*/
+    bool _is_server_url_valid;            /*Set it to true when field _server_urls is valid*/
+    bool _is_white_list_url_valid;        /*Set it to true after reading _config_urls*/
     static ae_error_t read_pek(endpoint_selection_infos_t& es_info); /*read _es_info from persistent storage*/
     static ae_error_t write_pek(const endpoint_selection_infos_t& es_info); /*save _es_info to persistent storage*/
     ae_error_t verify_signature(const endpoint_selection_infos_t& es_info, uint8_t xid[XID_SIZE], uint8_t rsa_signature[PVE_RSA_KEY_BYTES], uint16_t ttl); /*verify rsa signature in ES protocol result*/
 public:
     EndpointSelectionInfo(){
         memset(&_server_urls, 0, sizeof(_server_urls));
-        _is_server_url_loaded=false;
+        memset(&_config_urls, 0, sizeof(_config_urls));
+        _is_white_list_url_valid=false;
         _is_server_url_valid=false;
     }
 public:
+    static ae_error_t verify_file_by_xgid(uint32_t xgid);
+    ae_error_t get_url_info();
+    ae_error_t get_url_info(aesm_server_url_infos_t& server_url);
+    const char *get_server_url(aesm_network_server_enum_type_t type);
     void  get_proxy(uint32_t& proxy_type, char proxy_url[MAX_PATH]);
     /*Function to get result of Endpoint Selection Protocol from Backend Server*/
     ae_error_t start_protocol(endpoint_selection_infos_t& es_info);

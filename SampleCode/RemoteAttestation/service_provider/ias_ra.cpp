@@ -41,9 +41,9 @@
 #include <string.h>
 #include "ias_ra.h"
 
-// @TODO: This whole file is used as simulation of the interfaces to be
-// delivered the IAS. Once the interface definitions are made available by the
-// IAS, this file should be changed accordingly.
+//This whole file is used as simulation of the interfaces to be
+// delivered an attestation server. 
+
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
@@ -75,12 +75,10 @@
 // This is the ECDSA NIST P-256 private key used to sign platform_info_blob.
 // This private
 // key and the public key in SDK untrusted KElibrary should be a temporary key
-// pair. For production parts the IAS will sign the platform_info_blob with the
+// pair. For production parts an attestation server will sign the platform_info_blob with the
 // production private key and the SDK untrusted KE library will have the public
 // key for verifcation.
-// @TODO:  This key will will not be available when the production backend
-// is avaialbe.  The remote attestation sample will need to change to use the
-// real backend. This will likely be an RSA2048 type of key.
+
 static const sample_ec256_private_t g_rk_priv_key =
 {{
     0x63,0x2c,0xd4,0x02,0x7a,0xdc,0x56,0xa5,
@@ -92,7 +90,7 @@ static const sample_ec256_private_t g_rk_priv_key =
 static sample_spid_t g_sim_spid = {"Service X"};
 
 
-// Simulates the IAS function for verifying the quote produce by
+// Simulates the attestation server function for verifying the quote produce by
 // the ISV enclave. It doesn't decrypt or verify the quote in
 // the simulation.  Just produces the attestaion verification
 // report with the platform info blob.
@@ -189,8 +187,7 @@ int ias_verify_attestation_evidence(
 }
 
 
-// Simulates retrieving the SIGRL for upon the SP request. Becaue the IAS
-// backend is not ready right now, we will return NULL.
+// Simulates retrieving the SIGRL for upon the SP request. 
 //
 // @param gid Group ID for the EPID key.
 // @param p_sig_rl_size Pointer to the output value of the full
@@ -217,8 +214,7 @@ int ias_get_sigrl(
         }
         *p_sig_rl_size = 0;
         *p_sig_rl = NULL;
-        // we should try to get sig_rl from IAS, but right now we will just
-        // skip it until the IAS backend is ready.
+        // we should try to get sig_rl from an attestation server
         break;
     }while (0);
 
@@ -226,7 +222,7 @@ int ias_get_sigrl(
 }
 
 
-// Used to simulate the enrollment function of the IAS.  It only
+// Used to simulate the enrollment function of an attestation server.  It only
 // gives back the SPID right now. In production, the enrollment
 // occurs out of context from an attestation attempt and only
 // occurs once.

@@ -105,6 +105,10 @@ class AEGetLaunchTokenRequest;
 class AEGetQuoteRequest;
 class AEInitQuoteRequest;
 class AEGetPsCapRequest;
+class AEGetWhiteListSizeRequest;
+class AEGetWhiteListRequest;
+class AESGXGetExtendedEpidGroupIdRequest;
+class AESGXSwitchExtendedEpidGroupRequest;
 
 class IAERequestVisitor
 {
@@ -118,6 +122,10 @@ class IAERequestVisitor
   virtual void visitExchangeReportRequest(AEExchangeReportRequest&) = 0;
   virtual void visitCloseSessionRequest(AECloseSessionRequest&) = 0;  
   virtual void visitGetPsCapRequest(AEGetPsCapRequest&) = 0;
+  virtual void visitGetWhiteListSizeRequest(AEGetWhiteListSizeRequest&) = 0;
+  virtual void visitGetWhiteListRequest(AEGetWhiteListRequest&) = 0;
+  virtual void visitSGXGetExtendedEpidGroupIdRequest(AESGXGetExtendedEpidGroupIdRequest&) = 0;
+  virtual void visitSGXSwitchExtendedEpidGroupRequest(AESGXSwitchExtendedEpidGroupRequest&) = 0;
 
   virtual ~IAERequestVisitor() = 0;
 };

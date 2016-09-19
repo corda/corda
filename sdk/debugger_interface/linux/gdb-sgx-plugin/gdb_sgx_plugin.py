@@ -488,9 +488,9 @@ class UpdateOcallFrame(gdb.Breakpoint):
         if bp_in_urts == True:
 
             if SIZE == 4:
-                base_addr = gdb.parse_and_eval("base")
-                tcs_addr = gdb.parse_and_eval("tcs")
-                ocall_frame = gdb.parse_and_eval("of")
+                base_addr = gdb.parse_and_eval("$eax")
+                tcs_addr = gdb.parse_and_eval("$edx")
+                ocall_frame = gdb.parse_and_eval("$ecx")
             elif SIZE == 8:
                 base_addr = gdb.parse_and_eval("$rdi")
                 tcs_addr = gdb.parse_and_eval("$rsi")

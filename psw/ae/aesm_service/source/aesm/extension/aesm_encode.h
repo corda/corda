@@ -37,17 +37,16 @@
 extern "C"{
 #endif
 
-uint32_t certPseSvn();
 
-/*Function to provide an upbound of buffer size of encoded message for an input request
+/*Function to provide an upper bound of buffer size of encoded message for an input request
  *@param req, the header for the input request such as ProvMsg1 or ProvMsg3
- *@return an upbound of the required buffer size for the encoded message
- */
+ *@return an upper bound of the required buffer size for the encoded message
+*/
 uint32_t get_request_encoding_length(const uint8_t *req);
 
-/*Function to provide an upbound of the response body size given the length of encoded response message
+/*Function to provide an upper bound of the response body size given the length of encoded response message
  *@param buf_len, the length of the encoded message for an response message
- *@return an upbound of the length in bytes of decoded response message body such as ProvMsg2 or ProvMsg4
+ *@return an upper bound of the length in bytes of decoded response message body such as ProvMsg2 or ProvMsg4
  */
 uint32_t get_response_decoding_length(uint32_t buf_len);
 

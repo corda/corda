@@ -38,26 +38,30 @@
 /*Inline functions to estimate size of ProvMsg1, ProvMsg3 etc*/
 
 /*Function to estimate the size of ProvMsg1
-  TLV_CIPHER_TEXT(SK, PSID): E+MAC(Device_ID_TLV[:FLAG_TLV])*/
+  TLV_CIPHER_TEXT(SK, PSID): E+MAC(CIPHER_TLV:PLATFORM_INFO_TLV[:FLAG_TLV])*/
 inline uint32_t estimate_msg1_size(bool performance_rekey)
 {
     size_t field0_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
-    size_t field1_0_size = DEVICE_ID_TLV_SIZE();
-    size_t field1_1_size = performance_rekey? FLAGS_TLV_SIZE():0;
-    size_t field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field1_0_size+field1_1_size);
+    size_t field1_0_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
+    size_t field1_1_size = PLATFORM_INFO_TLV_SIZE();
+    size_t field1_2_size = performance_rekey? FLAGS_TLV_SIZE():0;
+    size_t field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field1_0_size+field1_1_size+field1_2_size);
     size_t field2_size = MAC_TLV_SIZE(MAC_SIZE);
     return static_cast<uint32_t>(PROVISION_REQUEST_HEADER_SIZE+field0_size+field1_size+field2_size); /*no checking for integer overflow since the size of msg1 is fixed and small*/
 }
 
 /*Function to estimate the size of ProvMsg3
-  NONCE_TLV(NONCE_SIZE):E+MAC(E+MAC(EPID_JOIN_PROOF_TLV):E+MAC(EPID_SIGNATURE_TLV))*/
+  NONCE_TLV(NONCE_SIZE):E+MAC(E+MAC(EPID_JOIN_PROOF_TLV):NONCE_TLV(NONCE_2):CIPHER_TLV:SE_REPRT_TLV):E+MAC(EPID_SIGNATURE_TLV)*/
 inline uint32_t calc_msg3_size_by_sigrl_count(uint32_t sigrl_count)
 {
     size_t field0_size = NONCE_TLV_SIZE(NONCE_SIZE);
     size_t field1_0_size = BLOCK_CIPHER_TEXT_TLV_SIZE(EPID_JOIN_PROOF_TLV_SIZE());
     size_t field1_1_size = MAC_TLV_SIZE(MAC_SIZE);
+    size_t field1_2_size = NONCE_TLV_SIZE(NONCE_2_SIZE);
+    size_t field1_3_size = CIPHER_TEXT_TLV_SIZE(PVE_RSA_KEY_BYTES);
+    size_t field1_4_size = SE_REPORT_TLV_SIZE();
     size_t field3_0_size = EPID_SIGNATURE_TLV_SIZE(sigrl_count);
-    size_t field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field1_0_size+field1_1_size);
+    size_t field1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field1_0_size+field1_1_size+field1_2_size+field1_3_size+field1_4_size);
     size_t field2_size = MAC_TLV_SIZE(MAC_SIZE);
     size_t field3_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field3_0_size);
     size_t field4_size = MAC_TLV_SIZE(MAC_SIZE);
@@ -65,19 +69,18 @@ inline uint32_t calc_msg3_size_by_sigrl_count(uint32_t sigrl_count)
 }
 
 /*Function to estimate the count of SigRL Entry inside a ProvMsg2
-  Nonce_TLV(NONCE_SIZE):E+MAC(PubGroupCert:ChallengeNonce[:SigrlPSVN]:PSID:E+MAC(TCB_KEY):deviceID)[:signed SigRL]*/
+  Nonce_TLV(NONCE_SIZE):E+MAC(PubGroupCert:ChallengeNonce[:PlatformInfoPSVN]:PSID:EPID_GID:PlatformInfo)[:signed SigRL]*/
 inline uint32_t estimate_sigrl_count_by_msg2_size(uint32_t msg2_size)
 {
     size_t field_0_size = NONCE_TLV_SIZE(NONCE_SIZE);
     size_t field_1_0_size = EPID_GROUP_CERT_TLV_SIZE();
     size_t field_1_1_size = NONCE_TLV_SIZE(CHALLENGE_NONCE_SIZE);
-    size_t field_1_2_size = EPID_SIGRL_PSVN_TLV_SIZE(); /*It is always present if sigrl entry count is nonzero*/
+    size_t field_1_2_size = PLATFORM_INFO_TLV_SIZE(); //It is always present if sigrl entry count is nonzero
     size_t field_1_3_size = PSID_TLV_SIZE();
-    size_t field_1_4_size = BLOCK_CIPHER_TEXT_TLV_SIZE(SK_SIZE);
-    size_t field_1_5_size = MAC_TLV_SIZE(MAC_SIZE);
-    size_t field_1_6_size = DEVICE_ID_TLV_SIZE();
+    size_t field_1_4_size = EPID_GID_TLV_SIZE();
+    size_t field_1_5_size = PLATFORM_INFO_TLV_SIZE();
     size_t field_1_size = BLOCK_CIPHER_TEXT_TLV_SIZE(field_1_0_size+field_1_1_size+field_1_2_size
-        + field_1_3_size + field_1_4_size + field_1_5_size + field_1_6_size);
+        + field_1_3_size + field_1_4_size + field_1_5_size );
     size_t field_2_size = MAC_TLV_SIZE(MAC_SIZE);
     size_t field_3_size = 0;
     if(PROVISION_RESPONSE_HEADER_SIZE+field_0_size+field_1_size+field_2_size>=msg2_size)

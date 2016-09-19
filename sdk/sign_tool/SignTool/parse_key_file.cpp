@@ -46,6 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #include <string>
 #include <algorithm>
@@ -55,6 +56,11 @@
 //N_SIZE+E_SIZE+D_SIZE+P_SIZE+Q_SIZE+DMP1_SIZE+DMQ1_SIZE+sizeof(inverseQ)
 #define PRI_COMPONENTS_SIZE  (N_SIZE_IN_BYTES + E_SIZE_IN_BYTES + D_SIZE_IN_BYTES + P_SIZE_IN_BYTES *5)
 #define PUB_CONPONENTS_SIZE  (N_SIZE_IN_BYTES + E_SIZE_IN_BYTES) //N_SIZE+E_SIZE
+#define SEQUENCE_TAG_VALUE    0x30
+#define INTEGER_TAG_VALUE     0x02
+#define BIT_STRING_TAG_VALUE  0x03
+#define NULL_TAG_VALUE        0x05
+#define OID_TAG_VALUE         0x06
 
 
 #define     CHECK_RETRUN(value)     {if(0 == (value)) return 0;}
@@ -69,7 +75,7 @@
 //Return Value
 //     int---The length of the decoded string
 static int base64_decode(const unsigned char* aSrc, size_t srcLen, unsigned char* result)
-{
+{ //two reason will cause the function return 0: 1- The input parameters are wrong, 2- srcLen<4
     static char   index_64[256]   =   {
         64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,
         64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,   64,
@@ -130,6 +136,89 @@ static void convert_string(unsigned char *str, int len)
     }
 }
 
+static bool parse_tag_and_length(const unsigned char *begin, const unsigned char *end, uint8_t expect_tag, size_t *len_bytes, size_t *value_bytes)
+{
+    assert(NULL != begin && NULL != end && NULL != len_bytes && NULL != value_bytes);
+    if (begin[0] != expect_tag)
+        return false;
+    size_t tvb = 0, tlb = 0; // 'temporary value bytes' and 'temporary length bytes'
+    const unsigned char *lbegin = begin + 1;
+    if (!(lbegin[0] & 0x80))
+    {
+        // Value bytes <= 127
+        tvb = lbegin[0];
+        tlb += 1; // length is only one bytes
+    }
+    else if (lbegin[0] == 0x81)
+    {
+        tlb += (lbegin[0] & 0x7F) + 1; // + 1byte Length + 1byte to contain the value bytes
+        if (tlb != 2)
+            return false;
+        tvb = lbegin[1];
+    }
+    else if (lbegin[0] == 0x82)
+    {
+        tlb += (lbegin[0] & 0x7F) + 1; // + 1byte Length + 2bytes to contain the value bytes
+        if (tlb != 3)
+            return false;
+        tvb = (lbegin[1] << 8) + lbegin[2];
+    }
+    else
+    {
+        // Only the 3072bits RSA key is acceptable, for which we only need 2bytes to store the value bytes.
+        // Therefore, return failure if the length of the value bytes is greater than 2bytes.
+        return false;
+    }
+
+    if ((tlb < UINT_MAX - tvb) && (size_t)(lbegin + tvb + tlb) > tvb + tlb)
+    {
+        // In the input begin/end, the key_header/end has been removed. 
+        // Therefore, we should not check the entire key length.
+        if (expect_tag != SEQUENCE_TAG_VALUE && lbegin + tvb + tlb > end)
+            return false;
+        else
+        {
+            *value_bytes = tvb;
+            *len_bytes = tlb + 1; // + size of tag
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool parse_tlv_integer(const unsigned char **begin, const unsigned char *end, unsigned int *values, size_t values_length)
+{
+    assert(NULL != begin && NULL != *begin && NULL != end && NULL != values && values_length > 0);
+    size_t value_bytes = 0, len_bytes = 0;
+    const unsigned char *psrc = *begin;
+    if (parse_tag_and_length(psrc, end, INTEGER_TAG_VALUE, &len_bytes, &value_bytes) == false)
+        return false;
+    psrc += len_bytes;
+
+    if (value_bytes < values_length)
+        return false;
+
+    else if (value_bytes > values_length)
+    {
+        for (unsigned int i = 0; i < value_bytes - values_length; i++)
+        {
+            if (*(psrc + i) != 0x00)
+                return false;
+        }
+        // There are some padding 0x00s which need to skip
+        psrc += value_bytes - values_length;
+    }
+
+    if (values != NULL)
+    {
+        memcpy_s(values, values_length, psrc, values_length);
+    }
+    psrc += values_length;
+    *begin = psrc;
+
+    return true;
+}
+
 static bool convert_from_pri_key(const unsigned char *psrc, unsigned int slen, rsa_params_t *rsa)
 {
     assert(NULL != psrc && NULL != rsa);
@@ -138,119 +227,81 @@ static bool convert_from_pri_key(const unsigned char *psrc, unsigned int slen, r
         return false;
     }
 
-    int index = 0;
-    if((int)psrc[index]== 0x30 &&(int)psrc[index+1] == 0x82)
-        index += 4;
-    else if((int)psrc[index] == 0x30 && (int)psrc[index+1] == 0x81)
-        index += 3;
-    else
-        return false;
-
-    if(!((int)psrc[index] == 0x02 && (int)psrc[index+1] == 0x01))// version number must be 0x0102
+    size_t value_bytes = 0, len_bytes = 0;
+    const unsigned char *end = psrc + slen;
+    if (parse_tag_and_length(psrc, end, SEQUENCE_TAG_VALUE, &len_bytes, &value_bytes) == false)
     {
         return false;
     }
-    index += 2;
-    if((int)psrc[index] != 0x00)
+    psrc += len_bytes;
+    // Version
+    if (parse_tag_and_length(psrc, end, INTEGER_TAG_VALUE, &len_bytes, &value_bytes) == false)
+    {
         return false;
-    index += 6;
+    }
+    psrc += len_bytes;
+    if (value_bytes != 0x01 || *psrc != 0x00) // Version should be 0x00
+    {
+        return false;
+    }
+    psrc += value_bytes;
 
     memset(rsa, 0, sizeof(rsa_params_t));
-    //get the module
-    memcpy_s(rsa->n, sizeof(rsa->n), psrc+index, N_SIZE_IN_BYTES);
+    // N
+    if (parse_tlv_integer(&psrc, end, rsa->n, N_SIZE_IN_BYTES) == false)
+    {
+        return false;
+    }
     convert_string((unsigned char *)rsa->n, sizeof(rsa->n));
 
-    //get EXPONENT
-    index += N_SIZE_IN_BYTES;
-    if(!((unsigned int)psrc[index] == 0x02 &&(unsigned int)psrc[index+1] == 0x01)) //"0x01" indicates the size of e is 1 byte
+    // E
+    if (parse_tlv_integer(&psrc, end, rsa->e, E_SIZE_IN_UINT) == false)
+    {
+        return false;
+    }
+    if (rsa->e[0] != 0x03)
     {
         se_trace(SE_TRACE_ERROR, "Only '3' is accepted as the Exponent value.\n");
         return false;
     }
-    index += 2;
-    unsigned int temp = *(psrc+index);
-    if(temp != 0x03)
-    {
-        se_trace(SE_TRACE_ERROR, "Key Exponent is %#x. Only '3' is accepted as the Exponent value.\n", temp);
-        return false;
-    }
-    temp = temp&0x0f;
-    memcpy_s(rsa->e, sizeof(rsa->e), &temp, sizeof(unsigned int));
 
-    //get D
-    index += 1;
-    if((unsigned int)psrc[index]!=0x02)
+    // D
+    if (parse_tlv_integer(&psrc, end, rsa->d, D_SIZE_IN_BYTES) == false)
     {
         return false;
     }
-
-    index = index+4;
-    if((int)psrc[index] == 0)
-        index += 1;
-    memcpy_s(rsa->d, sizeof(rsa->d), psrc+index, D_SIZE_IN_BYTES);
     convert_string((unsigned char *)rsa->d, sizeof(rsa->d));
 
-    //get P
-    index += D_SIZE_IN_BYTES;
-    if((unsigned int)psrc[index]!=0x02)
+    // P
+    if (parse_tlv_integer(&psrc, end, rsa->p, P_SIZE_IN_BYTES) == false)
     {
         return false;
     }
-    index = index+4;
-    if((int)psrc[index] == 0)
-        index += 1;
-    memcpy_s(rsa->p, sizeof(rsa->p), psrc+index, P_SIZE_IN_BYTES);
     convert_string((unsigned char *)rsa->p, sizeof(rsa->p));
-
-    //get Q
-    index += P_SIZE_IN_BYTES;
-    if((unsigned int)psrc[index]!=0x02)
+    // Q
+    if (parse_tlv_integer(&psrc, end, rsa->q, Q_SIZE_IN_BYTES) == false)
     {
         return false;
     }
-
-    index = index+4;
-    if((int)psrc[index] == 0)
-        index += 1;
-    memcpy_s(rsa->q, sizeof(rsa->q), psrc+index, Q_SIZE_IN_BYTES);
     convert_string((unsigned char *)rsa->q, sizeof(rsa->q));
-
-    //get DMP1
-    index += Q_SIZE_IN_BYTES;
-    if((unsigned int)psrc[index]!=0x02)
+    // DMP1
+    if (parse_tlv_integer(&psrc, end, rsa->dmp1, DMP1_SIZE_IN_BYTES) == false)
     {
         return false;
     }
-    index += 4;
-    if((int)psrc[index] == 0)
-        index += 1;
-    memcpy_s(rsa->dmp1, sizeof(rsa->dmp1), psrc+index, DMP1_SIZE_IN_BYTES);
     convert_string((unsigned char *)rsa->dmp1, sizeof(rsa->dmp1));
-
-    //get DMQ1
-    index += DMP1_SIZE_IN_BYTES;
-    if((unsigned int)psrc[index]!=0x02)
+    // DMQ1
+    if (parse_tlv_integer(&psrc, end, rsa->dmq1, DMQ1_SIZE_IN_BYTES) == false)
     {
         return false;
     }
-    index += 4;
-    if((int)psrc[index] == 0)
-        index += 1;
-    memcpy_s(rsa->dmq1, sizeof(rsa->dmq1), psrc+index, DMQ1_SIZE_IN_BYTES);
     convert_string((unsigned char *)rsa->dmq1, sizeof(rsa->dmq1));
-
-    //get IQMP
-    index += DMQ1_SIZE_IN_BYTES;
-    if((unsigned int)psrc[index]!=0x02)
+    // IQMP
+    if (parse_tlv_integer(&psrc, end, rsa->iqmp, IQMP_SIZE_IN_BYTES) == false)
     {
         return false;
     }
-    index += 3;
-    if((int)psrc[index] == 0)
-        index += 1;
-    memcpy_s(rsa->iqmp, sizeof(rsa->iqmp), psrc+index, IQMP_SIZE_IN_BYTES);
     convert_string((unsigned char *)rsa->iqmp, sizeof(rsa->iqmp));
-
     return true;
 }
 
@@ -261,73 +312,58 @@ static bool  convert_from_pub_key(const unsigned char *psrc, unsigned int slen, 
     {
         return false;
     }
-    //encoded OID sequence (OBJECT IDENTIFIER = 1.2.840.113549.1.1.1)
-    unsigned char OID_str[] = {0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00};
-    size_t index = 0;
-    if((unsigned int)psrc[index]==0x30 && (unsigned int)psrc[index+1] == 0x82)
-        index += 4;
-    else if((unsigned int)psrc[index]==0x30 && (unsigned int)psrc[index+1] == 0x81)
-        index += 3;
-    else
-        return false;
-    unsigned int i=0;
-    for(; i<sizeof(OID_str); i++)
-    {
-        if((unsigned int)psrc[index+i] != (unsigned int)OID_str[i])
-            break;
-    }
-    if(i<sizeof(OID_str))
+    const unsigned char *end = psrc + slen;
+    size_t len_bytes = 0, value_bytes = 0;
+
+    unsigned char OID_str[] = { 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01 };
+    // SEQUENCE
+    if (parse_tag_and_length(psrc, end, SEQUENCE_TAG_VALUE, &len_bytes, &value_bytes) == false)
     {
         return false;
     }
-
-    index += sizeof(OID_str);
-
-    if((unsigned int)psrc[index] == 0x03 && (unsigned int)psrc[index+1] == 0x82)//0382
-        index += 4;
-    else if((unsigned int)psrc[index] == 0x03 && (unsigned int)psrc[index+1] == 0x81)//0381
-        index += 3;
-    else
+    psrc += len_bytes;
+    // SEQUENCE
+    if (parse_tag_and_length(psrc, end, SEQUENCE_TAG_VALUE, &len_bytes, &value_bytes) == false)
         return false;
-
-    if((unsigned int)psrc[index] != 0x00)
+    psrc += len_bytes;
+    // OBJECT_ID
+    if (parse_tag_and_length(psrc, end, OID_TAG_VALUE, &len_bytes, &value_bytes) == false)
         return false;
-    index++;
-
-    if((unsigned int)psrc[index] == 0x30 &&(unsigned int)psrc[index+1] == 0x82)
-        index += 4;
-    else if((unsigned int)psrc[index] == 0x30 &&(unsigned int)psrc[index+1] == 0x81)
-        index += 3;
-    else return false;
-
-    if((unsigned int)psrc[index] == 0x02 &&(unsigned int)psrc[index+1] == 0x82)
-        index += 4;
-    else if((unsigned int)psrc[index] == 0x02 && (unsigned int)psrc[index+1] == 0x81)
-        index += 3;
-    if((unsigned int)psrc[index] == 0x00)
-        index ++;
-
-    //get N
+    psrc += len_bytes;
+    if (value_bytes != sizeof(OID_str) || memcmp(psrc, OID_str, sizeof(OID_str)) != 0)
+        return false;
+    psrc += value_bytes;
+    // NULL
+    if (parse_tag_and_length(psrc, end, NULL_TAG_VALUE, &len_bytes, &value_bytes) == false || value_bytes != 0)
+        return false;
+    psrc += len_bytes;
+    // BIT STRING
+    if (parse_tag_and_length(psrc, end, BIT_STRING_TAG_VALUE, &len_bytes, &value_bytes) == false)
+        return false;
+    psrc += len_bytes;
+    if (*psrc == 0) // Specifies the number of unused bits that exist in the last content byte
+        psrc++;
+    // SEQUENCE
+    if (parse_tag_and_length(psrc, end, SEQUENCE_TAG_VALUE, &len_bytes, &value_bytes) == false)
+        return false;
+    psrc += len_bytes;
     memset(rsa, 0, sizeof(rsa_params_t));
-    memcpy_s(rsa->n, sizeof(rsa->n), psrc+index, N_SIZE_IN_BYTES);
+    // N
+    if (parse_tlv_integer(&psrc, end, rsa->n, N_SIZE_IN_BYTES) == false)
+    {
+        return false;
+    }
     convert_string((unsigned char *)rsa->n, sizeof(rsa->n));
-
-    //get EXPONENT
-    index += N_SIZE_IN_BYTES;
-    if(!((unsigned int)psrc[index] == 0x02 &&(unsigned int)psrc[index+1] == 0x01)) //"0x01" indicates the size of e is 1 byte
+    // E
+    if (parse_tlv_integer(&psrc, end, rsa->e, E_SIZE_IN_UINT) == false)
+    {
+        return false;
+    }
+    if (rsa->e[0] != 0x03)
     {
         se_trace(SE_TRACE_ERROR, "Only '3' is accepted as the Exponent value.\n");
         return false;
     }
-    index += 2;
-    unsigned int temp = *(psrc+index);
-    if(temp != 0x03)
-    {
-        se_trace(SE_TRACE_ERROR, "Key Exponent is %#x. Only '3' is accepted as the Exponent value.\n", temp);
-        return false;
-    }
-    temp = temp&0x0f;
-    memcpy_s(rsa->e, sizeof(rsa->e), &temp, sizeof(unsigned int));
     return true;
 }
 

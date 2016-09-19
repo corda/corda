@@ -33,10 +33,11 @@
 
 top_dir=`dirname $0`
 out_dir=$top_dir/psw/ae/data/prebuilt
-server_url=https://01.org/sites/default/files/downloads/intelr-software-guard-extensions-linux-os/sgxprebuilt-1.5.80.27216.tar
+file_name=sgxprebuilt-1.6.100.34040.tar
+server_url=https://download.01.org/intel-sgx/linux-1.6/$file_name
 wget $server_url -P $out_dir
 if [ $? -ne 0 ]; then
     echo "Fail to download file $server_url"
     exit -1
 fi
-pushd $out_dir;tar -xf sgxprebuilt-1.5.80.27216.tar;rm -rf sgxprebuilt-1.5.80.27216.tar;popd
+pushd $out_dir;tar -xf $file_name;rm -rf $file_name;popd

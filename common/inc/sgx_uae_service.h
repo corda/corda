@@ -121,6 +121,31 @@ sgx_status_t SGXAPI sgx_get_quote(
  */
 sgx_status_t SGXAPI sgx_get_ps_cap(sgx_ps_cap_t* p_sgx_ps_cap);
 
+/**
+ * Get the white list's size
+ *
+ * @param p_whitelist_size Save the size of the white list.
+ * @return if OK, return SGX_SUCCESS
+ */
+sgx_status_t SGXAPI sgx_get_whitelist_size(uint32_t* p_whitelist_size);
+
+/**
+ * Get the white list value
+ *
+ * @param p_whitelist Save the white list value
+ * @param whitelist_size The size of the white list and the read data size is whitelist_size
+ * @return if OK, return SGX_SUCCESS
+ */
+sgx_status_t SGXAPI sgx_get_whitelist(uint8_t* p_whitelist, uint32_t whitelist_size);
+
+/**
+ * Get the extended epid group id
+ *
+ * @param p_extended_epid_group_id Save the extended epid group id.
+ * @return if OK, return SGX_SUCCESS
+ */
+sgx_status_t SGXAPI sgx_get_extended_epid_group_id(uint32_t* p_extended_epid_group_id);
+
 #define SGX_IS_TRUSTED_TIME_AVAILABLE(cap)           ((((uint32_t)PS_CAP_TRUSTED_TIME)&((cap).ps_cap0))!=0)
 #define SGX_IS_MONOTONIC_COUNTER_AVAILABLE(cap)      ((((uint32_t)PS_CAP_MONOTONIC_COUNTER)&((cap).ps_cap0))!=0)
 

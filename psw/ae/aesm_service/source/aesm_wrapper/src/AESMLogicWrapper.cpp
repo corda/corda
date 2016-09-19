@@ -139,6 +139,27 @@ aesm_error_t AESMLogicWrapper::reportAttestationStatus(uint8_t* platform_info, u
             update_info, update_info_size);
 }
 
+aesm_error_t AESMLogicWrapper::getWhiteListSize(uint32_t* white_list_size)
+{
+    return AESMLogic::get_white_list_size(white_list_size);
+}
+
+aesm_error_t AESMLogicWrapper::getWhiteList(uint8_t *white_list,
+                                      uint32_t white_list_size)
+{
+    return AESMLogic::get_white_list(white_list, white_list_size);    
+}
+
+aesm_error_t AESMLogicWrapper::sgxGetExtendedEpidGroupId(uint32_t* x_group_id)
+{
+    return AESMLogic::get_extended_epid_group_id(x_group_id);
+}
+
+aesm_error_t AESMLogicWrapper::sgxSwitchExtendedEpidGroup(uint32_t x_group_id)
+{
+    return AESMLogic::switch_extended_epid_group(x_group_id);
+}
+
 void AESMLogicWrapper::service_stop()
 {
     AESMLogic::service_stop();

@@ -33,6 +33,7 @@
 #include "aesm_config.h"
 #include "aesm_proxy_type.h"
 #include "oal.h"
+#include "default_url_info.hh"
 #include <sys/types.h>
 #include <regex.h>
 #include <stdio.h>
@@ -45,9 +46,7 @@
 enum _config_value_t{
     config_comment,
     config_space,
-    config_endpoint_url,
-    config_pse_rl_url,
-    config_pse_ocsp_url,
+    config_white_list_url,
     config_aesm_proxy_url,
     config_aesm_proxy_type,
     config_value_nums
@@ -59,9 +58,7 @@ struct _config_patterns_t{
 }config_patterns[]={
     {config_comment, "^[[:blank:]]*#"},   //matching a line with comments only (It is started by #)
     {config_space, "^[[:blank:]]*$"},   //matching empty line
-    {config_endpoint_url, "^[[:blank:]]*endpoint[[:blank:]]*url[[:blank:]]*=" URL_PATTERN OPTION_COMMENT "$"}, //matching line in format: endpoint url = ....
-    {config_pse_rl_url, "^[[:blank:]]*pse[[:blank:]]*rl[[:blank:]]*url[[:blank:]]*=" URL_PATTERN OPTION_COMMENT "$"}, //matching line in format: pse rl url = ...
-    {config_pse_ocsp_url, "^[[:blank:]]*pse[[:blank:]]*ocsp[[:blank:]]*url[[:blank:]]*=" URL_PATTERN OPTION_COMMENT "$"}, //matching line in format: pse ocsp url = ...
+    {config_white_list_url, "^[[:blank:]]*whitelist[[:blank:]]*url[[:blank:]]*=" URL_PATTERN OPTION_COMMENT "$"}, //matching line in format: whilelist url = ....
     {config_aesm_proxy_url,"^[[:blank:]]*aesm[[:blank:]]*proxy[[:blank:]]*=" URL_PATTERN OPTION_COMMENT "$"}, //matching line in format: aesm proxy = ...
     {config_aesm_proxy_type, "^[[:blank:]]*proxy[[:blank:]]*type[[:blank:]]*=[[:blank:]]([^[:blank:]]+)[[:blank:]]*" OPTION_COMMENT "$"}//matching line in format: proxy type = [direct|default|manual]
 };
@@ -143,28 +140,12 @@ static bool config_process_one_line(const char *line, config_entry_t entries[], 
             case config_space:
                  //ignore comment and space only line
                  break;
-            case config_endpoint_url://Matching Endpoint URL setting
+            case config_white_list_url://Matching White List URL setting
                  if(matches[1].rm_eo-matches[1].rm_so>=MAX_PATH){
-                     AESM_DBG_ERROR("too long endpoint url in config file");
+                     AESM_DBG_ERROR("too long white list url in config file");
                  }else{
-                     memcpy(infos.endpoint_url, line+matches[1].rm_so,matches[1].rm_eo-matches[1].rm_so);
-                     infos.endpoint_url[matches[1].rm_eo-matches[1].rm_so]='\0';
-                 }
-                 break;
-            case config_pse_rl_url:
-                 if(matches[1].rm_eo-matches[1].rm_so>=MAX_PATH){
-                     AESM_DBG_ERROR("too long pse pr url in config file");
-                 }else{
-                     memcpy(infos.pse_rl_url, line+matches[1].rm_so,matches[1].rm_eo-matches[1].rm_so);
-                     infos.pse_rl_url[matches[1].rm_eo-matches[1].rm_so]='\0';
-                 }
-                 break;
-            case config_pse_ocsp_url:
-                 if(matches[1].rm_eo-matches[1].rm_so>=MAX_PATH){
-                     AESM_DBG_ERROR("too long pse ocsp url in config file");
-                 }else{
-                     memcpy(infos.pse_ocsp_url, line+matches[1].rm_so,matches[1].rm_eo-matches[1].rm_so);
-                     infos.pse_ocsp_url[matches[1].rm_eo-matches[1].rm_so]='\0';
+                     memcpy(infos.white_list_url, line+matches[1].rm_so,matches[1].rm_eo-matches[1].rm_so);
+                     infos.white_list_url[matches[1].rm_eo-matches[1].rm_so]='\0';
                  }
                  break;
            case config_aesm_proxy_url:
@@ -200,9 +181,7 @@ bool read_aesm_config(aesm_config_infos_t& infos)
     config_entry_t entries[config_value_nums];
     memset(&entries,0,sizeof(entries));
     memset(&infos, 0, sizeof(aesm_config_infos_t));
-    strcpy(infos.endpoint_url, DEFAULT_URL);
-    strcpy(infos.pse_rl_url,   DEFAULT_PSE_RL_URL);
-    strcpy(infos.pse_ocsp_url, DEFAULT_PSE_OCSP_URL);
+    strcpy(infos.white_list_url, DEFAULT_WHITE_LIST_URL);
     
     infos.proxy_type = AESM_PROXY_TYPE_DEFAULT_PROXY;
     FILE *f =fopen(AESM_CONFIG_FILE, "r");

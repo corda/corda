@@ -105,6 +105,7 @@ int SGXAPI sgx_thread_cond_signal(sgx_thread_cond_t *cond);
 int SGXAPI sgx_thread_cond_broadcast(sgx_thread_cond_t *cond);
 
 sgx_thread_t SGXAPI sgx_thread_self(void);
+int sgx_thread_equal(sgx_thread_t a, sgx_thread_t b);
 
 #ifdef __cplusplus
 }

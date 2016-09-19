@@ -66,6 +66,18 @@
 #include <AEReportAttestationRequest.h>
 #include <AEReportAttestationResponse.h>
 
+#include <AEGetWhiteListSizeRequest.h>
+#include <AEGetWhiteListSizeResponse.h>
+
+#include <AEGetWhiteListRequest.h>
+#include <AEGetWhiteListResponse.h>
+
+#include <AESGXGetExtendedEpidGroupIdRequest.h>
+#include <AESGXGetExtendedEpidGroupIdResponse.h>
+
+#include <AESGXSwitchExtendedEpidGroupRequest.h>
+#include <AESGXSwitchExtendedEpidGroupResponse.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <string>
@@ -397,6 +409,14 @@ IAERequest* ProtobufSerializer::inflateRequest(AEMessage* message) {
         request = inflateGetPsCapRequest(reqMsg);
     if (reqMsg->has_reporterrreq() == true)
         request = inflateReportAttestationErrorRequest(reqMsg);
+    if(reqMsg->has_getwhitelistsizereq() == true)
+        request = inflateGetWhiteListSizeRequest(reqMsg);
+    if(reqMsg->has_getwhitelistreq() == true)
+        request = inflateGetWhiteListRequest(reqMsg);
+    if(reqMsg->has_sgxgetextendedepidgroupidreq() == true)
+        request = inflateSGXGetExtendedEpidGroupIdRequest(reqMsg);
+    if(reqMsg->has_sgxswitchextendedepidgroupreq() == true)
+        request = inflateSGXSwitchExtendedEpidGroupRequest(reqMsg);
     delete reqMsg;
     return request;
 }
@@ -1284,6 +1304,382 @@ bool ProtobufSerializer::inflateResponse(AEMessage* message, AEReportAttestation
     response->inflateValues(errorCode,
                             platform_update_info_length,
                             platform_update_info);
+
+    return true;
+}
+
+/*
+  Get white list size
+*/
+IAERequest* ProtobufSerializer::inflateGetWhiteListSizeRequest(aesm::message::Request* reqMsg)
+{
+    AEGetWhiteListSizeRequest* request = new AEGetWhiteListSizeRequest();
+    aesm::message::Request::GetWhiteListSizeRequest proto_req = reqMsg->getwhitelistsizereq();
+
+    request->inflateValues(proto_req.timeout());
+    return request;
+}
+
+AEMessage* ProtobufSerializer::serialize(AEGetWhiteListSizeRequest* request)
+{
+    //kill the warning
+    UNUSED(request);
+
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Request msg;
+    aesm::message::Request::GetWhiteListSizeRequest proto_req;
+    proto_req.set_timeout(request->GetTimeout());
+
+    if (proto_req.IsInitialized())
+    {
+        aesm::message::Request::GetWhiteListSizeRequest* mutableReq = msg.mutable_getwhitelistsizereq();
+        mutableReq->CopyFrom(proto_req);
+        msg.SerializeToString(&data);
+        msg.release_getwhitelistsizereq(); //free the internal object
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.c_str(), ae_msg->size);
+        }
+        delete mutableReq;
+    }
+    return ae_msg;
+}
+
+AEMessage* ProtobufSerializer::serialize(AEGetWhiteListSizeResponse* response)
+{
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    aesm::message::Response::GetWhiteListSizeResponse  proto_res;
+
+    proto_res.set_errorcode(response->GetErrorCode());
+    proto_res.set_white_list_size(response->GetWhiteListSize());
+
+    if (proto_res.IsInitialized())
+    {
+        aesm::message::Response::GetWhiteListSizeResponse* mutableRes = msg.mutable_getwhitelistsizeres();
+        mutableRes->CopyFrom(proto_res);
+        msg.SerializeToString(&data);
+        msg.release_getwhitelistsizeres();
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.data(), data.size());
+        }
+        delete mutableRes;
+    }
+    return ae_msg;
+}
+
+bool ProtobufSerializer::inflateResponse(AEMessage* message, AEGetWhiteListSizeResponse* response)
+{
+    std::string data((char*)message->data, message->size);
+    aesm::message::Response msg;
+
+    msg.ParseFromString(data);
+    if (msg.has_getwhitelistsizeres() == false)
+        return false;
+
+    aesm::message::Response::GetWhiteListSizeResponse proto_res = msg.getwhitelistsizeres();
+    uint32_t errorCode = proto_res.errorcode();
+    uint32_t white_list_size = -1;
+    if (proto_res.has_white_list_size())
+    {
+        white_list_size = proto_res.white_list_size();
+    }
+    response->inflateValues(errorCode, white_list_size);
+
+    return true;
+}
+
+/*
+  Get white list
+*/
+IAERequest* ProtobufSerializer::inflateGetWhiteListRequest(aesm::message::Request* reqMsg)
+{
+    AEGetWhiteListRequest* request = new AEGetWhiteListRequest();
+    aesm::message::Request::GetWhiteListRequest proto_req = reqMsg->getwhitelistreq();
+
+    request->inflateValues(proto_req.white_list_size(),proto_req.timeout());
+    return request;
+}
+
+AEMessage* ProtobufSerializer::serialize(AEGetWhiteListRequest* request)
+{
+    //kill the warning
+    UNUSED(request);
+
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Request msg;
+    aesm::message::Request::GetWhiteListRequest proto_req;
+    proto_req.set_white_list_size(request->GetWhiteListSize());
+    proto_req.set_timeout(request->GetTimeout());
+    
+    if (proto_req.IsInitialized())
+    {
+        aesm::message::Request::GetWhiteListRequest* mutableReq = msg.mutable_getwhitelistreq();
+        mutableReq->CopyFrom(proto_req);
+        msg.SerializeToString(&data);
+        msg.release_getwhitelistreq(); //free the internal object
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.c_str(), ae_msg->size);
+        }
+        delete mutableReq;
+    }
+    return ae_msg;
+}
+
+AEMessage* ProtobufSerializer::serialize(AEGetWhiteListResponse* response)
+{
+    std::string data;
+    AEMessage* ae_msg = NULL;
+
+    aesm::message::Response msg;
+    aesm::message::Response::GetWhiteListResponse proto_res;
+
+    if (response->GetWhiteList() != NULL)
+    {
+        std::string se_white_list((const char*)response->GetWhiteList(), response->GetWhiteListLength());
+        proto_res.set_white_list(se_white_list);
+    }
+
+    proto_res.set_errorcode(response->GetErrorCode());
+
+    if (proto_res.IsInitialized())
+    {
+        aesm::message::Response::GetWhiteListResponse* mutableRes = msg.mutable_getwhitelistres();
+        mutableRes->CopyFrom(proto_res);
+        msg.SerializeToString(&data);
+        msg.release_getwhitelistres();
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.data(), ae_msg->size);
+        }
+        delete mutableRes;
+    }
+
+    return ae_msg;
+}
+
+bool ProtobufSerializer::inflateResponse(AEMessage* message, AEGetWhiteListResponse* response)
+{
+    std::string data((char*)message->data, message->size);
+    aesm::message::Response msg;
+
+    msg.ParseFromString(data);
+    if (msg.has_getwhitelistres() == false)
+        return false;
+
+    aesm::message::Response::GetWhiteListResponse proto_res = msg.getwhitelistres();
+    uint32_t errorCode = proto_res.errorcode();
+    uint32_t white_list_length = 0;
+    uint8_t * white_list = NULL;
+
+    if (proto_res.has_white_list())
+    {
+        if(proto_res.white_list().size() > UINT_MAX) {
+            return false;
+        }
+        white_list_length = (unsigned int)proto_res.white_list().size();
+        white_list = (uint8_t*)const_cast<char *>(proto_res.white_list().data());
+    }
+    response->inflateValues(errorCode, white_list_length, white_list);
+
+    return true;
+}
+
+/*
+  SGX Get extended epid group id
+*/
+IAERequest* ProtobufSerializer::inflateSGXGetExtendedEpidGroupIdRequest(aesm::message::Request* reqMsg)
+{
+    AESGXGetExtendedEpidGroupIdRequest* request = new AESGXGetExtendedEpidGroupIdRequest();
+    aesm::message::Request::SGXGetExtendedEpidGroupIdRequest proto_req = reqMsg->sgxgetextendedepidgroupidreq();
+
+    request->inflateValues(proto_req.timeout());
+    return request;
+}
+
+AEMessage* ProtobufSerializer::serialize(AESGXGetExtendedEpidGroupIdRequest* request)
+{
+    //kill the warning
+    UNUSED(request);
+
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Request msg;
+    aesm::message::Request::SGXGetExtendedEpidGroupIdRequest proto_req;
+    proto_req.set_timeout(request->GetTimeout());
+
+    if (proto_req.IsInitialized())
+    {
+        aesm::message::Request::SGXGetExtendedEpidGroupIdRequest* mutableReq = msg.mutable_sgxgetextendedepidgroupidreq();
+        mutableReq->CopyFrom(proto_req);
+        msg.SerializeToString(&data);
+        msg.release_sgxgetextendedepidgroupidreq(); //free the internal object
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.c_str(), ae_msg->size);
+        }
+        delete mutableReq;
+    }
+    return ae_msg;
+}
+
+AEMessage* ProtobufSerializer::serialize(AESGXGetExtendedEpidGroupIdResponse* response)
+{
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    aesm::message::Response::SGXGetExtendedEpidGroupIdResponse  proto_res;
+
+    proto_res.set_errorcode(response->GetErrorCode());
+    proto_res.set_x_group_id(response->GetExtendedEpidGroupId());
+
+    if (proto_res.IsInitialized())
+    {
+        aesm::message::Response::SGXGetExtendedEpidGroupIdResponse* mutableRes = msg.mutable_sgxgetextendedepidgroupidres();
+        mutableRes->CopyFrom(proto_res);
+        msg.SerializeToString(&data);
+        msg.release_sgxgetextendedepidgroupidres();
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.data(), data.size());
+        }
+        delete mutableRes;
+    }
+    return ae_msg;
+}
+
+bool ProtobufSerializer::inflateResponse(AEMessage* message, AESGXGetExtendedEpidGroupIdResponse* response)
+{
+    std::string data((char*)message->data, message->size);
+    aesm::message::Response msg;
+
+    msg.ParseFromString(data);
+    if (msg.has_sgxgetextendedepidgroupidres() == false)
+        return false;
+
+    aesm::message::Response::SGXGetExtendedEpidGroupIdResponse proto_res = msg.sgxgetextendedepidgroupidres();
+    uint32_t errorCode = proto_res.errorcode();
+    uint32_t x_group_id = -1;
+    if (proto_res.has_x_group_id())
+    {
+        x_group_id = proto_res.x_group_id();
+    }
+    response->inflateValues(errorCode, x_group_id);
+
+    return true;
+}
+
+/*
+  SGX Switch extended epid group
+*/
+IAERequest* ProtobufSerializer::inflateSGXSwitchExtendedEpidGroupRequest(aesm::message::Request* reqMsg)
+{
+    AESGXSwitchExtendedEpidGroupRequest* request = new AESGXSwitchExtendedEpidGroupRequest();
+    aesm::message::Request::SGXSwitchExtendedEpidGroupRequest proto_req = reqMsg->sgxswitchextendedepidgroupreq();
+
+    request->inflateValues(proto_req.x_group_id(), proto_req.timeout());
+    return request;
+}
+
+AEMessage* ProtobufSerializer::serialize(AESGXSwitchExtendedEpidGroupRequest* request)
+{
+    //kill the warning
+    UNUSED(request);
+
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Request msg;
+    aesm::message::Request::SGXSwitchExtendedEpidGroupRequest proto_req;
+    proto_req.set_x_group_id(request->GetExtendedEpidGroupId());
+    proto_req.set_timeout(request->GetTimeout());
+
+    if (proto_req.IsInitialized())
+    {
+        aesm::message::Request::SGXSwitchExtendedEpidGroupRequest* mutableReq = msg.mutable_sgxswitchextendedepidgroupreq();
+        mutableReq->CopyFrom(proto_req);
+        msg.SerializeToString(&data);
+        msg.release_sgxswitchextendedepidgroupreq(); //free the internal object
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.c_str(), ae_msg->size);
+        }
+        delete mutableReq;
+    }
+    return ae_msg;
+}
+
+AEMessage* ProtobufSerializer::serialize(AESGXSwitchExtendedEpidGroupResponse* response)
+{
+    std::string data;
+    AEMessage *ae_msg = NULL;
+
+    aesm::message::Response msg;
+    aesm::message::Response::SGXSwitchExtendedEpidGroupResponse  proto_res;
+
+    proto_res.set_errorcode(response->GetErrorCode());
+
+    if (proto_res.IsInitialized())
+    {
+        aesm::message::Response::SGXSwitchExtendedEpidGroupResponse* mutableRes = msg.mutable_sgxswitchextendedepidgroupres();
+        mutableRes->CopyFrom(proto_res);
+        msg.SerializeToString(&data);
+        msg.release_sgxswitchextendedepidgroupres();
+
+        if (data.size() <= UINT_MAX) {
+            ae_msg = new AEMessage;
+            ae_msg->size = (unsigned int) data.size();
+            ae_msg->data = new char[ae_msg->size];
+            memcpy(ae_msg->data, data.data(), data.size());
+        }
+        delete mutableRes;
+    }
+    return ae_msg;
+}
+
+bool ProtobufSerializer::inflateResponse(AEMessage* message, AESGXSwitchExtendedEpidGroupResponse* response)
+{
+    std::string data((char*)message->data, message->size);
+    aesm::message::Response msg;
+
+    msg.ParseFromString(data);
+    if (msg.has_sgxswitchextendedepidgroupres() == false)
+        return false;
+
+    aesm::message::Response::SGXSwitchExtendedEpidGroupResponse proto_res = msg.sgxswitchextendedepidgroupres();
+    uint32_t errorCode = proto_res.errorcode();   
+    response->inflateValues(errorCode);
 
     return true;
 }

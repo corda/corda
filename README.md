@@ -21,7 +21,7 @@ See CONTRIBUTING.md for details.
 
 Documentation
 -------------
-- [Intel(R) SGX for Linux\* OS][1] project home page on [01.org](http://01.org)
+- [Intel(R) SGX for Linux\* OS][1] project home page on [01.org](https://01.org)
 - [Intel(R) SGX Programming Reference][2]
 [1]: https://01.org/intel-softwareguard-extensions
 [2]: https://software.intel.com/sites/default/files/managed/48/88/329298-002.pdf
@@ -44,7 +44,7 @@ Build the Intel(R) SGX SDK and Intel(R) SGX PSW Package
   $ sudo apt-get install libcurl4-openssl-dev protobuf-compiler protobuf-c-compiler libprotobuf-dev libprotobuf-c0-dev
 ```
 - Use the script `download_prebuilt.sh` inside source code package to download prebuilt binaries to prebuilt folder  
-  You may need set http proxy for wget tool used by the script (such as `export http_proxy=http://test-proxy:test-port`)  
+  You may need set https proxy for wget tool used by the script (such as `export https_proxy=http://test-proxy:test-port`)  
 ```
   $ ./download_prebuilt.sh
 ```
@@ -92,16 +92,12 @@ Install Intel(R) SGX SDK
 ```
 
 ###Install Intel(R) SGX SDK
-To install Intel(R) SGX SDK, execute the installer with root privilege:
+To install Intel(R) SGX SDK, enter the following commands:
 ```
 $ cd linux/installer/bin
-$ sudo ./sgx_linux_x64_sdk_${version}.bin 
+$ ./sgx_linux_x64_sdk_${version}.bin 
 ```
 ###Test Intel(R) SGX SDK Package with the Sample Codes
-- Copy the sample codes installed by Intel(R) SGX SDK package into your work folder, such as  
-```
-  $ cp -r /opt/intel/sgxsdk/SampleCode ~
-```
 - Compile and run each sample codes in the simulation mode to make sure the package works well.  
 ```
   $ cd SampleCode/LocalAttestation
@@ -114,10 +110,6 @@ $ sudo ./sgx_linux_x64_sdk_${version}.bin
 If you use an SGX hardware enabled machine, you need to run the sample codes in the hardware mode.
 Ensure that you install SGX driver and Intel(R) SGX PSW installer on the machine.  
 See the topic, Install Intel(R) SGX PSW, on how to install the PSW package.
-- Copy the sample codes installed by the Intel(R) SGX SDK package into your work folder, such as  
-```
-  $ cp -r /opt/intel/sgxsdk/SampleCode ~
-```
 - Compile and run each sample codes in the debug mode.  
 ```
   $ cd SampleCode/LocalAttestation

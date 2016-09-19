@@ -50,6 +50,7 @@ extern "C" {
 #define AESM_LOG_WARN(format, args...)  aesm_log_report(AESM_LOG_REPORT_WARNING, format, ## args)
 #define AESM_LOG_INIT() aesm_log_init()
 #define AESM_LOG_FINI() aesm_log_fini()
+#define AESM_LOG_ERROR_UNICODE AESM_LOG_ERROR
 
 #endif/*__OAL_ERROR_REPORT_H__*/
 

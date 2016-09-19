@@ -28,7 +28,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 #ifndef _AE_CLASS_H_
 #define _AE_CLASS_H_
 #include "sgx_eid.h"
@@ -125,9 +124,13 @@ ae_error_t SingletonEnclave<T>::load_enclave()
         AESM_DBG_ERROR("AE SERVER NOT AVAILABLE in load enclave: %s",enclave_path);
         return AE_SERVER_NOT_AVAILABLE;
     }
+    if(ret == SGX_ERROR_OUT_OF_EPC){
+        AESM_DBG_ERROR("No enough EPC to load AE: %s",enclave_path);
+        return AESM_AE_OUT_OF_EPC;
+    }
     if (ret != SGX_SUCCESS){
         AESM_DBG_ERROR("Create Enclave failed:%d",ret);
-        return AE_FAILURE;
+        return AE_SERVER_NOT_AVAILABLE;
     }
     AESM_DBG_INFO("enclave %d loaded with id 0X%llX",aesm_enclave_id,m_enclave_id);
 

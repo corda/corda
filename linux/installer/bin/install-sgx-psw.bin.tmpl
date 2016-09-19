@@ -32,8 +32,14 @@
 
 modinfo isgx &> /dev/null
 if [[ $? != "0" ]]; then
-    echo "Please install the driver package before the PSW package"
-    exit 4
+    lsmod | grep isgx &> /dev/null
+    if [[ $? = "0" ]]; then
+        echo "Warning: You did not follow the document to install the driver package"
+        echo
+    else
+        echo "Please install the driver package before the PSW package"
+        exit 4
+    fi
 fi
 
 set -e
@@ -55,6 +61,12 @@ fi
 
 if [[ $ARCH != $PKG_ARCH ]]; then
     echo "$PKG_ARCH $PKG_NAME can not be installed on $ARCH platform."
+    exit 4
+fi
+
+INSTALL_PATH=/opt/intel/sgxpsw
+if [ -d "$INSTALL_PATH" ]; then
+    echo "$PKG_NAME already exists in $INSTALL_PATH, please uninstall it first!"
     exit 4
 fi
 

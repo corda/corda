@@ -32,12 +32,26 @@
 #include "sgx_tcrypto.h"
 #include "aeerror.h"
 #include "tlv_common.h"
-#include "cipher.h"
+#include "pek_pub_key.h"
+#include "peksk_pub.hh"
 
-ae_error_t aesm_check_pek_signature(const signed_pek_t& signed_pek)
+ae_error_t aesm_check_pek_signature(const signed_pek_t& signed_pek, const extended_epid_group_blob_t& xegb)
 {
     uint8_t result = SGX_EC_INVALID_SIGNATURE;
-    sgx_status_t sgx_code = check_pek_signature(signed_pek, &result);
+    uint32_t i;
+    sgx_status_t sgx_code;
+    const uint8_t *p = (const uint8_t *)&xegb;
+    for (i = 0; i < sizeof(xegb); i++){
+        if (p[i] != 0){
+            break;
+        }
+    }
+    if (i == sizeof(xegb)){//if all bytes of xegb is 0, using hardcoded PEKSK public key
+        sgx_code = check_pek_signature(signed_pek, (const sgx_ec256_public_t*)&g_pek_pub_key_little_endian, &result);
+    }
+    else{
+        sgx_code = check_pek_signature(signed_pek, (const sgx_ec256_public_t*)xegb.pek_sk, &result);
+    }
     if(sgx_code == SGX_ERROR_OUT_OF_MEMORY)
         return AE_OUT_OF_MEMORY_ERROR;
     else if(sgx_code != SGX_SUCCESS)
@@ -46,5 +60,21 @@ ae_error_t aesm_check_pek_signature(const signed_pek_t& signed_pek)
         return PVE_MSG_ERROR; //signature verification failed
     else
         return AE_SUCCESS;//PEK Singatue verified successfully
+}
+
+ae_error_t aesm_verify_xegb(const extended_epid_group_blob_t& signed_xegb)
+{
+    uint8_t result = SGX_EC_INVALID_SIGNATURE;
+    sgx_status_t sgx_code = verify_xegb(signed_xegb, &result);
+    if (sgx_code == SGX_ERROR_INVALID_PARAMETER)
+        return AE_INVALID_PARAMETER; 
+    else if(sgx_code == SGX_ERROR_OUT_OF_MEMORY)
+        return AE_OUT_OF_MEMORY_ERROR;
+    else if (sgx_code != SGX_SUCCESS)
+        return AE_FAILURE; //unknown error code
+    else if (result != SGX_EC_VALID)//sgx_code is SGX_SUCCESS
+        return AE_INVALID_PARAMETER; //signature verification failed
+    else
+        return AE_SUCCESS;//XEGB Signature verified successfully
 }
 

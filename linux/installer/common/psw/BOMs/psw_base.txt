@@ -6,6 +6,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/build/linux/libsgx_le.signed.so	<installdir>/package/aesm/libsgx_le.signed.so	0	main	STP
 <deliverydir>/build/linux/libsgx_pve.signed.so	<installdir>/package/aesm/libsgx_pve.signed.so	0	main	STP
 <deliverydir>/build/linux/libsgx_qe.signed.so	<installdir>/package/aesm/libsgx_qe.signed.so	0	main	STP
+<deliverydir>/build/linux/libsgx_pce.signed.so	<installdir>/package/aesm/libsgx_pce.signed.so	0	main	STP
 <deliverydir>/linux/installer/common/psw/install.sh	<installdir>/scripts/install.sh	0	main	STP
 <deliverydir>/linux/installer/common/psw/Makefile	<installdir>/Makefile	0	main	STP
 <deliverydir>/psw/ae/aesm_service/config/network/aesmd.conf	<installdir>/package/aesm/conf/aesmd.conf	0	main	STP

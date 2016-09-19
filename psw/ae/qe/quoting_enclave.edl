@@ -48,6 +48,6 @@ include "sgx_quote.h"
                                     uint32_t sig_rl_size,
                                     [out] sgx_report_t *qe_report,
                                     [user_check] uint8_t *p_quote, // Quote is also big, we should output it in piece meal.
-                                    uint32_t quote_size);
+                                    uint32_t quote_size, sgx_isv_svn_t pce_isvnsvn);
     };
 };

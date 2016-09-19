@@ -34,10 +34,43 @@ set -e
 
 PKG_NAME="Intel SGX SDK"
 
-if test $(id -u) -ne 0; then
-    echo "Root privilege is required to install $PKG_NAME."
-    exit 4
-fi
+select_install_path()
+{
+    USER_INPUT_PATH=$(pwd)
+    echo
+    echo -n "Do you want to install in current directory? [yes/no] : "
+    read ANSWER
+
+    if [ "$ANSWER" == "yes" ]; then
+        if [ ! -d "$USER_INPUT_PATH" ] || [ ! -w "$USER_INPUT_PATH" ]; then
+            echo "Can not install in $USER_INPUT_PATH, please check the permission!"
+            exit 4
+        fi
+    else
+        echo
+        echo -n "Please input the directory which you want to install in : "
+        read USER_INPUT_PATH
+
+        eval USER_INPUT_PATH="$USER_INPUT_PATH"
+
+        if [ -d "$USER_INPUT_PATH" ]; then
+            if [ ! -w "$USER_INPUT_PATH" ]; then
+                echo "Can not install in $USER_INPUT_PATH, please check the permission!"
+                exit 4
+            fi
+        else
+            mkdir -p "$USER_INPUT_PATH"
+            if [ "$?" != "0" ]; then
+                echo "Can not install in $USER_INPUT_PATH, please check the permission!"
+                exit 4
+            fi
+        fi
+    fi
+
+    USER_INPUT_PATH=$(cd "$USER_INPUT_PATH"; pwd -P)
+}
+
+select_install_path
 
 PATH=/usr/bin:/bin
 umask 022
@@ -79,13 +112,49 @@ echo " done."
 
 pushd ${SDK_TEMP_FOLDER}
 
+sed -i "s#\(SGX_PACKAGES_PATH=\).*#\1$USER_INPUT_PATH#" scripts/installConfig
 source scripts/installConfig
-make install
+make install INSTALLER_FORM=BIN
 
 popd
 
-${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/scripts/install.sh
+${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/scripts/install.sh BIN
 
 rm -fr ${SDK_TEMP_FOLDER}
+
+export_the_simulation()
+{
+    if [ ! -d ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/sdk_libs ]; then
+        mkdir ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/sdk_libs
+    else
+        rm -f ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/sdk_libs/libsgx_urts_sim.so
+        rm -f ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/sdk_libs/libsgx_uae_service_sim.so
+    fi
+    ln -s ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/${LIB_DIR}/libsgx_urts_sim.so ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/sdk_libs/ 
+    ln -s ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/${LIB_DIR}/libsgx_uae_service_sim.so ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/sdk_libs/ 
+} 
+
+generate_environment_script()
+{
+    cat > ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/environment <<EOF
+export SGX_SDK=${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}
+export PATH=\$PATH:\$SGX_SDK/$(dirname ${BIN_DIR}):\$SGX_SDK/${BIN_DIR}
+export PKG_CONFIG_PATH=\$PKG_CONFIG_PATH:\$SGX_SDK/pkgconfig
+if [ -z "\$LD_LIBRARY_PATH" ]; then
+     export LD_LIBRARY_PATH=\$SGX_SDK/sdk_libs
+else
+     export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$SGX_SDK/sdk_libs
+fi
+
+EOF
+}
+
+export_the_simulation
+generate_environment_script
+
+echo """
+Please set the environment variables with below command:
+"
+echo -e "\033[32;49;1msource ${SGX_PACKAGES_PATH}/${SDK_PKG_NAME}/environment\033[39;49;0m"
 
 exit 0

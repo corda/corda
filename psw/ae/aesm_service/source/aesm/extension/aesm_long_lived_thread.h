@@ -33,9 +33,11 @@
 #define _AESM_LONG_LIVED_THREAD_H_
 #include "aesm_logic.h"
 
+#define AESM_STOP_TIMEOUT (60*1000) /*waiting for 1 minute at most*/
 extern ae_error_t start_epid_provision_thread(bool performance_rekey, unsigned long timeout=THREAD_TIMEOUT);
+extern ae_error_t start_white_list_thread(unsigned long timeout=THREAD_TIMEOUT);
 extern bool query_pve_thread_status(void);/*return true if idle and reset clock for thread*/
-extern ae_error_t wait_pve_thread(void);
-extern void stop_all_long_lived_threads(void);
+extern ae_error_t wait_pve_thread(uint64_t time_out_milliseconds=AESM_THREAD_INFINITE);
+extern void stop_all_long_lived_threads(uint64_t time_out_milliseconds=AESM_STOP_TIMEOUT);
 #endif
 

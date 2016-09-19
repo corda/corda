@@ -1,35 +1,34 @@
-﻿<!--------------------------------------------------------------------------->
-<!-- Copyright (c) 2016 Intel Corporation.				   -->
-<!-- 									   -->
-<!-- All rights reserved. This program and the accompanying materials	   -->
-<!-- are made available under the terms of the Eclipse Public License v1.0 -->
-<!-- which accompanies this distribution, and is available at		   -->
-<!-- http://www.eclipse.org/legal/epl-v10.html				   -->
-<!-- 									   -->
-<!-- Contributors:							   -->
-<!--     Intel Corporation - initial implementation and documentation	   -->
-<!--------------------------------------------------------------------------->
+<?xml version='1.0' encoding='utf-8'?>
+<!-- 
+ Copyright (c) 2016 Intel Corporation.
 
-<?xml version="1.0" encoding="utf-8"?>
-<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:lastBlockDepth="4" MadCap:lastHeight="1043" MadCap:lastWidth="652">
-    <head>
-        <link href="Resources/Stylesheets/intel_css_styles.css" rel="stylesheet" type="text/css" />
-    </head>
-    <body>
+ All rights reserved. This program and the accompanying materials
+ are made available under the terms of the Eclipse Public License v1.0
+ which accompanies this distribution, and is available at
+ http://www.eclipse.org/legal/epl-v10.html
 
-<h1 class="firsttitle" id="SGX_title" >Intel(R) Software Guard Extensions Plug-in for Eclipse*</h1>
+ Contributors:
+     Intel Corporation - initial implementation and documentation
+ -->
+
+<html xmlns:MadCap='http://www.madcapsoftware.com/Schemas/MadCap.xsd' MadCap:lastBlockDepth='4' MadCap:lastHeight='1043' MadCap:lastWidth='652'>
+  <head>
+    <link href='Resources/Stylesheets/intel_css_styles.css' rel='stylesheet' type='text/css' />
+  </head>
+  <body>
+    <div id='SGX_title'>
+        <h1 class="firsttitle">Intel(R) Software Guard Extensions Plug-in for Eclipse*</h1>
         <h2>Developer Guide</h2>
-        <p>Intel(R) Software Guard Extensions (Intel(R) SGX) is an Intel technology for a
-pplication developers seeking to protect select code and data from disclosure or 
+        <p>Intel(R) Software Guard Extensions (Intel(R) SGX) is an Intel technology for application developers seeking to protect select code and data from disclosure or 
 modification. Intel(R) SGX makes such protections possible through the use of 
 enclaves. Enclaves are protected areas of execution. Application code can be put 
 into an enclave through special instructions and software made available to 
 developers by the Intel(R) SGX SDK.</p>
-        <p><a href="#Legal_Information">Legal Information</a>
+        <p><a href="Legal_Information.htm">Legal Information</a>
         </p>
-    
-
-<h1 id="Legal_Information" >Legal Information</h1>
+    </div>
+    <div id='Legal_Information'>
+        <h1>Legal Information</h1>
         <p>No license (express or implied, by estoppel or otherwise) to any intellectual 
  property rights is granted by this document.</p>
         <p>Intel disclaims all express and implied warranties, including without 
@@ -78,13 +77,13 @@ developers by the Intel(R) SGX SDK.</p>
         </table>
         <p>* Other names and brands may be claimed as the property of others.</p>
         <p>© 2016 Intel Corporation.</p>
-    
-
-<h1 id="Introduction" >Introduction</h1>
-        <p>This <i>Developer Guide</i> is intended for use by Independent Service Vendors who wish to harden their Linux* applications using Intel(R) SGX Technology, code named Intel(R) Software Guard Extensions. The guide describes the procedure for installation of Intel(R) SGX Plugin for Eclipse* IDE and development of Intel(R) SGX components using the plugin. The Intel(R) SGX Plugin for Eclipse leverages on the Intel(R) Software Guard Extensions Evaluation SDK, which is a collection of APIs, libraries and tools that enable you to develop, build and debug Intel(R) SGX applications in C/C++.</p>
-        <p>To learn more about the Intel(R) Software Guard Extensions Evaluation SDK, see the <i>Intel(R) Software Guard Extensions Evaluation SDK for Linux* OS</i>.</p>&#160;
-
-<h2 id="Introducing_Intel_Software_Guard _Extensions_Eclipse_Plugin" >Introducing Intel(R) Software Guard Extensions</h2>
+    </div>
+    <div id='Introduction'>
+        <h1>Introduction</h1>
+        <p>This <i>Developer Guide</i> is intended for use by Independent Service Vendors who wish to harden their Linux* applications using Intel(R) SGX Technology, code named Intel(R) Software Guard Extensions. The guide describes the procedure for installation of Intel(R) SGX Plugin for Eclipse* IDE and development of Intel(R) SGX components using the plugin. The Intel(R) SGX Plugin for Eclipse leverages on the Intel(R) Software Guard Extensions SDK, which is a collection of APIs, libraries and tools that enable you to develop, build and debug Intel(R) SGX applications in C/C++.</p>
+        <p>To learn more about the Intel(R) Software Guard Extensions SDK, see the <i>Intel(R) Software Guard Extensions SDK for Linux* OS Developer Reference</i>.</p>&#160;</div>
+    <div id='Introducing_Intel_Software_Guard _Extensions_Eclipse_Plugin'>
+        <h2>Introducing Intel(R) Software Guard Extensions</h2>
         <p>Intel(R) Software Guard Extensions is a new Intel technology, whose objective is to enable a high level of protection of secrets. It operates by allocating hardware-protected memory where code and data reside. The protected memory area within an application process is called an enclave. Data within the enclave memory can only be accessed by code that resides within that enclave. Enclave code can be invoked by special instructions.</p>
         <p>An enclave can be built and loaded as a shared object.</p>
         <p>Throughout this document, Intel(R) SGX refers to Intel(R) Software Guard Extensions.</p>
@@ -105,22 +104,22 @@ developers by the Intel(R) SGX SDK.</p>
         </ul>
         <p>The proxy and bridge functions are generated by the <code>sgx_edger8r</code> tool provided by Intel(R) SGX SDK. It reads an <i>edl</i> file (Enclave Descriptor Language) which describes the functions that form the <i>trusted</i> and <i>untrusted</i> component boundaries within the application.</p>
         <p>After the enclave is built, a signed version of it is created using the tool <code>sgx_sign</code> also provided by Intel(R) SGX SDK.  It is this signed version may be loaded and executed in the encrypted memory.</p>
-        <p>Enclaves may have some specific properties which are added as meta-information during the signing process.  The meta-information is stored in one configuration xml file per enclave, whose details may be seen in <i>Intel(R) Software Guard Extensions Evaluation SDK for Linux* OS</i>.</p>
-    
-
-<h2 id="Introducing_Intel_Software_Guard_Extensions" >Introducing Intel(R) Software Guard Extensions Eclipse* Plug-in</h2>
-        <p>The Intel(R) Software Guard Extensions Eclipse* Plug-in helps the enclave developer to maintain enclaves and untrusted related code inside Eclipse* C/C++ projects.   To use this support, add SGX nature to the C/C++ project.  See <a href="#Adding_SGX_Nature_to_a_Project">Adding SGX Nature to a Project</a> for details.</p>
+        <p>Enclaves may have some specific properties which are added as meta-information during the signing process.  The meta-information is stored in one configuration xml file per enclave, whose details may be seen in <i>Intel(R) Software Guard Extensions SDK for Linux* OS</i>.</p>
+    </div>
+    <div id='Introducing_Intel_Software_Guard_Extensions'>
+        <h2>Introducing Intel(R) Software Guard Extensions Eclipse* Plug-in</h2>
+        <p>The Intel(R) Software Guard Extensions Eclipse* Plug-in helps the enclave developer to maintain enclaves and untrusted related code inside Eclipse* C/C++ projects.   To use this support, add SGX nature to the C/C++ project.  See <a href="Adding_SGX_Nature_to_a_Project.htm">Adding SGX Nature to a Project</a> for details.</p>
         <p>Once the SGX nature is added to a project, you will have access to the SGX commands.  SGX nature adds also a folder called <code>sgx</code> to the root of the project, and a Makefile inside it.   All resources of the project managed by Intel(R) Software Guard Extensions Eclipse Plug-inare located inside this directory.  You can build and run enclaves related code using GNU* Make tool through the Makefile.</p>
         <p>The plugin is generating minimal but ready-to-work code skeletons, complete with their own Makefile having all the required make targets as to call <code>sgx_edger8r</code> tool to generate the proxies and bridges, compile these source, generate a shared object and finally, to sign the enclave with the <code>sgx_sign</code> tool.  This provide a starting point you may build upon.</p>
-    
-
-<h1 id="Getting_Started" >Getting Started with Intel(R) Software Guard Extensions Eclipse* Plug-in</h1>
+    </div>
+    <div id='Getting_Started'>
+        <h1>Getting Started with Intel(R) Software Guard Extensions Eclipse* Plug-in</h1>
         <p>This section contains steps to set up your Intel(R) Software Guard Extensions Eclipse* Plug-in on a Linux* system, including necessary softwares, steps to install the product, and steps to configure your preferred product directory.</p>
         <p>•	Pre-requisites</p>
         <p>•	Installing Intel(R) Software Guard Extensions Eclipse* Plug-in</p>
-        <p>•	Configuring Intel(R) Software Guard Extensions Eclipse* Plug-in</p>&#160;
-
-<h2 id="Prerequisites" >Pre-requisites</h2>
+        <p>•	Configuring Intel(R) Software Guard Extensions Eclipse* Plug-in</p>&#160;</div>
+    <div id='Prerequisites'>
+        <h2>Pre-requisites</h2>
         <p>To use Intel(R) Software Guard Extensions Eclipse Plug-in, install the following softwares:</p>
         <ul>
             <li>Eclipse* Mars 1 with CDT IDE for C/C++ Developpers (version 4.5.1).   To use this version, install Java* Development Kit (JDK) or Java* Runtime Environment (JRE)  version 1.8 or above.</li>
@@ -128,9 +127,9 @@ developers by the Intel(R) SGX SDK.</p>
             <li>Openssl*</li>
             <li>Intel(R) SGX SDK for Linux* OS</li>
         </ul>
-    
-
-<h2 id="Installing_Intel_Software_Guard_Extensions_Eclipse_Plugin" >Installing Intel(R) Software Guard Extensions Eclipse* Plug-in</h2>
+    </div>
+    <div id='Installing_Intel_Software_Guard_Extensions_Eclipse_Plugin'>
+        <h2>Installing Intel(R) Software Guard Extensions Eclipse* Plug-in</h2>
         <p>Install Intel(R) Software Guard Extensions Eclipse* Plug-in as a regular Eclipse Plugin:</p>
         <ol>
             <li>Download the zip archive of Intel(R) Software Guard Extensions Eclipse Plug-in from Intel Site</li>
@@ -151,9 +150,9 @@ developers by the Intel(R) SGX SDK.</p>
             <li>Press <b>OK</b>  to add the archive as a repository.</li>
             <li>In the <b>Install</b> dialog, select the <b>Software Guard Extensions Plugin</b> check-box and proceed with the usual steps.</li>
         </ol>
-    
-
-<h2 id="Configuring_Intel_Software_Guard_Extensions_Eclipse_Plug-in" >Configuring Intel(R) Software Guard Extensions Eclipse* Plug-in</h2>
+    </div>
+    <div id='Configuring_Intel_Software_Guard_Extensions_Eclipse_Plug-in'>
+        <h2>Configuring Intel(R) Software Guard Extensions Eclipse* Plug-in</h2>
         <p>If you do not install Intel(R) SGX SDK for Linux* OS in the default location, you need to specify the path for Intel SGX SDK  using the following steps:</p>
         <ol>
             <li>
@@ -165,9 +164,9 @@ developers by the Intel(R) SGX SDK.</p>
             </li>
             <li>Enter the path for Intel SGX SDK for Linux OS in the <b>SGX SDK Directory</b> field.</li>
         </ol>
-    
-
-<h1 id="Command_Reference" >Command Reference</h1>
+    </div>
+    <div id='Command_Reference'>
+        <h1>Command Reference</h1>
         <p>This topic provides the command reference for the following scenarios of using Intel(R) Software Guard Extensions Eclipse* Plug-in:</p>
         <ul>
             <li>Adding SGX nature to a project</li>
@@ -178,14 +177,14 @@ developers by the Intel(R) SGX SDK.</p>
             <li>Updating enclave configuration files</li>
             <li>Two steps sign enclave</li>
         </ul>
-        <p>All commands brought by Intel(R) Software Guard Extensions Eclipse Plug-in are available by right-clicking on the Project root in Project explorer view in menu <b>Software Guard Extension Tools</b>:</p>&#160;<p><img src="Resources/Images/Project_Explorer.png" /></p><p class="figcap">Project Explorer</p>&#160;
-
-<h2 id="Adding_SGX_Nature_to_a_Project" >Adding SGX Nature to a Project</h2>
+        <p>All commands brought by Intel(R) Software Guard Extensions Eclipse Plug-in are available by right-clicking on the Project root in Project explorer view in menu <b>Software Guard Extension Tools</b>:</p>&#160;<p><img src="Resources/Images/Project_Explorer.png" /></p><p class="figcap">Project Explorer</p>&#160;</div>
+    <div id='Adding_SGX_Nature_to_a_Project'>
+        <h2>Adding SGX Nature to a Project</h2>
         <p>The <i>nature</i> of an Eclipse project is a concept defined by an Eclipse Platform which allows a plug-in to tag a project as a specific kind of project.   Intel(R) Software Guard Extensions  uses an <i>SGX nature</i> to add SGX-specific behavior to projects.  Project natures are defined by plug-ins, and are typically added or removed per-project when the user performs some action defined by the plug-in.</p>
-        <p>To use Intel(R) Software Guard Extensions Eclipse Plug-in in your project, you need to add SGX nature to it.   You may either add SGX nature to a pre-existing C/C++ project or create a project with SGX nature from start.  See <a href="#Adding_SGX_Nature_to_a_non_SGX_project">Adding SGX Nature to a non-SGX project</a> and <a href="#Creating_a_New_C_C_Project_with_SGX_Nature">Creating a New C/C++ Project with SGX Nature</a> for how to complete these tasks.</p>
-    
-
-<h3 id="Adding_SGX_Nature_to_a_non_SGX_project" >Adding SGX Nature to a non-SGX project</h3>
+        <p>To use Intel(R) Software Guard Extensions Eclipse Plug-in in your project, you need to add SGX nature to it.   You may either add SGX nature to a pre-existing C/C++ project or create a project with SGX nature from start.  See <a href="Adding_SGX_Nature_to_a_non_SGX_project.htm">Adding SGX Nature to a non-SGX project</a> and <a href="Creating_a_New_C_C_Project_with_SGX_Nature.htm">Creating a New C/C++ Project with SGX Nature</a> for how to complete these tasks.</p>
+    </div>
+    <div id='Adding_SGX_Nature_to_a_non_SGX_project'>
+        <h3>Adding SGX Nature to a non-SGX project</h3>
         <p>When you have a C/C++ project created without Intel SGX, you cannot use Intel SGX support.  In this case, you need to add SGX nature to this project to use Intel SGX support:</p>
         <ol>
             <li>Right-click on the project root <![CDATA[	]]></li>
@@ -221,9 +220,9 @@ developers by the Intel(R) SGX SDK.</p>
                 <p class="figcap">Configurations Specific to Intel(R) SGX Technology</p>
             </li>
         </ul>
-    
-
-<h3 id="Creating_a_New_C_C_Project_with_SGX_Nature" >Creating a New C/C++ Project with SGX Nature</h3>
+    </div>
+    <div id='Creating_a_New_C_C_Project_with_SGX_Nature'>
+        <h3>Creating a New C/C++ Project with SGX Nature</h3>
         <p>You can create a new project with SGX nature. To create such a project, follow these steps:</p>
         <ol>
             <li>
@@ -241,9 +240,9 @@ developers by the Intel(R) SGX SDK.</p>
             <p class="NoteTipHead">NOTE:</p>
             <p>Projects created following the subcategories under <b>C/C++ with SGX Enabled</b> are identical with their standard counterparts, except that they have SGX Nature added.  There is no difference between creating a C or C++ project with SGX enabled, or creating a standard C/C++ project and launch <b>Add SGX nature</b> from it, as described in precedent paragraph.</p>
         </div>
-    
-
-<h2 id="Adding_an_SGX_Enclave" >Adding an SGX Enclave</h2>
+    </div>
+    <div id='Adding_an_SGX_Enclave'>
+        <h2>Adding an SGX Enclave</h2>
         <p>After you add the SGX nature to a project, you can start creating a minimal but complete skeleton for a new enclave:</p>
         <ol>
             <li>Right-click on the project root in <b>Project Explorer</b>.</li>
@@ -278,9 +277,9 @@ developers by the Intel(R) SGX SDK.</p>
             <p class="NoteTipHead">NOTE:</p>
             <p>If you select the <b>Generate sample untrusted application</b> checkbox, ecalls from the untrusted part are not be resolved by Eclipse C/C++ indexer. These functions are marked with a red line. The declaration of these ecalls resides in the unstrusted stub header which is generated during the build proces and is not indexed by Eclipse. To resolve this problem, right-click on project root and select <b>Index → Freshen All Files</b>.</p>
         </div>
-    
-
-<h2 id="Adding_an_SGX_Trusted_Library" >Adding an SGX Trusted Library</h2>
+    </div>
+    <div id='Adding_an_SGX_Trusted_Library'>
+        <h2>Adding an SGX Trusted Library</h2>
         <p>Trusted Static Libraries helps enclave author  have libraries of shared code to be reused by enclaves, in exactly the same manner as usual static <code>libxxx.a</code> libraries are used to share code between regular non-SGX applications.  The plugin adds a command to generate the skeleton of a trusted shared library.</p>
         <p>To add a new SGX Trusted Library:</p>
         <ol>
@@ -299,9 +298,9 @@ developers by the Intel(R) SGX SDK.</p>
                 <p class="figcap">A Generated Trusted Library</p>
             </li>
         </ol>
-    
-
-<h2 id="Adding_an_SGX_Untrusted_Module" >Adding an SGX Untrusted Module</h2>
+    </div>
+    <div id='Adding_an_SGX_Untrusted_Module'>
+        <h2>Adding an SGX Untrusted Module</h2>
         <p>Add an untrusted module to generate the untrusted stubs so you use an enclave, provided you have access to its <code>.edl</code> file.  The enclave might have been built in the current project or in a different project.</p>
         <p>To use trusted functionality of an enclave for which its <code>*.edl</code> is known, use the command <b>Add SGX Untrusted Module</b>:</p>
         <ol>
@@ -320,9 +319,9 @@ developers by the Intel(R) SGX SDK.</p>
                 <p class="figcap">Copying the Untrusted Module to a Project</p>
             </li>
         </ol>
-    
-
-<h2 id="Updating_SGX_Enclave_Signing_Key" >Updating SGX Enclave Signing Key</h2>
+    </div>
+    <div id='Updating_SGX_Enclave_Signing_Key'>
+        <h2>Updating SGX Enclave Signing Key</h2>
         <p>All skeletons enclave samples produced by the plugin contain a sample signing key.  You might want to import another sign key that you already have, or generate a new one.   Use the command <b>Update SGX Enclave Signing Key</b> to complete this task.</p>
         <ol>
             <li>Choose  <b>Update SGX Enclave Signing Key</b> by right-click on the project in <b>Project Explorer -&gt; Software Guard Extension Tools</b> menu. The <b>Import or (Re)Generate Enclave Signing Key</b> dialog appears.</li>
@@ -340,9 +339,9 @@ developers by the Intel(R) SGX SDK.</p>
         <p><code>openssl genrsa -out ../../../encl1_private.pem.key.pem -3 3072</code>
         </p>
         <p><![CDATA[	]]></p>
-    
-
-<h2 id="Updating_Enclave_Configuration_Files" >Updating Enclave Configuration Files</h2>
+    </div>
+    <div id='Updating_Enclave_Configuration_Files'>
+        <h2>Updating Enclave Configuration Files</h2>
         <p>A configuration file is an important part in the definition of an enclave.  Intel(R) SGX SDK signer tool requires such *.xml configuration file as necessary input.</p>
         <p>To update this configuration file, use the <b>Update Config</b> command:</p>
         <ol>
@@ -362,9 +361,9 @@ developers by the Intel(R) SGX SDK.</p>
                 <p>For details on the meaning of the fields, see <i>Intel(R) Software Guard Extensions Developer Guide</i>.</p>
             </li>
         </ol>
-    
-
-<h2 id="Two_Steps_Sign_Enclave" >Two Steps Sign Enclave</h2>
+    </div>
+    <div id='Two_Steps_Sign_Enclave'>
+        <h2>Two Steps Sign Enclave</h2>
         <p>To help you develop enclaves, Intel(R) Software Guard Extensions Eclipse Plug-in generates all required structure including:</p>
         <ul>
             <li>c/c++ files and header files</li>
@@ -403,9 +402,9 @@ developers by the Intel(R) SGX SDK.</p>
             <img src="Resources/Images/Two_Step_Sign_Enclave_Menu.png" />
         </p>
         <p class="figcap">Two Step Sign Enclave Menu</p>
-    
-
-<h3 id="Generate_Hash" >Generate Hash</h3>
+    </div>
+    <div id='Generate_Hash'>
+        <h3>Generate Hash</h3>
         <p>Generating hash is the first step in the 2-Steps signing process.To generate hash, use the following steps:</p>
         <ol>
             <li>
@@ -431,9 +430,9 @@ developers by the Intel(R) SGX SDK.</p>
         </p>
         <p class="figcap">Generate Signed Enclave Dialog with Pre-configurations</p>
         <p>If you click <b>Cancel</b> in the <b>Generate Signed Enclave</b> dialog, you can continue the signing process later using the <b>Generate Signed Enclave</b> command.</p>
-    
-
-<h3 id="Generate_Signed_Enclaves" >Generate Signed Enclaves</h3>
+    </div>
+    <div id='Generate_Signed_Enclaves'>
+        <h3>Generate Signed Enclaves</h3>
         <p>Generating signed enclave is the second step in the 2-Steps signing process.  You should have the following files to complete this step:</p>
         <ul>
             <li>The <code>.hex</code> file generated with <b>Generate Hash</b> command</li>
@@ -452,16 +451,16 @@ developers by the Intel(R) SGX SDK.</p>
             </li>
             <li>Enter the inputs to all the fields and click <b>OK</b>.</li>
         </ol>
-    
-
-<h1 id="Building_and_Running_SGX_Code" >Building and Running SGX Code</h1>
+    </div>
+    <div id='Building_and_Running_SGX_Code'>
+        <h1>Building and Running SGX Code</h1>
         <p>This section describes the following topics about building and running SGX code:</p>
         <ul>
             <li>SGX build configurations</li>
             <li>Running samples generated for enclaves</li>
-        </ul>&#160;
-
-<h2 id="SGX_Build_Configurations" >SGX Build Configurations</h2>
+        </ul>&#160;</div>
+    <div id='SGX_Build_Configurations'>
+        <h2>SGX Build Configurations</h2>
         <p>There are usually two types of builds that a regular non-SGX project defines:</p>
         <ul>
             <li>Debug</li>
@@ -539,9 +538,9 @@ developers by the Intel(R) SGX SDK.</p>
             <img src="Resources/Images/Project_Menu.png" />
         </p>
         <p class="figcap">Project Menu			</p>
-    
-
-<h2 id="Running_Samples_Generated_for_Enclaves" >Running Samples Generated for Enclaves</h2>
+    </div>
+    <div id='Running_Samples_Generated_for_Enclaves'>
+        <h2>Running Samples Generated for Enclaves</h2>
         <p>Intel(R) Software Guard Extensions Eclipse* Plugin provides an option to generate a sample application together with the enclave code when the enclave is created.  After the project is build, the sample application is built also and ready to run.  You can see the sample application named sample in the enclave directory in Project Explorer.  You can run this sample as a local C/C++ application as shown in the following figure:</p>
         <p>
             <img src="Resources/Images/Sample_Application.png" />
@@ -552,6 +551,6 @@ developers by the Intel(R) SGX SDK.</p>
             <img src="Resources/Images/The_Result_of_Running_Samples_Generated_for_Enclaves.png" />
         </p>
         <p class="figcap">The Result of Running Samples Generated for Enclaves</p>
-    
-</body>
+    </div>
+  </body>
 </html>

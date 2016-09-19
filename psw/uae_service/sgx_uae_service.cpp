@@ -53,6 +53,10 @@
 #define SE_GET_PS_CAP_TIMEOUT_MSEC (IPC_LATENCY)
 #define SE_REPORT_REMOTE_ATTESTATION_FAILURE_TIMEOUT_MSEC  (IPC_LATENCY)
 
+#define GET_WHITE_LIST_SIZE_MSEC (IPC_LATENCY)
+#define GET_WHITE_LIST_MSEC (IPC_LATENCY)
+#define SGX_GET_EXTENDED_GROUP_ID_MSEC (IPC_LATENCY)
+#define SGX_SWITCH_EXTENDED_GROUP_MSEC (IPC_LATENCY)
 extern "C" {
 
 sgx_status_t get_launch_token(
@@ -84,6 +88,9 @@ sgx_status_t get_launch_token(
                     break;
                 case AESM_GET_LICENSETOKEN_ERROR:
                     mapped = SGX_ERROR_SERVICE_INVALID_PRIVILEGE;
+                    break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
                     break;
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
@@ -128,6 +135,9 @@ sgx_status_t sgx_init_quote(
                     break;
                 case AESM_SGX_PROVISION_FAILED:
                     mapped = SGX_ERROR_UNEXPECTED;
+                    break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
                     break;
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
@@ -185,6 +195,9 @@ sgx_status_t sgx_get_quote(
                     break;
                 case AESM_SGX_PROVISION_FAILED:
                     mapped = SGX_ERROR_UNEXPECTED;
+                    break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
                     break;
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
@@ -265,6 +278,12 @@ sgx_status_t sgx_report_attestation_status(
                 case AESM_PLATFORM_INFO_BLOB_INVALID_SIG:
                     mapped = SGX_ERROR_INVALID_PARAMETER;
                     break;
+                case AESM_EPIDBLOB_ERROR:
+                    mapped = SGX_ERROR_AE_INVALID_EPIDBLOB;
+                    break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
+                    break;
                 case AESM_SGX_PROVISION_FAILED:
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
@@ -307,6 +326,9 @@ sgx_status_t create_session_ocall(
                 case AESM_PSDA_UNAVAILABLE:
                 case AESM_SERVICE_NOT_AVAILABLE:
                     mapped = SGX_ERROR_SERVICE_UNAVAILABLE;
+                    break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
                     break;
                 case AESM_MSG_ERROR:
                 default:
@@ -356,6 +378,9 @@ sgx_status_t exchange_report_ocall(
                 case AESM_SERVICE_NOT_AVAILABLE:
                     mapped = SGX_ERROR_SERVICE_UNAVAILABLE;
                     break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
+                    break;
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
             }
@@ -392,6 +417,9 @@ sgx_status_t close_session_ocall(
                 case AESM_LONG_TERM_PAIRING_FAILED:
                 case AESM_SERVICE_NOT_AVAILABLE:
                     mapped = SGX_ERROR_SERVICE_UNAVAILABLE;
+                    break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
                     break;
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
@@ -436,6 +464,9 @@ sgx_status_t invoke_service_ocall(
                 case AESM_SERVICE_NOT_AVAILABLE:
                     mapped = SGX_ERROR_SERVICE_UNAVAILABLE;
                     break;
+                case AESM_OUT_OF_EPC:
+                    mapped = SGX_ERROR_OUT_OF_EPC;
+                    break;
                 case AESM_MSG_ERROR:
                 default:
                     mapped = SGX_ERROR_UNEXPECTED;
@@ -443,6 +474,132 @@ sgx_status_t invoke_service_ocall(
         }
     }
         
+    return mapped;
+}
+
+
+sgx_status_t sgx_get_whitelist_size(
+    uint32_t* p_whitelist_size)
+{
+    if (p_whitelist_size == NULL)
+        return SGX_ERROR_INVALID_PARAMETER;
+
+    aesm_error_t    result = AESM_UNEXPECTED_ERROR;
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    ret = oal_get_whitelist_size(p_whitelist_size, GET_WHITE_LIST_SIZE_MSEC*1000, &result);
+
+    //common mappings
+    sgx_status_t mapped = oal_map_status(ret);
+    if (mapped != SGX_SUCCESS)
+        return mapped;
+
+    mapped = oal_map_result(result);
+    if (mapped != SGX_SUCCESS)
+    {
+        //operation specific mapping
+        if (mapped == SGX_ERROR_UNEXPECTED && result != AESM_UNEXPECTED_ERROR)
+        {
+            switch (result)
+            {
+            default:
+                mapped = SGX_ERROR_UNEXPECTED;
+            }
+        }
+    }
+
+    return mapped;
+}
+
+
+sgx_status_t sgx_get_whitelist(
+    uint8_t* p_whitelist,
+    uint32_t whitelist_size)
+{
+    if (p_whitelist == NULL || whitelist_size == 0)
+        return SGX_ERROR_INVALID_PARAMETER;
+
+    aesm_error_t    result = AESM_UNEXPECTED_ERROR;
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+
+    ret = oal_get_whitelist(p_whitelist, whitelist_size, GET_WHITE_LIST_MSEC*1000, &result);
+
+    //common mappings
+    sgx_status_t mapped = oal_map_status(ret);
+    if (mapped != SGX_SUCCESS)
+        return mapped;
+
+    mapped = oal_map_result(result);
+    if (mapped != SGX_SUCCESS)
+    {
+        //operation specific mapping
+        if (mapped == SGX_ERROR_UNEXPECTED && result != AESM_UNEXPECTED_ERROR)
+        {
+            switch (result)
+            {
+            default:
+                mapped = SGX_ERROR_UNEXPECTED;
+            }
+        }
+    }
+
+    return mapped;
+}
+
+sgx_status_t sgx_get_extended_epid_group_id(
+    uint32_t* p_extended_epid_group_id)
+{
+    if (p_extended_epid_group_id == NULL)
+        return SGX_ERROR_INVALID_PARAMETER;
+
+    aesm_error_t    result = AESM_UNEXPECTED_ERROR;
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    ret = oal_get_extended_epid_group_id(p_extended_epid_group_id, SGX_GET_EXTENDED_GROUP_ID_MSEC*1000, &result);
+
+    //common mappings 
+    sgx_status_t mapped = oal_map_status(ret);
+    if (mapped != SGX_SUCCESS)
+        return mapped;
+
+    mapped = oal_map_result(result);
+    if (mapped != SGX_SUCCESS)
+    {
+        //operation specific mapping
+        if (mapped == SGX_ERROR_UNEXPECTED && result != AESM_UNEXPECTED_ERROR)
+        {
+            switch (result)
+            {
+            default:
+                mapped = SGX_ERROR_UNEXPECTED;
+            }
+        }
+    }
+    return mapped;
+}
+
+sgx_status_t sgx_switch_extended_epid_group(uint32_t extended_epid_group_id)
+{
+    aesm_error_t    result = AESM_UNEXPECTED_ERROR;
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    ret = oal_switch_extended_epid_group(extended_epid_group_id, SGX_SWITCH_EXTENDED_GROUP_MSEC*1000, &result);
+
+    //common mappings 
+    sgx_status_t mapped = oal_map_status(ret);
+    if (mapped != SGX_SUCCESS)
+        return mapped;
+
+    mapped = oal_map_result(result);
+    if (mapped != SGX_SUCCESS)
+    {
+        //operation specific mapping
+        if (mapped == SGX_ERROR_UNEXPECTED && result != AESM_UNEXPECTED_ERROR)
+        {
+            switch (result)
+            {
+            default:
+                mapped = SGX_ERROR_UNEXPECTED;
+            }
+        }
+    }
     return mapped;
 }
 
@@ -492,6 +649,7 @@ sgx_status_t    oal_map_result(aesm_error_t result)
             retVal = SGX_ERROR_INVALID_PARAMETER;
             break;
         case AESM_SERVICE_STOPPED:
+        case AESM_SERVICE_UNAVAILABLE:
             retVal = SGX_ERROR_SERVICE_UNAVAILABLE;
             break;
         case AESM_OUT_OF_MEMORY_ERROR:
@@ -504,6 +662,9 @@ sgx_status_t    oal_map_result(aesm_error_t result)
         case AESM_NETWORK_BUSY_ERROR:
         case AESM_PROXY_SETTING_ASSIST:
             retVal = SGX_ERROR_NETWORK_FAILURE;
+            break;
+        case AESM_NO_DEVICE_ERROR:
+            retVal = SGX_ERROR_NO_DEVICE;
             break;
         default:
             retVal = SGX_ERROR_UNEXPECTED;

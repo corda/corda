@@ -43,7 +43,7 @@ CPPFLAGS += -I.                          \
             -I$(LINUX_SDK_DIR)/trts      \
             -I./gdtoa      \
 
-LIBC_C_SRCS := $(wildcard gen/*.c gdtoa/*.c locale/*.c math/*.c stdlib/*.c string/*.c stdio/*.c time/*.c)
+LIBC_C_SRCS := $(wildcard gen/*.c gdtoa/*.c locale/*.c stdlib/*.c string/*.c stdio/*.c time/*.c)
 
 LIBC_CPP_SRCS := $(wildcard gen/*.cpp) tstdc_version.cpp
 LIBC_ASM_SRCS := $(wildcard gen/*.S)

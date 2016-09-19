@@ -60,6 +60,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/common/inc/tlibc/unistd.h	<installdir>/package/include/tlibc/unistd.h	0	main	STP
 <deliverydir>/common/inc/tlibc/wchar.h	<installdir>/package/include/tlibc/wchar.h	0	main	STP
 <deliverydir>/common/inc/tlibc/wctype.h	<installdir>/package/include/tlibc/wctype.h	0	main	STP
+<deliverydir>/common/inc/tlibc/setjmp.h	<installdir>/package/include/tlibc/setjmp.h	0	main	STP
 <deliverydir>/common/src/se_memory.c	<installdir>/package/ptrace/se_memory.c	0	main	STP
 <deliverydir>/common/src/se_trace.c	<installdir>/package/ptrace/se_trace.c	0	main	STP
 <deliverydir>/linux/installer/common/sdk/install.sh	<installdir>/scripts/install.sh	0	main	STP

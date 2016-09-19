@@ -95,7 +95,11 @@ void* aesm_thread_proc(void* param)
     AESM_DBG_TRACE("thread parameters of thread %p copied",param);
     ae_error_t err = fun_entry(arg);
     AESM_DBG_TRACE("returned from user defined thread code for thread %p",param);
-    pthread_mutex_lock(&p->mutex);
+    if(pthread_mutex_lock(&p->mutex)!=0){
+        p->status = AESM_THREAD_INVALID;
+        AESM_DBG_ERROR("fail to lock the thread mutex of thread %p",param);
+        return reinterpret_cast<void *>(static_cast<ptrdiff_t>(AE_FAILURE));
+    }
     p->ae_ret = err;
     if(p->status == AESM_THREAD_RUNNING){
         p->status = AESM_THREAD_PENDING;
@@ -244,7 +248,10 @@ ae_error_t aesm_free_thread(aesm_thread_t h)
 ae_error_t aesm_wait_thread(aesm_thread_t h, ae_error_t *thread_ret, unsigned long milisecond)
 {
     AESM_DBG_TRACE("start to wait thread %p for %d ms",h,milisecond);
-    pthread_mutex_lock(&h->mutex);
+    if(pthread_mutex_lock(&h->mutex)!=0){
+        AESM_DBG_TRACE("Fail to hold lock of thread %p",h);
+        return OAL_THREAD_ERROR;
+    }
     if(h->status==AESM_THREAD_PENDING||h->status==AESM_THREAD_DETACHED){//if the thread has been finished
         pthread_mutex_unlock(&h->mutex);
         AESM_DBG_TRACE("thread %p is pending",h);

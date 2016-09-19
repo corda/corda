@@ -55,6 +55,7 @@ const uint8_t QE_EPID_GROUP_OUT_OF_DATE = 0x04;
 /* Masks for sgx_tcb_evaluation_flags*/
 const uint16_t QUOTE_CPUSVN_OUT_OF_DATE = 0x0001;
 const uint16_t QUOTE_ISVSVN_QE_OUT_OF_DATE = 0x0002;
+const uint16_t QUOTE_ISVSVN_PCE_OUT_OF_DATE = 0x0004;
 
 /* Masks for sgx_pse_evaluation_flags
    PS_SEC_PROP_DESC.PSE_ISVSVN is out of date*/
@@ -81,7 +82,7 @@ typedef struct _platform_info_blob_wrapper_t
         tcb_psvn_t latest_equivalent_tcb_psvn;
         pse_isvsvn_t latest_pse_isvsvn;
         psda_svn_t latest_psda_svn;
-        GroupID performance_rekey_gid;
+        uint32_t xeid;
         GroupID gid;
         sgx_ec256_signature_t signature;
     } platform_info_blob;

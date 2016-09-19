@@ -29,74 +29,18 @@
  *
  */
 
-
 #include "util.h"
 #include "platform_info_logic.h"
 #include "sgx_quote.h"
 #include "aesm_encode.h"
 #include "pve_logic.h"
 #include "aesm_logic.h"
-#include <assert.h>
-#include "sgx_profile.h"
 #include "le2be_macros.h"
 #include "pibsk_pub.hh"
 #include "sgx_sha256_128.h"
+#include <assert.h>
+#include "sgx_profile.h"
 #include "aesm_long_lived_thread.h"
-
-ae_error_t PlatformInfoLogic::get_sgx_epid_group_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint8_t* pflags)
-{
-    ae_error_t retval = AE_SUCCESS;
-    if (NULL != pflags && NULL != p_platform_info_blob && p_platform_info_blob->valid_info_blob){
-        *pflags = p_platform_info_blob->platform_info_blob.sgx_epid_group_flags;
-    }
-    else {
-        retval = AE_INVALID_PARAMETER;
-    }
-    return retval;
-}
-
-ae_error_t PlatformInfoLogic::get_sgx_tcb_evaluation_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint16_t* pflags)
-{
-    ae_error_t retval = AE_SUCCESS;
-    if (NULL != pflags && NULL != p_platform_info_blob && p_platform_info_blob->valid_info_blob) {
-        const uint16_t* p = reinterpret_cast<const uint16_t*>(p_platform_info_blob->platform_info_blob.sgx_tcb_evaluation_flags);
-        *pflags = lv_ntohs(*p);
-    }
-    else {
-        retval = AE_INVALID_PARAMETER;
-    }
-    return retval;
-}
-
-bool PlatformInfoLogic::sgx_gid_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob)
-{
-    uint8_t flags = 0;
-    bool retVal = false;
-    ae_error_t getflagsError = get_sgx_epid_group_flags(p_platform_info_blob, &flags);
-    if (AE_SUCCESS == getflagsError) {
-        retVal = (0 != (QE_EPID_GROUP_OUT_OF_DATE & flags));
-    }
-    SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(__FUNCTION__" returning ", retVal, retVal);
-
-    return retVal;
-}
-
-ae_error_t PlatformInfoLogic::need_epid_provisioning(const platform_info_blob_wrapper_t* p_platform_info_blob)
-{
-    ae_error_t status = AESM_NEP_DONT_NEED_EPID_PROVISIONING;
-    if (sgx_gid_out_of_date(p_platform_info_blob) &&
-        !qe_svn_out_of_date(p_platform_info_blob) &&
-        !cpu_svn_out_of_date(p_platform_info_blob))
-    {
-        status = AESM_NEP_DONT_NEED_UPDATE_PVEQE;      // don't need update, but need epid provisioning
-    }
-    else if (!sgx_gid_out_of_date(p_platform_info_blob) && performance_rekey_available(p_platform_info_blob))
-    {
-        status = AESM_NEP_PERFORMANCE_REKEY;
-    }
-    SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(__FUNCTION__" returning ", status, status);
-    return status;
-}
 
 
 ae_error_t pib_verify_signature(platform_info_blob_wrapper_t& piBlobWrapper)
@@ -116,8 +60,8 @@ ae_error_t pib_verify_signature(platform_info_blob_wrapper_t& piBlobWrapper)
         sgx_ec256_signature_t signature;
         sgx_status_t sgx_status;
 
-        //BREAK_IF_TRUE((sizeof(publicKey) != sizeof(s_pib_pub_key_big_endian)), ae_err, AE_FAILURE);
-        //BREAK_IF_TRUE((sizeof(signature) != sizeof(piBlobWrapper.platform_info_blob.signature)), ae_err, AE_FAILURE);
+        se_static_assert(sizeof(publicKey) == sizeof(s_pib_pub_key_big_endian));
+        se_static_assert(sizeof(signature) == sizeof(piBlobWrapper.platform_info_blob.signature));
 
         // convert the public key to little endian
         if(0!=memcpy_s(&publicKey, sizeof(publicKey), s_pib_pub_key_big_endian, sizeof(s_pib_pub_key_big_endian))){
@@ -164,6 +108,7 @@ aesm_error_t PlatformInfoLogic::report_attestation_status(
     uint32_t attestation_status,
     uint8_t* update_info, uint32_t update_info_size)
 {
+
     AESM_DBG_TRACE("enter fun");
     //
     // we don't do anything without platform info
@@ -173,6 +118,7 @@ aesm_error_t PlatformInfoLogic::report_attestation_status(
     }
 
     platform_info_blob_wrapper_t pibw;
+
 
     //
     // presence of platform info is conditional, on whether we're up to date
@@ -200,6 +146,17 @@ aesm_error_t PlatformInfoLogic::report_attestation_status(
         AESM_DBG_ERROR("pib verify signature failed");
         return AESM_PLATFORM_INFO_BLOB_INVALID_SIG;
     }
+    if(pibw.platform_info_blob.xeid != AESMLogic::get_active_extended_epid_group_id()){
+        return AESM_UNEXPECTED_ERROR;
+    }
+    uint32_t gid_mt_result = AESMLogic::is_gid_matching_result_in_epid_blob( pibw.platform_info_blob.gid);
+    if(AESMLogic::GIDMT_UNMATCHED == gid_mt_result||
+        AESMLogic::GIDMT_UNEXPECTED_ERROR == gid_mt_result){
+            return AESM_UNEXPECTED_ERROR;
+    }
+    else if (AESMLogic::GIDMT_NOT_AVAILABLE == gid_mt_result) {
+            return AESM_EPIDBLOB_ERROR;
+    }
 
     ae_error_t nepStatus = need_epid_provisioning(&pibw);
     AESM_DBG_TRACE("need_epid_provisioning return %d",nepStatus);
@@ -220,7 +177,8 @@ aesm_error_t PlatformInfoLogic::report_attestation_status(
             status = PvEAESMLogic::provision(perfRekey, THREAD_TIMEOUT);
             if (AESM_BUSY == status || //thread timeout
                 AESM_PROXY_SETTING_ASSIST == status || //uae service need to set up proxy info and retry
-                AESM_UPDATE_AVAILABLE == status) //PSW need be updated
+                AESM_UPDATE_AVAILABLE == status || //PSW need be updated
+                AESM_OUT_OF_EPC == status) // out of EPC
             {
                 return status;//We should return to uae serivce directly
             }
@@ -247,7 +205,8 @@ aesm_error_t PlatformInfoLogic::report_attestation_status(
                 status = PvEAESMLogic::provision(perfRekey, THREAD_TIMEOUT);
                 if (AESM_BUSY == status ||//thread timeout
                     AESM_PROXY_SETTING_ASSIST == status ||//uae service need to set up proxy info and retry
-                    AESM_UPDATE_AVAILABLE == status)
+                    AESM_UPDATE_AVAILABLE == status ||
+                    AESM_OUT_OF_EPC == status)
                 {
                     return status;//We should return to uae serivce directly
                 }
@@ -278,68 +237,28 @@ aesm_error_t PlatformInfoLogic::report_attestation_status(
         memset(p_update_info, 0, sizeof(*p_update_info));
 
         //
-        // here, we treat values that get reported live - cpusvn, qe.isvsvn
+        // here, we treat values that get reported live - cpusvn, qe.isvsvn,
         // in normal flow, live values reported to attestation server will be the same as current values now so
         // we just look at out-of-date bits corresponding to these values.
         // the alternative would be to compare current with latest as reported by IAS. this
         // isn't an option for cpusvn since what we get from IAS is equivalent cpusvn.
         //
+        
+        
         if (cpu_svn_out_of_date(&pibw))
         {
             p_update_info->ucodeUpdate = 1;
             status = AESM_UPDATE_AVAILABLE;
         }
-        if (qe_svn_out_of_date(&pibw))
+        if (qe_svn_out_of_date(&pibw) ||
+            pce_svn_out_of_date(&pibw)
+          )
         {
             p_update_info->pswUpdate = 1;
             status = AESM_UPDATE_AVAILABLE;
         }
-
     }
     return status;
 }
 
-bool PlatformInfoLogic::cpu_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob)
-{
-    uint16_t flags = 0;
-    bool retVal = false;
-    ae_error_t getflagsError = get_sgx_tcb_evaluation_flags(p_platform_info_blob, &flags);
-    if (AE_SUCCESS == getflagsError) {
-        retVal = ( 0 !=(QUOTE_CPUSVN_OUT_OF_DATE & flags));
-    }
-    SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(__FUNCTION__" returning ", retVal, retVal);
 
-    return retVal;
-}
-
-bool PlatformInfoLogic::qe_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob)
-{
-    uint16_t flags = 0;
-    //
-    // default to true since easy to update QE/PvE
-    //
-    bool retVal = true;
-    ae_error_t getflagsError = get_sgx_tcb_evaluation_flags(p_platform_info_blob, &flags);
-    if (AE_SUCCESS == getflagsError) {
-        retVal = ( 0 !=(QUOTE_ISVSVN_QE_OUT_OF_DATE & flags));
-    }
-    SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(__FUNCTION__" returning ", retVal, retVal);
-    return retVal;
-}
-
-bool PlatformInfoLogic::performance_rekey_available(const platform_info_blob_wrapper_t* p_platform_info_blob)
-{
-    //
-    // return whether platform info blob says PR is available
-    // the group associated with PR that's returned corresponds to the group
-    // that we'll be in **after** executing PR
-    //
-    bool retVal = false;
-    uint8_t flags;
-    ae_error_t getflagsError = get_sgx_epid_group_flags(p_platform_info_blob, &flags);
-    if (AE_SUCCESS == getflagsError) {
-        retVal = static_cast<bool>(flags & PERF_REKEY_FOR_QE_EPID_GROUP_AVAILABLE);
-    }
-    SGX_DBGPRINT_ONE_STRING_TWO_INTS_CREATE_SESSION(__FUNCTION__" returning ", retVal, retVal);
-    return retVal;
-}

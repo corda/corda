@@ -32,17 +32,22 @@
 
 #ifdef DBG_LOG
 #include "oal/oal.h"
-#include "se_wrapper.h"
-#include "se_stdio.h"
 #include <time.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <ctype.h>
+#include <se_stdio.h>
+#include <se_string.h>
 #include "se_thread.h"
+#include "type_length_value.h"
+#include "aeerror.h"
+#include "aesm_error.h"
+#include "sgx_error.h"
+
 static int aesm_trace_level = TRACE_LOG_LEVEL;
 static int at_start=1;
 
-ae_error_t load_log_config(void);
 se_mutex_t cs;
 static ae_error_t init_log_file(void)
 {
@@ -50,8 +55,92 @@ static ae_error_t init_log_file(void)
     ae_error_t err = aesm_get_pathname(FT_PERSISTENT_STORAGE, AESM_DBG_LOG_FID, filename, MAX_PATH);
     if(err != AE_SUCCESS)
         return err;
-    (void)load_log_config();
     return AE_SUCCESS;
+}
+
+#include <string>
+using namespace std;
+
+static const char *get_sgx_status_t_string(sgx_status_t status);
+static const char *get_ae_error_t_string(ae_error_t ae_error);
+static const char *get_aesm_error_t_string(aesm_error_t aesm_error);
+static const char *get_tlv_enum_type_t_string(uint8_t type);
+
+const char *support_tags[] = {
+    "sgx",
+    "aesm",//matching longer tag before shorter one so aesm should be arranged before ae
+    "ae",
+    "tlv"
+};
+#define COUNT_TAGS (sizeof(support_tags)/sizeof(support_tags[0]))
+#define TAG_SGX  0
+#define TAG_AESM 1
+#define TAG_AE   2
+#define TAG_TLV  3
+
+#define MAX_BUF_SIZE 4096
+std::string internal_log_msg_trans(const std::string& s)
+{
+    std::string output;
+    size_t i;
+    const char *p = s.c_str();
+    for (i = 0; i < s.length(); ++i){
+        if (p[i] == '('){//begin of tag
+            size_t start = i + 1;
+            while (isspace(p[start]))start++;//skip all space
+            int j;
+            for (j = 0; j < COUNT_TAGS; ++j){
+                int tag_len = strlen(support_tags[j]);
+                if (strncmp(p + start, support_tags[j], tag_len) == 0){
+                    start += tag_len;
+                    break;
+                }
+            }
+            if (j < COUNT_TAGS){//found a potential tag
+                while (isspace(p[start]))start++;//skip all space after tag
+                if ((p[start] == '-' || p[start] == '+') && isdigit(p[start + 1]) ||
+                    isdigit(p[start])){
+                    int number = strtol(p + start,NULL, 0);
+                    switch (j){
+                    case TAG_SGX:
+                        output += "(sgx_status_t:";
+                        output += get_sgx_status_t_string((sgx_status_t)number);
+                        output += ":";
+                        break;
+                    case TAG_AESM:
+                        output += "(aesm_error_t:";
+                        output += get_aesm_error_t_string((aesm_error_t)number);
+                        output += ":";
+                        break;
+                    case TAG_AE:
+                        output += "(ae_error_t:";
+                        output += get_ae_error_t_string((ae_error_t)number);
+                        output += ":";
+                        break;
+                    case TAG_TLV:
+                        output += "(TLV:";
+                        output += get_tlv_enum_type_t_string((uint8_t)number);
+                        output += ":";
+                        break;
+                    default:
+                        output += "(Unknown type:";
+                        break;
+                    }
+                    i = start-1;
+                }
+                else{
+                    output += p[i];
+                }
+            }
+            else{//not found, keep original flags
+                output += p[i];
+            }
+        }
+        else{
+            output += p[i];
+        }
+    }
+    return output;
 }
 
 #define TIME_BUF_SIZE 100
@@ -69,8 +158,8 @@ void aesm_internal_log(const char *file_name, int line_no, const char *funname, 
             return;
         FILE *logfile = NULL;
         se_mutex_lock(&cs);
-        errno_t err_code = fopen_s(&logfile, filename, "a+");
-        if(err_code!=0){
+        logfile = fopen(filename, "a+");
+        if(logfile == NULL){
             se_mutex_unlock(&cs);
             return;
         }
@@ -88,9 +177,12 @@ void aesm_internal_log(const char *file_name, int line_no, const char *funname, 
            fprintf(logfile, "[%s|%d|%s]",file_name, line_no, funname);
         }
         va_start(varg, format);
-        vfprintf(logfile, format, varg);
+        char message_buf[MAX_BUF_SIZE];
+        vsnprintf(message_buf, MAX_BUF_SIZE-1, format, varg);
         va_end(varg);
-        fprintf(logfile, "\n");
+        std::string input_message = message_buf;
+        std::string output_message = internal_log_msg_trans(input_message);
+        fprintf(logfile, "%s\n", output_message.c_str());
         fflush(logfile);
         fclose(logfile);
         se_mutex_unlock(&cs);
@@ -160,72 +252,230 @@ void aesm_dbg_format_hex(const uint8_t *data, uint32_t data_len, char *out_buf, 
     }
 }
 
-#include "tinyxml.h"
 
-static const char *xml_get_child_text(TiXmlNode *parent, const char *name)
+#define CASE_ENUM_RET_STRING(x) case x: return #x;
+
+//(tlv%d)
+static const char *get_tlv_enum_type_t_string(uint8_t type)
 {
-    if(parent == NULL) return NULL;
-    TiXmlNode *sub_node = parent->FirstChild(name);
-    if(sub_node == NULL) return NULL;
-    TiXmlElement *elem = sub_node->ToElement();
-    if(elem == NULL) return NULL;
-    return elem->GetText();
+    switch (type){
+        CASE_ENUM_RET_STRING(TLV_CIPHER_TEXT)
+        CASE_ENUM_RET_STRING(TLV_BLOCK_CIPHER_TEXT)
+        CASE_ENUM_RET_STRING(TLV_BLOCK_CIPHER_INFO)
+        CASE_ENUM_RET_STRING(TLV_MESSAGE_AUTHENTICATION_CODE)
+        CASE_ENUM_RET_STRING(TLV_NONCE)
+        CASE_ENUM_RET_STRING(TLV_EPID_GID)
+        CASE_ENUM_RET_STRING(TLV_EPID_SIG_RL)
+        CASE_ENUM_RET_STRING(TLV_EPID_GROUP_CERT)
+        CASE_ENUM_RET_STRING(TLV_DEVICE_ID)
+        CASE_ENUM_RET_STRING(TLV_PS_ID)
+        CASE_ENUM_RET_STRING(TLV_EPID_JOIN_PROOF)
+        CASE_ENUM_RET_STRING(TLV_EPID_SIG)
+        CASE_ENUM_RET_STRING(TLV_EPID_MEMBERSHIP_CREDENTIAL)
+        CASE_ENUM_RET_STRING(TLV_EPID_PSVN)
+        CASE_ENUM_RET_STRING(TLV_QUOTE)
+        CASE_ENUM_RET_STRING(TLV_X509_CERT_TLV)
+        CASE_ENUM_RET_STRING(TLV_X509_CSR_TLV)
+        CASE_ENUM_RET_STRING(TLV_ES_SELECTOR)
+        CASE_ENUM_RET_STRING(TLV_ES_INFORMATION)
+        CASE_ENUM_RET_STRING(TLV_FLAGS)
+        CASE_ENUM_RET_STRING(TLV_QUOTE_SIG)
+        CASE_ENUM_RET_STRING(TLV_PEK)
+        CASE_ENUM_RET_STRING(TLV_SIGNATURE)
+        CASE_ENUM_RET_STRING(TLV_PLATFORM_INFO)
+        CASE_ENUM_RET_STRING(TLV_PWK2)
+        CASE_ENUM_RET_STRING(TLV_SE_REPORT)
+    default:
+        return "Unknown TLV";
+    }
 }
 
-static const char *dbg_level_str[]={
-    "fatal",
-    "error",
-    "warning",
-    "info",
-    "debug",
-    "trace"
-};
-#define DBG_LEVEL_COUNT (sizeof(dbg_level_str)/sizeof(dbg_level_str[0]))
-static int find_dbg_level_str(const char *text_level)
+//(ae%d)
+static const char *get_ae_error_t_string(ae_error_t ae_error)
 {
-    uint32_t i;
-    size_t text_level_len = strlen(text_level);
-    for(i=0;i<DBG_LEVEL_COUNT;i++){
-        size_t cur_len = strlen(dbg_level_str[i]);
-        if(cur_len>text_level_len)cur_len=text_level_len;
-        if(_strnicmp(text_level, dbg_level_str[i], cur_len)==0){
-            return (int)i;
-        }
+    switch (ae_error){
+        CASE_ENUM_RET_STRING(AE_SUCCESS)
+        CASE_ENUM_RET_STRING(AE_FAILURE)
+        CASE_ENUM_RET_STRING(AE_ENCLAVE_LOST)
+        CASE_ENUM_RET_STRING(OAL_PARAMETER_ERROR)
+        CASE_ENUM_RET_STRING(OAL_PATHNAME_BUFFER_OVERFLOW_ERROR)
+        CASE_ENUM_RET_STRING(OAL_FILE_ACCESS_ERROR)
+        CASE_ENUM_RET_STRING(OAL_CONFIG_FILE_ERROR)
+        CASE_ENUM_RET_STRING(OAL_NETWORK_UNAVAILABLE_ERROR)
+        CASE_ENUM_RET_STRING(OAL_NETWORK_BUSY)
+        CASE_ENUM_RET_STRING(OAL_NETWORK_RESEND_REQUIRED)
+        CASE_ENUM_RET_STRING(OAL_PROXY_SETTING_ASSIST)
+        CASE_ENUM_RET_STRING(OAL_THREAD_ERROR)
+        CASE_ENUM_RET_STRING(OAL_THREAD_TIMEOUT_ERROR)
+        CASE_ENUM_RET_STRING(AE_PSVN_UNMATCHED_ERROR)
+        CASE_ENUM_RET_STRING(AE_SERVER_NOT_AVAILABLE)
+        CASE_ENUM_RET_STRING(AE_INVALID_PARAMETER)
+        CASE_ENUM_RET_STRING(AE_READ_RAND_ERROR)
+        CASE_ENUM_RET_STRING(AE_OUT_OF_MEMORY_ERROR)
+        CASE_ENUM_RET_STRING(AE_INSUFFICIENT_DATA_IN_BUFFER)
+        CASE_ENUM_RET_STRING(QE_UNEXPECTED_ERROR)
+        CASE_ENUM_RET_STRING(QE_PARAMETER_ERROR)
+        CASE_ENUM_RET_STRING(QE_EPIDBLOB_ERROR)
+        CASE_ENUM_RET_STRING(QE_REVOKED_ERROR)
+        CASE_ENUM_RET_STRING(QE_SIGRL_ERROR)
+        CASE_ENUM_RET_STRING(PVE_UNEXPECTED_ERROR)
+        CASE_ENUM_RET_STRING(PVE_PARAMETER_ERROR)
+        CASE_ENUM_RET_STRING(PVE_EPIDBLOB_ERROR)
+        CASE_ENUM_RET_STRING(PVE_INSUFFICIENT_MEMORY_ERROR)
+        CASE_ENUM_RET_STRING(PVE_INTEGRITY_CHECK_ERROR)
+        CASE_ENUM_RET_STRING(PVE_SIGRL_INTEGRITY_CHECK_ERROR)
+        CASE_ENUM_RET_STRING(PVE_SERVER_REPORTED_ERROR)
+        CASE_ENUM_RET_STRING(PVE_PEK_SIGN_ERROR)
+        CASE_ENUM_RET_STRING(PVE_MSG_ERROR)
+        CASE_ENUM_RET_STRING(PVE_REVOKED_ERROR)
+        CASE_ENUM_RET_STRING(PVE_SESSION_OUT_OF_ORDER_ERROR)
+        CASE_ENUM_RET_STRING(PVE_SERVER_BUSY_ERROR)
+        CASE_ENUM_RET_STRING(PVE_PERFORMANCE_REKEY_NOT_SUPPORTED)
+        CASE_ENUM_RET_STRING(LE_UNEXPECTED_ERROR)
+        CASE_ENUM_RET_STRING(LE_INVALID_PARAMETER)
+        CASE_ENUM_RET_STRING(LE_GET_LICENSE_KEY_ERROR)
+        CASE_ENUM_RET_STRING(LE_INVALID_ATTRIBUTE)
+        CASE_ENUM_RET_STRING(LE_INVALID_PRIVILEGE_ERROR)
+        CASE_ENUM_RET_STRING(LE_WHITELIST_UNINITIALIZED_ERROR)
+        CASE_ENUM_RET_STRING(LE_CALC_LIC_TOKEN_ERROR)
+        CASE_ENUM_RET_STRING(AESM_NLTP_NO_LTP_BLOB)
+        CASE_ENUM_RET_STRING(AESM_NLTP_DONT_NEED_UPDATE_PAIR_LTP)
+        CASE_ENUM_RET_STRING(AESM_NLTP_MAY_NEED_UPDATE_LTP)
+        CASE_ENUM_RET_STRING(AESM_NLTP_OLD_EPID11_RLS)
+        CASE_ENUM_RET_STRING(AESM_PCP_NEED_PSE_UPDATE)
+        CASE_ENUM_RET_STRING(AESM_PCP_PSE_CERT_PROVISIONING_ATTESTATION_FAILURE_NEED_EPID_UPDATE)
+        CASE_ENUM_RET_STRING(AESM_PCP_PSE_CERT_PROVISIONING_ATTESTATION_FAILURE_MIGHT_NEED_EPID_UPDATE)
+        CASE_ENUM_RET_STRING(AESM_PCP_SIMPLE_PSE_CERT_PROVISIONING_ERROR)
+        CASE_ENUM_RET_STRING(AESM_PCP_SIMPLE_EPID_PROVISION_ERROR)
+        CASE_ENUM_RET_STRING(AESM_NPC_DONT_NEED_PSEP)
+        CASE_ENUM_RET_STRING(AESM_NPC_NO_PSE_CERT)
+        CASE_ENUM_RET_STRING(AESM_NPC_DONT_NEED_UPDATE_PSEP)
+        CASE_ENUM_RET_STRING(AESM_NPC_MAY_NEED_UPDATE_PSEP)
+        CASE_ENUM_RET_STRING(AESM_NEP_DONT_NEED_EPID_PROVISIONING)
+        CASE_ENUM_RET_STRING(AESM_NEP_DONT_NEED_UPDATE_PVEQE)
+        CASE_ENUM_RET_STRING(AESM_NEP_PERFORMANCE_REKEY)
+        CASE_ENUM_RET_STRING(AESM_NEP_MAY_NEED_UPDATE)
+        CASE_ENUM_RET_STRING(AESM_CP_ATTESTATION_FAILURE)
+        CASE_ENUM_RET_STRING(AESM_LTP_PSE_CERT_REVOKED)
+        CASE_ENUM_RET_STRING(AESM_LTP_SIMPLE_LTP_ERROR)
+        CASE_ENUM_RET_STRING(AESM_PSE_PR_GET_PRIVRL_ERROR)
+        CASE_ENUM_RET_STRING(AESM_NETWORK_TIMEOUT)
+
+        CASE_ENUM_RET_STRING(PSW_UPDATE_REQUIRED)
+        CASE_ENUM_RET_STRING(PSE_OP_ERROR_KDF_MISMATCH)
+        CASE_ENUM_RET_STRING(AESM_AE_OUT_OF_EPC)
+
+        CASE_ENUM_RET_STRING(PVE_PROV_ATTEST_KEY_NOT_FOUND)
+        CASE_ENUM_RET_STRING(PVE_INVALID_REPORT)
+        CASE_ENUM_RET_STRING(PVE_XEGDSK_SIGN_ERROR)
+
+        // PCE ERROR CODES
+        CASE_ENUM_RET_STRING(PCE_UNEXPECTED_ERROR)
+        CASE_ENUM_RET_STRING(PCE_INVALID_PRIVILEGE)
+        CASE_ENUM_RET_STRING(PCE_INVALID_REPORT)
+
+        CASE_ENUM_RET_STRING(LE_WHITE_LIST_QUERY_BUSY)
+        CASE_ENUM_RET_STRING(AESM_AE_NO_DEVICE)
+        CASE_ENUM_RET_STRING(EXTENDED_GROUP_NOT_AVAILABLE)
+    default:
+        return "Unknown ae_error_t";
     }
-    AESM_DBG_ERROR("unkown level %s",text_level);
-    return -1;
 }
 
-ae_error_t load_log_config(void)
+//(aesm%d)
+static const char *get_aesm_error_t_string(aesm_error_t aesm_error)
 {
-    char path_name[MAX_PATH];
-    ae_error_t ae_err = AE_SUCCESS;
-    if((ae_err=aesm_get_cpathname(FT_PERSISTENT_STORAGE, AESM_DBG_LOG_CFG_FID, path_name, MAX_PATH))!=AE_SUCCESS){
-        AESM_DBG_ERROR("fail to read config path");
-        return ae_err;
+    switch (aesm_error){
+        CASE_ENUM_RET_STRING(AESM_SUCCESS)
+        CASE_ENUM_RET_STRING(AESM_UNEXPECTED_ERROR)
+        CASE_ENUM_RET_STRING(AESM_NO_DEVICE_ERROR)
+        CASE_ENUM_RET_STRING(AESM_PARAMETER_ERROR)
+        CASE_ENUM_RET_STRING(AESM_EPIDBLOB_ERROR)
+        CASE_ENUM_RET_STRING(AESM_EPID_REVOKED_ERROR)
+        CASE_ENUM_RET_STRING(AESM_GET_LICENSETOKEN_ERROR)
+        CASE_ENUM_RET_STRING(AESM_SESSION_INVALID)
+        CASE_ENUM_RET_STRING(AESM_MAX_NUM_SESSION_REACHED)
+        CASE_ENUM_RET_STRING(AESM_PSDA_UNAVAILABLE)
+        CASE_ENUM_RET_STRING(AESM_KDF_MISMATCH)
+        CASE_ENUM_RET_STRING(AESM_EPH_SESSION_FAILED)
+        CASE_ENUM_RET_STRING(AESM_LONG_TERM_PAIRING_FAILED)
+        CASE_ENUM_RET_STRING(AESM_NETWORK_ERROR)
+        CASE_ENUM_RET_STRING(AESM_NETWORK_BUSY_ERROR)
+        CASE_ENUM_RET_STRING(AESM_PROXY_SETTING_ASSIST)
+        CASE_ENUM_RET_STRING(AESM_FILE_ACCESS_ERROR)
+        CASE_ENUM_RET_STRING(AESM_SGX_PROVISION_FAILED)
+        CASE_ENUM_RET_STRING(AESM_SERVICE_STOPPED)
+        CASE_ENUM_RET_STRING(AESM_BUSY)
+        CASE_ENUM_RET_STRING(AESM_BACKEND_SERVER_BUSY)
+        CASE_ENUM_RET_STRING(AESM_UPDATE_AVAILABLE)
+        CASE_ENUM_RET_STRING(AESM_OUT_OF_MEMORY_ERROR)
+        CASE_ENUM_RET_STRING(AESM_MSG_ERROR)
+        CASE_ENUM_RET_STRING(AESM_ENABLE_SGX_DEVICE_FAILED)
+        CASE_ENUM_RET_STRING(AESM_PLATFORM_INFO_BLOB_INVALID_SIG)
+        CASE_ENUM_RET_STRING(AESM_OUT_OF_EPC)
+        CASE_ENUM_RET_STRING(AESM_SERVICE_UNAVAILABLE)
+    default:
+        return "Unknow aesm_error_t";
     }
+}
 
-    TiXmlDocument doc(path_name);
-    bool load_ok = doc.LoadFile();
-    if(!load_ok){
-        AESM_DBG_ERROR("fail to load config file %s", path_name);
-        return OAL_FILE_ACCESS_ERROR;
+//(sgx)
+static const char *get_sgx_status_t_string(sgx_status_t status)
+{
+    switch (status){
+        CASE_ENUM_RET_STRING(SGX_SUCCESS)
+
+        CASE_ENUM_RET_STRING(SGX_ERROR_UNEXPECTED)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_PARAMETER)
+        CASE_ENUM_RET_STRING(SGX_ERROR_OUT_OF_MEMORY)
+        CASE_ENUM_RET_STRING(SGX_ERROR_ENCLAVE_LOST)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_STATE)
+
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_FUNCTION)
+        CASE_ENUM_RET_STRING(SGX_ERROR_OUT_OF_TCS)
+        CASE_ENUM_RET_STRING(SGX_ERROR_ENCLAVE_CRASHED )
+        CASE_ENUM_RET_STRING(SGX_ERROR_ECALL_NOT_ALLOWED)
+        CASE_ENUM_RET_STRING(SGX_ERROR_OCALL_NOT_ALLOWED)
+
+        CASE_ENUM_RET_STRING(SGX_ERROR_UNDEFINED_SYMBOL)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_ENCLAVE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_ENCLAVE_ID)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_SIGNATURE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_NDEBUG_ENCLAVE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_OUT_OF_EPC)
+        CASE_ENUM_RET_STRING(SGX_ERROR_NO_DEVICE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_MEMORY_MAP_CONFLICT)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_METADATA)
+        CASE_ENUM_RET_STRING(SGX_ERROR_DEVICE_BUSY)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_VERSION)
+        CASE_ENUM_RET_STRING(SGX_ERROR_MODE_INCOMPATIBLE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_ENCLAVE_FILE_ACCESS)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_MISC)
+
+        CASE_ENUM_RET_STRING(SGX_ERROR_MAC_MISMATCH)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_ATTRIBUTE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_CPUSVN)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_ISVSVN)
+        CASE_ENUM_RET_STRING(SGX_ERROR_INVALID_KEYNAME)
+
+        CASE_ENUM_RET_STRING(SGX_ERROR_SERVICE_UNAVAILABLE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_SERVICE_TIMEOUT)
+        CASE_ENUM_RET_STRING(SGX_ERROR_AE_INVALID_EPIDBLOB)
+        CASE_ENUM_RET_STRING(SGX_ERROR_SERVICE_INVALID_PRIVILEGE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_EPID_MEMBER_REVOKED)
+        CASE_ENUM_RET_STRING(SGX_ERROR_UPDATE_NEEDED)
+        CASE_ENUM_RET_STRING(SGX_ERROR_NETWORK_FAILURE)
+        CASE_ENUM_RET_STRING(SGX_ERROR_AE_SESSION_INVALID)
+        CASE_ENUM_RET_STRING(SGX_ERROR_BUSY)
+        CASE_ENUM_RET_STRING(SGX_ERROR_MC_NOT_FOUND)
+        CASE_ENUM_RET_STRING(SGX_ERROR_MC_NO_ACCESS_RIGHT)
+        CASE_ENUM_RET_STRING(SGX_ERROR_MC_USED_UP)
+        CASE_ENUM_RET_STRING(SGX_ERROR_MC_OVER_QUOTA)
+        CASE_ENUM_RET_STRING(SGX_ERROR_KDF_MISMATCH)
+
+    default:
+        return "Unknown sgx_status_t";
     }
-    TiXmlNode *pmetadata_node = doc.FirstChild("DbgLog");
-    const char *temp_text = xml_get_child_text(pmetadata_node, "level");
-    if(temp_text!=NULL){
-        if(isdigit(temp_text[0])){
-            AESM_SET_DBG_LEVEL(atoi(temp_text));
-        }else{
-            int level = find_dbg_level_str(temp_text);
-            if(level>=0){
-                AESM_SET_DBG_LEVEL(level);
-            }
-        }
-    }else{
-        AESM_DBG_ERROR("fail to find level");
-    }
-    return AE_SUCCESS;
 }
 
 #endif

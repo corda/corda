@@ -54,12 +54,14 @@ public:
         uint8_t * mrenclave, uint32_t mrenclave_size,
         uint8_t *mrsigner, uint32_t mrsigner_size,
         uint8_t *se_attributes, uint32_t se_attributes_size,
-        uint8_t * lictoken, uint32_t lictoken_size
+        uint8_t * lictoken, uint32_t lictoken_size,
+        uint32_t *ae_mrsigner_value=NULL
     );
     int white_list_register(
         const uint8_t *white_list_cert,
         uint32_t white_list_cert_size,
         bool save_to_persistent_storage=true);
+    static ae_error_t update_white_list_by_url(void);
 };
 #endif
 

@@ -90,6 +90,10 @@ class AESMLogicWrapper :public IAESMLogic {
         virtual aesm_error_t reportAttestationStatus(uint8_t* platform_info, uint32_t platform_info_size,
                 uint32_t attestation_error_code,
                 uint8_t* update_info, uint32_t update_info_size);
+        virtual aesm_error_t getWhiteListSize(uint32_t* white_list_size);
+        virtual aesm_error_t getWhiteList(uint8_t* white_list, uint32_t mWhiteListSize);
+        virtual aesm_error_t sgxGetExtendedEpidGroupId(uint32_t* x_group_id);
+        virtual aesm_error_t sgxSwitchExtendedEpidGroup(uint32_t x_group_id);
 
     private:
         AESMLogicWrapper& operator=(const AESMLogicWrapper&);

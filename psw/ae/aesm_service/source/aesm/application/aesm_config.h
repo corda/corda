@@ -35,9 +35,7 @@
 #include "aesm_logic.h"
 typedef struct _aesm_config_infos_t{
     uint32_t proxy_type;
-    char endpoint_url[MAX_PATH];
-    char pse_rl_url[MAX_PATH];
-    char pse_ocsp_url[MAX_PATH];
+    char white_list_url[MAX_PATH];
     char aesm_proxy[MAX_PATH];
 }aesm_config_infos_t;
 #endif

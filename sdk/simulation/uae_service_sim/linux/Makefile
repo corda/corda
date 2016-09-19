@@ -104,7 +104,7 @@ else
 endif
 
 $(LIBUAE_SERVICE_DEPLOY): ../uae_service_deploy.c
-	$(CC) -shared -Wl,-soname=libsgx_uae_service.so $< -o $@
+	$(CC) -fPIC -shared -Wl,-soname=libsgx_uae_service.so $< -o $@
 
 $(BUILD_DIR):
 	@$(MKDIR) $@

@@ -13,6 +13,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/build/linux/libsgx_tservice_sim.a	<installdir>/package/lib64/libsgx_tservice_sim.a	0	main	STP
 <deliverydir>/build/linux/libsgx_tstdc.a	<installdir>/package/lib64/libsgx_tstdc.a	0	main	STP
 <deliverydir>/build/linux/libsgx_tstdcxx.a	<installdir>/package/lib64/libsgx_tstdcxx.a	0	main	STP
+<deliverydir>/build/linux/libsgx_tsetjmp.a	<installdir>/package/lib64/libsgx_tsetjmp.a	0	main	STP
 <deliverydir>/build/linux/libsgx_uae_service_deploy.so	<installdir>/package/lib64/libsgx_uae_service.so	0	main	STP
 <deliverydir>/build/linux/libsgx_uae_service_sim.so	<installdir>/package/lib64/libsgx_uae_service_sim.so	0	main	STP
 <deliverydir>/build/linux/libsgx_ukey_exchange.a	<installdir>/package/lib64/libsgx_ukey_exchange.a	0	main	STP
@@ -23,3 +24,7 @@ DeliveryName	InstallName	FileCheckSum	FileFeature	FileOwner
 <deliverydir>/build/linux/sgx_edger8r	<installdir>/package/bin/x64/sgx_edger8r	0	main	STP
 <deliverydir>/build/linux/sgx_sign	<installdir>/package/bin/x64/sgx_sign	0	main	STP
 <deliverydir>/linux/installer/common/sdk/installConfig.x64	<installdir>/scripts/installConfig	0	main	STP
+<deliverydir>/linux/installer/common/sdk/pkgconfig/x64/libsgx_uae_service_sim.pc	<installdir>/package/pkgconfig/libsgx_uae_service_sim.pc	0	main	STP
+<deliverydir>/linux/installer/common/sdk/pkgconfig/x64/libsgx_urts_sim.pc	<installdir>/package/pkgconfig/libsgx_urts_sim.pc	0	main	STP
+<deliverydir>/linux/installer/common/sdk/pkgconfig/x64/libsgx_uae_service.pc	<installdir>/package/pkgconfig/libsgx_uae_service.pc	0	main	STP
+<deliverydir>/linux/installer/common/sdk/pkgconfig/x64/libsgx_urts.pc	<installdir>/package/pkgconfig/libsgx_urts.pc	0	main	STP

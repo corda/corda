@@ -49,7 +49,7 @@
 
 #include "default_url_info.hh"
 
-/*File to declare AESMLogic Class */
+/*File to declare AESMLogic Class and facility class(Mutex/Lock) for it*/
 
 const uint32_t THREAD_TIMEOUT = 5000;
 
@@ -82,15 +82,19 @@ class AESMLogic{
 public:
     static AESMLogicMutex _qe_pve_mutex, _pse_mutex, _le_mutex; /*mutex to lock external interface*/
 private:
-    static psvn_t _qe_psvn, _pse_psvn; /*two different cpu svn used although they're same. We should only access qe_psvn when qe_pve_mutex is acquired and only access pse_psvn when pse_mutext is acquired*/
-    static bool _is_qe_psvn_set, _is_pse_psvn_set;
-    static ae_error_t set_psvn(uint16_t prod_id, uint16_t isv_svn, sgx_cpu_svn_t cpu_svn);
+    static psvn_t _qe_psvn, _pse_psvn, _pce_psvn;   /*different cpu svn used although they're same. We should only access _qe_psvn/_pce_svn when qe_pve_mutex is acquired and only access _pse_psvn when pse_mutext is acquired*/
+    static bool _is_qe_psvn_set, _is_pse_psvn_set, _is_pce_psvn_set;
+    static uint32_t active_extended_epid_group_id;
+    static ae_error_t set_psvn(uint16_t prod_id, uint16_t isv_svn, sgx_cpu_svn_t cpu_svn, uint32_t mrsigner_index);
     static ae_error_t save_unverified_white_list(const uint8_t *white_list_cert, uint32_t white_list_cert_size);
+    static ae_error_t get_white_list_size_without_lock(uint32_t *white_list_cert_size);
 public:
-    static ae_error_t get_qe_isv_svn(uint16_t& isv_svn);/*This function should only be called when _qe_pve_mutex is acquired*/
+    static ae_error_t get_qe_isv_svn(uint16_t& isv_svn);     /*This function should only be called when _qe_pve_mutex is acquired*/
     static ae_error_t get_qe_cpu_svn(sgx_cpu_svn_t& cpu_svn);/*This function should only be called when _qe_pve_mutex is acquired*/
-    static ae_error_t get_pse_isv_svn(uint16_t& isv_svn); /*This function should only be called when _pse_mutex is acquired*/
+    static ae_error_t get_pse_isv_svn(uint16_t& isv_svn);    /*This function should only be called when _pse_mutex is acquired*/
     static ae_error_t get_pse_cpu_svn(sgx_cpu_svn_t& cpu_svn);/*This function should only be called when _pse_mutex is acquired*/
+    static ae_error_t get_pce_isv_svn(uint16_t& isv_svn);
+    static uint32_t   get_active_extended_epid_group_id(void);
 
     static ae_error_t service_start();
     static void service_stop();
@@ -138,6 +142,8 @@ public:
         uint64_t* ps_cap);
 
     static uint32_t endpoint_selection(endpoint_selection_infos_t& es_info);
+    enum {GIDMT_UNMATCHED, GIDMT_NOT_AVAILABLE, GIDMT_MATCHED,GIDMT_UNEXPECTED_ERROR};
+    static uint32_t is_gid_matching_result_in_epid_blob(const GroupID& gid);
 
     static aesm_error_t report_attestation_status(
         uint8_t* platform_info, uint32_t platform_info_size,
@@ -147,6 +153,17 @@ public:
     static aesm_error_t white_list_register(
         const uint8_t *white_list_cert, uint32_t white_list_cert_size);
 
+    static aesm_error_t get_white_list_size(
+        uint32_t* white_list_cert_size);
+
+    static aesm_error_t get_white_list(
+        uint8_t *white_list_cert, uint32_t buf_size);
+
+    static aesm_error_t get_extended_epid_group_id(
+        uint32_t* extended_epid_group_id);
+
+    static aesm_error_t switch_extended_epid_group( 
+        uint32_t extended_epid_group_id );
 };
 #endif
 

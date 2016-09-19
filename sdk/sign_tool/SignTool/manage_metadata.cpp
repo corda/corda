@@ -627,6 +627,13 @@ uint64_t CMetadata::calculate_sections_size()
 
     uint64_t size = (NULL == last_section) ? (0) : (last_section->get_rva() + last_section->virtual_size());
     size = ROUND_TO_PAGE(size);
+    
+    
+    
+    if(size < ROUND_TO_PAGE(last_section->get_rva() + ROUND_TO_PAGE(last_section->virtual_size())))
+    {
+        size += SE_PAGE_SIZE;
+    }    
 
     return size;
 }

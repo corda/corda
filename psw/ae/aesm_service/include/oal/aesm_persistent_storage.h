@@ -54,8 +54,11 @@ typedef enum _aesm_data_id_t{
     PVE_ENCLAVE_FID,
     PSE_OP_ENCLAVE_FID,
     PSE_PR_ENCLAVE_FID,
+    PCE_ENCLAVE_FID,
     LE_PROD_SIG_STRUCT_FID,
     /*some normal persistent storages*/
+    EXTENDED_EPID_GROUP_ID_FID,
+    EXTENDED_EPID_GROUP_BLOB_INFO_FID,
     PROVISION_PEK_BLOB_FID,
     EPID_DATA_BLOB_FID,
     AESM_SERVER_URL_FID,
@@ -92,43 +95,61 @@ typedef enum _aesm_data_id_t{
 aesm_data_id_t operator++(aesm_data_id_t& id, int);
 
 typedef aesm_data_id_t aesm_enclave_id_t;
-
-/*Function to get pathname of a file object such as vmc database, aesm_get_cpathname is alias of function aesm_get_pathname
+#define DEFAULT_EGID 0
+#define INVALID_EGID 0xFFFFFFFF
+/*Function to get pathname of a file object such as vmc database
  *@type: input for the type of the storage
  *@data_id: id of persistent storage
  *@buf: start address  of the buffer to receive the zero terminated path file name of the data
  *@buf_size: size in char of the buffer 'buf'
- *@return AESM_SUCCESS on success or error code if faileda
+ *@xgid: extended epid group id associated with the file if the file location info is AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *       the xgid must be INVALID_EGID if the file location info is not AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *@return AESM_SUCCESS on success or error code if failed
  */
-ae_error_t aesm_get_pathname(aesm_data_type_t type, aesm_data_id_t data_id, char *buf, uint32_t buf_size);
-ae_error_t aesm_get_cpathname(aesm_data_type_t type, aesm_data_id_t data_id, char *buf, uint32_t buf_size);
+ae_error_t aesm_get_pathname(aesm_data_type_t type, aesm_data_id_t data_id, char *buf, uint32_t buf_size, uint32_t xgid = INVALID_EGID);
+ae_error_t aesm_get_cpathname(aesm_data_type_t type, aesm_data_id_t data_id, char *buf, uint32_t buf_size, uint32_t xgid = INVALID_EGID);
 
 /*Function to query size of data in persistent storage
  *@type: input for the type of storage
  *@data_id: id of persistent storage
  *@p_size: output parameter to return size of the data blob
+ *@xgid: extended epid group id associated with the file if the file location info is AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *       the xgid must be INVALID_EGID if the file location info is not AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
  *@return AESM_SUCCESS on success or error code if failed
  */
-ae_error_t aesm_query_data_size(aesm_data_type_t type, aesm_data_id_t data_id, uint32_t *p_size);
+ae_error_t aesm_query_data_size(aesm_data_type_t type, aesm_data_id_t data_id, uint32_t *p_size, uint32_t xgid = INVALID_EGID);
 
 /*Function to read data from persistent storage
  *@type: input type of the storage
  *@data_id: id of persistent storage
  *@buf: start  address of the buffer to receive data from persistent storage
  *@p_size: the input value *p_size is size of the buffer and output the size in bytes of data read
+ *@xgid: extended epid group id associated with the file if the file location info is AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *       the xgid must be INVALID_EGID if the file location info is not AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
  *@return AESM_SUCCESS on success or error code if failed
  *  The functin will not check whether there're too much data in the persistent storage to be read
  */
-ae_error_t aesm_read_data(aesm_data_type_t type, aesm_data_id_t data_id, uint8_t *buf, uint32_t *p_size);
+ae_error_t aesm_read_data(aesm_data_type_t type, aesm_data_id_t data_id, uint8_t *buf, uint32_t *p_size, uint32_t xgid = INVALID_EGID);
 
-/*Function to write data to persistent storage
+/*Function to write data tp persistent storage
  *@type: input type of the storage
  *@data_id: id of persistent storage
  *@buf: start  address of the buffer where the data is to be saved to persistent storage
- *@size: size in bytes of the input data in buf
+ *@size: size in bytes of the ti be saved
+ *@xgid: extended epid group id associated with the file if the file location info is AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *       the xgid must be INVALID_EGID if the file location info is not AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
  *@return AESM_SUCCESS on success or error code if failed
+ *  The functin will not check whether there're too much data in the persistent storage to be read
  */
-ae_error_t aesm_write_data(aesm_data_type_t type, aesm_data_id_t data_id, const uint8_t *buf, uint32_t size);
+ae_error_t aesm_write_data(aesm_data_type_t type, aesm_data_id_t data_id, const uint8_t *buf, uint32_t size, uint32_t xgid = INVALID_EGID);
 
+/*Function to remove data persistent storage
+ *@type: input type of the storage
+ *@data_id: id of persistent storage
+ *@xgid: extended epid group id associated with the file if the file location info is AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *       the xgid must be INVALID_EGID if the file location info is not AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA
+ *@return AESM_SUCCESS on success or error code if failed 
+ */
+ae_error_t aesm_remove_data(aesm_data_type_t type, aesm_data_id_t data_id, uint32_t xgid = INVALID_EGID);
 #endif
 

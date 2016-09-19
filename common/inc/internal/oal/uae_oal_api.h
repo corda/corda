@@ -118,6 +118,27 @@ uae_oal_status_t oal_invoke_service(
     uint32_t        timeout_usec,
     aesm_error_t    *response);
 
+uae_oal_status_t oal_get_whitelist_size(
+    uint32_t* p_whitelist_size,
+    uint32_t timeout_usec,
+    aesm_error_t* result);
+
+uae_oal_status_t oal_get_whitelist(
+    uint8_t* p_whitelist,
+    uint32_t whitelist_size,
+    uint32_t timeout_usec,
+    aesm_error_t *result);
+
+uae_oal_status_t oal_get_extended_epid_group_id(
+    uint32_t* extended_group_id,
+    uint32_t timeout_usec,
+    aesm_error_t *result);
+
+uae_oal_status_t oal_switch_extended_epid_group(
+    uint32_t x_group_id,
+    uint32_t timeout_usec,
+    aesm_error_t *result);
+
 sgx_status_t    oal_map_status(uae_oal_status_t status);
 sgx_status_t    oal_map_result(aesm_error_t result);
 

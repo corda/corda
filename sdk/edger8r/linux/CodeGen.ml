@@ -1393,10 +1393,16 @@ let start_parsing (fname: string) : Ast.enclave =
     }
   in
     try
-      let chan =
-        let fullpath = Util.get_file_path fname
-        in save_file fullpath; open_in fullpath in
-      let lexbuf = Lexing.from_channel chan in
+      let fullpath = Util.get_file_path fname in
+      let preprocessed =
+        save_file fullpath;  Preprocessor.processor_macro(fullpath) in
+      let lexbuf = 
+        match preprocessed with
+          | None -> 
+            let chan =  open_in fullpath in
+            Lexing.from_channel chan
+          | Some(preprocessed_string) -> Lexing.from_string preprocessed_string
+      in
         try
           set_initial_pos lexbuf fname;
           let e : Ast.enclave = Parser.start_parsing Lexer.tokenize lexbuf in
@@ -1407,7 +1413,7 @@ let start_parsing (fname: string) : Ast.enclave =
               let res =  { e with Ast.ename = short_name } in
                 if Util.is_c_identifier short_name then res
                 else (eprintf "warning: %s: file short name `%s' is not a valid C identifier\n" fname short_name; res)
-        with exn -> close_in chan;
+        with exn ->
           begin match exn with
             | Parsing.Parse_error ->
                 let curr = lexbuf.Lexing.lex_curr_p in

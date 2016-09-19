@@ -44,9 +44,10 @@
 #include "internal/se_rwlock.h"
 
 typedef struct _epid_blob_with_cur_psvn_t{
-    uint8_t trusted_epid_blob[HARD_CODED_EPID_BLOB_SIZE];
-    psvn_t  cur_psvn;
+    uint8_t trusted_epid_blob[SGX_TRUSTED_EPID_BLOB_SIZE_PAK];
+    bk_platform_info_t   cur_pi;
 }epid_blob_with_cur_psvn_t;
+
 
 #define SGX_EPID_BLOB_SIZE sizeof(epid_blob_with_cur_psvn_t)
 
@@ -60,6 +61,8 @@ public:
     ae_error_t read(epid_blob_with_cur_psvn_t& blob);
     ae_error_t write(const epid_blob_with_cur_psvn_t& blob);
     ae_error_t get_sgx_gid(uint32_t* pgid);/*get little endian gid from epid data blob*/
+    ae_error_t get_extended_epid_group_id(uint32_t* pxeid);//get little endian extended_epid_group_id from epid data blob
+    ae_error_t remove(void);
 };
 #endif/*_AESM_EPID_BLOB_H_*/
 

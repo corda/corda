@@ -65,6 +65,8 @@ typedef enum _aesm_error_t
     AESM_PLATFORM_INFO_BLOB_INVALID_SIG           = 26,
     AESM_SERVICE_NOT_AVAILABLE                    = 27,
     AESM_KDF_MISMATCH                             = 28,
+    AESM_OUT_OF_EPC                               = 29,
+    AESM_SERVICE_UNAVAILABLE                      = 30
 
 } aesm_error_t;
 #endif

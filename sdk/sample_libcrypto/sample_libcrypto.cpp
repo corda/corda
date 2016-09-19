@@ -31,10 +31,13 @@
 
 
 /*
- * This sample cryptopgraphy library was intended to be used in a limited 
- * manner. Its cryptographic strength is very weak. It should not be 
- * used by any production code. Its scope is limited to assist in the
- * development of the remote attestation sample application.
+* Do NOT use this library in your actual product.
+* The purpose of this sample library is to aid the debugging of a
+* remote attestation service.
+* To achieve that goal, the sample remote attestation application
+* will use this sample library to generate reproducible messages.
+* If you have still not decided on whether you should use this library in a
+* released product, please refer to the implementation of __do_get_rand32.
 **/
 
 #include <string.h>
@@ -105,12 +108,12 @@ extern "C" int memset_s(void *s, size_t smax, int c, size_t n)
 #endif
 
 
-// We are using this very non-random definition for reproducibility / debugging purposes.
+
 static uint32_t seed = (uint32_t)(9);
 
+// We are using this very non-random definition for reproducibility / debugging purposes.
 static inline sample_status_t  __do_get_rand32(uint32_t* rand_num)
 {
-    // A better source of entropy would be the "time" function or something like that
     *rand_num = seed;
     return SAMPLE_SUCCESS;
 }

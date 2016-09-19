@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
 #include <dlfcn.h>
 
 
@@ -52,9 +54,9 @@ static ae_error_t aesm_get_path(
     if(0==dladdr(__builtin_return_address(0), &dl_info)||
         NULL==dl_info.dli_fname)
         return AE_FAILURE;
-    if(strlen(dl_info.dli_fname)>buf_size-1)
+    if(strnlen(dl_info.dli_fname,buf_size)>=buf_size)
         return OAL_PATHNAME_BUFFER_OVERFLOW_ERROR;
-    strncpy(p_file_path,dl_info.dli_fname,buf_size);
+    (void)strncpy(p_file_path,dl_info.dli_fname,buf_size);
     char* p_last_slash = strrchr(p_file_path, '/' );
     if ( p_last_slash != NULL )
     {
@@ -62,9 +64,9 @@ static ae_error_t aesm_get_path(
         *p_last_slash = '\0';  //null terminate the string
     }
     else p_file_path[0] = '\0';
-    if(strlen(p_file_path)+strlen(p_file_name)+sizeof(char)>buf_size)
+    if(strnlen(p_file_path,buf_size)+strnlen(p_file_name,buf_size)+sizeof(char)>buf_size)
         return OAL_PATHNAME_BUFFER_OVERFLOW_ERROR;
-    strncat(p_file_path,p_file_name, strlen(p_file_name));
+    (void)strncat(p_file_path,p_file_name, strnlen(p_file_name,buf_size));
     return AE_SUCCESS;
 }
 
@@ -77,10 +79,10 @@ static ae_error_t aesm_get_data_path(
     if(!p_file_name || !p_file_path)
         return OAL_PARAMETER_ERROR;
 
-    if(strlen(AESM_DATA_FOLDER)+strlen(p_file_name)+sizeof(char)>buf_size)
+    if(strlen(AESM_DATA_FOLDER)+strnlen(p_file_name,buf_size)+sizeof(char)>buf_size)
         return OAL_PATHNAME_BUFFER_OVERFLOW_ERROR;
-    strcpy(p_file_path, AESM_DATA_FOLDER);
-    strncat(p_file_path,p_file_name, strlen(p_file_name));
+    (void)strcpy(p_file_path, AESM_DATA_FOLDER);
+    (void)strncat(p_file_path,p_file_name, strnlen(p_file_name,buf_size));
     return AE_SUCCESS;
 }
 
@@ -95,11 +97,11 @@ static ae_error_t aesm_write_file(
     FILE* p_file = NULL;
     char p_full_path[MAX_PATH]= {0};
     if(is_full_path){
-        if(strlen(p_file_name)>MAX_PATH-1){
+        if(strnlen(p_file_name,MAX_PATH)>=MAX_PATH){
             ret = OAL_PATHNAME_BUFFER_OVERFLOW_ERROR;
             goto CLEANUP;
         }
-        strcpy(p_full_path, p_file_name);
+        (void)strcpy(p_full_path, p_file_name);
     }else{
         if((ret=aesm_get_data_path(p_file_name, p_full_path, MAX_PATH)) != AE_SUCCESS)
             goto CLEANUP;
@@ -132,11 +134,11 @@ static ae_error_t aesm_read_file(
     FILE* p_file = NULL;
     char p_full_path[MAX_PATH]= {0};
     if(is_full_path){
-        if(strlen(p_file_name)>MAX_PATH-1){
+        if(strnlen(p_file_name,MAX_PATH)>=MAX_PATH){
             ret = OAL_PATHNAME_BUFFER_OVERFLOW_ERROR;
             goto CLEANUP;
         }
-        strcpy(p_full_path, p_file_name);
+        (void)strcpy(p_full_path, p_file_name);
     }else{
         if((ret=aesm_get_data_path(p_file_name, p_full_path, MAX_PATH)) != AE_SUCCESS)
             goto CLEANUP;
@@ -155,31 +157,95 @@ CLEANUP:
     return ret;
 }
 
-ae_error_t aesm_get_pathname(aesm_data_type_t type, aesm_data_id_t id, char *buf, uint32_t buf_size)
+static ae_error_t aesm_remove_file(
+    const char *p_file_name,
+    bool is_full_path)
+{
+    ae_error_t ae_err = AE_FAILURE;
+    char p_full_path[MAX_PATH] = { 0 };
+    if (is_full_path){
+        if(strnlen(p_file_name,MAX_PATH)>=MAX_PATH){
+            ae_err = OAL_PATHNAME_BUFFER_OVERFLOW_ERROR;
+            goto CLEANUP;
+        }
+        (void)strcpy(p_full_path, p_file_name);
+    }
+    else{
+        if ((ae_err = aesm_get_data_path(p_file_name, p_full_path, MAX_PATH)) != AE_SUCCESS)
+            goto CLEANUP;
+    }
+    if (remove(p_full_path)){
+        if (errno == ENOENT)
+            ae_err = AE_SUCCESS;
+        else
+            ae_err = OAL_FILE_ACCESS_ERROR;
+        goto CLEANUP;
+    }
+    ae_err = AE_SUCCESS;
+
+CLEANUP:
+    return ae_err;
+}
+
+#define UPBOUND_OF_FORMAT 40
+ae_error_t aesm_get_pathname(aesm_data_type_t type, aesm_data_id_t id, char *buf, uint32_t buf_size, uint32_t xgid)
 {
     const persistent_storage_info_t *info = get_persistent_storage_info(id);
+    int num_bytes = 0;
     if(info == NULL)
         return OAL_PARAMETER_ERROR;
     if(info->type != type)
         return OAL_PARAMETER_ERROR;
     if(info->type == FT_ENCLAVE_NAME){
         char local_info_name[MAX_PATH];
-        sprintf(local_info_name,"libsgx_%s.signed.so",info->name);
+        if (xgid != INVALID_EGID){
+            return AE_FAILURE;
+        }
+        if(strnlen(info->name, MAX_PATH)>=MAX_PATH-UPBOUND_OF_FORMAT){
+            return AE_FAILURE;//info->name is a constant string and the length of it should not be too long so that the defense in depth codition here should never be triggered.
+        }
+        num_bytes = snprintf(local_info_name,MAX_PATH, "libsgx_%s.signed.so",info->name);
+        if(num_bytes<0||num_bytes>=MAX_PATH){
+            return AE_FAILURE;
+        }
         return aesm_get_path(local_info_name, buf, buf_size);
     }else if(info->loc == AESM_LOCATION_DATA){
+        if (xgid != INVALID_EGID){
+            return AE_FAILURE;
+        }
         return aesm_get_data_path(info->name, buf, buf_size);
+    }
+    else if (info->loc == AESM_LOCATION_MULTI_EXTENDED_EPID_GROUP_DATA){
+        char name[MAX_PATH];
+        int num_bytes = 0;
+        ae_error_t ae_err;
+        if (xgid == INVALID_EGID){//INVALID_EGID should not be used for file to support multi extended_epid_group
+            return AE_FAILURE;
+        }
+        if(strnlen(info->name,MAX_PATH)>=MAX_PATH-UPBOUND_OF_FORMAT){
+            return AE_FAILURE;//defense in depth. info->name is a constant string and its size should be small
+        }
+        if ((num_bytes=snprintf(name, MAX_PATH, "%s.%08X", info->name, xgid)) < 0|| num_bytes>=MAX_PATH){
+            return AE_FAILURE;
+        }
+        if ((ae_err = aesm_get_data_path(name, buf, buf_size)) != AE_SUCCESS)
+            return ae_err;
+        return AE_SUCCESS;
     }else{//info->loc == AESM_LOCATION_EXE_FOLDER
+        if (xgid != INVALID_EGID){
+            return AE_FAILURE;
+        }
         return aesm_get_path(info->name, buf, buf_size);
     }
 }
 
 //alias function for aesm_get_pathname
-ae_error_t aesm_get_cpathname(aesm_data_type_t type, aesm_data_id_t id, char *buf, uint32_t buf_size)
+ae_error_t aesm_get_cpathname(aesm_data_type_t type, aesm_data_id_t id, char *buf, uint32_t buf_size, uint32_t xgid)
 {
-    return aesm_get_pathname(type, id, buf, buf_size);
+    return aesm_get_pathname(type, id, buf, buf_size, xgid);
 }
 
-ae_error_t aesm_query_data_size(aesm_data_type_t type, aesm_data_id_t data_id, uint32_t *p_size)
+ae_error_t aesm_query_data_size(aesm_data_type_t type, aesm_data_id_t data_id, uint32_t *p_size, uint32_t xgid)
 {
     char pathname[MAX_PATH];
     ae_error_t ret = AE_SUCCESS;
@@ -190,7 +256,7 @@ ae_error_t aesm_query_data_size(aesm_data_type_t type, aesm_data_id_t data_id, u
     if(info->access == AESM_FILE_ACCESS_PATH_ONLY)
         return OAL_PARAMETER_ERROR;
 
-    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH);
+    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH, xgid);//currently all in file
     if(ret != AE_SUCCESS)
         return ret;
 
@@ -204,7 +270,7 @@ ae_error_t aesm_query_data_size(aesm_data_type_t type, aesm_data_id_t data_id, u
     return AE_SUCCESS;
 }
 
-ae_error_t aesm_read_data(aesm_data_type_t type, aesm_data_id_t data_id, uint8_t *buf, uint32_t *p_size)
+ae_error_t aesm_read_data(aesm_data_type_t type, aesm_data_id_t data_id, uint8_t *buf, uint32_t *p_size, uint32_t xgid)
 {
     char pathname[MAX_PATH];
     ae_error_t ret = AE_SUCCESS;
@@ -213,7 +279,7 @@ ae_error_t aesm_read_data(aesm_data_type_t type, aesm_data_id_t data_id, uint8_t
         return OAL_PARAMETER_ERROR;
     if(info->access == AESM_FILE_ACCESS_PATH_ONLY)
         return OAL_PARAMETER_ERROR;
-    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH);
+    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH, xgid);//currently all in file
     if(ret != AE_SUCCESS)
         return ret;
 
@@ -222,7 +288,7 @@ ae_error_t aesm_read_data(aesm_data_type_t type, aesm_data_id_t data_id, uint8_t
     return AE_SUCCESS;
 }
 
-ae_error_t aesm_write_data(aesm_data_type_t type, aesm_data_id_t data_id, const uint8_t *buf, uint32_t size)
+ae_error_t aesm_write_data(aesm_data_type_t type, aesm_data_id_t data_id, const uint8_t *buf, uint32_t size, uint32_t xgid)
 {
     char pathname[MAX_PATH];
     ae_error_t ret = AE_SUCCESS;
@@ -233,7 +299,7 @@ ae_error_t aesm_write_data(aesm_data_type_t type, aesm_data_id_t data_id, const 
     if(info->access != AESM_FILE_ACCESS_ALL)
         return OAL_PARAMETER_ERROR;
 
-    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH);
+    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH, xgid);//currently all in file
     if(ret != AE_SUCCESS)
         return ret;
     if((ret=aesm_write_file(buf, size, pathname, true))!=AE_SUCCESS)
@@ -241,3 +307,22 @@ ae_error_t aesm_write_data(aesm_data_type_t type, aesm_data_id_t data_id, const 
     return AE_SUCCESS;
 }
 
+ae_error_t aesm_remove_data(aesm_data_type_t type, aesm_data_id_t data_id, uint32_t xgid)
+{
+    char pathname[MAX_PATH];
+    ae_error_t ret = AE_SUCCESS;
+
+    const persistent_storage_info_t *info = get_persistent_storage_info(data_id);
+    if (info == NULL)
+        return OAL_PARAMETER_ERROR;
+    if (info->access != AESM_FILE_ACCESS_ALL)
+        return OAL_PARAMETER_ERROR;
+
+    ret = aesm_get_pathname(type, data_id, pathname, MAX_PATH, xgid);//currently all in file
+    if (ret != AE_SUCCESS){
+        return ret;
+    }
+    if ((ret = aesm_remove_file(pathname, true)) != AE_SUCCESS)
+        return ret;
+    return AE_SUCCESS;
+}

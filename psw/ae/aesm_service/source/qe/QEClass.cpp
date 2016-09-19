@@ -34,6 +34,7 @@
 #include "arch.h"
 #include "QEClass.h"
 #include "PVEClass.h"
+#include "PCEClass.h"
 #include "se_memcpy.h"
 #include "prof_fun.h"
 #include "quoting_enclave_u.h"
@@ -42,6 +43,7 @@
 void CQEClass::before_enclave_load() {
     // always unload qe enclave before loading pve enclave
     CPVEClass::instance().unload_enclave();
+    CPCEClass::instance().unload_enclave();
 }
 
 uint32_t CQEClass::get_qe_target(
@@ -81,6 +83,7 @@ uint32_t CQEClass::verify_blob(
     for(; status == SGX_ERROR_ENCLAVE_LOST && retry < AESM_RETRY_COUNT; retry++)
     {
         unload_enclave();
+        // Reload an AE will not fail because of out of EPC, so AESM_AE_OUT_OF_EPC is not checked here
         if(AE_SUCCESS != load_enclave())
             return AE_FAILURE;
         status = ::verify_blob(m_enclave_id, &ret, p_epid_blob, blob_size,
@@ -110,7 +113,8 @@ uint32_t CQEClass::get_quote(
     uint32_t sigrl_size,
     sgx_report_t *p_qe_report,
     uint8_t *p_quote,
-    uint32_t quote_size)
+    uint32_t quote_size,
+    uint16_t pce_isv_svn)
 {
     uint32_t ret = AE_SUCCESS;
     sgx_status_t status = SGX_SUCCESS;
@@ -131,10 +135,12 @@ uint32_t CQEClass::get_quote(
         sigrl_size,
         p_qe_report,
         p_quote,
-        quote_size);
+        quote_size,
+        pce_isv_svn);
     for(; status == SGX_ERROR_ENCLAVE_LOST && retry < AESM_RETRY_COUNT; retry++)
     {
         unload_enclave();
+        // Reload an AE will not fail because of out of EPC, so AESM_AE_OUT_OF_EPC is not checked here
         if(AE_SUCCESS != load_enclave())
             return AE_FAILURE;
         status = ::get_quote(
@@ -150,7 +156,8 @@ uint32_t CQEClass::get_quote(
             sigrl_size,
             p_qe_report,
             p_quote,
-            quote_size);
+            quote_size,
+            pce_isv_svn);
     }
     if(status != SGX_SUCCESS)
         return AE_FAILURE;

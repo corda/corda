@@ -58,7 +58,7 @@ EENTER_PROLOG
 /* 
  * at this point, we may have returned due to a normal EEXIT,
  * or we may have returned due to an OCALL. We differentiate 
- * by popping the top of the stack. If it is not -1, we have
+ * by popping the top of the stack. If it is not OCMD_ERET, we have
  * an untrusted bridge to call at that address.
  */
 

@@ -36,7 +36,6 @@
 
 #include "ecp.h"
 
-// These status should align with the definition in IAS API spec(rev 0.6)
 typedef enum {
     IAS_QUOTE_OK,
     IAS_QUOTE_SIGNATURE_INVALID,

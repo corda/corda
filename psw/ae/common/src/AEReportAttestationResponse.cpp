@@ -137,9 +137,6 @@ AEReportAttestationResponse& AEReportAttestationResponse::operator=(const AERepo
 //checks
 bool AEReportAttestationResponse::check()
 {
-    if (mErrorCode != SGX_SUCCESS)
-        return false;
-
     if (mValidSizeCheck == false)
         return false;
 

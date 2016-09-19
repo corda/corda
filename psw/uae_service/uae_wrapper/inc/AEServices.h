@@ -114,6 +114,8 @@ typedef PlainData Signature;
 typedef PlainData SEAttributes;
 typedef PlainData PSEMessage;
 
+typedef PlainData WhiteList;
+
 typedef PlainData PlatformInfo;
 typedef PlainData UpdateInfo;
 
@@ -218,7 +220,41 @@ struct PsCap
     }
 };
 
+struct WhiteListSize
+{
+    uint32_t errorCode;
+    uae_oal_status_t uaeStatus;
+    uint32_t white_list_size;
 
+    WhiteListSize(): errorCode(AESM_UNEXPECTED_ERROR), uaeStatus(UAE_OAL_ERROR_UNEXPECTED), white_list_size(0){}
+    ~WhiteListSize()
+    {
+    }
+
+    bool operator==(const WhiteListSize& other) const
+    {
+        if (this == &other) return true;
+        return white_list_size == other.white_list_size;
+    }
+};
+
+struct ExtendedEpidGroupId
+{
+    uint32_t errorCode;
+    uae_oal_status_t uaeStatus;
+    uint32_t x_group_id;
+
+    ExtendedEpidGroupId(): errorCode(AESM_UNEXPECTED_ERROR), uaeStatus(UAE_OAL_ERROR_UNEXPECTED), x_group_id(0){}
+    ~ExtendedEpidGroupId()
+    {
+    }
+
+    bool operator==(const ExtendedEpidGroupId& other) const
+    {
+        if (this == &other) return true;
+        return x_group_id == other.x_group_id;
+    }
+};
 
 struct AttestationStatus
 {
@@ -257,6 +293,10 @@ class AEServices
         virtual PsCap* GetPsCap(uint32_t timeout_msec=0) = 0;
         virtual AttestationStatus* ReportAttestationError(const PlatformInfo* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout_msec=0) = 0;
 
+        virtual WhiteListSize* GetWhiteListSize(uint32_t timeout_msec=0) = 0;
+        virtual PlainData* GetWhiteList(uint32_t white_list_size, uint32_t timeout = 0) =0;
+        virtual ExtendedEpidGroupId* SGXGetExtendedEpidGroupId(uint32_t timeout_msec=0) =0;
+        virtual PlainData* SGXSwitchExtendedEpidGroup(uint32_t x_group_id, uint32_t timeout = 0) =0;
 };
 
 #endif

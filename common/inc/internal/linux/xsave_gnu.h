@@ -37,12 +37,12 @@
 #ifdef __x86_64__
 #  define ASM_FXSAVE "rex64/fxsave"
 #  define ASM_FXRSTR "rex64/fxrstor"
-#  define ASM_XSAVE  "rex64/xsave"
+#  define ASM_XSAVE  ".byte 0x48,0x0f,0xae,0x21"
 #  define ASM_XRSTR  ".byte 0x48,0x0f,0xae,0x2f"
 #else
 #  define ASM_FXSAVE "fxsave"
 #  define ASM_FXRSTR "fxrstor"
-#  define ASM_XSAVE  "xsave"
+#  define ASM_XSAVE  ".byte 0x0f,0xae,0x21"
 #  define ASM_XRSTR  ".byte 0x0f,0xae,0x2f"
 #endif
 

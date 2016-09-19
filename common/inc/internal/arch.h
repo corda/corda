@@ -269,9 +269,9 @@ se_static_assert(sizeof(token_t) == 304);
 
 typedef struct _wl_cert_t                           /* All fields except the mr_signer_list fields, are big-endian integer format */
 {
-    uint16_t                version;                /* ( 0) White List Cert format version. For 2015, only valid version is 1 */
+    uint16_t                version;                /* ( 0) White List Cert format version. Currently, only valid version is 1 */
     uint16_t                cert_type;              /* ( 2) White List Cert Type. For Enclave Signing Key White List Cert, must be 1 */
-    uint16_t                provider_id;            /* ( 4) Enclave Signing Key White List Provider ID to identify the key used to sign this Enclave signing Key White List Certificate. For 2015, only one White List Provider is approved: WLProviderID-ISecG = 0 */
+    uint16_t                provider_id;            /* ( 4) Enclave Signing Key White List Provider ID to identify the key used to sign this Enclave signing Key White List Certificate. Currently, only one White List Provider is approved: WLProviderID-ISecG = 0 */
     uint16_t                le_prod_id;             /* ( 6) Launch Enclave ProdID the White List Cert applies to. Linux LE-ProdID = 0x20 */
     uint32_t                wl_version;             /* ( 8) Version of the Enclave Signing Key White List. For a specific LE-ProdID, should increase on every WL Cert signing request */
     uint32_t                entry_number;           /* (12) Number of MRSIGNER entries in the Cert. If the White List Certificate allows enclave signed by any key to launch, the White List Cert must only contain one all-0 MRSIGNER entry. */
@@ -279,10 +279,10 @@ typedef struct _wl_cert_t                           /* All fields except the mr_
 }wl_cert_t;
 typedef struct _wl_provider_cert_t                  /* All fields are big endian */
 {
-    uint16_t                version;                /* ( 0) White List Cert format version. For 2015, only valid version is 1 */
+    uint16_t                version;                /* ( 0) White List Cert format version. Currently, only valid version is 1 */
     uint16_t                cert_type;              /* ( 2) White List Cert Type, For Enclave Signing Key White List Signer Cert, must be 0 */
-    uint16_t                provider_id;            /* ( 4) Enclave Signing Key White List Signer ID assigned by the White List Root CA. For 2015, only one White List Provider is approved: WLProviderID-ISecG = 0 */
-    uint16_t                root_id;                /* ( 6) Identify the White List Root CA key used to sign the Cert. For 2015, only one WLRootID is valid: WLRootID-iKGF-Key-0 = 0 */
+    uint16_t                provider_id;            /* ( 4) Enclave Signing Key White List Signer ID assigned by the White List Root CA. Currently, only one White List Provider is approved: WLProviderID-ISecG = 0 */
+    uint16_t                root_id;                /* ( 6) Identify the White List Root CA key used to sign the Cert. Currently, only one WLRootID is valid: WLRootID-iKGF-Key-0 = 0 */
     sgx_ec256_public_t      pub_key;                /* ( 8) ECDSA public key of the Enclave Signing Key White List Provider identified by WLProviderID */
     sgx_ec256_signature_t   signature;              /* (72) ECDSA Signature by WL Root CA identified by WLRootID */
 }wl_provider_cert_t;

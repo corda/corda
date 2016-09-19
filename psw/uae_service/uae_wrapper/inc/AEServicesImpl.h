@@ -62,7 +62,12 @@ class AEServicesImpl : public AEInternalServices{
         PsCap* GetPsCap(uint32_t timeout_msec=0);
 
         AttestationStatus* ReportAttestationError(const PlatformInfo* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength,uint32_t timeout_msec=0) ;
-        
+
+        WhiteListSize* GetWhiteListSize(uint32_t timeout_msec=0);
+        PlainData*  GetWhiteList(uint32_t white_list_size, uint32_t timeout = 0);
+        ExtendedEpidGroupId* SGXGetExtendedEpidGroupId(uint32_t timeout_msec=0);
+        PlainData* SGXSwitchExtendedEpidGroup(uint32_t x_group_id, uint32_t timeout = 0);
+
         friend AEServices* AEServicesProvider::GetServicesProvider();
         friend AEInternalServices* AEInternalServicesProvider::GetInternalServicesProvider();
 

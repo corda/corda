@@ -34,6 +34,7 @@
 #include "QEClass.h"
 #include "LEClass.h"
 #include "PVEClass.h"
+#include "PCEClass.h"
 
 #include "arch.h"
 #include "sgx_report.h"
@@ -46,6 +47,7 @@
 #include "oal/aesm_thread.h"
 #include "aesm_encode.h"
 #include "aesm_epid_blob.h"
+#include "aesm_xegd_blob.h"
 #include "aesm_logic.h"
 #include "pve_logic.h"
 #include "qe_logic.h"
@@ -64,6 +66,7 @@
 #include "prof_fun.h"
 #include "aesm_long_lived_thread.h"
 #include "sgx_profile.h"
+#include "service_enclave_mrsigner.hh"
 
 #define CHECK_SERVICE_STATUS     if (!is_service_running()) return AESM_SERVICE_STOPPED;
 #define CHECK_SGX_STATUS         if (g_sgx_device_status != SGX_ENABLED) return AESM_SGX_DEVICE_NOT_AVAILABLE;
@@ -74,13 +77,60 @@ AESMLogicMutex AESMLogic::_le_mutex;
 
 bool AESMLogic::_is_qe_psvn_set;
 bool AESMLogic::_is_pse_psvn_set;
+bool AESMLogic::_is_pce_psvn_set;
 psvn_t AESMLogic::_qe_psvn;
+psvn_t AESMLogic::_pce_psvn;
 psvn_t AESMLogic::_pse_psvn;
+
+uint32_t AESMLogic::active_extended_epid_group_id;
+
+static ae_error_t read_global_extended_epid_group_id(uint32_t *xeg_id)
+{
+    char path_name[MAX_PATH];
+    ae_error_t ae_ret = aesm_get_pathname(FT_PERSISTENT_STORAGE, EXTENDED_EPID_GROUP_ID_FID, path_name, MAX_PATH);
+    if(AE_SUCCESS != ae_ret){
+        return ae_ret;
+    }
+    FILE * f = fopen(path_name, "r");
+    if( f == NULL){
+        return OAL_CONFIG_FILE_ERROR;
+    }
+    ae_ret = OAL_CONFIG_FILE_ERROR;
+    if(fscanf(f, "%u", xeg_id)==1){
+        ae_ret = AE_SUCCESS;
+    }
+    fclose(f);
+    return ae_ret;
+}
+static ae_error_t set_global_extended_epid_group_id(uint32_t xeg_id)
+{
+    char path_name[MAX_PATH];
+    ae_error_t ae_ret = aesm_get_pathname(FT_PERSISTENT_STORAGE, EXTENDED_EPID_GROUP_ID_FID, path_name, MAX_PATH);
+    if(AE_SUCCESS != ae_ret){
+        return ae_ret;
+    }
+    FILE *f = fopen(path_name, "w");
+    if(f == NULL){
+        return OAL_CONFIG_FILE_ERROR;
+    }
+    ae_ret = OAL_CONFIG_FILE_ERROR;
+    if(fprintf(f, "%u", xeg_id)>0){
+        ae_ret = AE_SUCCESS;
+    }
+    fclose(f);
+    return ae_ret;
+}
+
+uint32_t AESMLogic::get_active_extended_epid_group_id()
+{
+    return active_extended_epid_group_id;
+}
 
 static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
 {
     epid_blob_with_cur_psvn_t epid_data;
     ae_error_t ae_ret = AE_FAILURE;
+    uint32_t epid_xeid = 0;
     UNUSED(arg);
     AESM_DBG_TRACE("start to load qe");
     memset(&epid_data, 0, sizeof(epid_data));
@@ -94,7 +144,50 @@ static ae_error_t thread_to_load_qe(aesm_thread_arg_type_t arg)
             AESM_DBG_WARN("fail to load QE: %d", ae_ret);
         }else{
             AESM_DBG_TRACE("QE loaded successfully");
+            bool resealed = false;
+            // Just take this chance to reseal EPID blob in case TCB is
+            // upgraded, return value is ignored and no provisioning is
+            // triggered.
+            ae_ret = static_cast<ae_error_t>(CQEClass::instance().verify_blob(
+                epid_data.trusted_epid_blob,
+                SGX_TRUSTED_EPID_BLOB_SIZE_PAK,
+                &resealed));
+            if(AE_SUCCESS != ae_ret)
+            {
+                AESM_DBG_WARN("Failed to verify EPID blob: %d", ae_ret);
+                // The EPID blob is invalid.
+                EPIDBlob::instance().remove();
+            }else{
+                // Check whether EPID blob XEGDID is aligned with active extended group id if it exists.
+                if ((EPIDBlob::instance().get_extended_epid_group_id(&epid_xeid) == AE_SUCCESS) && (epid_xeid == AESMLogic::get_active_extended_epid_group_id())) {
+                    AESM_DBG_TRACE("EPID blob Verified");
+                    // XEGDID is aligned
+                    if (true == resealed)
+                    {
+                        AESM_DBG_TRACE("EPID blob is resealed");
+                        if ((ae_ret = EPIDBlob::instance().write(epid_data))
+                            != AE_SUCCESS)
+                        {
+                            AESM_DBG_WARN("Failed to update epid blob: %d", ae_ret);
+                        }
+                    }
+                }
+                else { // XEGDID is NOT aligned
+                    AESM_DBG_TRACE("XEGDID mismatch in EPIDBlob, loading PCE ...");
+                    EPIDBlob::instance().remove();
+                    ae_ret = CPCEClass::instance().load_enclave();
+                    if (AE_SUCCESS != ae_ret)
+                    {
+                        AESM_DBG_WARN("fail to load PCE: %d", ae_ret);
+                    }
+                    else{
+                        AESM_DBG_TRACE("PCE loaded successfully");
+                    }
+                }
+            }
         }
+    }else{
+        AESM_DBG_TRACE("Fail to read EPID Blob");
     }
     AESM_DBG_TRACE("QE Thread finished succ");
     return AE_SUCCESS;
@@ -110,6 +203,24 @@ ae_error_t AESMLogic::service_start()
 
     //ippInit();//no ippInit available for c version ipp
     AESM_DBG_INFO("aesm service is starting");
+
+    //Try to read current active extended epid group id
+    ae_ret = read_global_extended_epid_group_id(&AESMLogic::active_extended_epid_group_id);
+    if (AE_SUCCESS != ae_ret){
+        AESM_DBG_INFO("Fail to read extended epid group id, default extended epid group used");
+        AESMLogic::active_extended_epid_group_id = DEFAULT_EGID; //use default extended epid group id 0 if it is not available from data file
+
+    }
+    else{
+        AESM_DBG_INFO("active extended group id %d used", AESMLogic::active_extended_epid_group_id);
+    }
+    extended_epid_group_blob_t xegb;
+    aesm_server_url_infos_t urls;
+    if (AE_SUCCESS != (XEGDBlob::verify_xegd_by_xgid(active_extended_epid_group_id)) ||
+        AE_SUCCESS != (EndpointSelectionInfo::verify_file_by_xgid(active_extended_epid_group_id))){//try to load XEGD and URL file to make sure it is valid
+        AESMLogic::active_extended_epid_group_id = DEFAULT_EGID;//If the active extended epid group id read from data file is not valid, switch to default extended epid group id
+    }
+
     ae_ret = CLEClass::instance().load_enclave();
     if(AE_SUCCESS != ae_ret)
     {
@@ -126,7 +237,8 @@ ae_error_t AESMLogic::service_start()
     }else{
         (void)aesm_free_thread(qe_thread);//release thread handle to free memory
     }
-        
+ 
+    start_white_list_thread();       
     AESM_DBG_TRACE("aesm service is started");
 
     return AE_SUCCESS;
@@ -134,7 +246,9 @@ ae_error_t AESMLogic::service_start()
 
 void AESMLogic::service_stop()
 {
+    stop_all_long_lived_threads();//waiting for pending threads util timeout
     CPVEClass::instance().unload_enclave();
+    CPCEClass::instance().unload_enclave();
     CQEClass::instance().unload_enclave();
     CLEClass::instance().unload_enclave();
     stop_all_long_lived_threads();
@@ -234,16 +348,21 @@ aesm_error_t AESMLogic::get_launch_token(
         return AESM_PARAMETER_ERROR;
     }
     ae_error_t ae_ret = CLEClass::instance().load_enclave();
-    if(ae_ret == AE_SERVER_NOT_AVAILABLE)
+    if(ae_ret == AESM_AE_NO_DEVICE)
     {
         AESM_LOG_ERROR("%s", g_event_string_table[SGX_EVENT_SERVICE_UNAVAILABLE]);
         AESM_DBG_FATAL("LE not loaded due to AE_SERVER_NOT_AVAILABLE, possible SGX Env Not Ready");
         return AESM_NO_DEVICE_ERROR;
     }
+    else if(ae_ret == AESM_AE_OUT_OF_EPC)
+    {
+        AESM_DBG_WARN("LE not loaded due to out of EPC", ae_ret);
+        return AESM_OUT_OF_EPC;
+    }
     else if(AE_FAILED(ae_ret))
     {
         AESM_DBG_ERROR("LE not loaded:%d", ae_ret);
-        return AESM_UNEXPECTED_ERROR;
+        return AESM_SERVICE_UNAVAILABLE;
     }
     ret_le = static_cast<ae_error_t>(CLEClass::instance().get_launch_token(
         const_cast<uint8_t *>(mrenclave), mrenclave_size,
@@ -297,6 +416,24 @@ ae_error_t AESMLogic::get_qe_isv_svn(uint16_t& isv_svn)
     return AE_SUCCESS;
 }
 
+
+ae_error_t AESMLogic::get_pce_isv_svn(uint16_t& isv_svn)
+{
+    if(!_is_pce_psvn_set){
+        ae_error_t ae_err = CPCEClass::instance().load_enclave();
+        if(AE_SUCCESS != ae_err){
+            AESM_DBG_ERROR("Fail to load PCE Enclave:%d",ae_err);
+            return ae_err;
+        }
+    }
+    assert(_is_pce_psvn_set);
+    if(0!=memcpy_s(&isv_svn, sizeof(isv_svn), &_pce_psvn.isv_svn, sizeof(_pce_psvn.isv_svn))){
+        AESM_DBG_ERROR("memcpy failed");
+        return AE_FAILURE;
+    }
+    return AE_SUCCESS;
+}
+
 ae_error_t AESMLogic::get_pse_isv_svn(uint16_t& isv_svn)
 {
     return AE_FAILURE;
@@ -321,41 +458,62 @@ ae_error_t AESMLogic::get_qe_cpu_svn(sgx_cpu_svn_t& cpu_svn)
 
 
 
-ae_error_t AESMLogic::set_psvn(uint16_t prod_id, uint16_t isv_svn, sgx_cpu_svn_t cpu_svn)
+ae_error_t AESMLogic::set_psvn(uint16_t prod_id, uint16_t isv_svn, sgx_cpu_svn_t cpu_svn, uint32_t mrsigner_index)
 {
     if(prod_id == QE_PROD_ID){
-        if(_is_qe_psvn_set){
-            if(0!=memcmp(&_qe_psvn.isv_svn, &isv_svn, sizeof(isv_svn))||
-                0!=memcmp(&_qe_psvn.cpu_svn, &cpu_svn, sizeof(sgx_cpu_svn_t))){
-                    AESM_DBG_ERROR("PSVN unmatched for QE/PVE");
-                    return AE_PSVN_UNMATCHED_ERROR;
+        if(mrsigner_index == AE_MR_SIGNER){
+            if(_is_qe_psvn_set){
+                if(0!=memcmp(&_qe_psvn.isv_svn, &isv_svn, sizeof(isv_svn))||
+                    0!=memcmp(&_qe_psvn.cpu_svn, &cpu_svn, sizeof(sgx_cpu_svn_t))){
+                        AESM_DBG_ERROR("PSVN unmatched for QE/PVE");
+                        return AE_PSVN_UNMATCHED_ERROR;
+                }
+            }else{
+                if(0!=memcpy_s(&_qe_psvn.isv_svn, sizeof(_qe_psvn.isv_svn), &isv_svn, sizeof(isv_svn))||
+                    0!=memcpy_s(&_qe_psvn.cpu_svn, sizeof(_qe_psvn.cpu_svn), &cpu_svn, sizeof(sgx_cpu_svn_t))){
+                        AESM_DBG_ERROR("memcpy failed");
+                        return AE_FAILURE;
+                }
+                AESM_DBG_TRACE("get QE or PvE isv_svn=%d",(int)isv_svn);
+                _is_qe_psvn_set = true;
+                return AE_SUCCESS;
             }
-        }else{
-            if(0!=memcpy_s(&_qe_psvn.isv_svn, sizeof(_qe_psvn.isv_svn), &isv_svn, sizeof(isv_svn))||
-                0!=memcpy_s(&_qe_psvn.cpu_svn, sizeof(_qe_psvn.cpu_svn), &cpu_svn, sizeof(sgx_cpu_svn_t))){
-                    AESM_DBG_ERROR("memcpy failed");
-                    return AE_FAILURE;
+        }else if(mrsigner_index==PCE_MR_SIGNER){
+            if(_is_pce_psvn_set){
+                if(0!=memcmp(&_pce_psvn.isv_svn, &isv_svn, sizeof(isv_svn))||
+                    0!=memcmp(&_pce_psvn.cpu_svn, &cpu_svn, sizeof(sgx_cpu_svn_t))){
+                        AESM_DBG_ERROR("PSVN unmatched for PCE");
+                        return AE_PSVN_UNMATCHED_ERROR;
+                }
+            }else{
+                if(0!=memcpy_s(&_pce_psvn.isv_svn, sizeof(_pce_psvn.isv_svn), &isv_svn, sizeof(isv_svn))||
+                    0!=memcpy_s(&_pce_psvn.cpu_svn, sizeof(_pce_psvn.cpu_svn), &cpu_svn, sizeof(sgx_cpu_svn_t))){
+                        AESM_DBG_ERROR("memcpy failed");
+                        return AE_FAILURE;
+                }
+                AESM_DBG_TRACE("get PCE isv_svn=%d", (int)isv_svn);
+                _is_pce_psvn_set = true;
+                return AE_SUCCESS;
             }
-            AESM_DBG_TRACE("get QE or PvE isv_svn=%d",(int)isv_svn);
-            _is_qe_psvn_set = true;
-            return AE_SUCCESS;
         }
     }else if(prod_id == PSE_PROD_ID){
-        if(_is_pse_psvn_set){
-            if(0!=memcmp(&_pse_psvn.isv_svn, &isv_svn, sizeof(isv_svn))||
-                0!=memcmp(&_pse_psvn.cpu_svn, &cpu_svn, sizeof(sgx_cpu_svn_t))){
-                    AESM_DBG_ERROR("PSVN unmatched for PSE");
-                    return AE_PSVN_UNMATCHED_ERROR;
+        if(mrsigner_index == AE_MR_SIGNER){
+            if(_is_pse_psvn_set){
+                if(0!=memcmp(&_pse_psvn.isv_svn, &isv_svn, sizeof(isv_svn))||
+                    0!=memcmp(&_pse_psvn.cpu_svn, &cpu_svn, sizeof(sgx_cpu_svn_t))){
+                        AESM_DBG_ERROR("PSVN unmatched for PSE");
+                        return AE_PSVN_UNMATCHED_ERROR;
+                }
+            }else{
+                if(0!=memcpy_s(&_pse_psvn.isv_svn, sizeof(_pse_psvn.isv_svn), &isv_svn, sizeof(isv_svn))||
+                    0!=memcpy_s(&_pse_psvn.cpu_svn, sizeof(_pse_psvn.cpu_svn), &cpu_svn, sizeof(sgx_cpu_svn_t))){
+                        AESM_DBG_ERROR("memcpy failed");
+                        return AE_FAILURE;
+                }
+                AESM_DBG_TRACE("get PSE isv_svn=%d", (int)isv_svn);
+                _is_pse_psvn_set = true;
+               return AE_SUCCESS;
             }
-        }else{
-            if(0!=memcpy_s(&_pse_psvn.isv_svn, sizeof(_pse_psvn.isv_svn), &isv_svn, sizeof(isv_svn))||
-                0!=memcpy_s(&_pse_psvn.cpu_svn, sizeof(_pse_psvn.cpu_svn), &cpu_svn, sizeof(sgx_cpu_svn_t))){
-                    AESM_DBG_ERROR("memcpy failed");
-                    return AE_FAILURE;
-            }
-            AESM_DBG_TRACE("get PSE isv_svn=%d", (int)isv_svn);
-            _is_pse_psvn_set = true;
-            return AE_SUCCESS;
         }
     }
     return AE_SUCCESS;
@@ -369,16 +527,25 @@ sgx_status_t AESMLogic::get_launch_token(const enclave_css_t* signature,
     AESMLogicLock lock(_le_mutex);
 
     ae_error_t ret_le = AE_SUCCESS;
+    uint32_t mrsigner_index = UINT32_MAX;
     // load LE to get launch token
     if((ret_le=CLEClass::instance().load_enclave()) != AE_SUCCESS)
     {
-        if(ret_le == AE_SERVER_NOT_AVAILABLE)
+        if(ret_le == AESM_AE_NO_DEVICE)
         {
-            AESM_DBG_FATAL("LE not loaded due to AE_SERVER_NOT_AVAILABLE, possible SGX Env Not Ready");
+            AESM_DBG_FATAL("LE not loaded due to no SGX device available, possible SGX Env Not Ready");
             return SGX_ERROR_NO_DEVICE;
         }
-        AESM_DBG_FATAL("fail to load LE:%d",ret_le);
-        return SGX_ERROR_UNEXPECTED;
+        else if(ret_le == AESM_AE_OUT_OF_EPC)
+        {
+            AESM_DBG_FATAL("LE not loaded due to out of EPC");
+            return SGX_ERROR_OUT_OF_EPC;
+        }
+        else
+        {
+            AESM_DBG_FATAL("fail to load LE:%d",ret_le);
+            return SGX_ERROR_SERVICE_UNAVAILABLE;
+        }
     }
 
 
@@ -390,7 +557,8 @@ sgx_status_t AESMLogic::get_launch_token(const enclave_css_t* signature,
         const_cast<uint8_t*>(reinterpret_cast<const uint8_t *>(attribute)),
         sizeof(sgx_attributes_t),
         reinterpret_cast<uint8_t*>(launch_token),
-        sizeof(token_t)));
+        sizeof(token_t),
+        &mrsigner_index));
     switch (ret_le)
     {
     case AE_SUCCESS:
@@ -411,7 +579,7 @@ sgx_status_t AESMLogic::get_launch_token(const enclave_css_t* signature,
     }
 
     token_t *lt = reinterpret_cast<token_t *>(launch_token);
-    ret_le = set_psvn(signature->body.isv_prod_id, signature->body.isv_svn, lt->cpu_svn_le);
+    ret_le = set_psvn(signature->body.isv_prod_id, signature->body.isv_svn, lt->cpu_svn_le, mrsigner_index);
     if(AE_PSVN_UNMATCHED_ERROR == ret_le)
     {
         //QE or PSE has been changed, but AESM doesn't restart. Will not provide service.
@@ -428,7 +596,7 @@ aesm_error_t AESMLogic::create_session(
     uint32_t* session_id,
     uint8_t* se_dh_msg1, uint32_t se_dh_msg1_size)
 {
-    return AESM_SERVICE_NOT_AVAILABLE;
+    return AESM_SERVICE_UNAVAILABLE;
 }
 
 aesm_error_t AESMLogic::exchange_report(
@@ -436,20 +604,20 @@ aesm_error_t AESMLogic::exchange_report(
     const uint8_t* se_dh_msg2, uint32_t se_dh_msg2_size,
     uint8_t* se_dh_msg3, uint32_t se_dh_msg3_size)
 {
-    return AESM_SERVICE_NOT_AVAILABLE;
+    return AESM_SERVICE_UNAVAILABLE;
 }
 
 aesm_error_t AESMLogic::close_session(
     uint32_t session_id)
 {
-    return AESM_SERVICE_NOT_AVAILABLE; 
+    return AESM_SERVICE_UNAVAILABLE; 
 }
 
 aesm_error_t AESMLogic::invoke_service(
     const uint8_t* pse_message_req, uint32_t pse_message_req_size,
     uint8_t* pse_message_resp, uint32_t pse_message_resp_size)
 {
-    return AESM_SERVICE_NOT_AVAILABLE;;
+    return AESM_SERVICE_UNAVAILABLE;;
 }
 
 aesm_error_t AESMLogic::get_ps_cap(
@@ -469,6 +637,7 @@ aesm_error_t AESMLogic::init_quote(
 {
     ae_error_t ret = AE_SUCCESS;
     uint16_t qe_isv_svn = 0xFFFF;
+    uint16_t pce_isv_svn = 0xFFFF;
     sgx_cpu_svn_t qe_cpu_svn;
     memset(&qe_cpu_svn, 0, sizeof(qe_cpu_svn));
     AESM_DBG_INFO("init_quote");
@@ -479,19 +648,42 @@ aesm_error_t AESMLogic::init_quote(
     }
     AESMLogicLock lock(_qe_pve_mutex);
     CHECK_EPID_PROVISIONG_STATUS;
+    ret = get_pce_isv_svn(pce_isv_svn);
+    if(AE_SUCCESS != ret)
+    {
+        if(AESM_AE_OUT_OF_EPC == ret)
+            return AESM_OUT_OF_EPC;
+        else if(AESM_AE_NO_DEVICE == ret)
+            return AESM_NO_DEVICE_ERROR;
+        else if(AE_SERVER_NOT_AVAILABLE == ret)
+            return AESM_SERVICE_UNAVAILABLE;
+        return AESM_UNEXPECTED_ERROR;
+    }
     ret = get_qe_cpu_svn(qe_cpu_svn);
     if(AE_SUCCESS != ret)
     {
+        if(AESM_AE_OUT_OF_EPC == ret)
+            return AESM_OUT_OF_EPC;
+        else if(AESM_AE_NO_DEVICE == ret)
+            return AESM_NO_DEVICE_ERROR;
+        else if(AE_SERVER_NOT_AVAILABLE == ret)
+            return AESM_SERVICE_UNAVAILABLE;
         return AESM_UNEXPECTED_ERROR;
     }
     ret = get_qe_isv_svn(qe_isv_svn);
     if(AE_SUCCESS != ret)
     {
+        if(AESM_AE_OUT_OF_EPC == ret)
+            return AESM_OUT_OF_EPC;
+        else if(AESM_AE_NO_DEVICE == ret)
+            return AESM_NO_DEVICE_ERROR;
+        else if(AE_SERVER_NOT_AVAILABLE == ret)
+            return AESM_SERVICE_UNAVAILABLE;
         return AESM_UNEXPECTED_ERROR;
     }
     return QEAESMLogic::init_quote(
                reinterpret_cast<sgx_target_info_t *>(target_info),
-               gid, gid_size, qe_isv_svn, qe_cpu_svn);
+               gid, gid_size, pce_isv_svn, qe_isv_svn, qe_cpu_svn);
 }
 
 aesm_error_t AESMLogic::get_quote(const uint8_t *report, uint32_t report_size,
@@ -502,6 +694,8 @@ aesm_error_t AESMLogic::get_quote(const uint8_t *report, uint32_t report_size,
                              uint8_t *qe_report, uint32_t qe_report_size,
                              uint8_t *quote, uint32_t buf_size)
 {
+    ae_error_t ret = AE_SUCCESS;
+    uint16_t pce_isv_svn = 0xFFFF;
     AESM_DBG_INFO("get_quote");
     if(sizeof(sgx_report_t) != report_size ||
        sizeof(sgx_spid_t) != spid_size)
@@ -516,8 +710,19 @@ aesm_error_t AESMLogic::get_quote(const uint8_t *report, uint32_t report_size,
     }
     AESMLogicLock lock(_qe_pve_mutex);
     CHECK_EPID_PROVISIONG_STATUS;
+    ret = get_pce_isv_svn(pce_isv_svn);
+    if(AE_SUCCESS != ret)
+    {
+        if(AESM_AE_OUT_OF_EPC == ret)
+            return AESM_OUT_OF_EPC;
+        else if(AESM_AE_NO_DEVICE == ret)
+            return AESM_NO_DEVICE_ERROR;
+        else if(AE_SERVER_NOT_AVAILABLE == ret)
+            return AESM_SERVICE_UNAVAILABLE;
+        return AESM_UNEXPECTED_ERROR;
+    }
     return QEAESMLogic::get_quote(report, quote_type, spid, nonce, sigrl,
-                                  sigrl_size, qe_report, quote, buf_size);
+                                  sigrl_size, qe_report, quote, buf_size, pce_isv_svn);
 }
 
 uint32_t AESMLogic::endpoint_selection(endpoint_selection_infos_t& es_info)
@@ -538,6 +743,84 @@ aesm_error_t AESMLogic::report_attestation_status(
     return PlatformInfoLogic::report_attestation_status(platform_info, platform_info_size, attestation_status, update_info, update_info_size);
 }
 
+uint32_t AESMLogic::is_gid_matching_result_in_epid_blob(const GroupID& gid)
+{
+    AESMLogicLock lock(_qe_pve_mutex);
+    EPIDBlob& epid_blob = EPIDBlob::instance();
+    uint32_t le_gid;
+    if(epid_blob.get_sgx_gid(&le_gid)!=AE_SUCCESS){//get littlen endian gid
+        return GIDMT_UNEXPECTED_ERROR;
+    }
+    le_gid=_htonl(le_gid);//use bigendian gid
+    se_static_assert(sizeof(le_gid)==sizeof(gid));
+    if(memcmp(&le_gid,&gid,sizeof(gid))!=0){
+        return GIDMT_UNMATCHED;
+    }
+    return GIDMT_MATCHED;
+}
+
+ae_error_t AESMLogic::get_white_list_size_without_lock(uint32_t *white_list_cert_size)
+{
+    uint32_t white_cert_size = 0;
+    ae_error_t ae_ret = aesm_query_data_size(FT_PERSISTENT_STORAGE, AESM_WHITE_LIST_CERT_FID, &white_cert_size);
+    if (AE_SUCCESS == ae_ret)
+    {
+        if (white_cert_size != 0){//file existing and not 0 size
+            *white_list_cert_size = white_cert_size;
+            return AE_SUCCESS;
+        }
+        else
+            return AE_FAILURE;
+    }
+    else
+    {
+        return ae_ret;
+    }
+}
+
+aesm_error_t AESMLogic::get_white_list_size(
+        uint32_t* white_list_cert_size)
+{
+    if (NULL == white_list_cert_size){
+        return AESM_PARAMETER_ERROR;
+    }
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_le_mutex);
+    CHECK_SERVICE_STATUS;
+    ae_error_t ae_ret = get_white_list_size_without_lock(white_list_cert_size);
+    if (AE_SUCCESS == ae_ret)
+        return AESM_SUCCESS;
+    else
+        return AESM_UNEXPECTED_ERROR;
+}
+
+
+aesm_error_t AESMLogic::get_white_list(
+    uint8_t *white_list_cert, uint32_t buf_size)
+{
+    uint32_t white_cert_size=0;
+    if (NULL == white_list_cert){
+        return AESM_PARAMETER_ERROR;
+    }
+    CHECK_SERVICE_STATUS;
+    AESMLogicLock lock(_le_mutex);
+    CHECK_SERVICE_STATUS;
+    ae_error_t ae_ret = get_white_list_size_without_lock(&white_cert_size);
+    if (AE_SUCCESS != ae_ret)
+        return AESM_UNEXPECTED_ERROR;
+    if (white_cert_size != buf_size)
+    {
+        return AESM_PARAMETER_ERROR;
+    }
+
+    ae_ret = aesm_read_data(FT_PERSISTENT_STORAGE, AESM_WHITE_LIST_CERT_FID, white_list_cert, &white_cert_size);
+    if (AE_SUCCESS != ae_ret){
+        AESM_DBG_WARN("Fail to read white cert list file");
+        return AESM_UNEXPECTED_ERROR;
+    }
+    return AESM_SUCCESS;
+}
+
 ae_error_t sgx_error_to_ae_error(sgx_status_t status)
 {
     if(SGX_ERROR_OUT_OF_MEMORY == status)
@@ -545,5 +828,39 @@ ae_error_t sgx_error_to_ae_error(sgx_status_t status)
     if(SGX_SUCCESS == status)
         return AE_SUCCESS;
     return AE_FAILURE;
+}
+
+aesm_error_t AESMLogic::switch_extended_epid_group(
+    uint32_t extended_epid_group_id
+    )
+{
+    AESM_DBG_INFO("AESMLogic::switch_extended_epid_group");
+    ae_error_t ae_ret;
+    extended_epid_group_blob_t xegb;
+    aesm_server_url_infos_t urls;
+    if ((ae_ret = XEGDBlob::verify_xegd_by_xgid(extended_epid_group_id)) != AE_SUCCESS ||
+        (ae_ret = EndpointSelectionInfo::verify_file_by_xgid(extended_epid_group_id)) != AE_SUCCESS){
+        AESM_DBG_INFO("Fail to switch to extended epid group to %d due to XEGD blob for URL blob not available", extended_epid_group_id);
+        return AESM_PARAMETER_ERROR;
+    }
+    ae_ret = set_global_extended_epid_group_id(extended_epid_group_id);
+    if (ae_ret != AE_SUCCESS){
+        AESM_DBG_INFO("Fail to switch to extended epid group %d", extended_epid_group_id);
+        return AESM_UNEXPECTED_ERROR;
+    }
+
+    AESM_DBG_INFO("Succ to switch to extended epid group %d in data file, restart aesm required to use it", extended_epid_group_id);
+    return AESM_SUCCESS;
+}
+aesm_error_t AESMLogic::get_extended_epid_group_id(
+    uint32_t* extended_epid_group_id)
+{
+    AESM_DBG_INFO("AESMLogic::get_extended_epid_group");
+    if (NULL == extended_epid_group_id)
+    {
+        return AESM_PARAMETER_ERROR;
+    }
+    *extended_epid_group_id = get_active_extended_epid_group_id();
+    return AESM_SUCCESS;
 }
 

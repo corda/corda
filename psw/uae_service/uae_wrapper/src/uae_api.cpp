@@ -284,3 +284,93 @@ uae_oal_status_t SGXAPI oal_report_attestation_status(
     return ret;
 }
 
+extern "C"
+uae_oal_status_t oal_get_whitelist_size(uint32_t* white_list_size, uint32_t timeout_usec, aesm_error_t *result)
+{
+    AEServices* servicesProvider = AEServicesProvider::GetServicesProvider();
+    if (servicesProvider == NULL)
+        return UAE_OAL_ERROR_UNEXPECTED;
+
+    WhiteListSize* whiteListSize = servicesProvider->GetWhiteListSize(timeout_usec / 1000);
+
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    if (whiteListSize != NULL)
+    {
+        ret = whiteListSize->uaeStatus;
+        *result = (aesm_error_t)whiteListSize->errorCode;
+
+        if (*result == AESM_SUCCESS)
+        {
+            *white_list_size = whiteListSize->white_list_size;
+        }
+    }
+    delete whiteListSize;
+    return ret;
+}
+
+extern "C"
+uae_oal_status_t oal_get_whitelist(uint8_t *white_list, uint32_t white_list_size, uint32_t timeout_usec, aesm_error_t *result)
+{
+    AEServices* servicesProvider = AEServicesProvider::GetServicesProvider();
+    if (servicesProvider == NULL)
+        return UAE_OAL_ERROR_UNEXPECTED;
+
+    WhiteList* whiteList = servicesProvider->GetWhiteList(white_list_size, timeout_usec / 1000);
+
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    if (whiteList != NULL)
+    {
+        ret = whiteList->uaeStatus;
+        *result = (aesm_error_t)whiteList->errorCode;
+
+        if (*result == AESM_SUCCESS)
+        {           
+            memcpy(white_list,whiteList->data,whiteList->length);
+        }
+    }
+    delete whiteList;
+    return ret;
+}
+
+extern "C"
+uae_oal_status_t oal_get_extended_epid_group_id(uint32_t* extended_group_id, uint32_t timeout_usec, aesm_error_t *result)
+{
+    AEServices* servicesProvider = AEServicesProvider::GetServicesProvider();
+    if (servicesProvider == NULL)
+        return UAE_OAL_ERROR_UNEXPECTED;
+
+    ExtendedEpidGroupId* extendedGroupId = servicesProvider->SGXGetExtendedEpidGroupId(timeout_usec / 1000);
+
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    if (extendedGroupId != NULL)
+    {
+        ret = extendedGroupId->uaeStatus;
+        *result = (aesm_error_t)extendedGroupId->errorCode;
+
+        if (*result == AESM_SUCCESS)
+        {
+            *extended_group_id = extendedGroupId->x_group_id;
+        }
+    }
+    delete extendedGroupId;
+    return ret;
+}
+
+extern "C"
+uae_oal_status_t oal_switch_extended_epid_group(uint32_t x_group_id, uint32_t timeout_usec, aesm_error_t *result)
+{
+    AEServices* servicesProvider = AEServicesProvider::GetServicesProvider();
+    if (servicesProvider == NULL)
+        return UAE_OAL_ERROR_UNEXPECTED;
+
+    PlainData* plainData = servicesProvider->SGXSwitchExtendedEpidGroup(x_group_id, timeout_usec / 1000);
+
+    uae_oal_status_t ret = UAE_OAL_ERROR_UNEXPECTED;
+    if (plainData != NULL)
+    {
+        ret = plainData->uaeStatus;
+        *result = (aesm_error_t)plainData->errorCode;
+    }
+    delete plainData;
+    return ret;
+}

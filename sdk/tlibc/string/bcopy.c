@@ -42,15 +42,24 @@ typedef long word;      /* "word" used for optimal copy speed */
 #define wsize   sizeof(word)
 #define wmask   (wsize - 1)
 
+#ifdef MEMPCPY
+void *
+mempcpy(void *dst0, const void *src0, size_t length)
+#else
 /*
  * Copy a block of memory, handling overlap.
  */
 void
 bcopy(const void *src0, void *dst0, size_t length)
+#endif
 {
-    char *dst = dst0;
-    const char *src = src0;
+    char *dst = (char *)dst0;
+    const char *src = (const char *)src0;
     size_t t;
+
+#ifdef MEMPCPY
+    size_t len = length;
+#endif
 
     if (length == 0 || dst == src)      /* nothing to do */
         goto done;
@@ -108,5 +117,9 @@ bcopy(const void *src0, void *dst0, size_t length)
         TLOOP(*--dst = *--src);
     }
 done:
+#if defined(MEMPCPY)
+    return ((void *)(((char *)dst0) + len));
+#else
     return;
+#endif
 }

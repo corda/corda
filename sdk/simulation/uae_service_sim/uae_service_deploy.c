@@ -33,10 +33,14 @@ void Java_com_voidel_security_sgx_uae_SGX_1AEServices_initializeNativeAEServices
 void sgx_get_quote(){}
 void sgx_get_quote_size(){}
 void sgx_init_quote(){}
+void sgx_get_whitelist_size(){}
+void sgx_get_whitelist(){}
+void sgx_switch_extended_epid_group(){}
+void sgx_get_extended_epid_group_id(){}
 void get_launch_token(){}
 void close_session_ocall(){}
 void create_session_ocall(){}
 void exchange_report_ocall(){}
 void invoke_service_ocall(){}
-void sgx_report_remote_attestation_failure(){}
+void sgx_report_attestation_status(){}
 void sgx_get_ps_cap(){}

@@ -57,6 +57,10 @@ class ProtobufSerializer : public ISerializer{
         AEMessage* serialize(AECloseSessionRequest* request);
         AEMessage* serialize(AEGetPsCapRequest* request);
         AEMessage* serialize(AEReportAttestationRequest* request);
+        AEMessage* serialize(AEGetWhiteListSizeRequest* request);
+        AEMessage* serialize(AEGetWhiteListRequest* request);
+        AEMessage* serialize(AESGXGetExtendedEpidGroupIdRequest* request);
+        AEMessage* serialize(AESGXSwitchExtendedEpidGroupRequest* request);
 
         //response serializers
         AEMessage* serialize(AEInitQuoteResponse* response);
@@ -68,6 +72,10 @@ class ProtobufSerializer : public ISerializer{
         AEMessage* serialize(AECloseSessionResponse* response);
         AEMessage* serialize(AEGetPsCapResponse* response);
         AEMessage* serialize(AEReportAttestationResponse* response);
+        AEMessage* serialize(AEGetWhiteListSizeResponse* response);
+        AEMessage* serialize(AEGetWhiteListResponse* response);
+        AEMessage* serialize(AESGXGetExtendedEpidGroupIdResponse* response);
+        AEMessage* serialize(AESGXSwitchExtendedEpidGroupResponse* response);
 
         //base inflate request
         IAERequest* inflateRequest(AEMessage* message);
@@ -82,6 +90,10 @@ class ProtobufSerializer : public ISerializer{
         bool inflateResponse(AEMessage* message, AECloseSessionResponse* response);
         bool inflateResponse(AEMessage* message, AEGetPsCapResponse* response);
         bool inflateResponse(AEMessage* message, AEReportAttestationResponse* response);
+        bool inflateResponse(AEMessage* message, AEGetWhiteListSizeResponse* response);
+        bool inflateResponse(AEMessage* message, AEGetWhiteListResponse *response);
+        bool inflateResponse(AEMessage* message, AESGXGetExtendedEpidGroupIdResponse* response);
+        bool inflateResponse(AEMessage* message, AESGXSwitchExtendedEpidGroupResponse* response);
 
     private:
         //request inflaters
@@ -94,6 +106,10 @@ class ProtobufSerializer : public ISerializer{
         IAERequest* inflateInvokeServiceRequest(aesm::message::Request* reqMsg);
         IAERequest* inflateGetPsCapRequest(aesm::message::Request* reqMsg);
         IAERequest* inflateReportAttestationErrorRequest(aesm::message::Request* reqMsg);
+        IAERequest* inflateGetWhiteListSizeRequest(aesm::message::Request* reqMsg);
+        IAERequest* inflateGetWhiteListRequest(aesm::message::Request* reqMsg);
+        IAERequest* inflateSGXGetExtendedEpidGroupIdRequest(aesm::message::Request* reqMsg);
+        IAERequest* inflateSGXSwitchExtendedEpidGroupRequest(aesm::message::Request* reqMsg);
 };
 
 #endif

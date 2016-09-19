@@ -46,15 +46,12 @@ public:
         uint8_t* platform_info, uint32_t platform_info_size,
         uint32_t attestation_status,
         uint8_t* update_info, uint32_t update_info_size);
-
-
     static ae_error_t need_epid_provisioning(const platform_info_blob_wrapper_t* p_platform_info_blob);
-
     static bool sgx_gid_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool cpu_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool qe_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
+    static bool pce_svn_out_of_date(const platform_info_blob_wrapper_t* p_platform_info_blob);
     static bool performance_rekey_available(const platform_info_blob_wrapper_t* p_platform_info_blob);
-
 private:
     static ae_error_t get_sgx_epid_group_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint8_t* flags);
     static ae_error_t get_sgx_tcb_evaluation_flags(const platform_info_blob_wrapper_t* p_platform_info_blob, uint16_t* flags);

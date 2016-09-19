@@ -54,13 +54,9 @@ IppStatus get_provision_server_rsa_pub_key_in_ipp_format(const signed_pek_t& pek
 {
     signed_pek_t little_endian_key;
     get_provision_server_rsa_key_little_endian_order(pek, little_endian_key);
-    IppStatus status = create_rsa_pub_key(PVE_RSA_KEY_BYTES, 
+    return create_rsa_pub_key(PVE_RSA_KEY_BYTES, 
                        sizeof(little_endian_key.e),
                        reinterpret_cast<const Ipp32u*>(little_endian_key.n),
                        reinterpret_cast<const Ipp32u *>(&little_endian_key.e),
                        rsa_pub_key);
-    if(status != ippStsNoErr){
-        return status;
-    }
-    return ippStsNoErr;
 }

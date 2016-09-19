@@ -528,7 +528,7 @@ bool build_regular_sections(const uint8_t* start_addr,
         {
         case PT_LOAD:
             sec = build_section(GET_PTR(uint8_t, start_addr, prg_hdr->p_offset),
-                                (uint64_t)prg_hdr->p_filesz, ROUND_TO_PAGE((uint64_t)prg_hdr->p_memsz),
+                                (uint64_t)prg_hdr->p_filesz, (uint64_t)prg_hdr->p_memsz,
                                 (uint64_t)prg_hdr->p_vaddr, (uint32_t) prg_hdr->p_flags);
             break;
 

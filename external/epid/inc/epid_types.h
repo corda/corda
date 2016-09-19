@@ -92,9 +92,9 @@ typedef struct G2ElemStr {
 } G2ElemStr;
 
 /// Serialized GT element
-typedef struct GtElemStr {
+typedef struct GTElemStr {
   FqElemStr x[12];  ///< an integer between [0, q-1]
-} GtElemStr;
+} GTElemStr;
 
 typedef FpElemStr PElemStr;
 typedef OctStr32 RLver_t;
@@ -281,6 +281,32 @@ typedef struct VerifierRl {
   OctStr32 n4;       ///< number of entries in VerifierRL
   G1ElemStr K[1];    ///< elements in G1 (flexible array)
 } VerifierRl;
+
+/*!
+* \brief
+* member pre-computation blob
+*
+* \note e12 = 0 implies that this blob is not valid
+*/
+typedef struct _MemberPrecomp {
+  GTElemStr e12;  ///< an element in GT
+  GTElemStr e22;  ///< an element in GT
+  GTElemStr e2w;  ///< an element in GT
+  GTElemStr ea2;  ///< an element in GT
+} MemberPrecomp;
+
+/*!
+ * \brief
+ * verifier pre-computation blob
+ *
+ * \note e12 = 0 implies that this blob is not valid
+*/
+typedef struct _VerifierPrecomp {
+  GTElemStr e12;  ///< an element in GT
+  GTElemStr e22;  ///< an element in GT
+  GTElemStr e2w;  ///< an element in GT
+  GTElemStr eg12;  ///< an element in GT
+} VerifierPrecomp;
 
 /// element to store seed values for later rekey
 typedef G1ElemStr ReKeySeed;

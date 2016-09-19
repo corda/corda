@@ -30,7 +30,7 @@
  */
 
 
-
+#include <assert.h>
 #include "isv_enclave_t.h"
 #include "sgx_tkey_exchange.h"
 #include "sgx_tcrypto.h"
@@ -69,6 +69,134 @@ static const sgx_ec256_public_t g_sp_pub_key = {
 uint8_t g_secret[8] = {0};
 
 
+#ifdef SUPPLIED_KEY_DERIVATION
+
+#pragma message ("Supplied key derivation function is used.")
+
+typedef struct _hash_buffer_t
+{
+    uint8_t counter[4];
+    sgx_ec256_dh_shared_t shared_secret;
+    uint8_t algorithm_id[4];
+} hash_buffer_t;
+
+const char ID_U[] = "SGXRAENCLAVE";
+const char ID_V[] = "SGXRASERVER";
+
+// Derive two keys from shared key and key id.
+bool derive_key(
+    const sgx_ec256_dh_shared_t *p_shared_key,
+    uint8_t key_id,
+    sgx_ec_key_128bit_t *first_derived_key,
+    sgx_ec_key_128bit_t *second_derived_key)
+{
+    sgx_status_t sgx_ret = SGX_SUCCESS;
+    hash_buffer_t hash_buffer;
+    sgx_sha_state_handle_t sha_context;
+    sgx_sha256_hash_t key_material;
+
+    memset(&hash_buffer, 0, sizeof(hash_buffer_t));
+    /* counter in big endian  */
+    hash_buffer.counter[3] = key_id;
+
+    /*convert from little endian to big endian */
+    for (size_t i = 0; i < sizeof(sgx_ec256_dh_shared_t); i++)
+    {
+        hash_buffer.shared_secret.s[i] = p_shared_key->s[sizeof(p_shared_key->s)-1 - i];
+    }
+
+    sgx_ret = sgx_sha256_init(&sha_context);
+    if (sgx_ret != SGX_SUCCESS)
+    {
+        return false;
+    }
+    sgx_ret = sgx_sha256_update((uint8_t*)&hash_buffer, sizeof(hash_buffer_t), sha_context);
+    if (sgx_ret != SGX_SUCCESS)
+    {
+        sgx_sha256_close(sha_context);
+        return false;
+    }
+    sgx_ret = sgx_sha256_update((uint8_t*)&ID_U, sizeof(ID_U), sha_context);
+    if (sgx_ret != SGX_SUCCESS)
+    {
+        sgx_sha256_close(sha_context);
+        return false;
+    }
+    sgx_ret = sgx_sha256_update((uint8_t*)&ID_V, sizeof(ID_V), sha_context);
+    if (sgx_ret != SGX_SUCCESS)
+    {
+        sgx_sha256_close(sha_context);
+        return false;
+    }
+    sgx_ret = sgx_sha256_get_hash(sha_context, &key_material);
+    if (sgx_ret != SGX_SUCCESS)
+    {
+        sgx_sha256_close(sha_context);
+        return false;
+    }
+    sgx_ret = sgx_sha256_close(sha_context);
+
+    assert(sizeof(sgx_ec_key_128bit_t)* 2 == sizeof(sgx_sha256_hash_t));
+    memcpy(first_derived_key, &key_material, sizeof(sgx_ec_key_128bit_t));
+    memcpy(second_derived_key, (uint8_t*)&key_material + sizeof(sgx_ec_key_128bit_t), sizeof(sgx_ec_key_128bit_t));
+
+    // memset here can be optimized away by compiler, so please use memset_s on
+    // windows for production code and similar functions on other OSes.
+    memset(&key_material, 0, sizeof(sgx_sha256_hash_t));
+
+    return true;
+}
+
+//isv defined key derivation function id
+#define ISV_KDF_ID 2
+
+typedef enum _derive_key_type_t
+{
+    DERIVE_KEY_SMK_SK = 0,
+    DERIVE_KEY_MK_VK,
+} derive_key_type_t;
+
+sgx_status_t key_derivation(const sgx_ec256_dh_shared_t* shared_key,
+    uint16_t kdf_id,
+    sgx_ec_key_128bit_t* smk_key,
+    sgx_ec_key_128bit_t* sk_key,
+    sgx_ec_key_128bit_t* mk_key,
+    sgx_ec_key_128bit_t* vk_key)
+{
+    bool derive_ret = false;
+
+    if (NULL == shared_key)
+    {
+        return SGX_ERROR_INVALID_PARAMETER;
+    }
+
+    if (ISV_KDF_ID != kdf_id)
+    {
+        //fprintf(stderr, "\nError, key derivation id mismatch in [%s].", __FUNCTION__);
+        return SGX_ERROR_KDF_MISMATCH;
+    }
+
+    derive_ret = derive_key(shared_key, DERIVE_KEY_SMK_SK,
+        smk_key, sk_key);
+    if (derive_ret != true)
+    {
+        //fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
+        return SGX_ERROR_UNEXPECTED;
+    }
+
+    derive_ret = derive_key(shared_key, DERIVE_KEY_MK_VK,
+        mk_key, vk_key);
+    if (derive_ret != true)
+    {
+        //fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
+        return SGX_ERROR_UNEXPECTED;
+    }
+    return SGX_SUCCESS;
+}
+#else
+#pragma message ("Default key derivation function is used.")
+#endif
+
 // This ecall is a wrapper of sgx_ra_init to create the trusted
 // KE exchange key context needed for the remote attestation
 // SIGMA API's. Input pointers aren't checked since the trusted stubs
@@ -99,7 +227,11 @@ sgx_status_t enclave_init_ra(
         if (ret != SGX_SUCCESS)
             return ret;
     }
+#ifdef SUPPLIED_KEY_DERIVATION
+    ret = sgx_ra_init_ex(&g_sp_pub_key, b_pse, key_derivation, p_context);
+#else
     ret = sgx_ra_init(&g_sp_pub_key, b_pse, p_context);
+#endif
     if(b_pse)
     {
         sgx_close_pse_session();

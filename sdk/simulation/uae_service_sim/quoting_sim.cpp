@@ -460,3 +460,25 @@ sgx_status_t SGXAPI sgx_report_attestation_status(
     return SGX_SUCCESS;
 }
 
+sgx_status_t SGXAPI sgx_get_extended_epid_group_id(uint32_t* p_extended_epid_group_id)
+{
+    *p_extended_epid_group_id = 0;
+    return SGX_SUCCESS;
+}
+
+sgx_status_t SGXAPI sgx_get_whitelist_size(uint32_t* p_whitelist_size)
+{
+    *p_whitelist_size = 0;
+    return SGX_SUCCESS;
+}
+
+sgx_status_t SGXAPI sgx_get_whitelist(uint8_t* p_whitelist, uint32_t whitelist_size)
+{
+    UNUSED(p_whitelist);
+    if(whitelist_size!=0){
+          return SGX_ERROR_INVALID_PARAMETER;
+    }else{
+          return SGX_SUCCESS;
+    }
+}
+

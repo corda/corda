@@ -52,6 +52,11 @@ class AEInternalServices : public AEServices
         
         virtual PsCap* GetPsCap(uint32_t timeout_msec=0) =0;
         virtual AttestationStatus* ReportAttestationError(const PlatformInfo* platformInfo, uint32_t attestation_error_code, uint32_t updateInfoLength, uint32_t timeout_msec=0) =0;
+
+        virtual WhiteListSize* GetWhiteListSize(uint32_t timeout_msec=0) =0;
+        virtual PlainData* GetWhiteList(uint32_t white_list_size, uint32_t timeout = 0) =0;
+        virtual ExtendedEpidGroupId* SGXGetExtendedEpidGroupId(uint32_t timeout_msec=0) =0;
+        virtual PlainData* SGXSwitchExtendedEpidGroup(uint32_t x_group_id, uint32_t timeout = 0) =0;
 };
 
 #endif

@@ -131,6 +131,7 @@ static int get_exec_class(pid_t pid)
         return ELFCLASSNONE;
     if(-1 == read(fd, e_ident, EI_NIDENT))
     {
+        close(fd);
         return ELFCLASSNONE;
     }
 

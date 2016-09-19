@@ -59,6 +59,23 @@ message Request{
         optional    uint32  timeout         = 9;
     }
 
+    message GetWhiteListSizeRequest{
+        optional    uint32  timeout        = 9;
+    }
+
+    message GetWhiteListRequest{
+        optional    uint32  white_list_size= 1;
+        optional    uint32  timeout        = 9;
+    }
+
+    message SGXGetExtendedEpidGroupIdRequest{
+        optional    uint32  timeout        = 9;
+    }
+
+    message SGXSwitchExtendedEpidGroupRequest{
+        optional    uint32  x_group_id      = 1;
+        optional    uint32  timeout        = 9;
+    }
     optional    InitQuoteRequest initQuoteReq                 = 1;
     optional    GetQuoteRequest getQuoteReq                   = 2;
     optional    GetLaunchTokenRequest getLicTokenReq         = 3;
@@ -68,6 +85,10 @@ message Request{
     optional    ExchangeReportRequest exchangeReportReq       = 7;
     optional    CloseSessionRequest closeSessionReq           = 8;
     optional    GetPsCapRequest getPsCapReq                   = 9;
+    optional    GetWhiteListSizeRequest getWhiteListSizeReq     = 10;
+    optional    GetWhiteListRequest     getWhiteListReq         = 11;
+    optional    SGXGetExtendedEpidGroupIdRequest sgxGetExtendedEpidGroupIdReq   = 12;
+    optional    SGXSwitchExtendedEpidGroupRequest sgxSwitchExtendedEpidGroupReq = 13;
 }
 
 message Response{
@@ -119,6 +140,24 @@ message Response{
         required   uint32 errorCode = 1 [default = 1];
         optional   uint64 ps_cap = 2;
     }
+    message GetWhiteListSizeResponse{
+        required   uint32 errorCode = 1 [default = 1];
+        optional   uint32 white_list_size = 2;
+    }
+
+    message GetWhiteListResponse{
+        required   uint32 errorCode = 1 [default = 1];
+        optional   bytes  white_list = 2;
+    }
+
+    message SGXGetExtendedEpidGroupIdResponse{
+        required   uint32 errorCode = 1 [default = 1];
+        optional   uint32 x_group_id = 2;
+    }
+
+    message SGXSwitchExtendedEpidGroupResponse{
+        required   uint32 errorCode = 1 [ default = 1];
+    }
     optional    InitQuoteResponse initQuoteRes              = 1;
     optional    GetQuoteResponse getQuoteRes                = 2;
     optional    GetLaunchTokenResponse getLicTokenRes      = 3;
@@ -128,4 +167,8 @@ message Response{
     optional    ExchangeReportResponse exchangeReportRes    = 7;
     optional    CloseSessionResponse closeSessionRes        = 8;
     optional    GetPsCapResponse getPsCapRes                = 9;
+    optional    GetWhiteListSizeResponse getWhiteListSizeRes = 10;
+    optional    GetWhiteListResponse  getWhiteListRes       = 11;
+    optional    SGXGetExtendedEpidGroupIdResponse sgxGetExtendedEpidGroupIdRes = 12;
+    optional    SGXSwitchExtendedEpidGroupResponse sgxSwitchExtendedEpidGroupRes = 13;
 }

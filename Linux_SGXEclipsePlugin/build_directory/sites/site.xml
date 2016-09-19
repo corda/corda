@@ -17,5 +17,7 @@
    <feature url="features/com.intel.sgx.feature_1.0.1.qualifier.jar" id="com.intel.sgx.feature" version="1.0.1.qualifier">
       <category name="com.intel.security.sgx"/>
    </feature>
-   <category-def name="com.intel.security.sgx" label="SGX Eclipse Plugin"/>
+   <category-def name="com.intel.security.sgx" label="SGX Eclipse Plugin">
+      <description>SGX Eclipse Plugin 1.0.1.qualifier</description>
+   </category-def>
 </site>

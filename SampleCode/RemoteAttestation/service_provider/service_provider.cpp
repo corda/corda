@@ -48,6 +48,17 @@
 #define SAFE_FREE(ptr) {if (NULL != (ptr)) {free(ptr); (ptr) = NULL;}}
 #endif
 
+// This is supported extended epid group of SP. SP can support more than one
+// extended epid group with different extended epid group id and credentials.
+static const sample_extended_epid_group g_extended_epid_groups[] = {
+    {
+        0,
+        ias_enroll,
+        ias_get_sigrl,
+        ias_verify_attestation_evidence
+    }
+};
+
 // This is the private EC key of SP, the corresponding public EC key is
 // hard coded in isv_enclave. It is based on NIST P-256 curve.
 static const sample_ec256_private_t g_sp_priv_key = {
@@ -90,6 +101,7 @@ typedef struct _sp_db_item_t
 }sp_db_item_t;
 static sp_db_item_t g_sp_db;
 
+static const sample_extended_epid_group* g_sp_extended_epid_group_id= NULL;
 static bool g_is_sp_registered = false;
 static int g_sp_credentials = 0;
 static int g_authentication_token = 0;
@@ -97,6 +109,60 @@ static int g_authentication_token = 0;
 uint8_t g_secret[8] = {0,1,2,3,4,5,6,7};
 
 sample_spid_t g_spid;
+
+
+// Verify message 0 then configure extended epid group.
+int sp_ra_proc_msg0_req(const sample_ra_msg0_t *p_msg0,
+    uint32_t msg0_size)
+{
+    int ret = -1;
+
+    if (!p_msg0 ||
+        (msg0_size != sizeof(sample_ra_msg0_t)))
+    {
+        return -1;
+    }
+    uint32_t extended_epid_group_id = p_msg0->extended_epid_group_id;
+
+    // Check to see if we have registered with the attestation server yet?
+    if (!g_is_sp_registered ||
+        (g_sp_extended_epid_group_id != NULL && g_sp_extended_epid_group_id->extended_epid_group_id != extended_epid_group_id))
+    {
+        // Check to see if the extended_epid_group_id is supported?
+        ret = SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
+        for (size_t i = 0; i < sizeof(g_extended_epid_groups) / sizeof(sample_extended_epid_group); i++)
+        {
+            if (g_extended_epid_groups[i].extended_epid_group_id == extended_epid_group_id)
+            {
+                g_sp_extended_epid_group_id = &(g_extended_epid_groups[i]);
+                // In the product, the SP will establish a mutually
+                // authenticated SSL channel. During the enrollment process, the ISV
+                // registers it exchanges TLS certs with attestation server and obtains an SPID and
+                // Report Key from the attestation server.
+                // For a product attestation server, enrollment is an offline process.  See the 'on-boarding'
+                // documentation to get the information required.  The enrollment process is
+                // simulated by a call in this sample.
+                ret = g_sp_extended_epid_group_id->enroll(g_sp_credentials, &g_spid,
+                    &g_authentication_token);
+                if (0 != ret)
+                {
+                    ret = SP_IAS_FAILED;
+                    break;
+                }
+
+                g_is_sp_registered = true;
+                ret = SP_OK;
+                break;
+            }
+        }
+    }
+    else
+    {
+        ret = SP_OK;
+    }
+
+    return ret;
+}
 
 // Verify message 1 then generate and return message 2 to isv.
 int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
@@ -117,56 +183,24 @@ int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
         return -1;
     }
 
+    // Check to see if we have registered?
+    if (!g_is_sp_registered)
+    {
+        return SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
+    }
+
     do
     {
-        // Check to see if we have registered with the IAS yet?
-        if(!g_is_sp_registered)
-        {
-            do
-            {
-                // @IAS_Q: What are the sp credentials?
-                // @IAS_Q: What is in the authentication token
-                // In the product, the SP will establish a mutually
-                // authenticated SSL channel. The authentication token is
-                // based on this channel.
-                // @TODO: Convert this call to a 'network' send/receive
-                // once the IAS server is a vaialable.
-                ret = ias_enroll(g_sp_credentials, &g_spid,
-                                 &g_authentication_token);
-                if(0 != ret)
-                {
-                    ret = SP_IAS_FAILED;
-                    break;
-                }
-
-                // IAS may support registering the Enclave Trust Policy.
-                // Just leave a place holder here
-                // @IAS_Q: What needs to be sent to the IAS with the policy
-                // that identifies the SP?
-                // ret = ias_register_enclave_policy(g_enclave_policy,
-                // g_authentication_token);
-                // if(0 != ret)
-                // {
-                //     break;
-                // }
-
-                g_is_sp_registered = true;
-                break;
-            } while(0);
-        }
-
-        // Get the sig_rl from IAS using GID.
+        // Get the sig_rl from attestation server using GID.
         // GID is Base-16 encoded of EPID GID in little-endian format.
-        // @IAS_Q: Does the SP need to supply any authentication info to the
-        // IAS?  SPID?
-        // In the product, the SP and IAS will use an established channel for
+        // In the product, the SP and attesation server uses an established channel for
         // communication.
         uint8_t* sig_rl;
         uint32_t sig_rl_size = 0;
 
-        // @TODO: Convert this call to a 'network' send/receive
-        // once the IAS server is a vaialable.
-        ret = ias_get_sigrl(p_msg1->gid, &sig_rl_size, &sig_rl);
+        // The product interface uses a REST based message to get the SigRL.
+        
+        ret = g_sp_extended_epid_group_id->get_sigrl(p_msg1->gid, &sig_rl_size, &sig_rl);
         if(0 != ret)
         {
             fprintf(stderr, "\nError, ias_get_sigrl [%s].", __FUNCTION__);
@@ -187,7 +221,7 @@ int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
         sample_ret = sample_ecc256_open_context(&ecc_state);
         if(SAMPLE_SUCCESS != sample_ret)
         {
-            fprintf(stderr, "\nError, cannot get ECC cotext in [%s].",
+            fprintf(stderr, "\nError, cannot get ECC context in [%s].",
                              __FUNCTION__);
             ret = -1;
             break;
@@ -228,6 +262,28 @@ int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
             break;
         }
 
+#ifdef SUPPLIED_KEY_DERIVATION
+
+        // smk is only needed for msg2 generation.
+        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK_SK,
+            &g_sp_db.smk_key, &g_sp_db.sk_key);
+        if(derive_ret != true)
+        {
+            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
+            ret = SP_INTERNAL_ERROR;
+            break;
+        }
+
+        // The rest of the keys are the shared secrets for future communication.
+        derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_MK_VK,
+            &g_sp_db.mk_key, &g_sp_db.vk_key);
+        if(derive_ret != true)
+        {
+            fprintf(stderr, "\nError, derive key fail in [%s].", __FUNCTION__);
+            ret = SP_INTERNAL_ERROR;
+            break;
+        }
+#else
         // smk is only needed for msg2 generation.
         derive_ret = derive_key(&dh_key, SAMPLE_DERIVE_KEY_SMK,
                                 &g_sp_db.smk_key);
@@ -265,6 +321,7 @@ int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
             ret = SP_INTERNAL_ERROR;
             break;
         }
+#endif
 
         uint32_t msg2_size = sizeof(sample_ra_msg2_t) + sig_rl_size;
         p_msg2_full = (ra_samp_response_header_t*)malloc(msg2_size
@@ -278,7 +335,8 @@ int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
         memset(p_msg2_full, 0, msg2_size + sizeof(ra_samp_response_header_t));
         p_msg2_full->type = TYPE_RA_MSG2;
         p_msg2_full->size = msg2_size;
-        // @TODO: Set the status properly based on real protocol communication.
+        // The simulated message2 always passes.  This would need to be set
+        // accordingly in a real service provider implementation.
         p_msg2_full->status[0] = 0;
         p_msg2_full->status[1] = 0;
         p_msg2 = (sample_ra_msg2_t *)p_msg2_full->body;
@@ -298,9 +356,13 @@ int sp_ra_proc_msg1_req(const sample_ra_msg1_t *p_msg1,
         // signature type and to understand the implications of the choice!
         p_msg2->quote_type = SAMPLE_QUOTE_LINKABLE_SIGNATURE;
 
-
+#ifdef SUPPLIED_KEY_DERIVATION
+//isv defined key derivation function id
+#define ISV_KDF_ID 2
+        p_msg2->kdf_id = ISV_KDF_ID;
+#else
         p_msg2->kdf_id = SAMPLE_AES_CMAC_KDF_ID;
-
+#endif
         // Create gb_ga
         sample_ec_pub_t gb_ga[2];
         if(memcpy_s(&gb_ga[0], sizeof(gb_ga[0]), &g_sp_db.g_b,
@@ -394,6 +456,11 @@ int sp_ra_proc_msg3_req(const sample_ra_msg3_t *p_msg3,
         return SP_INTERNAL_ERROR;
     }
 
+    // Check to see if we have registered?
+    if (!g_is_sp_registered)
+    {
+        return SP_UNSUPPORTED_EXTENDED_EPID_GROUP;
+    }
     do
     {
         // Compare g_a in message 3 with local g_a.
@@ -441,7 +508,17 @@ int sp_ra_proc_msg3_req(const sample_ra_msg3_t *p_msg3,
 
         p_quote = (sample_quote_t *)p_msg3->quote;
 
-        // Verify the the report_data in the Quote matches the expected value.
+        // Check the quote version if needed. Only check the Quote.version field if the enclave
+        // identity fields have changed or the size of the quote has changed.  The version may
+        // change without affecting the legacy fields or size of the quote structure.
+        //if(p_quote->version < ACCEPTED_QUOTE_VERSION)
+        //{
+        //    fprintf(stderr,"\nError, quote version is too old.", __FUNCTION__);
+        //    ret = SP_QUOTE_VERSION_ERROR;
+        //    break;
+        //}
+
+        // Verify the report_data in the Quote matches the expected value.
         // The first 32 bytes of report_data are SHA256 HASH of {ga|gb|vk}.
         // The second 32 bytes of report_data are set to zero.
         sample_ret = sample_sha256_init(&sha_handle);
@@ -496,15 +573,14 @@ int sp_ra_proc_msg3_req(const sample_ra_msg3_t *p_msg3,
             break;
         }
 
-        // Verify Enclave policy (IAS may provide an API for this if we
+        // Verify Enclave policy (an attestation server may provide an API for this if we
         // registered an Enclave policy)
 
-        // Verify quote with IAS.
-        // @IAS_Q: What is the proper JSON format for attestation evidence?
-        ias_att_report_t attestation_report;
-        // @TODO: Convert this call to a 'network' send/receive
-        // once the IAS server is a vaialable.
-        ret = ias_verify_attestation_evidence(p_quote, NULL,
+        // Verify quote with attestation server.
+        // In the product, an attestation server could use a REST message and JSON formatting to request
+        // attestation Quote verification.  The sample only simulates this interface.
+        ias_att_report_t attestation_report = {0};
+        ret = g_sp_extended_epid_group_id->verify_attestation_evidence(p_quote, NULL,
                                               &attestation_report);
         if(0 != ret)
         {
@@ -519,14 +595,13 @@ int sp_ra_proc_msg3_req(const sample_ra_msg3_t *p_msg3,
                 attestation_report.revocation_reason);
         // attestation_report.info_blob;
         fprintf(OUTPUT, "\n\tpse_status: %d.",  attestation_report.pse_status);
-        // Check if Platform_Info_Blob is available.
-        // @TODO: Currenlty, the IAS spec says this will not be available if
-        // no info blob status flags are set. For now, assume it is always
-        // there until we have the full message format definition.
+        // Note: This sample always assumes the PIB is sent by attestation server.  In the product
+        // implementation, the attestation server could only send the PIB for certain attestation 
+        // report statuses.  A product SP implementation needs to handle cases
+        // where the PIB is zero length.
 
         // Respond the client with the results of the attestation.
-        uint32_t att_result_msg_size = sizeof(sample_ra_att_result_msg_t)
-                                       + attestation_report.policy_report_size;
+        uint32_t att_result_msg_size = sizeof(sample_ra_att_result_msg_t);
         p_att_result_msg_full =
             (ra_samp_response_header_t*)malloc(att_result_msg_size
             + sizeof(ra_samp_response_header_t) + sizeof(g_secret));
@@ -552,15 +627,13 @@ int sp_ra_proc_msg3_req(const sample_ra_msg3_t *p_msg3,
         p_att_result_msg =
             (sample_ra_att_result_msg_t *)p_att_result_msg_full->body;
 
-        // @TODO: In the product, the HTTP response header itself will have
+        // In a product implementation of attestation server, the HTTP response header itself could have
         // an RK based signature that the service provider needs to check here.
 
         // The platform_info_blob signature will be verified by the client
-        // if needed. No need to have the Service Provider to check it.
+        // when sent. No need to have the Service Provider to check it.  The SP
+        // should pass it down to the application for further analysis.
 
-        // @TODO: Verify the enlcave policy report if they are to be supported
-        // by IAS. Otherwise, the SP will need to check the ISV enclave report
-        // itself.
         fprintf(OUTPUT, "\n\n\tEnclave Report:");
         fprintf(OUTPUT, "\n\tSignature Type: 0x%x", p_quote->sign_type);
         fprintf(OUTPUT, "\n\tSignature Basename: ");
@@ -602,7 +675,12 @@ int sp_ra_proc_msg3_req(const sample_ra_msg3_t *p_msg3,
                 p_quote->report_body.isv_prod_id);
         fprintf(OUTPUT, "\n\tisv_svn: 0x%0x",p_quote->report_body.isv_svn);
         fprintf(OUTPUT, "\n");
-        // @TODO do a real check here.
+
+        // A product service provider needs to verify that its enclave properties 
+        // match what is expected.  The SP needs to check these values before
+        // trusting the enclave.  For the sample, we always pass the policy check.
+        // Attestation server only verifies the quote structure and signature.  It does not 
+        // check the identity of the enclave.
         bool isv_policy_passed = true;
 
         // Assemble Attestation Result Message

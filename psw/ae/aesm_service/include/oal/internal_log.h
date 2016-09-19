@@ -75,6 +75,8 @@ extern "C" {
 #define SGX_DBGPRINT_PRINT_TWO_STRINGS(x,y)                 AESM_DBG_WARN("%s %s",x, y)
 #define SGX_DBGPRINT_PRINT_TWO_STRINGS_ONE_INT(x,y,z)       AESM_DBG_WARN("%s %s %d", x,y,z)
 #define SGX_DBGPRINT_PRINT_FIVE_STRINGS(a,b,c,d,e)          AESM_DBG_WARN("%s %s %s %s %s",a,b,c,d,e)
+#define SGX_DBGPRINT_PRINT_UNICODE_STRING_LTP(x)            AESM_DBG_WARN("%s", x)
+#define SGX_DBGPRINT_PRINT_ANSI_STRING(x)                   AESM_DBG_WARN("%s",x)
 #define SGX_DBGPRINT_PRINT_STRING_LTP(x)                    AESM_DBG_WARN("%s",x)
 #define SGX_DBGPRINT_PRINT_STRING(x)                        AESM_DBG_WARN("%s",x)
 

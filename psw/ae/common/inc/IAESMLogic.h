@@ -77,6 +77,10 @@ class IAESMLogic {
         virtual aesm_error_t reportAttestationStatus(uint8_t* platform_info, uint32_t platform_info_size,
                                            uint32_t attestation_error_code,
                                            uint8_t* update_info, uint32_t update_info_size) = 0;
+        virtual aesm_error_t getWhiteListSize(uint32_t* white_list_size) = 0;
+        virtual aesm_error_t getWhiteList(uint8_t* white_list, uint32_t mWhiteListSize) = 0;
+        virtual aesm_error_t sgxGetExtendedEpidGroupId(uint32_t* x_group_id) = 0;
+        virtual aesm_error_t sgxSwitchExtendedEpidGroup(uint32_t x_group_id) = 0;
         virtual void service_stop() = 0;
         virtual ~IAESMLogic(){};
 };

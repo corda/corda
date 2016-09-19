@@ -37,7 +37,7 @@ http://www.eclipse.org/legal/epl-v10.html
 
 ==============================================================
 
-libsgx_le.signed.so, libsgx_pve.signed.so and libsgx_qe.signed.so are licensed as Intel redistributable binary firmware and other blobs.
+libsgx_le.signed.so, libsgx_pce.signed.so, libsgx_pve.signed.so and libsgx_qe.signed.so are licensed as Intel redistributable binary firmware and other blobs.
 
  
 Copyright (c) Intel Corporation.

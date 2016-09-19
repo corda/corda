@@ -131,6 +131,14 @@ Enclave_Cpp_Files_3 := $(wildcard Enclave3/*.cpp)
 Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/stlport -I./LocalAttestationCode -I./Include
 
 Enclave_Compile_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
+
+# To generate a proper enclave, it is recommended to follow below guideline to link the trusted libraries:
+#    1. Link sgx_trts with the `--whole-archive' and `--no-whole-archive' options,
+#       so that the whole content of trts is included in the enclave.
+#    2. For other libraries, you just need to pull the required symbols.
+#       Use `--start-group' and `--end-group' to link these libraries.
+# Do NOT move the libraries linked with `--start-group' and `--end-group' within `--whole-archive' and `--no-whole-archive' options.
+# Otherwise, you may get some undesirable errors.
 Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library_Name) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -l$(Crypto_Library_Name) -L. -lLocalAttestation_Trusted -l$(Service_Library_Name) -Wl,--end-group \
@@ -162,7 +170,7 @@ all: $(Trust_Lib_Name) $(UnTrustLib_Name) Enclave1.so Enclave2.so Enclave3.so $(
 	@echo "   $(SGX_ENCLAVE_SIGNER) sign -key <key1> -enclave Enclave1.so -out <$(Enclave_Name_1)> -config Enclave1/Enclave1.config.xml"
 	@echo "   $(SGX_ENCLAVE_SIGNER) sign -key <key2> -enclave Enclave2.so -out <$(Enclave_Name_2)> -config Enclave2/Enclave2.config.xml"
 	@echo "   $(SGX_ENCLAVE_SIGNER) sign -key <key3> -enclave Enclave3.so -out <$(Enclave_Name_3)> -config Enclave3/Enclave3.config.xml"
-	@echo "You can also sign the enclaves using an external signing tool. See User's Guide for more details."
+	@echo "You can also sign the enclaves using an external signing tool."
 	@echo "To build the project in simulation mode set SGX_MODE=SIM. To build the project in prerelease mode set SGX_PRERELEASE=1 and SGX_MODE=HW."
 else
 all: $(Trust_Lib_Name) $(UnTrustLib_Name) $(Enclave_Name_1) $(Enclave_Name_2) $(Enclave_Name_3) $(App_Name)

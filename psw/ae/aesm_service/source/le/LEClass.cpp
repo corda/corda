@@ -36,6 +36,8 @@
 #include "arch.h"
 #include "ae_ipp.h"
 #include "util.h"
+#include "service_enclave_mrsigner.hh"
+#include "aesm_long_lived_thread.h"
 
 extern "C" sgx_status_t sgx_create_le(const char *file_name, const char *prd_css_file_name, const int debug, sgx_launch_token_t *launch_token, int *launch_token_updated, sgx_enclave_id_t *enclave_id, sgx_misc_attribute_t *misc_attr, int *production_loaded);
 
@@ -50,6 +52,7 @@ int CLEClass::white_list_register(
     sgx_status_t ret = SGX_SUCCESS;
     int retry = 0;
     uint32_t status = 0;
+    AESMLogicLock locker(AESMLogic::_le_mutex);
 
     assert(m_enclave_id);
 
@@ -82,6 +85,50 @@ void CLEClass::load_white_cert_list()
 {
     load_verified_white_cert_list();
     load_white_cert_list_to_be_verify();//If this version is older than previous one, it will not be loaded
+}
+#include <time.h>
+#include "endpoint_select_info.h"
+#include "stdint.h"
+
+#define UPDATE_DURATION (24*3600)
+ae_error_t CLEClass::update_white_list_by_url()
+{
+    static time_t last_updated_time = 0;
+    int i = 0;
+    ae_error_t ret = AE_FAILURE;
+    time_t cur_time = time(NULL);
+    if (last_updated_time + UPDATE_DURATION > cur_time){
+        return LE_WHITE_LIST_QUERY_BUSY;
+    }
+    for (i = 0; i < 2; i++){//at most retry once if network error
+        uint8_t *resp_buf = NULL;
+        uint32_t resp_size = 0;
+        const char *url = EndpointSelectionInfo::instance().get_server_url(SGX_WHITE_LIST_FILE); 
+        if (NULL == url){
+            return OAL_CONFIG_FILE_ERROR;
+        }
+        ret = aesm_network_send_receive(url,
+            NULL, 0, &resp_buf, &resp_size,GET, false);
+        if (ret == OAL_NETWORK_UNAVAILABLE_ERROR){
+            AESM_DBG_WARN("Network failure in getting white list...");
+            continue;
+        }
+        if (ret == AE_SUCCESS){
+            if (resp_buf != NULL && resp_size > 0){
+                ret = (ae_error_t)instance().white_list_register(resp_buf, resp_size, true);
+                if (AE_SUCCESS == ret&&resp_size >= sizeof(wl_cert_chain_t)){
+                    const wl_cert_chain_t* wl = reinterpret_cast<const wl_cert_chain_t*>(resp_buf);
+                }
+                else{
+                    ret = AE_FAILURE;//Internal error, maybe LE not consistent with AESM?
+                }
+            }
+            last_updated_time = cur_time;
+            aesm_free_network_response_buffer(resp_buf);
+        }
+        break;
+    }
+    return ret;
 }
 
 ae_error_t CLEClass::load_verified_white_cert_list()
@@ -189,11 +236,16 @@ ae_error_t CLEClass::load_enclave_only()
         &m_attributes, &production_le_loaded);
     if (ret == SGX_ERROR_NO_DEVICE){
         AESM_DBG_ERROR("AE SERVER NOT AVAILABLE in load non-production signed LE: %s",enclave_path);
-        return AE_SERVER_NOT_AVAILABLE;
+        return AESM_AE_NO_DEVICE;
+    }
+    if(ret == SGX_ERROR_OUT_OF_EPC)
+    {
+        AESM_DBG_ERROR("Loading LE failed due to out of epc");
+        return AESM_AE_OUT_OF_EPC;
     }
     if (ret != SGX_SUCCESS){
         AESM_DBG_ERROR("Loading LE failed:%d",ret);
-        return AE_FAILURE;
+        return AE_SERVER_NOT_AVAILABLE;
     }else if(production_le_loaded!=0){//production signed LE loaded
         AESM_DBG_INFO("Production signed LE loaded, try loading white list now");
     }else{
@@ -219,7 +271,8 @@ int CLEClass::get_launch_token(
     uint8_t * mrenclave, uint32_t mrenclave_size,
     uint8_t *public_key, uint32_t public_key_size,
     uint8_t *se_attributes, uint32_t se_attributes_size,
-    uint8_t * lictoken, uint32_t lictoken_size
+    uint8_t * lictoken, uint32_t lictoken_size,
+    uint32_t *ae_mrsigner_index
     )
 {
     sgx_status_t ret = SGX_SUCCESS;
@@ -240,11 +293,21 @@ int CLEClass::get_launch_token(
     if( ipperrorCode != ippStsNoErr){
         return AE_FAILURE;
     }
+    if(ae_mrsigner_index!=NULL){
+        *ae_mrsigner_index = UINT32_MAX;
+        for(uint32_t i=0;i<sizeof(G_SERVICE_ENCLAVE_MRSIGNER)/sizeof(G_SERVICE_ENCLAVE_MRSIGNER[0]);i++){
+            if(memcmp(&G_SERVICE_ENCLAVE_MRSIGNER[i], &mrsigner, sizeof(mrsigner))==0){
+                *ae_mrsigner_index=i;
+                break;
+            }
+        }
+    }
 
 #ifdef DBG_LOG
     char mrsigner_info[256];
+    sgx_attributes_t *attr = (sgx_attributes_t *)se_attributes;
     aesm_dbg_format_hex((uint8_t *)&mrsigner, sizeof(mrsigner), mrsigner_info, 256);
-    AESM_DBG_INFO("try to load Enclave with mrsigner:%s",mrsigner_info);
+    AESM_DBG_INFO("try to load Enclave with mrsigner:%s , attr %llx, xfrm %llx", mrsigner_info, attr->flags, attr->xfrm);
 #endif
 
     //get launch token by ecall into LE
@@ -267,5 +330,8 @@ int CLEClass::get_launch_token(
 
     if(SGX_SUCCESS!=ret)
         return sgx_error_to_ae_error(ret);
+    if (status == LE_WHITELIST_UNINITIALIZED_ERROR || status == LE_INVALID_PRIVILEGE_ERROR){
+        start_white_list_thread(0);//try to query white list unblocking
+    }
     return status;
 }

@@ -10,6 +10,7 @@ global:
     exchange_report_ocall;
     close_session_ocall;
     invoke_service_ocall;
+    sgx_get_extended_epid_group_id;
 local:
     *;
 };

@@ -37,6 +37,8 @@
 #include "epid_pve_type.h"
 
 
-sgx_status_t check_pek_signature(const signed_pek_t& signed_pek, uint8_t *result);
+sgx_status_t check_pek_signature(const signed_pek_t& signed_pek, const sgx_ec256_public_t* pek_sk, uint8_t *result);
+sgx_status_t verify_xegb(const extended_epid_group_blob_t& xegb, uint8_t *result);
+sgx_status_t verify_xegb_with_default(const extended_epid_group_blob_t& xegb, uint8_t *result, extended_epid_group_blob_t& out_xegb);
 #endif
 

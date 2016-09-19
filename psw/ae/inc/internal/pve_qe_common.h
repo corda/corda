@@ -41,10 +41,6 @@
 extern "C" {
 #endif
 
-extern const uint8_t g_sgx_isk_pubkey_x[SGX_ECP256_KEY_SIZE];
-
-extern const uint8_t g_sgx_isk_pubkey_y[SGX_ECP256_KEY_SIZE];
-
 IppStatus new_std_256_ecp(IppsECCPState **pp_new_ecp);
 
 void secure_free_std_256_ecp(IppsECCPState *p_ecp);

@@ -38,6 +38,7 @@
 #        - trts:          libsgx_trts.a
 #        - tcrypto:       libsgx_tcrypto.a
 #        - tkey_exchange: libsgx_tkey_exchange.a
+#        - tsetjmp:       libsgx_tsetjmp.a
 #  - Untrtusted libraries
 #        - ukey_exchange: libsgx_ukey_exchange.a
 #        - ptrace:        libsgx_ptrace.so, gdb-sgx-plugin
@@ -55,7 +56,7 @@ LIBTLIBCXX := $(BUILD_DIR)/libsgx_tstdcxx.a
 LIBTSE     := $(BUILD_DIR)/libsgx_tservice.a
 
 .PHONY: all
-all: tstdc tstdcxx tservice trts tcrypto tkey_exchange ukey_exchange ptrace sample_crypto simulation signtool edger8r
+all: tstdc tstdcxx tservice trts tcrypto tkey_exchange ukey_exchange ptrace sample_crypto simulation signtool edger8r tsetjmp
 
 # ---------------------------------------------------
 #  tstdc
@@ -161,6 +162,9 @@ tcrypto:
 tkey_exchange:
 	$(MAKE) -C tkey_exchange
 
+.PHONY: tsetjmp
+tsetjmp:
+	$(MAKE) -C tsetjmp/
 # ---------------------------------------------------
 #  Untrusted libraries
 # ---------------------------------------------------
@@ -208,6 +212,7 @@ clean:
 	$(MAKE) -C selib/linux/                        clean
 	$(MAKE) -C tae_service/                        clean
 	$(MAKE) -C trts/                               clean
+	$(MAKE) -C tsetjmp/                            clean
 	$(MAKE) -C tlibcrypto/                         clean
 	$(MAKE) -C tkey_exchange/                      clean
 	$(MAKE) -C ukey_exchange/                      clean

@@ -1,2 +1,2 @@
 #define MEMPCPY
-#include "./memcpy.c"
+#include "./bcopy.c"

@@ -176,6 +176,7 @@ IAEResponse* AEReportAttestationRequest::execute(IAESMLogic* aesmLogic)
 {
     aesm_error_t result; 
     uint8_t* update_info = new uint8_t[mUpdateInfoLength];
+    memset(update_info,0, mUpdateInfoLength);
     result = aesmLogic->reportAttestationStatus(mPlatformInfo, mPlatformInfoLength,
             mAttestationErrorCode,
             update_info, mUpdateInfoLength);
