@@ -190,9 +190,9 @@ class TwoPartyTradeProtocolTests {
                     // That constructs the storage service object in a customised way ...
                     override fun constructStorageService(attachments: NodeAttachmentService,
                                                          transactionStorage: TransactionStorage,
-                                                         keypair: KeyPair,
+                                                         keyPair: KeyPair,
                                                          identity: Party): StorageServiceImpl {
-                        return StorageServiceImpl(attachments, RecordingTransactionStorage(transactionStorage), keypair, identity)
+                        return StorageServiceImpl(attachments, RecordingTransactionStorage(transactionStorage), keyPair, identity)
                     }
                 }
             }

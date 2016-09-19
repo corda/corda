@@ -399,15 +399,15 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
         val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
-        val (identity, keypair) = obtainKeyPair(dir)
-        return Pair(constructStorageService(attachments, transactionStorage, keypair, identity),checkpointStorage)
+        val (identity, keyPair) = obtainKeyPair(dir)
+        return Pair(constructStorageService(attachments, transactionStorage, keyPair, identity),checkpointStorage)
     }
 
     protected open fun constructStorageService(attachments: NodeAttachmentService,
                                                transactionStorage: TransactionStorage,
-                                               keypair: KeyPair,
+                                               keyPair: KeyPair,
                                                identity: Party) =
-            StorageServiceImpl(attachments, transactionStorage, keypair, identity)
+            StorageServiceImpl(attachments, transactionStorage, keyPair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
@@ -420,13 +420,13 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         return if (!Files.exists(privKeyFile)) {
             log.info("Identity key not found, generating fresh key!")
-            val keypair: KeyPair = generateKeyPair()
-            keypair.serialize().writeToFile(privKeyFile)
-            val myIdentity = Party(configuration.myLegalName, keypair.public)
+            val keyPair: KeyPair = generateKeyPair()
+            keyPair.serialize().writeToFile(privKeyFile)
+            val myIdentity = Party(configuration.myLegalName, keyPair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
             // wrong type by mistake.
             myIdentity.serialize().writeToFile(pubIdentityFile)
-            Pair(myIdentity, keypair)
+            Pair(myIdentity, keyPair)
         } else {
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
@@ -436,8 +436,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
                         "${configuration.myLegalName} vs ${myIdentity.name}")
             // Load the private key.
-            val keypair = Files.readAllBytes(privKeyFile).deserialize<KeyPair>()
-            Pair(myIdentity, keypair)
+            val keyPair = Files.readAllBytes(privKeyFile).deserialize<KeyPair>()
+            Pair(myIdentity, keyPair)
         }
     }
 

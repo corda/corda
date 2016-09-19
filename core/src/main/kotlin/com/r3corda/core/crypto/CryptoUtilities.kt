@@ -177,7 +177,7 @@ fun PublicKey.toStringShort(): String {
 
 fun Iterable<PublicKey>.toStringsShort(): String = map { it.toStringShort() }.toString()
 
-// Allow Kotlin destructuring:    val (private, public) = keypair
+// Allow Kotlin destructuring:    val (private, public) = keyPair
 operator fun KeyPair.component1() = this.private
 operator fun KeyPair.component2() = this.public
 
@@ -185,7 +185,7 @@ operator fun KeyPair.component2() = this.public
 fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()
 
 /**
- * Returns a keypair derived from the given private key entropy. This is useful for unit tests and other cases where
+ * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
  * you want hard-coded private keys.
  */
 fun entropyToKeyPair(entropy: BigInteger): KeyPair {

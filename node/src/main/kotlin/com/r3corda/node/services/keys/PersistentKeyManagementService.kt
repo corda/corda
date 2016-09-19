@@ -33,10 +33,10 @@ class PersistentKeyManagementService(initialKeys: Set<KeyPair>) : SingletonSeria
     override val keys: Map<PublicKey, PrivateKey> get() = mutex.locked { HashMap(keys) }
 
     override fun freshKey(): KeyPair {
-        val keypair = generateKeyPair()
+        val keyPair = generateKeyPair()
         mutex.locked {
-            keys[keypair.public] = keypair.private
+            keys[keyPair.public] = keyPair.private
         }
-        return keypair
+        return keyPair
     }
 }

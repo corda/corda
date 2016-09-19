@@ -252,17 +252,16 @@ object X509Utilities {
         return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
     }
 
-
     /**
-     * Helper data class to pass around public certificate and KeyPair entities when using CA certs
+     * Helper data class to pass around public certificate and [KeyPair] entities when using CA certs.
      */
-    data class CACertAndKey(val certificate: X509Certificate, val keypair: KeyPair)
+    data class CACertAndKey(val certificate: X509Certificate, val keyPair: KeyPair)
 
 
     /**
-     * Create a de novo root self-signed X509 v3 CA cert and KeyPair.
+     * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
      * @param domain The Common (CN) field of the cert Subject will be populated with the domain string
-     * @return A data class is returned containing the new root CA Cert and its KeyPair for signing downstream certificates.
+     * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
     fun createSelfSignedCACert(myLegalName: String): CACertAndKey {
@@ -341,10 +340,10 @@ object X509Utilities {
         builder.addExtension(Extension.extendedKeyUsage, false,
                 DERSequence(purposes))
 
-        val cert = signCertificate(builder, certificateAuthority.keypair.private)
+        val cert = signCertificate(builder, certificateAuthority.keyPair.private)
 
         cert.checkValidity(Date())
-        cert.verify(certificateAuthority.keypair.public)
+        cert.verify(certificateAuthority.keyPair.public)
 
         return CACertAndKey(cert, keyPair)
     }
@@ -404,10 +403,10 @@ object X509Utilities {
         val subjectAlternativeNamesExtension = DERSequence(subjectAlternativeNames.toTypedArray())
         builder.addExtension(Extension.subjectAlternativeName, false, subjectAlternativeNamesExtension)
 
-        val cert = signCertificate(builder, certificateAuthority.keypair.private)
+        val cert = signCertificate(builder, certificateAuthority.keyPair.private)
 
         cert.checkValidity(Date())
-        cert.verify(certificateAuthority.keypair.public)
+        cert.verify(certificateAuthority.keyPair.public)
 
         return cert
     }
@@ -482,7 +481,7 @@ object X509Utilities {
         if (!keyStore.containsAlias(alias)) {
             val selfSignCert = keyGenerator()
             // Save to the key store.
-            keyStore.addOrReplaceKey(alias, selfSignCert.keypair.private, keyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
+            keyStore.addOrReplaceKey(alias, selfSignCert.keyPair.private, keyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
             X509Utilities.saveKeyStore(keyStore, keyStoreFilePath, storePassword)
         }
 
@@ -527,14 +526,14 @@ object X509Utilities {
         val rootCA = X509Utilities.createSelfSignedCACert("Corda Node Root CA")
         val intermediateCA = X509Utilities.createIntermediateCert("Corda Node Intermediate CA", rootCA)
 
-        val keypass = keyPassword.toCharArray()
+        val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
-        keyStore.addOrReplaceKey(CORDA_ROOT_CA_PRIVATE_KEY, rootCA.keypair.private, keypass, arrayOf(rootCA.certificate))
+        keyStore.addOrReplaceKey(CORDA_ROOT_CA_PRIVATE_KEY, rootCA.keyPair.private, keyPass, arrayOf(rootCA.certificate))
 
         keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA_PRIVATE_KEY,
-                intermediateCA.keypair.private,
-                keypass,
+                intermediateCA.keyPair.private,
+                keyPass,
                 arrayOf(intermediateCA.certificate, rootCA.certificate))
 
         saveKeyStore(keyStore, keyStoreFilePath, storePassword)
@@ -560,8 +559,8 @@ object X509Utilities {
     fun loadCertificateAndKey(keyStore: KeyStore,
                               keyPassword: String,
                               alias: String): CACertAndKey {
-        val keypass = keyPassword.toCharArray()
-        val key = keyStore.getKey(alias, keypass) as PrivateKey
+        val keyPass = keyPassword.toCharArray()
+        val key = keyStore.getKey(alias, keyPass) as PrivateKey
         val cert = keyStore.getCertificate(alias) as X509Certificate
         return CACertAndKey(cert, KeyPair(cert.publicKey, key))
     }
@@ -597,12 +596,12 @@ object X509Utilities {
                 if (host.canonicalHostName == host.hostName) listOf() else listOf(host.hostName),
                 listOf(host.hostAddress))
 
-        val keypass = keyPassword.toCharArray()
+        val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
         keyStore.addOrReplaceKey(CORDA_CLIENT_CA_PRIVATE_KEY,
                 serverKey.private,
-                keypass,
+                keyPass,
                 arrayOf(serverCert, intermediateCA.certificate, rootCA.certificate))
 
         keyStore.addOrReplaceCertificate(CORDA_CLIENT_CA, serverCert)
