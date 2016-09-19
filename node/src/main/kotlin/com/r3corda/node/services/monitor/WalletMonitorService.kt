@@ -8,7 +8,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.LedgerTransaction
@@ -60,7 +60,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
 
         // Notify listeners on state changes
         services.storageService.validatedTransactions.updates.subscribe { tx -> notifyTransaction(tx.tx.toLedgerTransaction(services)) }
-        services.walletService.updates.subscribe { update -> notifyWalletUpdate(update) }
+        services.vaultService.updates.subscribe { update -> notifyVaultUpdate(update) }
         smm.changes.subscribe { change ->
             val fiberId: Long = change.third
             val logic: ProtocolLogic<*> = change.first
@@ -81,7 +81,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     }
 
     @VisibleForTesting
-    internal fun notifyWalletUpdate(update: Wallet.Update)
+    internal fun notifyVaultUpdate(update: Vault.Update)
             = notifyEvent(ServiceToClientEvent.OutputState(Instant.now(), update.consumed, update.produced))
 
     @VisibleForTesting
@@ -135,7 +135,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     fun processRegisterRequest(req: RegisterRequest) {
         try {
             listeners.add(RegisteredListener(req.replyToRecipient, req.sessionID))
-            val stateMessage = StateSnapshotMessage(services.walletService.currentWallet.states.toList(),
+            val stateMessage = StateSnapshotMessage(services.vaultService.currentVault.states.toList(),
                     smm.allStateMachines.map { it.javaClass.name })
             net.send(net.createMessage(STATE_TOPIC, DEFAULT_SESSION_ID, stateMessage.serialize().bits), req.replyToRecipient)
 
@@ -158,7 +158,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
         try {
             Cash().generateSpend(builder, req.amount.withoutIssuer(), req.recipient.owningKey,
                     // TODO: Move cash state filtering by issuer down to the contract itself
-                    services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.amount.token == req.amount.token },
+                    services.vaultService.currentVault.statesOfType<Cash.State>().filter { it.state.data.amount.token == req.amount.token },
                     setOf(req.amount.token.issuer.party))
             .forEach {
                 val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
@@ -182,11 +182,11 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
         try {
             val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
             Cash().generateExit(builder, req.amount.issuedBy(issuer),
-                    services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
+                    services.vaultService.currentVault.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
             builder.signWith(services.storageService.myLegalIdentityKey)
 
             // Work out who the owners of the burnt states were
-            val inputStatesNullable = services.walletService.statesForRefs(builder.inputStates())
+            val inputStatesNullable = services.vaultService.statesForRefs(builder.inputStates())
             val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
             if (inputStatesNullable.size != inputStates.size) {
                 val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }

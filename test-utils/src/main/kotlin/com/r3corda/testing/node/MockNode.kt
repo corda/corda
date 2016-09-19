@@ -13,9 +13,9 @@ import com.r3corda.core.messaging.send
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.node.services.WalletService
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.serialization.deserialize
-import com.r3corda.core.testing.InMemoryWalletService
+import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.NodeConfiguration
@@ -91,7 +91,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
-        override fun makeWalletService(): WalletService = InMemoryWalletService(services)
+        override fun makeVaultService(): VaultService = InMemoryVaultService(services)
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
 

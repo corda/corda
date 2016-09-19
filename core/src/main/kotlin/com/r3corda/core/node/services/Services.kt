@@ -21,9 +21,9 @@ val DEFAULT_SESSION_ID = 0L
  */
 
 /**
- * A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
- * because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
- * change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
+ * A vault (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+ * because we own them. This class represents an immutable, stable state of a vault: it is guaranteed not to
+ * change out from underneath you, even though the canonical currently-best-known vault may change as we learn
  * about new transactions from our peers and generate new transactions that consume states ourselves.
  *
  * This abstract class has no references to Cash contracts.
@@ -32,16 +32,16 @@ val DEFAULT_SESSION_ID = 0L
  *   Active means they haven't been consumed yet (or we don't know about it).
  *   Relevant means they contain at least one of our pubkeys.
  */
-class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
+class Vault(val states: Iterable<StateAndRef<ContractState>>) {
     @Suppress("UNCHECKED_CAST")
     inline fun <reified T : ContractState> statesOfType() = states.filter { it.state.data is T } as List<StateAndRef<T>>
 
     /**
-     * Represents an update observed by the Wallet that will be notified to observers.  Include the [StateRef]s of
+     * Represents an update observed by the vault that will be notified to observers.  Include the [StateRef]s of
      * transaction outputs that were consumed (inputs) and the [ContractState]s produced (outputs) to/by the transaction
-     * or transactions observed and the Wallet.
+     * or transactions observed and the vault.
      *
-     * If the Wallet observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
+     * If the vault observes multiple transactions simultaneously, where some transactions consume the outputs of some of the
      * other transactions observed, then the changes are observed "net" of those.
      */
     data class Update(val consumed: Set<StateRef>, val produced: Set<StateAndRef<ContractState>>) {
@@ -54,7 +54,7 @@ class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
         operator fun plus(rhs: Update): Update {
             val previouslyProduced = produced.map { it.ref }
             val previouslyConsumed = consumed
-            val combined = Wallet.Update(
+            val combined = Vault.Update(
                     previouslyConsumed + (rhs.consumed - previouslyProduced),
                     // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
                     produced.filter { it.ref !in rhs.consumed }.toSet() + rhs.produced)
@@ -79,19 +79,19 @@ class Wallet(val states: Iterable<StateAndRef<ContractState>>) {
 }
 
 /**
- * A [WalletService] is responsible for securely and safely persisting the current state of a wallet to storage. The
- * wallet service vends immutable snapshots of the current wallet for working with: if you build a transaction based
- * on a wallet that isn't current, be aware that it may end up being invalid if the states that were used have been
+ * A [VaultService] is responsible for securely and safely persisting the current state of a vault to storage. The
+ * vault service vends immutable snapshots of the current vault for working with: if you build a transaction based
+ * on a vault that isn't current, be aware that it may end up being invalid if the states that were used have been
  * consumed by someone else first!
  *
- * Note that transactions we've seen are held by the storage service, not the wallet.
+ * Note that transactions we've seen are held by the storage service, not the vault.
  */
-interface WalletService {
+interface VaultService {
     /**
-     * Returns a read-only snapshot of the wallet at the time the call is made. Note that if you consume states or
-     * keys in this wallet, you must inform the wallet service so it can update its internal state.
+     * Returns a read-only snapshot of the vault at the time the call is made. Note that if you consume states or
+     * keys in this vault, you must inform the vault service so it can update its internal state.
      */
-    val currentWallet: Wallet
+    val currentVault: Vault
 
     /**
      * Returns a snapshot of the heads of LinearStates.
@@ -107,34 +107,34 @@ interface WalletService {
     }
 
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
-        val refsToStates = currentWallet.states.associateBy { it.ref }
+        val refsToStates = currentVault.states.associateBy { it.ref }
         return refs.associateBy({ it }, { refsToStates[it]?.state })
     }
 
     /**
-     * Possibly update the wallet by marking as spent states that these transactions consume, and adding any relevant
+     * Possibly update the vault by marking as spent states that these transactions consume, and adding any relevant
      * new states that they create. You should only insert transactions that have been successfully verified here!
      *
-     * Returns the new wallet that resulted from applying the transactions (note: it may quickly become out of date).
+     * Returns the new vault that resulted from applying the transactions (note: it may quickly become out of date).
      *
      * TODO: Consider if there's a good way to enforce the must-be-verified requirement in the type system.
      */
-    fun notifyAll(txns: Iterable<WireTransaction>): Wallet
+    fun notifyAll(txns: Iterable<WireTransaction>): Vault
 
     /** Same as notifyAll but with a single transaction. */
-    fun notify(tx: WireTransaction): Wallet = notifyAll(listOf(tx))
+    fun notify(tx: WireTransaction): Vault = notifyAll(listOf(tx))
 
     /**
-     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
-     * the update.
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
+     * incorporate the update.
      */
-    val updates: rx.Observable<Wallet.Update>
+    val updates: rx.Observable<Vault.Update>
 
     /**
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
-    fun whenConsumed(ref: StateRef): ListenableFuture<Wallet.Update> {
-        val future = SettableFuture.create<Wallet.Update>()
+    fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update> {
+        val future = SettableFuture.create<Vault.Update>()
         updates.filter { ref in it.consumed }.first().subscribe {
             future.set(it)
         }
@@ -142,7 +142,7 @@ interface WalletService {
     }
 }
 
-inline fun <reified T : LinearState> WalletService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
+inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
@@ -206,7 +206,7 @@ interface TxWritableStorageService : StorageService {
  *
  * If the point in time is in the past, the expectation is that the activity will happen shortly after it is scheduled.
  *
- * The main consumer initially is an observer of the wallet to schedule activities based on transactions as they are
+ * The main consumer initially is an observer of the vault to schedule activities based on transactions as they are
  * recorded.
  */
 interface SchedulerService {

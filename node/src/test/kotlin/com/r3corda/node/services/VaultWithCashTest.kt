@@ -5,12 +5,12 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
-import com.r3corda.core.node.services.WalletService
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
-import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.*
@@ -27,25 +27,25 @@ import kotlin.test.assertNull
 
 // TODO: Move this to the cash contract tests once mock services are further split up.
 
-class WalletWithCashTest {
+class VaultWithCashTest {
     lateinit var services: MockServices
-    val wallet: WalletService get() = services.walletService
+    val vault: VaultService get() = services.vaultService
     lateinit var dataSource: Closeable
 
     @Before
     fun setUp() {
-        LogHelper.setLevel(NodeWalletService::class)
+        LogHelper.setLevel(NodeVaultService::class)
         dataSource = configureDatabase(makeTestDataSourceProperties()).first
         databaseTransaction {
             services = object : MockServices() {
-                override val walletService: WalletService = NodeWalletService(this)
+                override val vaultService: VaultService = NodeVaultService(this)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         storageService.validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    walletService.notifyAll(txs.map { it.tx })
+                    vaultService.notifyAll(txs.map { it.tx })
                 }
             }
         }
@@ -53,7 +53,7 @@ class WalletWithCashTest {
 
     @After
     fun tearDown() {
-        LogHelper.reset(NodeWalletService::class)
+        LogHelper.reset(NodeVaultService::class)
         dataSource.close()
     }
 
@@ -63,7 +63,7 @@ class WalletWithCashTest {
             // Fix the PRNG so that we get the same splits every time.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val w = wallet.currentWallet
+            val w = vault.currentVault
             assertEquals(3, w.states.toList().size)
 
             val state = w.states.toList()[0].state.data as Cash.State
@@ -100,14 +100,14 @@ class WalletWithCashTest {
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
 
-            assertNull(wallet.currentWallet.cashBalances[USD])
+            assertNull(vault.currentVault.cashBalances[USD])
             services.recordTransactions(usefulTX)
-            assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
+            assertEquals(100.DOLLARS, vault.currentVault.cashBalances[USD])
             services.recordTransactions(irrelevantTX)
-            assertEquals(100.DOLLARS, wallet.currentWallet.cashBalances[USD])
+            assertEquals(100.DOLLARS, vault.currentVault.cashBalances[USD])
             services.recordTransactions(spendTX)
 
-            assertEquals(20.DOLLARS, wallet.currentWallet.cashBalances[USD])
+            assertEquals(20.DOLLARS, vault.currentVault.cashBalances[USD])
 
             // TODO: Flesh out these tests as needed.
         }
@@ -151,7 +151,7 @@ class WalletWithCashTest {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyIssue)
-            assertEquals(1, wallet.currentWallet.states.toList().size)
+            assertEquals(1, vault.currentVault.states.toList().size)
 
             // Move the same state
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
@@ -163,7 +163,7 @@ class WalletWithCashTest {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyMove)
-            assertEquals(1, wallet.currentWallet.states.toList().size)
+            assertEquals(1, vault.currentVault.states.toList().size)
         }
     }
 }

@@ -19,7 +19,7 @@ import java.time.Clock
  * state from being serialized in checkpoints.
  */
 interface ServiceHub {
-    val walletService: WalletService
+    val vaultService: VaultService
     val keyManagementService: KeyManagementService
     val identityService: IdentityService
     val storageService: StorageService
@@ -30,7 +30,7 @@ interface ServiceHub {
 
     /**
      * Given a list of [SignedTransaction]s, writes them to the local storage for validated transactions and then
-     * sends them to the wallet for further processing.
+     * sends them to the vault for further processing.
      *
      * @param txs The transactions to record.
      */
@@ -38,7 +38,7 @@ interface ServiceHub {
 
     /**
      * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
-     * sends them to the wallet for further processing.
+     * sends them to the vault for further processing.
      *
      * @param txs The transactions to record.
      */

@@ -243,7 +243,7 @@ object TwoPartyTradeProtocol {
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionType.General.Builder(notary)
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
-            val wallet = serviceHub.walletService.currentWallet
+            val wallet = serviceHub.vaultService.currentVault
             val cashStates = wallet.statesOfType<Cash.State>()
             val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
             // Add inputs/outputs/a command for the movement of the asset.

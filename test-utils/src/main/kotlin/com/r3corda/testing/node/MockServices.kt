@@ -51,7 +51,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val identityService: MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
     override val keyManagementService: MockKeyManagementService = MockKeyManagementService(key)
 
-    override val walletService: WalletService get() = throw UnsupportedOperationException()
+    override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val networkService: MessagingService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = throw UnsupportedOperationException()

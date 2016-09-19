@@ -11,7 +11,7 @@ import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.TransactionStorage
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
@@ -370,7 +370,7 @@ class TwoPartyTradeProtocolTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
-            owner: PublicKey = BOB_PUBKEY): Pair<Wallet, List<WireTransaction>> {
+            owner: PublicKey = BOB_PUBKEY): Pair<Vault, List<WireTransaction>> {
         val issuer = DUMMY_CASH_ISSUER
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
@@ -407,15 +407,15 @@ class TwoPartyTradeProtocolTests {
             this.verifies()
         }
 
-        val wallet = Wallet(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
-        return Pair(wallet, listOf(eb1, bc1, bc2))
+        val vault = Vault(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
+        return Pair(vault, listOf(eb1, bc1, bc2))
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
             owner: PublicKey,
             amount: Amount<Issued<Currency>>,
-            attachmentID: SecureHash?): Pair<Wallet, List<WireTransaction>> {
+            attachmentID: SecureHash?): Pair<Vault, List<WireTransaction>> {
         val ap = transaction {
             output("alice's paper") {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
@@ -432,8 +432,8 @@ class TwoPartyTradeProtocolTests {
             }
         }
 
-        val wallet = Wallet(listOf("alice's paper".outputStateAndRef()))
-        return Pair(wallet, listOf(ap))
+        val vault = Vault(listOf("alice's paper".outputStateAndRef()))
+        return Pair(vault, listOf(ap))
     }
 
     class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {

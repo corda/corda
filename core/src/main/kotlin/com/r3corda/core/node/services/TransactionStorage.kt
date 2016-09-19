@@ -13,8 +13,8 @@ interface ReadOnlyTransactionStorage {
     fun getTransaction(id: SecureHash): SignedTransaction?
 
     /**
-     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Wallet will already incorporate
-     * the update.
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
+     * incorporate the update.
      */
     val updates: rx.Observable<SignedTransaction>
 }

@@ -1,11 +1,11 @@
-package com.r3corda.node.services.wallet
+package com.r3corda.node.services.vault
 
 import com.google.common.collect.Sets
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.Wallet
-import com.r3corda.core.node.services.WalletService
+import com.r3corda.core.node.services.Vault
+import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.loggerFor
@@ -21,8 +21,8 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * Currently, the node wallet service is a very simple RDBMS backed implementation.  It will change significantly when
- * we add further functionality as the design for the wallet and wallet service matures.
+ * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
+ * we add further functionality as the design for the vault and vault service matures.
  *
  * This class needs database transactions to be in-flight during method calls and init, and will throw exceptions if
  * this is not the case.
@@ -31,10 +31,10 @@ import kotlin.concurrent.withLock
  * TODO: keep an audit trail with time stamps of previously unconsumed states "as of" a particular point in time.
  * TODO: have transaction storage do some caching.
  */
-class NodeWalletService(private val services: ServiceHub) : SingletonSerializeAsToken(), WalletService {
+class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsToken(), VaultService {
 
     private companion object {
-        val log = loggerFor<NodeWalletService>()
+        val log = loggerFor<NodeVaultService>()
     }
 
     private object StatesSetTable : JDBCHashedTable("vault_unconsumed_states") {
@@ -53,11 +53,11 @@ class NodeWalletService(private val services: ServiceHub) : SingletonSerializeAs
 
     protected val mutex = ReentrantLock()
 
-    override val currentWallet: Wallet get() = mutex.withLock { Wallet(allUnconsumedStates()) }
+    override val currentVault: Vault get() = mutex.withLock { Vault(allUnconsumedStates()) }
 
-    private val _updatesPublisher = PublishSubject.create<Wallet.Update>()
+    private val _updatesPublisher = PublishSubject.create<Vault.Update>()
 
-    override val updates: Observable<Wallet.Update>
+    override val updates: Observable<Vault.Update>
         get() = _updatesPublisher
 
     /**
@@ -66,21 +66,21 @@ class NodeWalletService(private val services: ServiceHub) : SingletonSerializeAs
      * TODO: Represent this using an actual JDBCHashMap or look at vault design further.
      */
     override val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
-        get() = currentWallet.states.filterStatesOfType<LinearState>().associateBy { it.state.data.linearId }.mapValues { it.value }
+        get() = currentVault.states.filterStatesOfType<LinearState>().associateBy { it.state.data.linearId }.mapValues { it.value }
 
-    override fun notifyAll(txns: Iterable<WireTransaction>): Wallet {
+    override fun notifyAll(txns: Iterable<WireTransaction>): Vault {
         val ourKeys = services.keyManagementService.keys.keys
-        val netDelta = txns.fold(Wallet.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, netDelta, ourKeys) }
-        if (netDelta != Wallet.NoUpdate) {
+        val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, netDelta, ourKeys) }
+        if (netDelta != Vault.NoUpdate) {
             mutex.withLock {
                 recordUpdate(netDelta)
             }
             _updatesPublisher.onNext(netDelta)
         }
-        return currentWallet
+        return currentVault
     }
 
-    private fun makeUpdate(tx: WireTransaction, netDelta: Wallet.Update, ourKeys: Set<PublicKey>): Wallet.Update {
+    private fun makeUpdate(tx: WireTransaction, netDelta: Vault.Update, ourKeys: Set<PublicKey>): Vault.Update {
         val ourNewStates = tx.outputs.
                 filter { isRelevant(it.data, ourKeys) }.
                 map { tx.outRef<ContractState>(it.data) }
@@ -95,26 +95,26 @@ class NodeWalletService(private val services: ServiceHub) : SingletonSerializeAs
 
         // Is transaction irrelevant?
         if (consumed.isEmpty() && ourNewStates.isEmpty()) {
-            log.trace { "tx ${tx.id} was irrelevant to this wallet, ignoring" }
-            return Wallet.NoUpdate
+            log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
+            return Vault.NoUpdate
         }
 
-        return Wallet.Update(consumed, ourNewStates.toHashSet())
+        return Vault.Update(consumed, ourNewStates.toHashSet())
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>): Boolean {
         return if (state is OwnableState) {
             state.owner in ourKeys
         } else if (state is LinearState) {
-            // It's potentially of interest to the wallet
+            // It's potentially of interest to the vault
             state.isRelevant(ourKeys)
         } else {
             false
         }
     }
 
-    private fun recordUpdate(update: Wallet.Update): Wallet.Update {
-        if (update != Wallet.NoUpdate) {
+    private fun recordUpdate(update: Vault.Update): Vault.Update {
+        if (update != Vault.NoUpdate) {
             val producedStateRefs = update.produced.map { it.ref }
             val consumedStateRefs = update.consumed
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }

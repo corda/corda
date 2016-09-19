@@ -30,10 +30,10 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
         // something we can't later implement against a persistent store (i.e. need to pick / build a query engine)
         if (query is StatesQuery.Selection) {
             if (query.criteria is StatesQuery.Criteria.AllDeals) {
-                val states = node.services.walletService.linearHeads
+                val states = node.services.vaultService.linearHeads
                 return states.values.map { it.ref }
             } else if (query.criteria is StatesQuery.Criteria.Deal) {
-                val states = node.services.walletService.linearHeadsOfType<DealState>().filterValues {
+                val states = node.services.vaultService.linearHeadsOfType<DealState>().filterValues {
                     it.state.data.ref == query.criteria.ref
                 }
                 return states.values.map { it.ref }
@@ -43,7 +43,7 @@ class APIServerImpl(val node: AbstractNode) : APIServer {
     }
 
     override fun fetchStates(states: List<StateRef>): Map<StateRef, TransactionState<ContractState>?> {
-        return node.services.walletService.statesForRefs(states)
+        return node.services.vaultService.statesForRefs(states)
     }
 
     override fun fetchTransactions(txs: List<SecureHash>): Map<SecureHash, SignedTransaction?> {

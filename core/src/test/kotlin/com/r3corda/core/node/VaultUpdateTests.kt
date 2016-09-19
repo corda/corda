@@ -2,14 +2,14 @@ package com.r3corda.core.node
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import org.junit.Test
 import java.security.PublicKey
 import kotlin.test.assertEquals
 
 
-class WalletUpdateTests {
+class VaultUpdateTests {
 
     object DummyContract : Contract {
 
@@ -22,7 +22,7 @@ class WalletUpdateTests {
     private class DummyState : ContractState {
         override val participants: List<PublicKey>
             get() = emptyList()
-        override val contract = WalletUpdateTests.DummyContract
+        override val contract = VaultUpdateTests.DummyContract
     }
 
     private val stateRef0 = StateRef(SecureHash.randomSHA256(), 0)
@@ -39,47 +39,47 @@ class WalletUpdateTests {
 
     @Test
     fun `nothing plus nothing is nothing`() {
-        val before = Wallet.NoUpdate
-        val after = before + Wallet.NoUpdate
+        val before = Vault.NoUpdate
+        val after = before + Vault.NoUpdate
         assertEquals(before, after)
     }
 
     @Test
     fun `something plus nothing is something`() {
-        val before = Wallet.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef2, stateAndRef3))
-        val after = before + Wallet.NoUpdate
+        val before = Vault.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef2, stateAndRef3))
+        val after = before + Vault.NoUpdate
         assertEquals(before, after)
     }
 
     @Test
     fun `nothing plus something is something`() {
-        val before = Wallet.NoUpdate
-        val after = before + Wallet.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef2, stateAndRef3))
-        val expected = Wallet.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef2, stateAndRef3))
+        val before = Vault.NoUpdate
+        val after = before + Vault.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef2, stateAndRef3))
+        val expected = Vault.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef2, stateAndRef3))
         assertEquals(expected, after)
     }
 
     @Test
     fun `something plus consume state 0 is something without state 0 output`() {
-        val before = Wallet.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Wallet.Update(setOf(stateRef0), setOf())
-        val expected = Wallet.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef1))
+        val before = Vault.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1))
+        val after = before + Vault.Update(setOf(stateRef0), setOf())
+        val expected = Vault.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef1))
         assertEquals(expected, after)
     }
 
     @Test
     fun `something plus produce state 4 is something with additional state 4 output`() {
-        val before = Wallet.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Wallet.Update(setOf(), setOf(stateAndRef4))
-        val expected = Wallet.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1, stateAndRef4))
+        val before = Vault.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1))
+        val after = before + Vault.Update(setOf(), setOf(stateAndRef4))
+        val expected = Vault.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1, stateAndRef4))
         assertEquals(expected, after)
     }
 
     @Test
     fun `something plus consume states 0 and 1, and produce state 4, is something without state 0 and 1 outputs and only state 4 output`() {
-        val before = Wallet.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1))
-        val after = before + Wallet.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef4))
-        val expected = Wallet.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef4))
+        val before = Vault.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef0, stateAndRef1))
+        val after = before + Vault.Update(setOf(stateRef0, stateRef1), setOf(stateAndRef4))
+        val expected = Vault.Update(setOf(stateRef2, stateRef3), setOf(stateAndRef4))
         assertEquals(expected, after)
     }
 }

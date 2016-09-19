@@ -87,9 +87,9 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
 
     /**
      * Generate a transaction that consumes one or more of the given input states to move assets to the given pubkey.
-     * Note that the wallet list is not updated: it's up to you to do that.
+     * Note that the vault is not updated: it's up to you to do that.
      *
-     * @param onlyFromParties if non-null, the wallet will be filtered to only include asset states issued by the set
+     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
      */
@@ -106,7 +106,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
         //
         // First we must select a set of asset states (which for convenience we will call 'coins' here, as in bitcoinj).
-        // The input states can be considered our "wallet", and may consist of different products, and with different
+        // The input states can be considered our "vault", and may consist of different products, and with different
         // issuers and deposits.
         //
         // Coin selection is a complex problem all by itself and many different approaches can be used. It is easily

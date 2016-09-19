@@ -50,9 +50,9 @@ abstract class OnLedgerAsset<T : Any, C: CommandData, S : FungibleAsset<T>> : Co
 
     /**
      * Generate a transaction that consumes one or more of the given input states to move assets to the given pubkey.
-     * Note that the wallet list is not updated: it's up to you to do that.
+     * Note that the vault is not updated: it's up to you to do that.
      *
-     * @param onlyFromParties if non-null, the wallet will be filtered to only include asset states issued by the set
+     * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
      *                        of given parties. This can be useful if the party you're trying to pay has expectations
      *                        about which type of asset claims they are willing to accept.
      */

@@ -25,8 +25,8 @@ class DataVendingServiceTests {
 
     @Test
     fun `notify of transaction`() {
-        val (walletServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = walletServiceNode.services.storageService.myLegalIdentityKey.public
+        val (vaultServiceNode, registerNode) = network.createTwoNodes()
+        val beneficiary = vaultServiceNode.services.storageService.myLegalIdentityKey.public
         val deposit = registerNode.services.storageService.myLegalIdentity.ref(1)
         network.runNetwork()
 
@@ -37,13 +37,13 @@ class DataVendingServiceTests {
         // Complete the cash transaction, and then manually relay it
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction()
-        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
+        assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
         DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
-                walletServiceNode.info, tx)
+                vaultServiceNode.info, tx)
         network.runNetwork()
 
         // Check the transaction is in the receiving node
-        val actual = walletServiceNode.services.walletService.currentWallet.states.singleOrNull()
+        val actual = vaultServiceNode.services.vaultService.currentVault.states.singleOrNull()
         val expected = tx.tx.outRef<Cash.State>(0)
 
         assertEquals(expected, actual)
@@ -54,8 +54,8 @@ class DataVendingServiceTests {
      */
     @Test
     fun `notify failure`() {
-        val (walletServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = walletServiceNode.services.storageService.myLegalIdentityKey.public
+        val (vaultServiceNode, registerNode) = network.createTwoNodes()
+        val beneficiary = vaultServiceNode.services.storageService.myLegalIdentityKey.public
         val deposit = MEGA_CORP.ref(1)
         network.runNetwork()
 
@@ -66,12 +66,12 @@ class DataVendingServiceTests {
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid
         ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
         val tx = ptx.toSignedTransaction(false)
-        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
+        assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
         DataVending.Service.notify(registerNode.net, registerNode.services.storageService.myLegalIdentity,
-                walletServiceNode.info, tx)
+                vaultServiceNode.info, tx)
         network.runNetwork()
 
         // Check the transaction is not in the receiving node
-        assertEquals(0, walletServiceNode.services.walletService.currentWallet.states.toList().size)
+        assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
     }
 }
