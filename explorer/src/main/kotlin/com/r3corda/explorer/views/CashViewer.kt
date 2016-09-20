@@ -287,7 +287,6 @@ class CashViewer : View() {
 
     // Wire up UI
     init {
-
         searchCancelImageView.setOnMouseClicked { event: MouseEvent ->
             if (event.button == MouseButton.PRIMARY) {
                 searchCriteriaTextField.text = ""
@@ -356,6 +355,7 @@ class CashViewer : View() {
         cashViewerTable.root.isExpanded = true
         cashViewerTable.isShowRoot = false
 
+        // TODO Think about i18n!
         totalMatchingLabel.textProperty().bind(Bindings.size(cashViewerIssueNodes).map {
             val plural = if (it == 1) "" else "s"
             "Total $it matching issuer$plural"
