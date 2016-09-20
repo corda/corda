@@ -58,6 +58,14 @@ extern "C" sgx_status_t sgx_create_enclave(const char *file_name, const int debu
     file.name_len = (uint32_t)strlen(resolved_path);
 
     ret = _create_enclave(!!debug, fd, file, NULL, launch_token, launch_token_updated, enclave_id, misc_attr);
+    if(SGX_SUCCESS != ret && misc_attr)
+    {
+        sgx_misc_attribute_t plat_cap;
+        memset(&plat_cap, 0, sizeof(plat_cap));
+        get_enclave_creator()->get_plat_cap(&plat_cap);
+        memcpy_s(misc_attr, sizeof(sgx_misc_attribute_t), &plat_cap, sizeof(sgx_misc_attribute_t));
+    }
+
     close(fd);
 
     return ret;
