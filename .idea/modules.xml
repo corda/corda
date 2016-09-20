@@ -24,9 +24,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_main.iml" group="contracts/isolated" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" filepath="$PROJECT_DIR$/.idea/modules/contracts/isolated/isolated_test.iml" group="contracts/isolated" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-explorer/network-explorer_main.iml" filepath="$PROJECT_DIR$/.idea/modules/network-explorer/network-explorer_main.iml" group="network-explorer" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-explorer/network-explorer_test.iml" filepath="$PROJECT_DIR$/.idea/modules/network-explorer/network-explorer_test.iml" group="network-explorer" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-explorer/network-map-visualiser.iml" filepath="$PROJECT_DIR$/.idea/modules/network-explorer/network-map-visualiser.iml" group="network-explorer" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator.iml" filepath="$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator.iml" group="network-simulator" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_main.iml" filepath="$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_main.iml" group="network-simulator" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_test.iml" filepath="$PROJECT_DIR$/.idea/modules/network-simulator/network-simulator_test.iml" group="network-simulator" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_integrationTest.iml" group="node" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/node/node_main.iml" filepath="$PROJECT_DIR$/.idea/modules/node/node_main.iml" group="node" />
