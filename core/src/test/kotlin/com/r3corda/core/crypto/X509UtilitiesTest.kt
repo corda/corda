@@ -97,9 +97,9 @@ class X509UtilitiesTest {
         // Load back generated root CA Cert and private key from keystore and check against copy in truststore
         val keyStore = X509Utilities.loadKeyStore(tmpKeyStore, "keystorepass")
         val trustStore = X509Utilities.loadKeyStore(tmpTrustStore, "trustpass")
-        val rootCaCert = keyStore.getCertificate(X509Utilities.ROOT_CA_CERT_PRIVATE_KEY_ALIAS) as X509Certificate
-        val rootCaPrivateKey = keyStore.getKey(X509Utilities.ROOT_CA_CERT_PRIVATE_KEY_ALIAS, "keypass".toCharArray()) as PrivateKey
-        val rootCaFromTrustStore = trustStore.getCertificate(X509Utilities.CA_CERT_ALIAS) as X509Certificate
+        val rootCaCert = keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY) as X509Certificate
+        val rootCaPrivateKey = keyStore.getKey(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY, "keypass".toCharArray()) as PrivateKey
+        val rootCaFromTrustStore = trustStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as X509Certificate
         assertEquals(rootCaCert, rootCaFromTrustStore)
         rootCaCert.checkValidity(Date())
         rootCaCert.verify(rootCaCert.publicKey)
@@ -116,8 +116,8 @@ class X509UtilitiesTest {
         assertTrue { caVerifier.verify(caSignature) }
 
         // Load back generated intermediate CA Cert and private key
-        val intermediateCaCert = keyStore.getCertificate(X509Utilities.INTERMEDIATE_CA_PRIVATE_KEY_ALIAS) as X509Certificate
-        val intermediateCaCertPrivateKey = keyStore.getKey(X509Utilities.INTERMEDIATE_CA_PRIVATE_KEY_ALIAS, "keypass".toCharArray()) as PrivateKey
+        val intermediateCaCert = keyStore.getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY) as X509Certificate
+        val intermediateCaCertPrivateKey = keyStore.getKey(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY, "keypass".toCharArray()) as PrivateKey
         intermediateCaCert.checkValidity(Date())
         intermediateCaCert.verify(rootCaCert.publicKey)
 
@@ -148,14 +148,14 @@ class X509UtilitiesTest {
 
         // Load signing intermediate CA cert
         val caKeyStore = X509Utilities.loadKeyStore(tmpCAKeyStore, "cakeystorepass")
-        val caCertAndKey = X509Utilities.loadCertificateAndKey(caKeyStore, "cakeypass", X509Utilities.INTERMEDIATE_CA_PRIVATE_KEY_ALIAS)
+        val caCertAndKey = X509Utilities.loadCertificateAndKey(caKeyStore, "cakeypass", X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
 
         // Generate server cert and private key and populate another keystore suitable for SSL
         X509Utilities.createKeystoreForSSL(tmpServerKeyStore, "serverstorepass", "serverkeypass", caKeyStore, "cakeypass")
 
         // Load back server certificate
         val serverKeyStore = X509Utilities.loadKeyStore(tmpServerKeyStore, "serverstorepass")
-        val serverCertAndKey = X509Utilities.loadCertificateAndKey(serverKeyStore, "serverkeypass", X509Utilities.CERT_PRIVATE_KEY_ALIAS)
+        val serverCertAndKey = X509Utilities.loadCertificateAndKey(serverKeyStore, "serverkeypass", X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY)
 
         serverCertAndKey.certificate.checkValidity(Date())
         serverCertAndKey.certificate.verify(caCertAndKey.certificate.publicKey)

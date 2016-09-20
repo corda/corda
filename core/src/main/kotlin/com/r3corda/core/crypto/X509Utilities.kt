@@ -1,6 +1,7 @@
 package com.r3corda.core.crypto
 
 import com.r3corda.core.random63BitValue
+import com.r3corda.core.use
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.DERSequence
@@ -16,9 +17,14 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.IPAddress
 import org.bouncycastle.util.io.pem.PemReader
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.FileReader
+import java.io.FileWriter
+import java.io.InputStream
 import java.math.BigInteger
 import java.net.InetAddress
 import java.nio.file.Files
@@ -41,10 +47,14 @@ object X509Utilities {
     val ECDSA_CURVE = "secp256r1"
 
     val KEYSTORE_TYPE = "JKS"
-    val CA_CERT_ALIAS = "CA Cert"
-    val CERT_PRIVATE_KEY_ALIAS = "Server Private Key"
-    val ROOT_CA_CERT_PRIVATE_KEY_ALIAS = "Root CA Private Key"
-    val INTERMEDIATE_CA_PRIVATE_KEY_ALIAS = "Intermediate CA Private Key"
+
+    // Aliases for private keys and certificates.
+    val CORDA_ROOT_CA_PRIVATE_KEY = "cordarootcaprivatekey"
+    val CORDA_ROOT_CA = "cordarootca"
+    val CORDA_INTERMEDIATE_CA_PRIVATE_KEY = "cordaintermediatecaprivatekey"
+    val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
+    val CORDA_CLIENT_CA_PRIVATE_KEY = "cordaclientcaprivatekey"
+    val CORDA_CLIENT_CA = "cordaclientca"
 
     init {
         Security.addProvider(BouncyCastleProvider()) // register Bouncy Castle Crypto Provider required to sign certificates
@@ -108,8 +118,15 @@ object X509Utilities {
         return nameBuilder.build()
     }
 
+    fun getX509Name(myLegalName: String, nearestCity: String, email: String): X500Name {
+        return X500NameBuilder(BCStyle.INSTANCE)
+                .addRDN(BCStyle.CN, myLegalName)
+                .addRDN(BCStyle.L, nearestCity)
+                .addRDN(BCStyle.E, email).build()
+    }
+
     /**
-     * Helper method to either open an existing keystore for modification, or create a new blank keystore
+     * Helper method to either open an existing keystore for modification, or create a new blank keystore.
      * @param keyStoreFilePath location of KeyStore file
      * @param storePassword password to open the store. This does not have to be the same password as any keys stored,
      * but for SSL purposes this is recommended.
@@ -119,13 +136,10 @@ object X509Utilities {
         val pass = storePassword.toCharArray()
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
         if (Files.exists(keyStoreFilePath)) {
-            val input = FileInputStream(keyStoreFilePath.toFile())
-            input.use {
-                keyStore.load(input, pass)
-            }
+            keyStoreFilePath.use { keyStore.load(it, pass) }
         } else {
             keyStore.load(null, pass)
-            val output = FileOutputStream(keyStoreFilePath.toFile())
+            val output = Files.newOutputStream(keyStoreFilePath)
             output.use {
                 keyStore.store(output, pass)
             }
@@ -143,10 +157,7 @@ object X509Utilities {
     fun loadKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStore {
         val pass = storePassword.toCharArray()
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-        val input = FileInputStream(keyStoreFilePath.toFile())
-        input.use {
-            keyStore.load(input, pass)
-        }
+        keyStoreFilePath.use { keyStore.load(it, pass) }
         return keyStore
     }
 
@@ -175,7 +186,7 @@ object X509Utilities {
      */
     fun saveKeyStore(keyStore: KeyStore, keyStoreFilePath: Path, storePassword: String) {
         val pass = storePassword.toCharArray()
-        val output = FileOutputStream(keyStoreFilePath.toFile())
+        val output = Files.newOutputStream(keyStoreFilePath)
         output.use {
             keyStore.store(output, pass)
         }
@@ -189,7 +200,7 @@ object X509Utilities {
      * but for SSL purposes this is recommended.
      * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert
      */
-    private fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<Certificate>) {
+    fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<Certificate>) {
         try {
             this.deleteEntry(alias)
         } catch (kse: KeyStoreException) {
@@ -203,7 +214,7 @@ object X509Utilities {
      * @param alias name to record the public certificate under
      * @param cert certificate to store
      */
-    private fun KeyStore.addOrReplaceCertificate(alias: String, cert: Certificate) {
+    fun KeyStore.addOrReplaceCertificate(alias: String, cert: Certificate) {
         try {
             this.deleteEntry(alias)
         } catch (kse: KeyStoreException) {
@@ -225,6 +236,24 @@ object X509Utilities {
     }
 
     /**
+     * Create certificate signing request using provided information.
+     *
+     * @param myLegalName The legal name of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
+     * @param nearestCity The city where your organization is located.
+     * @param email An email address used to contact your organization.
+     * @param keyPair Standard curve ECDSA KeyPair generated for TLS.
+     * @return The generated Certificate signing request.
+     */
+    fun createCertificateSigningRequest(myLegalName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest {
+        val subject = getX509Name(myLegalName, nearestCity, email)
+        val signer = JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
+                .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                .build(keyPair.private)
+        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
+    }
+
+
+    /**
      * Helper data class to pass around public certificate and KeyPair entities when using CA certs
      */
     data class CACertAndKey(val certificate: X509Certificate, val keypair: KeyPair)
@@ -236,10 +265,10 @@ object X509Utilities {
      * @return A data class is returned containing the new root CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
-    fun createSelfSignedCACert(domain: String): CACertAndKey {
+    fun createSelfSignedCACert(myLegalName: String): CACertAndKey {
         val keyPair = generateECDSAKeyPairForSSL()
 
-        val issuer = getDevX509Name(domain)
+        val issuer = getDevX509Name(myLegalName)
         val serial = BigInteger.valueOf(random63BitValue())
         val subject = issuer
         val pubKey = keyPair.public
@@ -292,7 +321,7 @@ object X509Utilities {
 
         // Ten year certificate validity
         // TODO how do we manage certificate expiry, revocation and loss
-        val window = getCertificateValidityWindow(0, 365*10, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
+        val window = getCertificateValidityWindow(0, 365 * 10, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
 
         val builder = JcaX509v3CertificateBuilder(
                 issuer, serial, window.first, window.second, subject, pubKey)
@@ -341,7 +370,7 @@ object X509Utilities {
 
         // Ten year certificate validity
         // TODO how do we manage certificate expiry, revocation and loss
-        val window = getCertificateValidityWindow(0, 365*10, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
+        val window = getCertificateValidityWindow(0, 365 * 10, certificateAuthority.certificate.notBefore, certificateAuthority.certificate.notAfter)
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, window.first, window.second, subject, publicKey)
         builder.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyIdentifier(publicKey))
@@ -420,7 +449,7 @@ object X509Utilities {
     }
 
     /**
-     * Extract public and private keys from a KeyStore file assuming storage alias is know
+     * Extract public and private keys from a KeyStore file assuming storage alias is known.
      * @param keyStoreFilePath Path to load KeyStore from
      * @param storePassword Password to unlock the KeyStore
      * @param keyPassword Password to unlock the private key entries
@@ -435,6 +464,32 @@ object X509Utilities {
         val keyEntry = keyStore.getKey(alias, keyPassword.toCharArray()) as PrivateKey
         val certificate = keyStore.getCertificate(alias) as X509Certificate
         return KeyPair(certificate.publicKey, keyEntry)
+    }
+
+    /**
+     * Extract public and private keys from a KeyStore file assuming storage alias is known, or
+     * create a new pair of keys using the provided function if the keys not exist.
+     * @param keyStoreFilePath Path to load KeyStore from
+     * @param storePassword Password to unlock the KeyStore
+     * @param keyPassword Password to unlock the private key entries
+     * @param alias The name to lookup the Key and Certificate chain from
+     * @param keyGenerator Function for generating new keys
+     * @return The KeyPair found in the KeyStore under the specified alias
+     */
+    fun loadOrCreateKeyPairFromKeyStore(keyStoreFilePath: Path, storePassword: String, keyPassword: String,
+                                        alias: String, keyGenerator: () -> CACertAndKey): KeyPair {
+        val keyStore = X509Utilities.loadKeyStore(keyStoreFilePath, storePassword)
+        if (!keyStore.containsAlias(alias)) {
+            val selfSignCert = keyGenerator()
+            // Save to the key store.
+            keyStore.addOrReplaceKey(alias, selfSignCert.keypair.private, keyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
+            X509Utilities.saveKeyStore(keyStore, keyStoreFilePath, storePassword)
+        }
+
+        val certificate = keyStore.getCertificate(alias)
+        val keyEntry = keyStore.getKey(alias, keyPassword.toCharArray())
+
+        return KeyPair(certificate.publicKey, keyEntry as PrivateKey)
     }
 
     /**
@@ -475,9 +530,9 @@ object X509Utilities {
         val keypass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
-        keyStore.addOrReplaceKey(ROOT_CA_CERT_PRIVATE_KEY_ALIAS, rootCA.keypair.private, keypass, arrayOf(rootCA.certificate))
+        keyStore.addOrReplaceKey(CORDA_ROOT_CA_PRIVATE_KEY, rootCA.keypair.private, keypass, arrayOf(rootCA.certificate))
 
-        keyStore.addOrReplaceKey(INTERMEDIATE_CA_PRIVATE_KEY_ALIAS,
+        keyStore.addOrReplaceKey(CORDA_INTERMEDIATE_CA_PRIVATE_KEY,
                 intermediateCA.keypair.private,
                 keypass,
                 arrayOf(intermediateCA.certificate, rootCA.certificate))
@@ -486,7 +541,8 @@ object X509Utilities {
 
         val trustStore = loadOrCreateKeyStore(trustStoreFilePath, trustStorePassword)
 
-        trustStore.addOrReplaceCertificate(CA_CERT_ALIAS, rootCA.certificate)
+        trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, rootCA.certificate)
+        trustStore.addOrReplaceCertificate(CORDA_INTERMEDIATE_CA, intermediateCA.certificate)
 
         saveKeyStore(trustStore, trustStoreFilePath, trustStorePassword)
 
@@ -527,10 +583,10 @@ object X509Utilities {
                              caKeyPassword: String): KeyStore {
         val rootCA = X509Utilities.loadCertificateAndKey(caKeyStore,
                 caKeyPassword,
-                X509Utilities.ROOT_CA_CERT_PRIVATE_KEY_ALIAS)
+                X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY)
         val intermediateCA = X509Utilities.loadCertificateAndKey(caKeyStore,
                 caKeyPassword,
-                X509Utilities.INTERMEDIATE_CA_PRIVATE_KEY_ALIAS)
+                X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
 
         val serverKey = X509Utilities.generateECDSAKeyPairForSSL()
         val host = InetAddress.getLocalHost()
@@ -538,18 +594,18 @@ object X509Utilities {
         val serverCert = X509Utilities.createServerCert(subject,
                 serverKey.public,
                 intermediateCA,
-                if(host.canonicalHostName == host.hostName) listOf() else listOf(host.hostName),
+                if (host.canonicalHostName == host.hostName) listOf() else listOf(host.hostName),
                 listOf(host.hostAddress))
 
         val keypass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
-        keyStore.addOrReplaceKey(CERT_PRIVATE_KEY_ALIAS,
+        keyStore.addOrReplaceKey(CORDA_CLIENT_CA_PRIVATE_KEY,
                 serverKey.private,
                 keypass,
                 arrayOf(serverCert, intermediateCA.certificate, rootCA.certificate))
 
-        keyStore.addOrReplaceCertificate(CA_CERT_ALIAS, rootCA.certificate)
+        keyStore.addOrReplaceCertificate(CORDA_CLIENT_CA, serverCert)
 
         saveKeyStore(keyStore, keyStoreFilePath, storePassword)
 
