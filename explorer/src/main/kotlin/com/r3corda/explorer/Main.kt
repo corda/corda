@@ -34,6 +34,7 @@ class Main : App() {
         super.start(stage)
 
         // start the driver on another thread
+        // TODO Change this to connecting to an actual node (specified on cli/in a config) once we're happy with the code
         Thread({
 
             val portAllocation = PortAllocation.Incremental(20000)
