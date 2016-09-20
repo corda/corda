@@ -1,21 +1,38 @@
 package com.r3corda.client.fxutils
 
-import com.r3corda.contracts.asset.Cash
-import com.r3corda.core.contracts.StateAndRef
 import javafx.beans.binding.Bindings
 import javafx.beans.property.ReadOnlyObjectWrapper
-import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
 import javafx.collections.transformation.FilteredList
-import kotlinx.support.jdk8.collections.stream
 import org.fxmisc.easybind.EasyBind
 import java.util.function.Predicate
-import java.util.stream.Collector
 
+/**
+ * Here follows utility extension functions that help reduce the visual load when developing RX code. Each function should
+ * have a short accompanying example code.
+ */
+
+/**
+ * val person: ObservableValue<Person> = (..)
+ * val personName: ObservableValue<String> = person.map { it.name }
+ */
 fun <A, B> ObservableValue<out A>.map(function: (A) -> B): ObservableValue<B> = EasyBind.map(this, function)
+
+/**
+ * val dogs: ObservableList<Dog> = (..)
+ * val dogOwners: ObservableList<Person> = dogs.map { it.owner }
+ */
 fun <A, B> ObservableList<out A>.map(function: (A) -> B): ObservableList<B> = EasyBind.map(this, function)
 
+/**
+ * val aliceHeight: ObservableValue<Long> = (..)
+ * val bobHeight: ObservableValue<Long> = (..)
+ * fun sumHeight(a: Long, b: Long): Long { .. }
+ *
+ * val aliceBobSumHeight = ::sumHeight.lift(aliceHeight, bobHeight)
+ * val aliceHeightPlus2 = ::sumHeight.lift(aliceHeight, 2L.lift())
+ */
 fun <A> A.lift(): ObservableValue<A> = ReadOnlyObjectWrapper(this)
 fun <A, R> ((A) -> R).lift(
         arg0: ObservableValue<A>
@@ -36,11 +53,24 @@ fun <A, B, C, D, R> ((A, B, C, D) -> R).lift(
         arg3: ObservableValue<D>
 ): ObservableValue<R> = EasyBind.combine(arg0, arg1, arg2, arg3, this)
 
+/**
+ * data class Person(val height: ObservableValue<Long>)
+ * val person: ObservableValue<Person> = (..)
+ * val personHeight: ObservableValue<Long> = person.bind { it.height }
+ */
 fun <A, B> ObservableValue<out A>.bind(function: (A) -> ObservableValue<out B>): ObservableValue<out B> =
         // We cast here to enforce variance, flatMap should be covariant
         @Suppress("UNCHECKED_CAST")
         EasyBind.monadic(this).flatMap(function as (A) -> ObservableValue<B>)
 
+/**
+ * enum class FilterCriterion { HEIGHT, NAME }
+ * val filterCriterion: ObservableValue<FilterCriterion> = (..)
+ * val people: ObservableList<Person> = (..)
+ * fun filterFunction(filterCriterion: FilterCriterion): (Person) -> Boolean { .. }
+ *
+ * val filteredPeople: ObservableList<Person> = people.filter(filterCriterion.map(filterFunction))
+ */
 fun <A> ObservableList<out A>.filter(predicate: ObservableValue<out (A) -> Boolean>): ObservableList<out A> {
     // We cast here to enforce variance, FilteredList should be covariant
     @Suppress("UNCHECKED_CAST")
@@ -51,6 +81,11 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<out (A) -> Boole
     }
 }
 
+/**
+ * val people: ObservableList<Person> = (..)
+ * val concatenatedNames = people.fold("", { names, person -> names + person.name })
+ * val concatenatedNames2 = people.map(Person::name).fold("", String::plus)
+ */
 fun <A, B> ObservableList<out A>.fold(initial: B, folderFunction: (B, A) -> B): ObservableValue<B> {
     return Bindings.createObjectBinding({
         var current = initial
@@ -61,20 +96,9 @@ fun <A, B> ObservableList<out A>.fold(initial: B, folderFunction: (B, A) -> B): 
     }, arrayOf(this))
 }
 
-fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<out A> {
-    return FlattenedList(this)
-}
-
-fun sum(a: Int, b: Int): Int = a + b
-
-fun main(args: Array<String>) {
-    val a = SimpleObjectProperty(0)
-    val b = SimpleObjectProperty(0)
-
-    ::sum.lift(a, b).addListener { observableValue, i0, i1 ->
-        println(i1)
-    }
-
-    a.set(2)
-    b.set(4)
-}
+/**
+ * data class Person(val height: ObservableValue<Long>)
+ * val people: ObservableList<Person> = (..)
+ * val heights: ObservableList<Long> = people.map(Person::height).flatten()
+ */
+fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<out A> = FlattenedList(this)
