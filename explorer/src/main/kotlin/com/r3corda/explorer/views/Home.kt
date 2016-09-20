@@ -7,7 +7,6 @@ import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.withoutIssuer
 import com.r3corda.explorer.formatters.AmountFormatter
-import com.r3corda.explorer.formatters.NumberFormatter
 import com.r3corda.explorer.model.SelectedView
 import com.r3corda.explorer.model.SettingsModel
 import com.r3corda.explorer.model.TopLevelModel
@@ -47,7 +46,7 @@ class Home : View() {
     )
 
     init {
-        val formatter = AmountFormatter.currency(AmountFormatter.compact)
+        val formatter = AmountFormatter.boring
 
         ourCashLabel.textProperty().bind(sumAmount.map { formatter.format(it) })
         ourCashPane.setOnMouseClicked { clickEvent ->
@@ -57,7 +56,7 @@ class Home : View() {
         }
 
         ourTransactionsLabel.textProperty().bind(
-                Bindings.size(gatheredTransactionDataList).map { NumberFormatter.numberComma.format(it) }
+                Bindings.size(gatheredTransactionDataList).map { it.toString() }
         )
         ourTransactionsPane.setOnMouseClicked { clickEvent ->
             if (clickEvent.button == MouseButton.PRIMARY) {

@@ -1,6 +1,9 @@
 package com.r3corda.explorer.views
 
-import com.r3corda.client.fxutils.*
+import com.r3corda.client.fxutils.ChosenList
+import com.r3corda.client.fxutils.bind
+import com.r3corda.client.fxutils.lift
+import com.r3corda.client.fxutils.map
 import com.r3corda.client.model.*
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
@@ -260,7 +263,7 @@ class TransactionViewer: View() {
                 null.lift()
             }
         }
-        statesAmount.setCellFactory(NumberFormatter.longComma.toTableCellFactory())
+        statesAmount.cellFactory = NumberFormatter.boringLong.toTableCellFactory()
         statesEquiv.setCellValueFactory {
             val state = it.value.transactionState.data
             if (state is Cash.State) {
@@ -271,6 +274,7 @@ class TransactionViewer: View() {
                 null.lift()
             }
         }
+        statesEquiv.cellFactory = AmountFormatter.boring.toTableCellFactory()
     }
 
     init {
@@ -318,7 +322,7 @@ class TransactionViewer: View() {
         transactionViewTotalValueEquiv.setCellValueFactory<ViewerNode, AmountDiff<Currency>> { it.value.totalValueEquiv }
         transactionViewTotalValueEquiv.cellFactory = object : Formatter<AmountDiff<Currency>> {
             override fun format(value: AmountDiff<Currency>) =
-                    "${value.positivity.sign}${AmountFormatter.comma.format(value.amount)}"
+                    "${value.positivity.sign}${AmountFormatter.boring.format(value.amount)}"
         }.toTableCellFactory()
 
         // Contract states

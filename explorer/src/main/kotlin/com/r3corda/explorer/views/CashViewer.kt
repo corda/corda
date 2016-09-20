@@ -10,7 +10,6 @@ import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.withoutIssuer
 import com.r3corda.core.crypto.Party
 import com.r3corda.explorer.formatters.AmountFormatter
-import com.r3corda.explorer.formatters.NumberFormatter
 import com.r3corda.explorer.model.ReportingCurrencyModel
 import com.r3corda.explorer.model.SettingsModel
 import com.r3corda.explorer.ui.*
@@ -222,8 +221,8 @@ class CashViewer : View() {
 
         init {
             val amountNoIssuer = stateRow.stateAndRef.state.data.amount.withoutIssuer()
-            val amountFormatter = AmountFormatter.currency(AmountFormatter.comma)
-            val equivFormatter = AmountFormatter.comma
+            val amountFormatter = AmountFormatter.boring
+            val equivFormatter = AmountFormatter.boring
 
             equivLabel.textProperty().bind(equivAmount.map { it.token.currencyCode.toString() })
             stateIdValueLabel.text = stateRow.stateAndRef.ref.toString()
@@ -302,7 +301,7 @@ class CashViewer : View() {
             "Total $it position$plural"
         })
 
-        val equivSumLabelFormatter = AmountFormatter.currency(AmountFormatter.compact)
+        val equivSumLabelFormatter = AmountFormatter.boring
         equivSumLabel.textProperty().bind(selectedViewerNodeSumEquiv.map {
             equivSumLabelFormatter.format(it)
         })
@@ -311,7 +310,7 @@ class CashViewer : View() {
 
         cashStatesList.setCustomCellFactory { StateRowGraphic(it).root }
 
-        val cellFactory = AmountFormatter.comma.toTreeTableCellFactory<ViewerNode, Amount<Currency>>()
+        val cellFactory = AmountFormatter.boring.toTreeTableCellFactory<ViewerNode, Amount<Currency>>()
 
         // TODO use smart resize
         cashViewerTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
