@@ -24,6 +24,7 @@ import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
+import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
@@ -57,7 +58,10 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Implement stub/skel classes that provide a basic RPC framework on top of this.
  */
 @ThreadSafe
-class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableServices: List<Any>, val checkpointStorage: CheckpointStorage, val executor: AffinityExecutor) {
+class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableServices: List<Any>,
+                          val checkpointStorage: CheckpointStorage,
+                          val executor: AffinityExecutor,
+                          val database: Database) {
     inner class FiberScheduler : FiberExecutorScheduler("Same thread scheduler", executor)
 
     val scheduler = FiberScheduler()
@@ -219,6 +223,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     }
 
     private fun initFiber(psm: ProtocolStateMachineImpl<*>, startingCheckpoint: () -> Checkpoint): Checkpoint {
+        psm.database = database
         psm.serviceHub = serviceHub
         psm.suspendAction = { request ->
             psm.logger.trace { "Suspended fiber ${psm.id} ${psm.logic}" }

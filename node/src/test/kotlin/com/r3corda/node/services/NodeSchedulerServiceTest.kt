@@ -71,7 +71,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     init {
         val kms = MockKeyManagementService(ALICE_KEY)
-        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"))
+        val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.Handle(0, "None"), persistenceTx = { it() })
         services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
             override val testReference = this@NodeSchedulerServiceTest
         }
@@ -82,10 +82,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         countDown = CountDownLatch(1)
         smmHasRemovedAllProtocols = CountDownLatch(1)
         calls = 0
-        dataSource = configureDatabase(makeTestDataSourceProperties()).first
+        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        dataSource = dataSourceAndDatabase.first
+        val database = dataSourceAndDatabase.second
         scheduler = NodeSchedulerService(services, factory, schedulerGatedExecutor)
         smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-        val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor)
+        val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor, database)
         mockSMM.changes.subscribe { change ->
             if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
                 smmHasRemovedAllProtocols.countDown()
@@ -98,7 +100,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     @After
     fun tearDown() {
         // We need to make sure the StateMachineManager is done before shutting down executors.
-        if(services.smm.allStateMachines.isNotEmpty()) {
+        if (services.smm.allStateMachines.isNotEmpty()) {
             smmHasRemovedAllProtocols.await()
         }
         smmExecutor.shutdown()
@@ -125,6 +127,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             (serviceHub as TestReference).testReference.calls += increment
             (serviceHub as TestReference).testReference.countDown.countDown()
         }
+
         override val topic: String get() = throw UnsupportedOperationException()
     }
 

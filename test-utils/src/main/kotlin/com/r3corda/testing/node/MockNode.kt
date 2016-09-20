@@ -14,6 +14,7 @@ import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.node.services.VaultService
+import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
@@ -23,8 +24,8 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.ServiceRequestMessage
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,7 +34,8 @@ import java.util.*
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
- * Components that do IO are either swapped out for mocks, or pointed to a [Jimfs] in memory filesystem.
+ * Components that do IO are either swapped out for mocks, or pointed to a [Jimfs] in memory filesystem or an in
+ * memory H2 database instance.
  *
  * Mock network nodes require manual pumping by default: they will not run asynchronous. This means that
  * for message exchanges to take place (and associated handlers to run), you must call the [runNetwork]
@@ -49,6 +51,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     private var counter = 0
     val filesystem = com.google.common.jimfs.Jimfs.newFileSystem(com.google.common.jimfs.Configuration.unix())
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped)
+
+    // A unique identifier for this network to segregate databases with the same nodeID but different networks.
+    private val networkId = random63BitValue()
 
     val identities = ArrayList<Party>()
 
@@ -87,7 +92,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeMessagingService(): com.r3corda.node.services.api.MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName).start().get()
+            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, configuration.myLegalName,
+                    persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } }).start().get()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
@@ -98,17 +104,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun startMessagingService() {
             // Nothing to do
-        }
-
-        // If the in-memory H2 instance is configured, use that, otherwise mock out the transaction manager.
-        override fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
-            try {
-                super.initialiseDatabasePersistence(insideTransaction)
-            } catch(fallback: DatabaseConfigurationException) {
-                log.info("Using mocked database features.")
-                TransactionManager.manager = TestTransactionManager()
-                insideTransaction()
-            }
         }
 
         override fun makeNetworkMapService() {
@@ -158,7 +153,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     /** Returns a node, optionally created by the passed factory method. */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    start: Boolean = true, legalName: String? = null, keyPair: KeyPair? = null,
-                   databasePersistence: Boolean = false, vararg advertisedServices: ServiceType): MockNode {
+                   vararg advertisedServices: ServiceType): MockNode {
         val newNode = forcedID == -1
         val id = if (newNode) counter++ else forcedID
 
@@ -176,7 +171,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             override val exportJMXto: String = ""
             override val keyStorePassword: String = "dummy"
             override val trustStorePassword: String = "trustpass"
-            override val dataSourceProperties: Properties get() = if (databasePersistence) makeTestDataSourceProperties("node_$id") else Properties()
+            override val dataSourceProperties: Properties get() = makeTestDataSourceProperties("node_${id}_net_$networkId")
             override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
         }
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
@@ -217,7 +212,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createTwoNodes(nodeFactory: Factory = defaultFactory, notaryKeyPair: KeyPair? = null): Pair<MockNode, MockNode> {
         require(nodes.isEmpty())
         return Pair(
-                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, false, com.r3corda.node.services.network.NetworkMapService.Type, com.r3corda.node.services.transactions.SimpleNotaryService.Type),
+                createNode(null, -1, nodeFactory, true, null, notaryKeyPair, com.r3corda.node.services.network.NetworkMapService.Type, com.r3corda.node.services.transactions.SimpleNotaryService.Type),
                 createNode(nodes[0].info.address, -1, nodeFactory, true, null)
         )
     }
@@ -245,14 +240,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun createNotaryNode(legalName: String? = null, keyPair: KeyPair? = null): MockNode {
-        return createNode(null, -1, defaultFactory, true, legalName, keyPair, false, com.r3corda.node.services.network.NetworkMapService.Type, com.r3corda.node.services.transactions.SimpleNotaryService.Type)
+        return createNode(null, -1, defaultFactory, true, legalName, keyPair, com.r3corda.node.services.network.NetworkMapService.Type, com.r3corda.node.services.transactions.SimpleNotaryService.Type)
     }
 
     fun createPartyNode(networkMapAddr: SingleMessageRecipient, legalName: String? = null, keyPair: KeyPair? = null): MockNode {
         return createNode(networkMapAddr, -1, defaultFactory, true, legalName, keyPair)
     }
 
-    @Suppress("unused")  // This is used from the network visualiser tool.
+    @Suppress("unused") // This is used from the network visualiser tool.
     fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
 
     fun startNodes() {

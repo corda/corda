@@ -15,10 +15,7 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
-import com.r3corda.testing.node.InMemoryMessagingNetwork
-import com.r3corda.testing.node.MockNetwork
-import com.r3corda.testing.node.TestClock
-import com.r3corda.testing.node.setTo
+import com.r3corda.testing.node.*
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.nio.file.Path
@@ -71,6 +68,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+                override val dataSourceProperties = makeTestDataSourceProperties()
             }
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
@@ -97,6 +95,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+                override val dataSourceProperties = makeTestDataSourceProperties()
             }
 
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
@@ -119,6 +118,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+                override val dataSourceProperties = makeTestDataSourceProperties()
             }
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
@@ -140,6 +140,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+                override val dataSourceProperties = makeTestDataSourceProperties()
             }
 
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
@@ -167,6 +168,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+                override val dataSourceProperties = makeTestDataSourceProperties()
             }
 
             val n = object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
@@ -293,7 +295,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    @Suppress("unused")   // Used from the network visualiser tool.
+    @Suppress("unused") // Used from the network visualiser tool.
     val networkInitialisationFinished: ListenableFuture<*> =
             Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
 

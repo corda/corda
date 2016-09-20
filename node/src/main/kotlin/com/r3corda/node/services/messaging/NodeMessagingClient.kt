@@ -11,7 +11,6 @@ import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.JDBCHashSet
-import com.r3corda.node.utilities.databaseTransaction
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
@@ -45,6 +44,9 @@ import javax.annotation.concurrent.ThreadSafe
  * @param executor An executor to run received message tasks upon.
  * @param persistentInbox If true the inbox will be created persistent if not already created.
  * If false the inbox queue will be transient, which is appropriate for UI clients for example.
+ * @param persistenceTx A lambda to wrap message processing in any transaction required by the persistence layer (e.g.
+ * a database transaction) without introducing a dependency on the actual solution and any parameters it requires
+ * in this class.
  */
 @ThreadSafe
 class NodeMessagingClient(config: NodeConfiguration,
@@ -52,6 +54,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
                           val persistentInbox: Boolean = true,
+                          val persistenceTx: (() -> Unit) -> Unit = { it() },
                           private val rpcOps: CordaRPCOps? = null) : ArtemisMessagingComponent(config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
@@ -264,13 +267,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
             executor.fetchFrom {
-                // TODO: we should be able to clean this up if we separate client and server code, but for now
-                //       interpret persistent as "server" and non-persistent as "client".
-                if (persistentInbox) {
-                    databaseTransaction {
-                        callHandlers(msg, deliverTo)
-                    }
-                } else {
+                persistenceTx {
                     callHandlers(msg, deliverTo)
                 }
             }

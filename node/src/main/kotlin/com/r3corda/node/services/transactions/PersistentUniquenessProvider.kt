@@ -9,7 +9,6 @@ import com.r3corda.core.node.services.UniquenessProvider
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.utilities.JDBCHashMap
-import com.r3corda.node.utilities.databaseTransaction
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
@@ -23,31 +22,25 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
 
     /**
      * For each input state store the consuming transaction information.
-     * TODO: remove databaseTransaction here once node initialisation is wrapped in it
      */
-    val committedStates = ThreadBox(databaseTransaction {
-        JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(TABLE_NAME, loadOnInit = false)
-    })
+    val committedStates = ThreadBox(JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(TABLE_NAME, loadOnInit = false))
 
     override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
         val conflict = committedStates.locked {
-            // TODO: remove databaseTransaction here once protocols are wrapped in it
-            databaseTransaction {
-                val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-                for (inputState in states) {
-                    val consumingTx = get(inputState)
-                    if (consumingTx != null) conflictingStates[inputState] = consumingTx
+            val conflictingStates = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
+            for (inputState in states) {
+                val consumingTx = get(inputState)
+                if (consumingTx != null) conflictingStates[inputState] = consumingTx
+            }
+            if (conflictingStates.isNotEmpty()) {
+                log.debug("Failure, input states already committed: ${conflictingStates.keys.toString()}")
+                UniquenessProvider.Conflict(conflictingStates)
+            } else {
+                states.forEachIndexed { i, stateRef ->
+                    put(stateRef, UniquenessProvider.ConsumingTx(txId, i, callerIdentity))
                 }
-                if (conflictingStates.isNotEmpty()) {
-                    log.debug("Failure, input states already committed: ${conflictingStates.keys.toString()}")
-                    UniquenessProvider.Conflict(conflictingStates)
-                } else {
-                    states.forEachIndexed { i, stateRef ->
-                        put(stateRef, UniquenessProvider.ConsumingTx(txId, i, callerIdentity))
-                    }
-                    log.debug("Successfully committed all input states: $states")
-                    null
-                }
+                log.debug("Successfully committed all input states: $states")
+                null
             }
         }
 

@@ -44,6 +44,7 @@ import com.r3corda.node.services.transactions.ValidatingNotaryService
 import com.r3corda.node.services.vault.CashBalanceAsMetricsObserver
 import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.*
+import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -65,7 +66,7 @@ import java.util.concurrent.TimeUnit
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(val configuration: NodeConfiguration, val networkMapService: SingleMessageRecipient?,
-                            val advertisedServices: Set<ServiceType>, val platformClock: Clock): SingletonSerializeAsToken() {
+                            val advertisedServices: Set<ServiceType>, val platformClock: Clock) : SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -133,9 +134,10 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
     lateinit var protocolLogicFactory: ProtocolLogicRefFactory
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
+    lateinit var database: Database
 
     /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
-    inline fun <reified T: Any> findService() = customServices.filterIsInstance<T>().single()
+    inline fun <reified T : Any> findService() = customServices.filterIsInstance<T>().single()
 
     var isPreviousCheckpointsPresent = false
         private set
@@ -193,7 +195,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             smm = StateMachineManager(services,
                     listOf(tokenizableServices),
                     checkpointStorage,
-                    serverThread)
+                    serverThread,
+                    database)
             if (serverThread is ExecutorService) {
                 runOnStop += Runnable {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -230,10 +233,11 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
             val (toClose, database) = configureDatabase(props)
+            this.database = database
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             log.info("Connected to ${database.vendor} database.")
             runOnStop += Runnable { toClose.close() }
-            databaseTransaction {
+            databaseTransaction(database) {
                 insideTransaction()
             }
         } else {
@@ -259,7 +263,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             val service = serviceClass.getConstructor(ServiceHubInternal::class.java).newInstance(services)
             serviceList.add(service)
             tokenizableServices.add(service)
-            if(service is AcceptsFileUpload) {
+            if (service is AcceptsFileUpload) {
                 _servicesThatAcceptUploads += service
             }
         }
@@ -361,7 +365,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }
 
         netMapCache.changed.subscribe { mapChange ->
-            if(mapChange.type == MapChangeType.Added) {
+            if (mapChange.type == MapChangeType.Added) {
                 service.registerIdentity(mapChange.node.identity)
             }
         }
@@ -398,7 +402,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
         val (identity, keyPair) = obtainKeyPair(dir)
-        return Pair(constructStorageService(attachments, transactionStorage, keyPair, identity),checkpointStorage)
+        return Pair(constructStorageService(attachments, transactionStorage, keyPair, identity), checkpointStorage)
     }
 
     protected open fun constructStorageService(attachments: NodeAttachmentService,

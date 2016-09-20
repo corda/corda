@@ -17,6 +17,7 @@ import com.r3corda.testing.*
 import com.r3corda.testing.node.MockServices
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,12 +32,15 @@ class VaultWithCashTest {
     lateinit var services: MockServices
     val vault: VaultService get() = services.vaultService
     lateinit var dataSource: Closeable
+    lateinit var database: Database
 
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        dataSource = configureDatabase(makeTestDataSourceProperties()).first
-        databaseTransaction {
+        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        dataSource = dataSourceAndDatabase.first
+        database = dataSourceAndDatabase.second
+        databaseTransaction(database) {
             services = object : MockServices() {
                 override val vaultService: VaultService = NodeVaultService(this)
 
@@ -59,7 +63,7 @@ class VaultWithCashTest {
 
     @Test
     fun splits() {
-        databaseTransaction {
+        databaseTransaction(database) {
             // Fix the PRNG so that we get the same splits every time.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
@@ -77,7 +81,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        databaseTransaction {
+        databaseTransaction(database) {
             // A tx that sends us money.
             val freshKey = services.keyManagementService.freshKey()
             val usefulTX = TransactionType.General.Builder(null).apply {
@@ -116,7 +120,7 @@ class VaultWithCashTest {
 
     @Test
     fun `branching LinearStates fails to verify`() {
-        databaseTransaction {
+        databaseTransaction(database) {
             val freshKey = services.keyManagementService.freshKey()
             val linearId = UniqueIdentifier()
 
@@ -136,7 +140,7 @@ class VaultWithCashTest {
 
     @Test
     fun `sequencing LinearStates works`() {
-        databaseTransaction {
+        databaseTransaction(database) {
             val freshKey = services.keyManagementService.freshKey()
 
             val linearId = UniqueIdentifier()
