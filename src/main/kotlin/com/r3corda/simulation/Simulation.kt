@@ -17,6 +17,7 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.*
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -147,7 +148,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
-                    findService<NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
+                    javaClass.getResourceAsStream("example.rates.txt").use {
+                        databaseTransaction(database) {
+                            findService<NodeInterestRates.Service>().upload(it)
+                        }
+                    }
                     return this
                 }
             }

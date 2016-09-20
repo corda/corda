@@ -18,7 +18,9 @@ import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.FiberBox
+import com.r3corda.node.utilities.JDBCHashSet
 import com.r3corda.protocols.RatesFixProtocol.*
+import com.r3corda.protocols.ServiceRequestMessage
 import com.r3corda.protocols.TwoPartyDealProtocol
 import java.io.InputStream
 import java.math.BigDecimal
@@ -116,9 +118,10 @@ object NodeInterestRates {
      */
     @ThreadSafe
     class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) {
-        private class InnerState {
-            var container: FixContainer = FixContainer(emptyList<Fix>())
 
+        private class InnerState {
+            val fixes = JDBCHashSet<Fix>("interest_rate_fixes")
+            var container: FixContainer = FixContainer(fixes)
         }
         private val mutex = FiberBox(InnerState())
 
@@ -126,6 +129,8 @@ object NodeInterestRates {
             set(value) {
                 require(value.size > 0)
                 mutex.write {
+                    fixes.clear()
+                    fixes.addAll(value.fixes)
                     container = value
                 }
             }
@@ -185,9 +190,9 @@ object NodeInterestRates {
     class UnknownFix(val fix: FixOf) : RetryableException("Unknown fix: $fix")
 
     /** Fix container, for every fix name & date pair stores a tenor to interest rate map - [InterpolatingRateMap] */
-    class FixContainer(fixes: List<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator) {
+    class FixContainer(val fixes: Set<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator) {
         private val container = buildContainer(fixes)
-        val size = fixes.size
+        val size: Int get() = fixes.size
 
         operator fun get(fixOf: FixOf): Fix? {
             val rates = container[fixOf.name to fixOf.forDay]
@@ -195,7 +200,7 @@ object NodeInterestRates {
             return Fix(fixOf, fixValue)
         }
 
-        private fun buildContainer(fixes: List<Fix>): Map<Pair<String, LocalDate>, InterpolatingRateMap> {
+        private fun buildContainer(fixes: Set<Fix>): Map<Pair<String, LocalDate>, InterpolatingRateMap> {
             val tempContainer = HashMap<Pair<String, LocalDate>, HashMap<Tenor, BigDecimal>>()
             for (fix in fixes) {
                 val fixOf = fix.of
@@ -265,7 +270,8 @@ object NodeInterestRates {
                 map(String::trim).
                 // Filter out comment and empty lines.
                 filterNot { it.startsWith("#") || it.isBlank() }.
-                map { parseFix(it) }
+                map { parseFix(it) }.
+                toSet()
         return FixContainer(fixes)
     }
 
