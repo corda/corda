@@ -88,7 +88,7 @@ class JDBCHashSet<K : Any>(tableName: String, loadOnInit: Boolean = false) : Abs
  *
  * See [AbstractJDBCHashMap] for implementation details.
  */
-abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(table: T, loadOnInit: Boolean = false) : MutableSet<K>, AbstractSet<K>() {
+abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(protected val table: T, loadOnInit: Boolean = false) : MutableSet<K>, AbstractSet<K>() {
     protected val innerMap = object : AbstractJDBCHashMap<K, Unit, T>(table, loadOnInit) {
         override fun keyFromRow(it: ResultRow): K = this@AbstractJDBCHashSet.elementFromRow(it)
 
@@ -103,9 +103,6 @@ abstract class AbstractJDBCHashSet<K : Any, T : JDBCHashedTable>(table: T, loadO
         }
 
     }
-
-    protected val table: T
-        get() = innerMap.table
 
     override fun add(element: K): Boolean {
         if (innerMap.containsKey(element)) {

@@ -118,7 +118,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
-        return NodeMessagingClient(config, server, identity.public, AffinityExecutor.SAME_THREAD).apply {
+        return NodeMessagingClient(config, server, identity.public, AffinityExecutor.SAME_THREAD, false).apply {
             configureWithDevSSLCertificate()
             messagingClient = this
         }
