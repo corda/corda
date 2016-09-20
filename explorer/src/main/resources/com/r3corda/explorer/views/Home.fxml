@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.TilePane?>
+
+<TilePane prefHeight="425.0" prefWidth="425.0" tileAlignment="TOP_LEFT" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <TitledPane id="tile_cash" fx:id="ourCashPane" alignment="CENTER" collapsible="false" prefHeight="160.0" prefWidth="160.0" styleClass="tile" text="Our cash">
+         <content>
+            <Label fx:id="ourCashLabel" text="USD 186.7m" textAlignment="CENTER" wrapText="true" />
+         </content>
+      </TitledPane>
+      <TitledPane id="tile_debtors" fx:id="ourDebtorsPane" alignment="CENTER" collapsible="false" layoutX="232.0" layoutY="10.0" prefHeight="160.0" prefWidth="160.0" styleClass="tile" text="Our debtors">
+         <content>
+            <Label text="USD 71.3m" textAlignment="CENTER" wrapText="true" />
+         </content>
+      </TitledPane>
+      <TitledPane id="tile_creditors" fx:id="ourCreditorsPane" alignment="CENTER" collapsible="false" layoutX="312.0" layoutY="10.0" prefHeight="160.0" prefWidth="160.0" styleClass="tile" text="Our creditors">
+         <content>
+            <Label text="USD (29.4m)" textAlignment="CENTER" wrapText="true" />
+         </content>
+      </TitledPane>
+      <TitledPane id="tile_tx" fx:id="ourTransactionsPane" alignment="CENTER" collapsible="false" layoutX="392.0" layoutY="10.0" prefHeight="160.0" prefWidth="160.0" styleClass="tile" text="Our transactions">
+         <content>
+            <Label fx:id="ourTransactionsLabel" text="In flight: 1,315" textAlignment="CENTER" wrapText="true" />
+         </content>
+      </TitledPane>
+   </children>
+</TilePane>

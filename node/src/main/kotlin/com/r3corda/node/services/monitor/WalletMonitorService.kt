@@ -11,7 +11,7 @@ import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.Wallet
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.serialize
-import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.api.AbstractNodeService
@@ -59,7 +59,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
         addMessageHandler(OUT_EVENT_TOPIC) { req: ClientToServiceCommandMessage -> processEventRequest(req) }
 
         // Notify listeners on state changes
-        services.storageService.validatedTransactions.updates.subscribe { tx -> notifyTransaction(tx) }
+        services.storageService.validatedTransactions.updates.subscribe { tx -> notifyTransaction(tx.tx.toLedgerTransaction(services)) }
         services.walletService.updates.subscribe { update -> notifyWalletUpdate(update) }
         smm.changes.subscribe { change ->
             val fiberId: Long = change.third
@@ -85,7 +85,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
             = notifyEvent(ServiceToClientEvent.OutputState(Instant.now(), update.consumed, update.produced))
 
     @VisibleForTesting
-    internal fun notifyTransaction(transaction: SignedTransaction)
+    internal fun notifyTransaction(transaction: LedgerTransaction)
         = notifyEvent(ServiceToClientEvent.Transaction(Instant.now(), transaction))
 
     private fun processEventRequest(reqMessage: ClientToServiceCommandMessage) {
@@ -94,11 +94,12 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
                 try {
                     when (req) {
                         is ClientToServiceCommand.IssueCash -> issueCash(req)
-                        is ClientToServiceCommand.PayCash -> initatePayment(req)
+                        is ClientToServiceCommand.PayCash -> initiatePayment(req)
                         is ClientToServiceCommand.ExitCash -> exitCash(req)
                         else -> throw IllegalArgumentException("Unknown request type ${req.javaClass.name}")
                     }
                 } catch(ex: Exception) {
+                    logger.warn("Exception while processing message of type ${req.javaClass.simpleName}", ex)
                     TransactionBuildResult.Failed(ex.message)
                 }
 
@@ -134,7 +135,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     fun processRegisterRequest(req: RegisterRequest) {
         try {
             listeners.add(RegisteredListener(req.replyToRecipient, req.sessionID))
-            val stateMessage = StateSnapshotMessage(services.walletService.currentWallet.states.map { it.state.data }.toList(),
+            val stateMessage = StateSnapshotMessage(services.walletService.currentWallet.states.toList(),
                     smm.allStateMachines.map { it.javaClass.name })
             net.send(net.createMessage(STATE_TOPIC, DEFAULT_SESSION_ID, stateMessage.serialize().bits), req.replyToRecipient)
 
@@ -151,7 +152,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     }
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
-    private fun initatePayment(req: ClientToServiceCommand.PayCash): TransactionBuildResult {
+    private fun initiatePayment(req: ClientToServiceCommand.PayCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
@@ -165,7 +166,11 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
             }
             val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
             val protocol = FinalityProtocol(tx, setOf(req), setOf(req.recipient))
-            return TransactionBuildResult.ProtocolStarted(smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId, tx, "Cash payment transaction generated")
+            return TransactionBuildResult.ProtocolStarted(
+                    smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId,
+                    tx.tx.toLedgerTransaction(services),
+                    "Cash payment transaction generated"
+            )
         } catch(ex: InsufficientBalanceException) {
             return TransactionBuildResult.Failed(ex.message ?: "Insufficient balance")
         }
@@ -174,27 +179,35 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun exitCash(req: ClientToServiceCommand.ExitCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
-        val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
-        Cash().generateExit(builder, req.amount.issuedBy(issuer),
-                services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
-        builder.signWith(services.storageService.myLegalIdentityKey)
+        try {
+            val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
+            Cash().generateExit(builder, req.amount.issuedBy(issuer),
+                    services.walletService.currentWallet.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
+            builder.signWith(services.storageService.myLegalIdentityKey)
 
-        // Work out who the owners of the burnt states were
-        val inputStatesNullable = services.walletService.statesForRefs(builder.inputStates())
-        val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
-        if (inputStatesNullable.size != inputStates.size) {
-            val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }
-            throw InputStateRefResolveFailed(unresolvedStateRefs)
+            // Work out who the owners of the burnt states were
+            val inputStatesNullable = services.walletService.statesForRefs(builder.inputStates())
+            val inputStates = inputStatesNullable.values.filterNotNull().map { it.data }
+            if (inputStatesNullable.size != inputStates.size) {
+                val unresolvedStateRefs = inputStatesNullable.filter { it.value == null }.map { it.key }
+                throw InputStateRefResolveFailed(unresolvedStateRefs)
+            }
+
+            // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
+            //       count as a reason to fail?
+            val participants: Set<Party> = inputStates.filterIsInstance<Cash.State>().map { services.identityService.partyFromKey(it.owner) }.filterNotNull().toSet()
+
+            // Commit the transaction
+            val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
+            val protocol = FinalityProtocol(tx, setOf(req), participants)
+            return TransactionBuildResult.ProtocolStarted(
+                    smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId,
+                    tx.tx.toLedgerTransaction(services),
+                    "Cash destruction transaction generated"
+            )
+        } catch (ex: InsufficientBalanceException) {
+            return TransactionBuildResult.Failed(ex.message ?: "Insufficient balance")
         }
-
-        // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them
-        //       count as a reason to fail?
-        val participants: Set<Party> = inputStates.filterIsInstance<Cash.State>().map { services.identityService.partyFromKey(it.owner) }.filterNotNull().toSet()
-
-        // Commit the transaction
-        val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
-        val protocol = FinalityProtocol(tx, setOf(req), participants)
-        return TransactionBuildResult.ProtocolStarted(smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId, tx, "Cash destruction transaction generated")
     }
 
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
@@ -206,7 +219,11 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
         val tx = builder.toSignedTransaction(checkSufficientSignatures = true)
         // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
         val protocol = BroadcastTransactionProtocol(tx, setOf(req), setOf(req.recipient))
-        return TransactionBuildResult.ProtocolStarted(smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId, tx, "Cash issuance completed")
+        return TransactionBuildResult.ProtocolStarted(
+                smm.add(BroadcastTransactionProtocol.TOPIC, protocol).machineId,
+                tx.tx.toLedgerTransaction(services),
+                "Cash issuance completed"
+        )
     }
 
     class InputStateRefResolveFailed(stateRefs: List<StateRef>) :

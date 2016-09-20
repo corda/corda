@@ -105,9 +105,9 @@ class WalletMonitorClientTests {
                                         }
                                 ),
                                 expect { tx: ServiceToClientEvent.Transaction ->
-                                    require(tx.transaction.tx.inputs.isEmpty())
-                                    require(tx.transaction.tx.outputs.size == 1)
-                                    val signaturePubKeys = tx.transaction.sigs.map { it.by }.toSet()
+                                    require(tx.transaction.inputs.isEmpty())
+                                    require(tx.transaction.outputs.size == 1)
+                                    val signaturePubKeys = tx.transaction.mustSign.toSet()
                                     // Only Alice signed
                                     require(signaturePubKeys.size == 1)
                                     require(signaturePubKeys.contains(aliceNode.identity.owningKey))
@@ -137,9 +137,9 @@ class WalletMonitorClientTests {
                                         }
                                 ),
                                 expect { tx: ServiceToClientEvent.Transaction ->
-                                    require(tx.transaction.tx.inputs.size == 1)
-                                    require(tx.transaction.tx.outputs.size == 1)
-                                    val signaturePubKeys = tx.transaction.sigs.map { it.by }.toSet()
+                                    require(tx.transaction.inputs.size == 1)
+                                    require(tx.transaction.outputs.size == 1)
+                                    val signaturePubKeys = tx.transaction.mustSign.toSet()
                                     // Alice and Notary signed
                                     require(signaturePubKeys.size == 2)
                                     require(signaturePubKeys.contains(aliceNode.identity.owningKey))

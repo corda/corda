@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TreeTableColumn?>
+<?import javafx.scene.control.TreeTableView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<SplitPane fx:id="topSplitPane" dividerPositions="0.5" xmlns="http://javafx.com/javafx/8.0.76-ea" xmlns:fx="http://javafx.com/fxml/1">
+   <items>
+      <VBox fx:id="leftPane" spacing="5.0" styleClass="root">
+         <children>
+            <StackPane alignment="CENTER_RIGHT">
+               <VBox.margin>
+                  <Insets />
+               </VBox.margin>
+               <children>
+                  <TextField id="search" fx:id="searchCriteriaTextField" promptText="Search by issuer/currency" styleClass="search">
+                     <opaqueInsets>
+                        <Insets />
+                     </opaqueInsets>
+                     <StackPane.margin>
+                        <Insets />
+                     </StackPane.margin>
+                     <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                     </padding>
+                  </TextField>
+                  <ImageView fx:id="searchCancelImageView" fitHeight="16.0" fitWidth="16.0" pickOnBounds="true" preserveRatio="true" styleClass="search-clear">
+                     <image>
+                        <Image url="@../../images/clear_inactive.png" />
+                     </image>
+                     <StackPane.margin>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                     </StackPane.margin>
+                  </ImageView>
+               </children>
+            </StackPane>
+            <Label fx:id="totalMatchingLabel" alignment="BOTTOM_LEFT" text="Total 15 matching issuer(s)" wrapText="true">
+               <VBox.margin>
+                  <Insets bottom="5.0" right="10.0" top="5.0" />
+               </VBox.margin>
+            </Label>
+            <TreeTableView fx:id="cashViewerTable" showRoot="false" VBox.vgrow="ALWAYS">
+              <columns>
+                <TreeTableColumn fx:id="cashViewerTableIssuerCurrency" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="100.0" styleClass="first-column" text="Issuer/Currency" />
+                <TreeTableColumn fx:id="cashViewerTableLocalCurrency" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="132.0" text="Local currency">
+                     <styleClass>
+                        <String fx:value="monetary-value" />
+                        <String fx:value="second-column" />
+                     </styleClass>
+                  </TreeTableColumn>
+                  <TreeTableColumn fx:id="cashViewerTableEquiv" maxWidth="1.7976931348623157E308" minWidth="-1.0" prefWidth="72.0" styleClass="monetary-value" text="Equiv" />
+              </columns>
+            </TreeTableView>
+         </children>
+         <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </padding>
+      </VBox>
+      <VBox fx:id="rightPane" spacing="5.0">
+         <children>
+            <Button mnemonicParsing="false" text="&gt;&gt;" />
+            <Label fx:id="totalPositionsLabel" styleClass="subline" text="Total 18 position(s)" />
+            <Label fx:id="equivSumLabel" styleClass="headline" text="USD 394.6k" />
+            <ListView fx:id="cashStatesList" VBox.vgrow="ALWAYS" />
+         </children>
+         <opaqueInsets>
+            <Insets />
+         </opaqueInsets>
+         <padding>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </padding>
+      </VBox>
+   </items>
+</SplitPane>
