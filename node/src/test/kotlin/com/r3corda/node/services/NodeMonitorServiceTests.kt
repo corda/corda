@@ -5,6 +5,7 @@ import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.random63BitValue

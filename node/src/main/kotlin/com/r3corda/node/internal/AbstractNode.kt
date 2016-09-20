@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.CordaPluginRegistry

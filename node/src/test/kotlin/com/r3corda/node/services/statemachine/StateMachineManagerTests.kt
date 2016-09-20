@@ -111,6 +111,45 @@ class StateMachineManagerTests {
         assertThat(restoredProtocol.receivedPayload).isEqualTo(payload)
     }
 
+    @Test
+    fun `protocol with send will resend on interrupted restart`() {
+        val topic = "send-and-receive"
+        val payload = random63BitValue()
+        val payload2 = random63BitValue()
+        var sentCount = 0
+        var receivedCount = 0
+        net.messagingNetwork.sentMessages.subscribe { if (it.message.topicSession.topic == topic) sentCount++ }
+        net.messagingNetwork.receivedMessages.subscribe { if (it.message.topicSession.topic == topic) receivedCount++ }
+        val node3 = net.createNode(node1.info.address)
+        net.runNetwork()
+        val firstProtocol = PingPongProtocol(topic, node3.info.identity, payload)
+        val secondProtocol = PingPongProtocol(topic, node2.info.identity, payload2)
+        connectProtocols(firstProtocol, secondProtocol)
+        // Kick off first send and receive
+        node2.smm.add("test", firstProtocol)
+        assertEquals(1, node2.checkpointStorage.checkpoints.count())
+        // Restart node and thus reload the checkpoint and resend the message with same UUID
+        node2.stop()
+        val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
+        val (firstAgain, fut1) = node2b.smm.findStateMachines(PingPongProtocol::class.java).single()
+        net.runNetwork()
+        assertEquals(1, node2.checkpointStorage.checkpoints.count())
+        // Now add in the other half of the protocol. First message should get deduped. So message data stays in sync.
+        node3.smm.add("test", secondProtocol)
+        net.runNetwork()
+        node2b.smm.executor.flush()
+        fut1.get()
+        // Check protocols completed cleanly and didn't get out of phase
+        assertEquals(4, receivedCount, "Protocol should have exchanged 4 unique messages")// Two messages each way
+        assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages") // can't give a precise value as every addMessageHandler re-runs the undelivered messages
+        assertEquals(0, node2b.checkpointStorage.checkpoints.count(), "Checkpoints left after restored protocol should have ended")
+        assertEquals(0, node3.checkpointStorage.checkpoints.count(), "Checkpoints left after restored protocol should have ended")
+        assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
+        assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")
+        assertEquals(payload, secondProtocol.receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
+        assertEquals(payload + 1, secondProtocol.receivedPayload2, "Received payload does not match the expected second value on Node 2")
+    }
+
     private inline fun <reified P : NonTerminatingProtocol> MockNode.restartAndGetRestoredProtocol(networkMapAddress: SingleMessageRecipient? = null): P {
         val servicesArray = advertisedServices.toTypedArray()
         val node = mockNet.createNode(networkMapAddress, id, advertisedServices = *servicesArray)
@@ -148,7 +187,8 @@ class StateMachineManagerTests {
         val lazyTime by lazy { serviceHub.clock.instant() }
 
         @Suspendable
-        override fun call() {}
+        override fun call() {
+        }
 
         override val topic: String get() = throw UnsupportedOperationException()
     }
@@ -170,6 +210,17 @@ class StateMachineManagerTests {
         }
     }
 
+    private class PingPongProtocol(override val topic: String, val otherParty: Party, val payload: Long) : ProtocolLogic<Unit>() {
+        @Transient var receivedPayload: Long? = null
+        @Transient var receivedPayload2: Long? = null
+
+        @Suspendable
+        override fun call() {
+            receivedPayload = sendAndReceive<Long>(otherParty, payload).unwrap { it }
+            receivedPayload2 = sendAndReceive<Long>(otherParty, (payload + 1)).unwrap { it }
+        }
+
+    }
 
     /**
      * A protocol that suspends forever after doing some work. This is to allow it to be retrieved from the SMM after

@@ -4,6 +4,7 @@ import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.serialization.DeserializeAsKotlinObjectDef
 import com.r3corda.core.serialization.serialize
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.concurrent.ThreadSafe
@@ -76,23 +77,24 @@ interface MessagingService {
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
      *
-     * @param topic identifier for the general subject of the message, for example "platform.network_map.fetch".
-     * Must not be blank.
-     * @param sessionID identifier for the session the message is part of. For messages sent to services before the
-     * construction of a session, use [DEFAULT_SESSION_ID].
-     */
-    fun createMessage(topic: String, sessionID: Long = DEFAULT_SESSION_ID, data: ByteArray): Message
-
-    /**
-     * Returns an initialised [Message] with the current time, etc, already filled in.
-     *
      * @param topicSession identifier for the topic and session the message is sent to.
      */
-    fun createMessage(topicSession: TopicSession, data: ByteArray): Message
+    fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID = UUID.randomUUID()): Message
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
 }
+
+/**
+ * Returns an initialised [Message] with the current time, etc, already filled in.
+ *
+ * @param topic identifier for the general subject of the message, for example "platform.network_map.fetch".
+ * Must not be blank.
+ * @param sessionID identifier for the session the message is part of. For messages sent to services before the
+ * construction of a session, use [DEFAULT_SESSION_ID].
+ */
+fun MessagingService.createMessage(topic: String, sessionID: Long = DEFAULT_SESSION_ID, data: ByteArray): Message
+        = createMessage(TopicSession(topic, sessionID), data)
 
 /**
  * Registers a handler for the given topic and session ID that runs the given callback with the message and then removes
@@ -106,7 +108,7 @@ interface MessagingService {
  * a session is established, use [DEFAULT_SESSION_ID].
  */
 fun MessagingService.runOnNextMessage(topic: String, sessionID: Long, executor: Executor? = null, callback: (Message) -> Unit)
-    = runOnNextMessage(TopicSession(topic, sessionID), executor, callback)
+        = runOnNextMessage(TopicSession(topic, sessionID), executor, callback)
 
 /**
  * Registers a handler for the given topic and session that runs the given callback with the message and then removes
@@ -125,11 +127,11 @@ fun MessagingService.runOnNextMessage(topicSession: TopicSession, executor: Exec
     }
 }
 
-fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients)
-    = send(TopicSession(topic, sessionID), payload, to)
+fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
+        = send(TopicSession(topic, sessionID), payload, to, uuid)
 
-fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients)
-    = send(createMessage(topicSession, payload.serialize().bits), to)
+fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
+        = send(createMessage(topicSession, payload.serialize().bits, uuid), to)
 
 interface MessageHandlerRegistration
 
@@ -145,6 +147,7 @@ data class TopicSession(val topic: String, val sessionID: Long = DEFAULT_SESSION
     companion object {
         val Blank = TopicSession("", DEFAULT_SESSION_ID)
     }
+
     fun isBlank() = topic.isBlank() && sessionID == DEFAULT_SESSION_ID
 
     override fun toString(): String = "$topic.$sessionID"
@@ -164,7 +167,7 @@ interface Message {
     val topicSession: TopicSession
     val data: ByteArray
     val debugTimestamp: Instant
-    val debugMessageID: String
+    val uniqueMessageId: UUID
     fun serialise(): ByteArray
 }
 

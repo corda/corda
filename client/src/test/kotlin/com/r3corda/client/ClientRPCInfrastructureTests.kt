@@ -21,6 +21,7 @@ import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantLock
@@ -57,8 +58,11 @@ class ClientRPCInfrastructureTests {
         producer = serverSession.createProducer()
         val dispatcher = object : RPCDispatcher(TestOps()) {
             override fun send(bits: SerializedBytes<*>, toAddress: String) {
-                val msg = serverSession.createMessage(false)
-                msg.writeBodyBufferBytes(bits.bits)
+                val msg = serverSession.createMessage(false).apply {
+                    writeBodyBufferBytes(bits.bits)
+                    // Use the magic deduplication property built into Artemis as our message identity too
+                    putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                }
                 producer.send(toAddress, msg)
             }
         }

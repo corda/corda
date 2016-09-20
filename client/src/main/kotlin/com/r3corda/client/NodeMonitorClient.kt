@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.deserialize

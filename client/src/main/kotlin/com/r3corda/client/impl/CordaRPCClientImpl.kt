@@ -16,6 +16,7 @@ import com.r3corda.core.utilities.debug
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.messaging.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
+import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -212,6 +213,8 @@ class CordaRPCClientImpl(private val session: ClientSession,
             return session.createMessage(false).apply {
                 putStringProperty(ClientRPCRequestMessage.METHOD_NAME, method.name)
                 putStringProperty(ClientRPCRequestMessage.REPLY_TO, proxyAddress)
+                // Use the magic deduplication property built into Artemis as our message identity too
+                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
             }
         }
 

@@ -3,6 +3,7 @@ package com.r3corda.node.services
 import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
