@@ -26,7 +26,7 @@ import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
 /**
- * Service which allows external clients to monitor the wallet service and state machine manager, as well as trigger
+ * Service which allows external clients to monitor the node's vault and state machine manager, as well as trigger
  * actions within the node. The service also sends requests for user input back to clients, for example to enter
  * additional information while a protocol runs, or confirm an action.
  *
@@ -38,15 +38,15 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: Clients need to be able to indicate whether they support interactivity (no point in sending requests for input
 //       to a monitoring tool)
 @ThreadSafe
-class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineManager) : AbstractNodeService(services) {
+class NodeMonitorService(services: ServiceHubInternal, val smm: StateMachineManager) : AbstractNodeService(services) {
     companion object {
-        val REGISTER_TOPIC = "platform.wallet_monitor.register"
-        val DEREGISTER_TOPIC = "platform.wallet_monitor.deregister"
-        val STATE_TOPIC = "platform.wallet_monitor.state_snapshot"
-        val IN_EVENT_TOPIC = "platform.wallet_monitor.in"
-        val OUT_EVENT_TOPIC = "platform.wallet_monitor.out"
+        val REGISTER_TOPIC = "platform.monitor.register"
+        val DEREGISTER_TOPIC = "platform.monitor.deregister"
+        val STATE_TOPIC = "platform.monitor.state_snapshot"
+        val IN_EVENT_TOPIC = "platform.monitor.in"
+        val OUT_EVENT_TOPIC = "platform.monitor.out"
 
-        val logger = loggerFor<WalletMonitorService>()
+        val logger = loggerFor<NodeMonitorService>()
     }
 
     val listeners: MutableSet<RegisteredListener> = HashSet()
@@ -130,7 +130,7 @@ class WalletMonitorService(services: ServiceHubInternal, val smm: StateMachineMa
 
     /**
      * Process a request from a monitor to add them to the subscribers. This includes hooks to authenticate the request,
-     * but currently all requests pass (and there's no access control on wallets, so it has no actual meaning).
+     * but currently all requests pass (and there's no access control on vaults, so it has no actual meaning).
      */
     fun processRegisterRequest(req: RegisterRequest) {
         try {

@@ -57,7 +57,7 @@ data class GatheredTransactionDataWritable(
  */
 class GatheredTransactionDataModel {
 
-    private val serviceToClient: Observable<ServiceToClientEvent> by observable(WalletMonitorModel::serviceToClient)
+    private val serviceToClient: Observable<ServiceToClientEvent> by observable(NodeMonitorModel::serviceToClient)
 
     /**
      * Aggregation of updates to transactions. We use the observable list as the only container and do linear search for

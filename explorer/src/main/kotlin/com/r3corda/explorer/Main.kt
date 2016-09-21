@@ -1,11 +1,11 @@
 package com.r3corda.explorer
 
-import com.r3corda.client.WalletMonitorClient
+import com.r3corda.client.NodeMonitorClient
 import com.r3corda.client.mock.EventGenerator
 import com.r3corda.client.mock.Generator
 import com.r3corda.client.mock.oneOf
 import com.r3corda.client.model.Models
-import com.r3corda.client.model.WalletMonitorModel
+import com.r3corda.client.model.NodeMonitorModel
 import com.r3corda.client.model.observer
 import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.explorer.model.IdentityModel
@@ -22,7 +22,7 @@ import java.util.*
 
 class Main : App() {
     override val primaryView = MainWindow::class
-    val aliceOutStream: Observer<ClientToServiceCommand> by observer(WalletMonitorModel::clientToService)
+    val aliceOutStream: Observer<ClientToServiceCommand> by observer(NodeMonitorModel::clientToService)
 
     override fun start(stage: Stage) {
 
@@ -51,13 +51,13 @@ class Main : App() {
                 val aliceClient = startClient(aliceNode).get()
 
                 Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.identity)
-                Models.get<WalletMonitorModel>(Main::class).register(aliceClient, aliceNode)
+                Models.get<NodeMonitorModel>(Main::class).register(aliceClient, aliceNode)
 
                 val bobInStream = PublishSubject.create<ServiceToClientEvent>()
                 val bobOutStream = PublishSubject.create<ClientToServiceCommand>()
 
                 val bobClient = startClient(bobNode).get()
-                val bobMonitorClient = WalletMonitorClient(bobClient, bobNode, bobOutStream, bobInStream, PublishSubject.create())
+                val bobMonitorClient = NodeMonitorClient(bobClient, bobNode, bobOutStream, bobInStream, PublishSubject.create())
                 assert(bobMonitorClient.register().get())
 
                 for (i in 0 .. 10000) {

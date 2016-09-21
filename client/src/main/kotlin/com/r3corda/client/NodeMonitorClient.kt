@@ -18,9 +18,9 @@ import rx.Observer
  * Worked example of a client which communicates with the wallet monitor service.
  */
 
-private val log: Logger = LoggerFactory.getLogger("WalletMonitorClient")
+private val log: Logger = LoggerFactory.getLogger(NodeMonitorClient::class.java)
 
-class WalletMonitorClient(
+class NodeMonitorClient(
         val net: MessagingService,
         val node: NodeInfo,
         val outEvents: Observable<ClientToServiceCommand>,
@@ -33,29 +33,29 @@ class WalletMonitorClient(
 
         val future = SettableFuture.create<Boolean>()
         log.info("Registering with ID $sessionID. I am ${net.myAddress}")
-        net.addMessageHandler(WalletMonitorService.REGISTER_TOPIC, sessionID) { msg, reg ->
+        net.addMessageHandler(NodeMonitorService.REGISTER_TOPIC, sessionID) { msg, reg ->
             val resp = msg.data.deserialize<RegisterResponse>()
             net.removeMessageHandler(reg)
             future.set(resp.success)
         }
-        net.addMessageHandler(WalletMonitorService.STATE_TOPIC, sessionID) { msg, reg ->
+        net.addMessageHandler(NodeMonitorService.STATE_TOPIC, sessionID) { msg, reg ->
             val snapshotMessage = msg.data.deserialize<StateSnapshotMessage>()
             net.removeMessageHandler(reg)
             snapshot.onNext(snapshotMessage)
         }
 
-        net.addMessageHandler(WalletMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
+        net.addMessageHandler(NodeMonitorService.IN_EVENT_TOPIC, sessionID) { msg, reg ->
             val event = msg.data.deserialize<ServiceToClientEvent>()
             inEvents.onNext(event)
         }
 
         val req = RegisterRequest(net.myAddress, sessionID)
-        val registerMessage = net.createMessage(WalletMonitorService.REGISTER_TOPIC, 0, req.serialize().bits)
+        val registerMessage = net.createMessage(NodeMonitorService.REGISTER_TOPIC, 0, req.serialize().bits)
         net.send(registerMessage, node.address)
 
         outEvents.subscribe { event ->
             val envelope = ClientToServiceCommandMessage(sessionID, net.myAddress, event)
-            val message = net.createMessage(WalletMonitorService.OUT_EVENT_TOPIC, 0, envelope.serialize().bits)
+            val message = net.createMessage(NodeMonitorService.OUT_EVENT_TOPIC, 0, envelope.serialize().bits)
             net.send(message, node.address)
         }
 
