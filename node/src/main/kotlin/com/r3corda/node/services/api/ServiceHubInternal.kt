@@ -7,6 +7,7 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.protocols.StateMachineRunId
 
 interface MessagingServiceInternal : MessagingService {
     /**

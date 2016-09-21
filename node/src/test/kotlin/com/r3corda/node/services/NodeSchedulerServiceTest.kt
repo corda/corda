@@ -86,8 +86,8 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         scheduler = NodeSchedulerService(services, factory, schedulerGatedExecutor)
         smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
         val mockSMM = StateMachineManager(services, listOf(services), PerFileCheckpointStorage(fs.getPath("checkpoints")), smmExecutor)
-        mockSMM.changes.subscribe { change:Triple<ProtocolLogic<*>, AddOrRemove, Long> ->
-            if(change.second==AddOrRemove.REMOVE && mockSMM.allStateMachines.size==0) {
+        mockSMM.changes.subscribe { change ->
+            if (change.addOrRemove == AddOrRemove.REMOVE && mockSMM.allStateMachines.isEmpty()) {
                 smmHasRemovedAllProtocols.countDown()
             }
         }

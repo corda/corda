@@ -11,6 +11,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.explorer.AmountDiff
 import com.r3corda.explorer.formatters.AmountFormatter
 import com.r3corda.explorer.formatters.Formatter
@@ -46,7 +47,7 @@ class TransactionViewer: View() {
     // Top half (transactions table)
     private val transactionViewTable: TableView<ViewerNode> by fxid()
     private val transactionViewTransactionId: TableColumn<ViewerNode, String> by fxid()
-    private val transactionViewFiberId: TableColumn<ViewerNode, String> by fxid()
+    private val transactionViewStateMachineId: TableColumn<ViewerNode, String> by fxid()
     private val transactionViewClientUuid: TableColumn<ViewerNode, String> by fxid()
     private val transactionViewTransactionStatus: TableColumn<ViewerNode, TransactionCreateStatus?> by fxid()
     private val transactionViewProtocolStatus: TableColumn<ViewerNode, String> by fxid()
@@ -98,7 +99,7 @@ class TransactionViewer: View() {
      */
     data class ViewerNode(
             val transactionId: ObservableValue<SecureHash?>,
-            val fiberId: ObservableValue<Long?>,
+            val stateMachineRunId: ObservableValue<StateMachineRunId?>,
             val clientUuid: ObservableValue<UUID?>,
             val originator: ObservableValue<String>,
             val transactionStatus: ObservableValue<TransactionCreateStatus?>,
@@ -125,7 +126,7 @@ class TransactionViewer: View() {
     private val viewerNodes = gatheredTransactionDataList.map {
         ViewerNode(
                 transactionId = it.transaction.map { it?.id },
-                fiberId = it.fiberId,
+                stateMachineRunId = it.stateMachineRunId,
                 clientUuid = it.uuid,
                 /**
                  * We can't really do any better based on uuid, we need to store explicit data for this TODO
@@ -288,7 +289,7 @@ class TransactionViewer: View() {
         }
 
         transactionViewTransactionId.setCellValueFactory { it.value.transactionId.map { "${it ?: ""}" } }
-        transactionViewFiberId.setCellValueFactory { it.value.fiberId.map { "${it?: ""}" } }
+        transactionViewStateMachineId.setCellValueFactory { it.value.stateMachineRunId.map { "${it?.uuid ?: ""}" } }
         transactionViewClientUuid.setCellValueFactory { it.value.clientUuid.map { "${it ?: ""}" } }
         transactionViewProtocolStatus.setCellValueFactory { it.value.protocolStatus.map { "${it ?: ""}" } }
         transactionViewTransactionStatus.setCellValueFactory { it.value.transactionStatus }

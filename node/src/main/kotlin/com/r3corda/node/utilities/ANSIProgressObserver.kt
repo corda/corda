@@ -13,10 +13,10 @@ import java.util.*
 class ANSIProgressObserver(val smm: StateMachineManager) {
 
     init {
-        smm.changes.subscribe { change: Triple<ProtocolLogic<*>, AddOrRemove, Long> ->
-            when (change.second) {
-                AddOrRemove.ADD -> addProtocolLogic(change.first)
-                AddOrRemove.REMOVE -> removeProtocolLogic(change.first)
+        smm.changes.subscribe { change ->
+            when (change.addOrRemove) {
+                AddOrRemove.ADD -> addProtocolLogic(change.logic)
+                AddOrRemove.REMOVE -> removeProtocolLogic(change.logic)
             }
         }
     }

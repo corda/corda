@@ -6,6 +6,13 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
+import java.util.*
+
+data class StateMachineRunId private constructor(val uuid: UUID) {
+    companion object {
+        fun createRandom() = StateMachineRunId(UUID.randomUUID())
+    }
+}
 
 /**
  * The interface of [ProtocolStateMachineImpl] exposing methods and properties required by ProtocolLogic for compilation.
@@ -30,6 +37,8 @@ interface ProtocolStateMachine<R> {
 
     /** Unique ID for this machine, valid only while it is in memory. */
     val machineId: Long
+    /** Unique ID for this machine run, valid across restarts */
+    val stateMachineRunId: StateMachineRunId
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R>
 }

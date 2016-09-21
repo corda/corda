@@ -2,6 +2,7 @@ package com.r3corda.node.services.monitor
 
 import com.r3corda.core.contracts.*
 import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.node.utilities.AddOrRemove
 import java.time.Instant
 import java.util.*
@@ -22,13 +23,13 @@ sealed class ServiceToClientEvent(val time: Instant) {
     }
     class StateMachine(
             time: Instant,
-            val fiberId: Long,
+            val stateMachineRunId: StateMachineRunId,
             val label: String,
             val addOrRemove: AddOrRemove
     ) : ServiceToClientEvent(time) {
         override fun toString() = "StateMachine($label, ${addOrRemove.name})"
     }
-    class Progress(time: Instant, val fiberId: Long, val message: String) : ServiceToClientEvent(time) {
+    class Progress(time: Instant, val stateMachineRunId: StateMachineRunId, val message: String) : ServiceToClientEvent(time) {
         override fun toString() = "Progress($message)"
     }
     class TransactionBuild(time: Instant, val id: UUID, val state: TransactionBuildResult) : ServiceToClientEvent(time) {
@@ -46,7 +47,7 @@ sealed class TransactionBuildResult {
      *
      * @param transaction the transaction created as a result, in the case where the protocol has completed.
      */
-    class ProtocolStarted(val fiberId: Long, val transaction: LedgerTransaction?, val message: String?) : TransactionBuildResult() {
+    class ProtocolStarted(val stateMachineId: StateMachineRunId, val transaction: LedgerTransaction?, val message: String?) : TransactionBuildResult() {
         override fun toString() = "Started($message)"
     }
 

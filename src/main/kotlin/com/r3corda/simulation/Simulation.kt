@@ -14,6 +14,7 @@ import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
+import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.node.TestClock
@@ -259,8 +260,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showProgressFor(nodes: List<SimulatedNode>) {
         nodes.forEach { node ->
-            node.smm.changes.filter { it.second == com.r3corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
-                linkProtocolProgress(node, it.first)
+            node.smm.changes.filter { it.addOrRemove == AddOrRemove.ADD }.first().subscribe {
+                linkProtocolProgress(node, it.logic)
             }
         }
     }
@@ -278,8 +279,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showConsensusFor(nodes: List<SimulatedNode>) {
         val node = nodes.first()
-        node.smm.changes.filter { it.second == com.r3corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
-            linkConsensus(nodes, it.first)
+        node.smm.changes.filter { it.addOrRemove == com.r3corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
+            linkConsensus(nodes, it.logic)
         }
     }
 

@@ -7,12 +7,14 @@ import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.base.Throwables
 import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.ThreadBox
 import com.r3corda.core.abbreviate
 import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.messaging.send
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.*
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
@@ -24,10 +26,10 @@ import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import rx.Observable
 import rx.subjects.PublishSubject
+import rx.subjects.UnicastSubject
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.*
-import java.util.Collections.synchronizedMap
 import java.util.concurrent.ExecutionException
 import javax.annotation.concurrent.ThreadSafe
 
@@ -60,30 +62,43 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
 
     val scheduler = FiberScheduler()
 
+    data class Change(
+            val logic: ProtocolLogic<*>,
+            val addOrRemove: AddOrRemove,
+            val stateMachineRunId: StateMachineRunId
+    )
+
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
-    private val stateMachines = synchronizedMap(LinkedHashMap<ProtocolStateMachineImpl<*>, Checkpoint>())
+    private val mutex = ThreadBox(object {
+        var started = false
+        val stateMachines = LinkedHashMap<ProtocolStateMachineImpl<*>, Checkpoint>()
+        val changesPublisher = PublishSubject.create<Change>()
+
+        fun notifyChangeObservers(psm: ProtocolStateMachineImpl<*>, addOrRemove: AddOrRemove) {
+            changesPublisher.onNext(Change(psm.logic, addOrRemove, psm.stateMachineRunId))
+        }
+    })
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
 
     init {
-        metrics.register("Protocols.InFlight", Gauge<Int> { stateMachines.size })
+        metrics.register("Protocols.InFlight", Gauge<Int> { mutex.content.stateMachines.size })
     }
 
     private val checkpointingMeter = metrics.meter("Protocols.Checkpointing Rate")
     private val totalStartedProtocols = metrics.counter("Protocols.Started")
     private val totalFinishedProtocols = metrics.counter("Protocols.Finished")
-    private var started = false
 
     // Context for tokenized services in checkpoints
     private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo())
 
     /** Returns a list of all state machines executing the given protocol logic at the top level (subprotocols do not count) */
     fun <P : ProtocolLogic<T>, T> findStateMachines(protocolClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
-        synchronized(stateMachines) {
-            @Suppress("UNCHECKED_CAST")
-            return stateMachines.keys
+        @Suppress("UNCHECKED_CAST")
+        return mutex.locked {
+            stateMachines.keys
                     .map { it.logic }
                     .filterIsInstance(protocolClass)
                     .map { it to (it.psm as ProtocolStateMachineImpl<T>).resultFuture }
@@ -91,19 +106,25 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     }
 
     val allStateMachines: List<ProtocolLogic<*>>
-        get() = stateMachines.keys.map { it.logic }
-
-    private val _changesPublisher = PublishSubject.create<Triple<ProtocolLogic<*>, AddOrRemove, Long>>()
+        get() = mutex.locked { stateMachines.keys.map { it.logic } }
 
     /**
      * An observable that emits triples of the changing protocol, the type of change, and a process-specific ID number
      * which may change across restarts.
      */
-    val changes: Observable<Triple<ProtocolLogic<*>, AddOrRemove, Long>>
-        get() = _changesPublisher
+    val changes: Observable<Change>
+        get() = mutex.content.changesPublisher
 
-    private fun notifyChangeObservers(psm: ProtocolStateMachineImpl<*>, change: AddOrRemove) {
-        _changesPublisher.onNext(Triple(psm.logic, change, psm.id))
+    /**
+     * Atomic get snapshot + subscribe. This is needed so we don't miss updates between subscriptions to [changes] and
+     * calls to [allStateMachines]
+     */
+    fun getAllStateMachinesAndChanges(): Pair<List<ProtocolStateMachineImpl<*>>, Observable<Change>> {
+        return mutex.locked {
+            val bufferedChanges = UnicastSubject.create<Change>()
+            changesPublisher.subscribe(bufferedChanges)
+            Pair(stateMachines.keys.toList(), bufferedChanges)
+        }
     }
 
     // Used to work around a small limitation in Quasar.
@@ -122,7 +143,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     fun start() {
         checkpointStorage.checkpoints.forEach { createFiberForCheckpoint(it) }
         serviceHub.networkMapCache.mapServiceRegistered.then(executor) {
-            synchronized(started) {
+            mutex.locked {
                 started = true
                 stateMachines.forEach { restartFiber(it.key, it.value) }
             }
@@ -205,18 +226,22 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         }
         psm.actionOnEnd = {
             psm.logic.progressTracker?.currentStep = ProgressTracker.DONE
-            val finalCheckpoint = stateMachines.remove(psm)
-            if (finalCheckpoint != null) {
-                checkpointStorage.removeCheckpoint(finalCheckpoint)
+            mutex.locked {
+                val finalCheckpoint = stateMachines.remove(psm)
+                if (finalCheckpoint != null) {
+                    checkpointStorage.removeCheckpoint(finalCheckpoint)
+                }
+                totalFinishedProtocols.inc()
+                notifyChangeObservers(psm, AddOrRemove.REMOVE)
             }
-            totalFinishedProtocols.inc()
-            notifyChangeObservers(psm, AddOrRemove.REMOVE)
         }
         val checkpoint = startingCheckpoint()
         checkpoint.fiberCreated = true
         totalStartedProtocols.inc()
-        stateMachines[psm] = checkpoint
-        notifyChangeObservers(psm, AddOrRemove.ADD)
+        mutex.locked {
+            stateMachines[psm] = checkpoint
+            notifyChangeObservers(psm, AddOrRemove.ADD)
+        }
         return checkpoint
     }
 
@@ -226,14 +251,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
      * restarted with checkpointed state machines in the storage service.
      */
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
-        val fiber = ProtocolStateMachineImpl(logic, scheduler, loggerName)
+        val id = StateMachineRunId.createRandom()
+        val fiber = ProtocolStateMachineImpl(id, logic, scheduler, loggerName)
         // Need to add before iterating in case of immediate completion
         val checkpoint = initFiber(fiber) {
             val checkpoint = Checkpoint(serializeFiber(fiber), null, null)
             checkpoint
         }
         checkpointStorage.addCheckpoint(checkpoint)
-        synchronized(started) { // If we are not started then our checkpoint will be picked up during start
+        mutex.locked { // If we are not started then our checkpoint will be picked up during start
             if (!started) {
                 return fiber
             }
@@ -267,7 +293,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                                  request: ProtocolIORequest?,
                                  receivedPayload: Any?) {
         val newCheckpoint = Checkpoint(serialisedFiber, request, receivedPayload)
-        val previousCheckpoint = stateMachines.put(psm, newCheckpoint)
+        val previousCheckpoint = mutex.locked {
+            stateMachines.put(psm, newCheckpoint)
+        }
         if (previousCheckpoint != null) {
             checkpointStorage.removeCheckpoint(previousCheckpoint)
         }

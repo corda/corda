@@ -3,6 +3,7 @@ package com.r3corda.client.model
 import com.r3corda.client.fxutils.foldToObservableList
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.transactions.LedgerTransaction
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.node.services.monitor.ServiceToClientEvent
 import com.r3corda.node.services.monitor.TransactionBuildResult
 import com.r3corda.node.utilities.AddOrRemove
@@ -16,7 +17,7 @@ import java.time.Instant
 import java.util.UUID
 
 interface GatheredTransactionData {
-    val fiberId: ObservableValue<Long?>
+    val stateMachineRunId: ObservableValue<StateMachineRunId?>
     val uuid: ObservableValue<UUID?>
     val protocolStatus: ObservableValue<ProtocolStatus?>
     val stateMachineStatus: ObservableValue<StateMachineStatus?>
@@ -42,7 +43,7 @@ sealed class StateMachineStatus(val stateMachineName: String) {
 }
 
 data class GatheredTransactionDataWritable(
-        override val fiberId: SimpleObjectProperty<Long?> = SimpleObjectProperty(null),
+        override val stateMachineRunId: SimpleObjectProperty<StateMachineRunId?> = SimpleObjectProperty(null),
         override val uuid: SimpleObjectProperty<UUID?> = SimpleObjectProperty(null),
         override val stateMachineStatus: SimpleObjectProperty<StateMachineStatus?> = SimpleObjectProperty(null),
         override val protocolStatus: SimpleObjectProperty<ProtocolStatus?> = SimpleObjectProperty(null),
@@ -85,7 +86,7 @@ class GatheredTransactionDataModel {
                             is ServiceToClientEvent.OutputState -> {}
                             is ServiceToClientEvent.StateMachine -> {
                                 newFiberIdTransactionStateOrModify(transactionStates, serviceToClientEvent,
-                                        fiberId = serviceToClientEvent.fiberId,
+                                        stateMachineRunId = serviceToClientEvent.stateMachineRunId,
                                         tweak = {
                                             stateMachineStatus.set(when (serviceToClientEvent.addOrRemove) {
                                                 AddOrRemove.ADD -> StateMachineStatus.Added(serviceToClientEvent.label)
@@ -96,7 +97,7 @@ class GatheredTransactionDataModel {
                             }
                             is ServiceToClientEvent.Progress -> {
                                 newFiberIdTransactionStateOrModify(transactionStates, serviceToClientEvent,
-                                        fiberId = serviceToClientEvent.fiberId,
+                                        stateMachineRunId = serviceToClientEvent.stateMachineRunId,
                                         tweak = {
                                             protocolStatus.set(ProtocolStatus(serviceToClientEvent.message))
                                         }
@@ -106,8 +107,8 @@ class GatheredTransactionDataModel {
                                 val state = serviceToClientEvent.state
                                 newUuidTransactionStateOrModify(transactionStates, serviceToClientEvent,
                                         uuid = serviceToClientEvent.id,
-                                        fiberId = when (state) {
-                                            is TransactionBuildResult.ProtocolStarted -> state.fiberId
+                                        stateMachineRunId = when (state) {
+                                            is TransactionBuildResult.ProtocolStarted -> state.stateMachineId
                                             is TransactionBuildResult.Failed -> null
                                         },
                                         transactionId = when (state) {
@@ -160,13 +161,13 @@ class GatheredTransactionDataModel {
         private fun newFiberIdTransactionStateOrModify(
                 transactionStates: ObservableList<GatheredTransactionDataWritable>,
                 event: ServiceToClientEvent,
-                fiberId: Long,
+                stateMachineRunId: StateMachineRunId,
                 tweak: GatheredTransactionDataWritable.() -> Unit
         ) {
-            val index = transactionStates.indexOfFirst { it.fiberId.value == fiberId }
+            val index = transactionStates.indexOfFirst { it.stateMachineRunId.value == stateMachineRunId }
             val state = if (index < 0) {
                 val newState = GatheredTransactionDataWritable(
-                        fiberId = SimpleObjectProperty(fiberId),
+                        stateMachineRunId = SimpleObjectProperty(stateMachineRunId),
                         lastUpdate = SimpleObjectProperty(event.time)
                 )
                 tweak(newState)
@@ -185,19 +186,19 @@ class GatheredTransactionDataModel {
                 transactionStates: ObservableList<GatheredTransactionDataWritable>,
                 event: ServiceToClientEvent,
                 uuid: UUID,
-                fiberId: Long?,
+                stateMachineRunId: StateMachineRunId?,
                 transactionId: SecureHash?,
                 tweak: GatheredTransactionDataWritable.() -> Unit
         ) {
             val index = transactionStates.indexOfFirst {
                 it.uuid.value == uuid ||
-                        (fiberId != null && it.fiberId.value == fiberId) ||
+                        (stateMachineRunId != null && it.stateMachineRunId.value == stateMachineRunId) ||
                         (transactionId != null && it.transaction.value?.id == transactionId)
             }
             val state = if (index < 0) {
                 val newState = GatheredTransactionDataWritable(
                         uuid = SimpleObjectProperty(uuid),
-                        fiberId = SimpleObjectProperty(fiberId),
+                        stateMachineRunId = SimpleObjectProperty(stateMachineRunId),
                         lastUpdate = SimpleObjectProperty(event.time)
                 )
                 tweak(newState)

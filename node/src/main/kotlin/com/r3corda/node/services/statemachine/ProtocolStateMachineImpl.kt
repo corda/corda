@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolStateMachine
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
@@ -28,7 +29,8 @@ import java.util.concurrent.ExecutionException
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
+class ProtocolStateMachineImpl<R>(override val stateMachineRunId: StateMachineRunId,
+                                  val logic: ProtocolLogic<R>,
                                   scheduler: FiberScheduler,
                                   private val loggerName: String)
 : Fiber<R>("protocol", scheduler), ProtocolStateMachine<R> {
