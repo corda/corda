@@ -17,7 +17,7 @@ class EventGenerator(
         val notary: Party
 ) {
 
-    private var wallet = listOf<StateAndRef<Cash.State>>()
+    private var vault = listOf<StateAndRef<Cash.State>>()
 
     val issuerGenerator =
             Generator.pickOne(parties).combine(Generator.intRange(0, 1)) { party, ref -> party.ref(ref.toByte()) }
@@ -42,19 +42,19 @@ class EventGenerator(
 
     val consumedGenerator: Generator<Set<StateRef>> = Generator.frequency(
             0.7 to Generator.pure(setOf()),
-            0.3 to Generator.impure { wallet }.bind { states ->
+            0.3 to Generator.impure { vault }.bind { states ->
                 Generator.sampleBernoulli(states, 0.2).map { someStates ->
                     val consumedSet = someStates.map { it.ref }.toSet()
-                    wallet = wallet.filter { it.ref !in consumedSet }
+                    vault = vault.filter { it.ref !in consumedSet }
                     consumedSet
                 }
             }
     )
     val producedGenerator: Generator<Set<StateAndRef<ContractState>>> = Generator.frequency(
 //            0.1 to Generator.pure(setOf())
-            0.9 to Generator.impure { wallet }.bind { states ->
+            0.9 to Generator.impure { vault }.bind { states ->
                 Generator.replicate(2, cashStateGenerator).map {
-                    wallet = states + it
+                    vault = states + it
                     it.toSet()
                 }
             }

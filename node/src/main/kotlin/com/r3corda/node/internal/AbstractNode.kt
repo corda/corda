@@ -43,8 +43,8 @@ import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.services.transactions.ValidatingNotaryService
-import com.r3corda.node.services.wallet.CashBalanceAsMetricsObserver
-import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.services.vault.CashBalanceAsMetricsObserver
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.*
 import org.slf4j.Logger
 import java.nio.file.FileAlreadyExistsException
@@ -94,7 +94,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
         override val networkService: MessagingServiceInternal get() = net
         override val networkMapCache: NetworkMapCache get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
-        override val walletService: WalletService get() = wallet
+        override val vaultService: VaultService get() = vault
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
@@ -121,7 +121,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     lateinit var storage: TxWritableStorageService
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
-    lateinit var wallet: WalletService
+    lateinit var vault: VaultService
     lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeWalletMonitorService: WalletMonitorService? = null
@@ -167,7 +167,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             checkpointStorage = storageServices.second
             netMapCache = InMemoryNetworkMapCache()
             net = makeMessagingService()
-            wallet = makeWalletService()
+            vault = makeVaultService()
 
             identity = makeIdentityService()
 
@@ -180,7 +180,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
             protocolLogicFactory = initialiseProtocolLogicFactory()
 
-            val tokenizableServices = mutableListOf(storage, net, wallet, keyManagement, identity, platformClock, scheduler)
+            val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
 
             customServices.clear()
             customServices.addAll(buildPluginServices(tokenizableServices))
@@ -211,7 +211,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
             // TODO: this model might change but for now it provides some de-coupling
             // Add SMM observers
             ANSIProgressObserver(smm)
-            // Add wallet observers
+            // Add vault observers
             CashBalanceAsMetricsObserver(services)
             ScheduledActivityObserver(services)
         }
@@ -372,7 +372,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
-    protected open fun makeWalletService(): WalletService = NodeWalletService(services)
+    protected open fun makeVaultService(): VaultService = NodeVaultService(services)
 
     protected open fun makeWalletMonitorService(): WalletMonitorService = WalletMonitorService(services, smm)
 

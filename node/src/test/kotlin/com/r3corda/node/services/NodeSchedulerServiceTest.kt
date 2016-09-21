@@ -17,7 +17,7 @@ import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.wallet.NodeWalletService
+import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase

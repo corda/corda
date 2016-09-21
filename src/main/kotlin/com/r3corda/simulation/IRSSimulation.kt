@@ -79,7 +79,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.walletService.linearHeadsOfType<com.r3corda.contracts.InterestRateSwap.State>()
+        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.vaultService.linearHeadsOfType<com.r3corda.contracts.InterestRateSwap.State>()
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
@@ -89,8 +89,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
         val retFuture = SettableFuture.create<Unit>()
         // Complete the future when the state has been consumed on both nodes
-        val futA = node1.services.walletService.whenConsumed(theDealRef.ref)
-        val futB = node2.services.walletService.whenConsumed(theDealRef.ref)
+        val futA = node1.services.vaultService.whenConsumed(theDealRef.ref)
+        val futB = node2.services.vaultService.whenConsumed(theDealRef.ref)
         Futures.allAsList(futA, futB) success {
             retFuture.set(null)
         } failure { throwable ->

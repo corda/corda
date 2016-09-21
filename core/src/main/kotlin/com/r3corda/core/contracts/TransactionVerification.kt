@@ -31,7 +31,7 @@ data class TransactionForContract(val inputs: List<ContractState>,
      * The purpose of this function is to simplify the writing of verification logic for transactions that may contain
      * similar but unrelated state evolutions which need to be checked independently. Consider a transaction that
      * simultaneously moves both dollars and euros (e.g. is an atomic FX trade). There may be multiple dollar inputs and
-     * multiple dollar outputs, depending on things like how fragmented the owners wallet is and whether various privacy
+     * multiple dollar outputs, depending on things like how fragmented the owner's vault is and whether various privacy
      * techniques are in use. The quantity of dollars on the output side must sum to the same as on the input side, to
      * ensure no money is being lost track of. This summation and checking must be repeated independently for each
      * currency. To solve this, you would use groupStates with a type of Cash.State and a selector that returns the

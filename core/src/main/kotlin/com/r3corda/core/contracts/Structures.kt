@@ -220,18 +220,18 @@ data class ScheduledActivity(val logicRef: ProtocolLogicRef, override val schedu
 /**
  * A state that evolves by superseding itself, all of which share the common "linearId".
  *
- * This simplifies the job of tracking the current version of certain types of state in e.g. a wallet.
+ * This simplifies the job of tracking the current version of certain types of state in e.g. a vault.
  */
 interface LinearState: ContractState {
     /**
-     * Unique id shared by all LinearState states throughout history within the wallets of all parties.
+     * Unique id shared by all LinearState states throughout history within the vaults of all parties.
      * Verify methods should check that one input and one output share the id in a transaction,
      * except at issuance/termination.
      */
     val linearId: UniqueIdentifier
 
     /**
-     * True if this should be tracked by our wallet(s).
+     * True if this should be tracked by our vault(s).
      * */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
 
@@ -328,7 +328,7 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
     override fun toString() = "$txhash($index)"
 }
 
-/** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
+/** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */

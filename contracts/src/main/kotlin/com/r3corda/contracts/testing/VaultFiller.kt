@@ -1,4 +1,4 @@
-@file:JvmName("WalletFiller")
+@file:JvmName("VaultFiller")
 package com.r3corda.contracts.testing
 
 import com.r3corda.contracts.asset.Cash
@@ -10,7 +10,7 @@ import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import java.security.PublicKey
@@ -19,13 +19,13 @@ import java.util.*
 
 /**
  * Creates a random set of between (by default) 3 and 10 cash states that add up to the given amount and adds them
- * to the wallet. This is intended for unit tests. The cash is issued by [DUMMY_CASH_ISSUER] and owned by the legal
+ * to the vault. This is intended for unit tests. The cash is issued by [DUMMY_CASH_ISSUER] and owned by the legal
  * identity key from the storage service.
  *
  * The service hub needs to provide at least a key management service and a storage service.
  *
  * @param outputNotary the notary to use for output states. The transaction is NOT signed by this notary.
- * @return a wallet object that represents the generated states (it will NOT be the full wallet from the service hub!).
+ * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
  */
 fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     outputNotary: Party = DUMMY_NOTARY,
@@ -33,7 +33,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
-                                    ownedBy: PublicKey? = null): Wallet {
+                                    ownedBy: PublicKey? = null): Vault {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
     val myKey: PublicKey = ownedBy ?: storageService.myLegalIdentityKey.public
@@ -55,7 +55,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
         stx.tx.outputs.indices.map { i -> stx.tx.outRef<Cash.State>(i) }
     }
 
-    return Wallet(states)
+    return Vault(states)
 }
 
 private fun calculateRandomlySizedAmounts(howMuch: Amount<Currency>, min: Int, max: Int, rng: Random): LongArray {

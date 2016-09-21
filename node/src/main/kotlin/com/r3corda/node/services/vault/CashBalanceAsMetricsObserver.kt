@@ -1,19 +1,19 @@
-package com.r3corda.node.services.wallet
+package com.r3corda.node.services.vault
 
 import com.codahale.metrics.Gauge
 import com.r3corda.contracts.asset.cashBalances
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.node.services.api.ServiceHubInternal
 import java.util.*
 
 /**
- * This class observes the wallet and reflect current cash balances as exposed metrics in the monitoring service.
+ * This class observes the vault and reflect current cash balances as exposed metrics in the monitoring service.
  */
 class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal) {
     init {
         // TODO: Need to consider failure scenarios.  This needs to run if the TX is successfully recorded
-        serviceHubInternal.walletService.updates.subscribe { update ->
-            exportCashBalancesViaMetrics(serviceHubInternal.walletService.currentWallet)
+        serviceHubInternal.vaultService.updates.subscribe { update ->
+            exportCashBalancesViaMetrics(serviceHubInternal.vaultService.currentVault)
         }
     }
 
@@ -24,16 +24,16 @@ class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal) {
 
     private val balanceMetrics = HashMap<Currency, BalanceMetric>()
 
-    private fun exportCashBalancesViaMetrics(wallet: Wallet) {
+    private fun exportCashBalancesViaMetrics(vault: Vault) {
         // This is just for demo purposes. We probably shouldn't expose balances via JMX in a real node as that might
         // be commercially sensitive info that the sysadmins aren't even meant to know.
         //
         // Note: exported as pennies.
         val m = serviceHubInternal.monitoringService.metrics
-        for ((key, value) in wallet.cashBalances) {
+        for ((key, value) in vault.cashBalances) {
             val metric = balanceMetrics.getOrPut(key) {
                 val newMetric = BalanceMetric()
-                m.register("WalletBalances.${key}Pennies", newMetric)
+                m.register("VaultBalances.${key}Pennies", newMetric)
                 newMetric
             }
             metric.pennies = value.quantity

@@ -8,7 +8,7 @@ import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
 import java.security.PublicKey
@@ -125,10 +125,10 @@ class CommercialPaperLegacy : Contract {
     }
 
     @Throws(InsufficientBalanceException::class)
-    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: Wallet) {
-        // Add the cash movement using the states in our wallet.
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: Vault) {
+        // Add the cash movement using the states in our vault.
         Cash().generateSpend(tx, paper.state.data.faceValue.withoutIssuer(),
-                paper.state.data.owner, wallet.statesOfType<Cash.State>())
+                paper.state.data.owner, vault.statesOfType<Cash.State>())
         tx.addInputState(paper)
         tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner))
     }

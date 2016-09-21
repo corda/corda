@@ -6,7 +6,7 @@ import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
 import com.r3corda.core.contracts.clauses.*
 import com.r3corda.core.crypto.*
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
 import java.math.BigInteger
@@ -175,7 +175,7 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
  * Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
  * which we have no cash evaluate to null (not present in map), not 0.
  */
-val Wallet.cashBalances: Map<Currency, Amount<Currency>> get() = states.
+val Vault.cashBalances: Map<Currency, Amount<Currency>> get() = states.
         // Select the states we own which are cash, ignore the rest, take the amounts.
         mapNotNull { (it.state.data as? Cash.State)?.amount }.
         // Turn into a Map<Currency, List<Amount>> like { GBP -> (£100, £500, etc), USD -> ($2000, $50) }

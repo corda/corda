@@ -48,7 +48,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     private fun generateDealLink(deal: InterestRateSwap.State) = "/api/irs/deals/" + deal.common.tradeID
 
     private fun getDealByRef(ref: String): InterestRateSwap.State? {
-        val states = services.walletService.linearHeadsOfType<InterestRateSwap.State>().filterValues { it.state.data.ref == ref }
+        val states = services.vaultService.linearHeadsOfType<InterestRateSwap.State>().filterValues { it.state.data.ref == ref }
         return if (states.isEmpty()) null else {
             val deals = states.values.map { it.state.data }
             return if (deals.isEmpty()) null else deals[0]
@@ -56,7 +56,7 @@ class InterestRateSwapAPI(val services: ServiceHub) {
     }
 
     private fun getAllDeals(): Array<InterestRateSwap.State> {
-        val states = services.walletService.linearHeadsOfType<InterestRateSwap.State>()
+        val states = services.vaultService.linearHeadsOfType<InterestRateSwap.State>()
         val swaps = states.values.map { it.state.data }.toTypedArray()
         return swaps
     }

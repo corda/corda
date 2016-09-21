@@ -20,7 +20,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
- * that also encompasses the [Wallet] observer for processing transactions.
+ * that also encompasses the [Vault] observer for processing transactions.
  *
  * This will observe transactions as they are stored and schedule and unschedule activities based on the States consumed
  * or produced.
@@ -50,7 +50,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     // to somewhere.
     private class InnerState {
         // TODO: This has no persistence, and we don't consider initialising from non-empty map if we add persistence.
-        //       If we were to rebuild the wallet at start up by replaying transactions and re-calculating, then
+        //       If we were to rebuild the vault at start up by replaying transactions and re-calculating, then
         //       persistence here would be unnecessary.
         var scheduledStates = HashMap<StateRef, ScheduledStateRef>()
         var earliestState: ScheduledStateRef? = null

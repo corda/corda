@@ -260,7 +260,7 @@ private class TraderDemoProtocolBuyer(val otherSide: Party,
     }
 
     private fun logBalance() {
-        val balances = serviceHub.walletService.currentWallet.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
+        val balances = serviceHub.vaultService.currentVault.cashBalances.entries.map { "${it.key.currencyCode} ${it.value}" }
         logger.info("Remaining balance: ${balances.joinToString()}")
     }
 

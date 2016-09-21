@@ -13,6 +13,8 @@ API changes:
   location.
 * ``AbstractStateReplacementProtocol.verifyProposal`` has changed its prototype in a minor way.
 * The ``UntrustworthyData<T>.validate`` method has been renamed to ``unwrap`` - the old name is now deprecated.
+* The wallet, wallet service, etc. are now vault, vault service, etc. These better reflect the intent that they
+  are a generic secure data store, rather than something which holds cash.
 
 Milestone 3
 -----------

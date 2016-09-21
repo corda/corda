@@ -6,7 +6,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.newSecureRandom
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.node.services.Wallet
+import com.r3corda.core.node.services.Vault
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.serialization.deserialize
@@ -77,8 +77,8 @@ class WalletMonitorServiceTests {
         val (monitorServiceNode, registerNode) = network.createTwoNodes()
         val sessionID = authenticate(monitorServiceNode, registerNode)
         var receivePsm = receiveWalletUpdate(registerNode, sessionID)
-        var expected = Wallet.Update(emptySet(), emptySet())
-        monitorServiceNode.inNodeWalletMonitorService!!.notifyWalletUpdate(expected)
+        var expected = Vault.Update(emptySet(), emptySet())
+        monitorServiceNode.inNodeWalletMonitorService!!.notifyVaultUpdate(expected)
         network.runNetwork()
         var actual = receivePsm.get(1, TimeUnit.SECONDS)
         assertEquals(expected.consumed, actual.consumed)
@@ -89,8 +89,8 @@ class WalletMonitorServiceTests {
         val consumed = setOf(StateRef(SecureHash.randomSHA256(), 0))
         val producedState = TransactionState(DummyContract.SingleOwnerState(newSecureRandom().nextInt(), DUMMY_PUBKEY_1), DUMMY_NOTARY)
         val produced = setOf(StateAndRef(producedState, StateRef(SecureHash.randomSHA256(), 0)))
-        expected = Wallet.Update(consumed, produced)
-        monitorServiceNode.inNodeWalletMonitorService!!.notifyWalletUpdate(expected)
+        expected = Vault.Update(consumed, produced)
+        monitorServiceNode.inNodeWalletMonitorService!!.notifyVaultUpdate(expected)
         network.runNetwork()
         actual = receivePsm.get(1, TimeUnit.SECONDS)
         assertEquals(expected.produced, actual.produced)
@@ -110,7 +110,7 @@ class WalletMonitorServiceTests {
         }
 
         // Check the monitoring service wallet is empty
-        assertFalse(monitorServiceNode.services.walletService.currentWallet.states.iterator().hasNext())
+        assertFalse(monitorServiceNode.services.vaultService.currentVault.states.iterator().hasNext())
 
         // Tell the monitoring service node to issue some cash
         val recipient = monitorServiceNode.services.storageService.myLegalIdentity
