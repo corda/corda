@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.AddressFormatException
 import com.r3corda.core.crypto.newSecureRandom
+import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
@@ -41,7 +42,7 @@ import javax.annotation.concurrent.ThreadSafe
 class ArtemisMessagingServer(directory: Path,
                              config: NodeConfiguration,
                              val myHostPort: HostAndPort,
-                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent(directory, config) {
+                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent(directory / "certificates", config) {
     companion object {
         val log = loggerFor<ArtemisMessagingServer>()
     }
