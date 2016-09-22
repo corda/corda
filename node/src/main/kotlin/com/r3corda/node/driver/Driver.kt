@@ -3,6 +3,7 @@ package com.r3corda.node.driver
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache

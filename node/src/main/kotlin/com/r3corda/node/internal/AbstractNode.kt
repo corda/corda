@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.messaging.runOnNextMessage
@@ -158,6 +159,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
     open fun start(): AbstractNode {
         require(!started) { "Node has already been started" }
+
+        if (configuration.devMode) {
+            log.warn("Corda node is running in dev mode.")
+            configuration.configureWithDevSSLCertificate()
+        }
+        require(hasSSLCertificates()) { "SSL certificates not found." }
+
         log.info("Node starting up ...")
 
         // Do all of this in a database transaction so anything that might need a connection has one.
@@ -224,6 +232,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         smm.start()
         started = true
         return this
+    }
+
+    private fun hasSSLCertificates(): Boolean {
+        val keyStore = try {
+            // This will throw exception if key file not found or keystore password is incorrect.
+            X509Utilities.loadKeyStore(configuration.keyStorePath, configuration.keyStorePassword)
+        } catch (e: Exception) {
+            null
+        }
+        return keyStore?.containsAlias(X509Utilities.CORDA_CLIENT_CA) ?: false
     }
 
     // Specific class so that MockNode can catch it.

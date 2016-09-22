@@ -133,7 +133,6 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
     override fun startMessagingService() {
         // Start up the embedded MQ server
         messageBroker?.apply {
-            configureWithDevSSLCertificate() // TODO: Create proper certificate provisioning process
             runOnStop += Runnable { messageBroker?.stop() }
             start()
             bridgeToNetworkMapService(networkMapService)
@@ -141,7 +140,6 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
         // Start up the MQ client.
         (net as NodeMessagingClient).apply {
-            configureWithDevSSLCertificate() // TODO: Client might need a separate certificate
             start()
         }
     }
