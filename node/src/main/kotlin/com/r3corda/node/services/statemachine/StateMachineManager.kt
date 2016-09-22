@@ -65,7 +65,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     data class Change(
             val logic: ProtocolLogic<*>,
             val addOrRemove: AddOrRemove,
-            val stateMachineRunId: StateMachineRunId
+            val id: StateMachineRunId
     )
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
@@ -76,7 +76,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
         val changesPublisher = PublishSubject.create<Change>()
 
         fun notifyChangeObservers(psm: ProtocolStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.onNext(Change(psm.logic, addOrRemove, psm.stateMachineRunId))
+            changesPublisher.onNext(Change(psm.logic, addOrRemove, psm.id))
         }
     })
 

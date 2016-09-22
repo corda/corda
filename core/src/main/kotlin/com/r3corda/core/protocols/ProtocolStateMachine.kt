@@ -35,10 +35,8 @@ interface ProtocolStateMachine<R> {
     val serviceHub: ServiceHub
     val logger: Logger
 
-    /** Unique ID for this machine, valid only while it is in memory. */
-    val machineId: Long
     /** Unique ID for this machine run, valid across restarts */
-    val stateMachineRunId: StateMachineRunId
+    val id: StateMachineRunId
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R>
 }

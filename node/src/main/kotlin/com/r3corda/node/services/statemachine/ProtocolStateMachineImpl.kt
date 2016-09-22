@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutionException
  * a protocol invokes a sub-protocol, then it will pass along the PSM to the child. The call method of the topmost
  * logic element gets to return the value that the entire state machine resolves to.
  */
-class ProtocolStateMachineImpl<R>(override val stateMachineRunId: StateMachineRunId,
+class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
                                   val logic: ProtocolLogic<R>,
                                   scheduler: FiberScheduler,
                                   private val loggerName: String)
@@ -59,11 +59,6 @@ class ProtocolStateMachineImpl<R>(override val stateMachineRunId: StateMachineRu
             return f
         }
     }
-    /**
-     * Unique ID for the deserialized instance protocol state machine. This is NOT maintained across a state machine
-     * being serialized and then deserialized.
-     */
-    override val machineId: Long get() = this.id
 
     init {
         logic.psm = this

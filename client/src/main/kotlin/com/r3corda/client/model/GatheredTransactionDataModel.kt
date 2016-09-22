@@ -86,7 +86,7 @@ class GatheredTransactionDataModel {
                             is ServiceToClientEvent.OutputState -> {}
                             is ServiceToClientEvent.StateMachine -> {
                                 newFiberIdTransactionStateOrModify(transactionStates, serviceToClientEvent,
-                                        stateMachineRunId = serviceToClientEvent.stateMachineRunId,
+                                        stateMachineRunId = serviceToClientEvent.id,
                                         tweak = {
                                             stateMachineStatus.set(when (serviceToClientEvent.addOrRemove) {
                                                 AddOrRemove.ADD -> StateMachineStatus.Added(serviceToClientEvent.label)
@@ -97,7 +97,7 @@ class GatheredTransactionDataModel {
                             }
                             is ServiceToClientEvent.Progress -> {
                                 newFiberIdTransactionStateOrModify(transactionStates, serviceToClientEvent,
-                                        stateMachineRunId = serviceToClientEvent.stateMachineRunId,
+                                        stateMachineRunId = serviceToClientEvent.id,
                                         tweak = {
                                             protocolStatus.set(ProtocolStatus(serviceToClientEvent.message))
                                         }
@@ -108,7 +108,7 @@ class GatheredTransactionDataModel {
                                 newUuidTransactionStateOrModify(transactionStates, serviceToClientEvent,
                                         uuid = serviceToClientEvent.id,
                                         stateMachineRunId = when (state) {
-                                            is TransactionBuildResult.ProtocolStarted -> state.stateMachineId
+                                            is TransactionBuildResult.ProtocolStarted -> state.id
                                             is TransactionBuildResult.Failed -> null
                                         },
                                         transactionId = when (state) {
