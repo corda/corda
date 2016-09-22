@@ -4,13 +4,16 @@ import com.google.common.io.BaseEncoding
 import com.r3corda.core.serialization.OpaqueBytes
 import java.security.MessageDigest
 
+/**
+ * Container for a cryptographically secure hash value.
+ * Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).
+ */
 sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
+    /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes) */
     class SHA256(bits: ByteArray) : SecureHash(bits) {
         init {
             require(bits.size == 32)
         }
-
-        override val signatureAlgorithmName: String get() = "SHA256withECDSA"
     }
 
     override fun toString() = BaseEncoding.base16().encode(bits)
@@ -33,8 +36,6 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
 
         @JvmStatic fun randomSHA256() = sha256(newSecureRandom().generateSeed(32))
     }
-
-    abstract val signatureAlgorithmName: String
 
     // In future, maybe SHA3, truncated hashes etc.
 }
