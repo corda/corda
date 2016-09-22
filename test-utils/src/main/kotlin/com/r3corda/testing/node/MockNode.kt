@@ -18,6 +18,7 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
+import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.network.InMemoryNetworkMapService
@@ -61,19 +62,19 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
     /** Allows customisation of how nodes are created. */
     interface Factory {
-        fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                    advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNode
     }
 
     object DefaultFactory : Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNode {
-            return MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair)
+            return MockNode(config, network, networkMapAddr, advertisedServices, id, keyPair)
         }
     }
 
-    open class MockNode(dir: Path, config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : com.r3corda.node.internal.AbstractNode(dir, config, networkMapAddr, advertisedServices, TestClock()) {
+    open class MockNode(config: NodeConfiguration, val mockNet: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+                        advertisedServices: Set<ServiceType>, val id: Int, val keyPair: KeyPair?) : AbstractNode(config, networkMapAddr, advertisedServices, TestClock()) {
         override val log: Logger = loggerFor<MockNode>()
         override val serverThread: com.r3corda.node.utilities.AffinityExecutor =
                 if (mockNet.threadPerNode)
@@ -167,7 +168,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // TODO: create a base class that provides a default implementation
         val config = object : NodeConfiguration {
-
+            override val basedir: Path = path
             override val myLegalName: String = legalName ?: "Mock Company $id"
             override val nearestCity: String = "Atlantis"
             override val emailAddress: String = ""
@@ -178,7 +179,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             override val dataSourceProperties: Properties get() = if (databasePersistence) makeTestDataSourceProperties("node_$id") else Properties()
             override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
         }
-        val node = nodeFactory.create(path, config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
+        val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
         if (start) {
             node.setup().start()
             if (threadPerNode && networkMapAddress != null)

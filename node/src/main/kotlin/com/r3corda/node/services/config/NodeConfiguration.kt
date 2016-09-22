@@ -1,6 +1,7 @@
 package com.r3corda.node.services.config
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.internal.Node
@@ -25,11 +26,14 @@ import kotlin.reflect.jvm.javaType
 interface NodeSSLConfiguration {
     val keyStorePassword: String
     val trustStorePassword: String
-
-    // TODO: Move cert paths into this interface as well.
+    val certificatesPath: Path
+    val keyStorePath: Path get() = certificatesPath / "sslkeystore.jks"
+    val trustStorePath: Path get() = certificatesPath / "truststore.jks"
 }
 
 interface NodeConfiguration : NodeSSLConfiguration {
+    val basedir: Path
+    override val certificatesPath: Path get() = basedir / "certificates"
     val myLegalName: String
     val nearestCity: String
     val emailAddress: String
@@ -100,6 +104,7 @@ fun Config.getProperties(path: String): Properties {
 }
 
 class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : NodeConfiguration {
+    override val basedir: Path by config
     override val myLegalName: String by config
     override val nearestCity: String by config
     override val emailAddress: String by config
@@ -112,7 +117,7 @@ class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : N
 }
 
 class FullNodeConfiguration(conf: Config) : NodeConfiguration {
-    val basedir: Path by conf
+    override val basedir: Path by conf
     override val myLegalName: String by conf
     override val nearestCity: String by conf
     override val emailAddress: String by conf
@@ -141,8 +146,7 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
         }
         if (networkMapAddress == null) advertisedServices.add(NetworkMapService.Type)
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
-        return Node(basedir.toAbsolutePath().normalize(),
-                artemisAddress,
+        return Node(artemisAddress,
                 webAddress,
                 this,
                 networkMapMessageAddress,

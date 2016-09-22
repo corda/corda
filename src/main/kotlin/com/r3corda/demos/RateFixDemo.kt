@@ -18,6 +18,7 @@ import joptsimple.OptionParser
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import kotlin.system.exitProcess
@@ -61,7 +62,7 @@ fun main(args: Array<String>) {
 
     // TODO: create a base class that provides a default implementation
     val config = object : NodeConfiguration {
-
+        override val basedir: Path = dir
         override val myLegalName: String = "Rate fix demo node"
         override val nearestCity: String = "Atlantis"
         override val emailAddress: String = ""
@@ -76,7 +77,7 @@ fun main(args: Array<String>) {
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
 
-    val node = logElapsedTime("Node startup") { Node(dir, myNetAddr, apiAddr, config, networkMapAddr,
+    val node = logElapsedTime("Node startup") { Node(myNetAddr, apiAddr, config, networkMapAddr,
             advertisedServices, DemoClock()).setup().start() }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]

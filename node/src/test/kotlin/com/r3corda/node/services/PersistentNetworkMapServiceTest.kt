@@ -59,9 +59,9 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
     }
 
     private object NodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
+            return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, keyPair) {
 
                 override fun makeNetworkMapService() {
                     inNodeNetworkMapService = SwizzleNetworkMapService(services)

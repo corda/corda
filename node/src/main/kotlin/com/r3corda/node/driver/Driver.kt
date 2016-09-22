@@ -10,9 +10,9 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
-import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.NotaryService
@@ -335,9 +335,7 @@ class DriverDSL(
                         )
                 )
         )
-        val client = NodeMessagingClient(
-                Paths.get(baseDirectory, providedName),
-                nodeConfiguration,
+        val client = NodeMessagingClient(nodeConfiguration,
                 serverHostPort = serverAddress,
                 myIdentity = identity.public,
                 executor = AffinityExecutor.ServiceAffinityExecutor(providedName, 1),
@@ -366,9 +364,7 @@ class DriverDSL(
                         )
                 )
         )
-        val server = ArtemisMessagingServer(
-                Paths.get(baseDirectory, name),
-                config,
+        val server = ArtemisMessagingServer(config,
                 portAllocation.nextHostAndPort(),
                 networkMapCache
         )

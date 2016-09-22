@@ -27,9 +27,7 @@ import java.security.PublicKey
  * @param certificatePath A place where Artemis can stash its message journal and other files.
  * @param config The config object is used to pass in the passwords for the certificate KeyStore and TrustStore
  */
-abstract class ArtemisMessagingComponent(val certificatePath: Path, val config: NodeSSLConfiguration) : SingletonSerializeAsToken() {
-    val keyStorePath: Path = certificatePath / "sslkeystore.jks"
-    val trustStorePath: Path = certificatePath / "truststore.jks"
+abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : SingletonSerializeAsToken() {
 
     companion object {
         init {
@@ -116,10 +114,10 @@ abstract class ArtemisMessagingComponent(val certificatePath: Path, val config: 
      * unfortunately Artemis tends to bury the exception when the password is wrong.
      */
     fun checkStorePasswords() {
-        keyStorePath.use {
+        config.keyStorePath.use {
            KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
         }
-        trustStorePath.use {
+        config.trustStorePath.use {
            KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
         }
     }
@@ -145,10 +143,10 @@ abstract class ArtemisMessagingComponent(val certificatePath: Path, val config: 
                             // and AES encryption
                             TransportConstants.SSL_ENABLED_PROP_NAME to true,
                             TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
-                            TransportConstants.KEYSTORE_PATH_PROP_NAME to keyStorePath,
+                            TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStorePath,
                             TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
                             TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
-                            TransportConstants.TRUSTSTORE_PATH_PROP_NAME to trustStorePath,
+                            TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStorePath,
                             TransportConstants.TRUSTSTORE_PASSWORD_PROP_NAME to config.trustStorePassword,
                             TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                             TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
@@ -161,16 +159,16 @@ abstract class ArtemisMessagingComponent(val certificatePath: Path, val config: 
      * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
      */
     fun configureWithDevSSLCertificate() {
-        Files.createDirectories(certificatePath)
-        if (!Files.exists(trustStorePath)) {
+        Files.createDirectories(config.certificatesPath)
+        if (!Files.exists(config.trustStorePath)) {
             Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
-                    trustStorePath)
+                    config.trustStorePath)
         }
-        if (!Files.exists(keyStorePath)) {
+        if (!Files.exists(config.keyStorePath)) {
             val caKeyStore = X509Utilities.loadKeyStore(
                     javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordadevcakeys.jks"),
                     "cordacadevpass")
-            X509Utilities.createKeystoreForSSL(keyStorePath, config.keyStorePassword, config.keyStorePassword, caKeyStore, "cordacadevkeypass")
+            X509Utilities.createKeystoreForSSL(config.keyStorePath, config.keyStorePassword, config.keyStorePassword, caKeyStore, "cordacadevkeypass")
         }
     }
 }

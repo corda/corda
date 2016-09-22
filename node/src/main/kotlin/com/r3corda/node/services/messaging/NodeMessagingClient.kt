@@ -2,7 +2,6 @@ package com.r3corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
-import com.r3corda.core.div
 import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.opaque
@@ -15,7 +14,6 @@ import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import java.nio.file.FileSystems
-import java.nio.file.Path
 import java.security.PublicKey
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
@@ -46,14 +44,12 @@ import javax.annotation.concurrent.ThreadSafe
  * If false the inbox queue will be transient, which is appropriate for UI clients for example.
  */
 @ThreadSafe
-class NodeMessagingClient(directory: Path,
-                          config: NodeConfiguration,
+class NodeMessagingClient(config: NodeConfiguration,
                           val serverHostPort: HostAndPort,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
                           val persistentInbox: Boolean = true,
-                          private val rpcOps: CordaRPCOps? = null)
-: ArtemisMessagingComponent(directory / "certificates", config), MessagingServiceInternal {
+                          private val rpcOps: CordaRPCOps? = null) : ArtemisMessagingComponent(config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
 
@@ -103,7 +99,7 @@ class NodeMessagingClient(directory: Path,
     private val handlers = CopyOnWriteArrayList<Handler>()
 
     init {
-        require(directory.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
+        require(config.basedir.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
     }
 
     fun start() {

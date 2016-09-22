@@ -12,6 +12,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -35,13 +36,9 @@ class CertificateSignerTest {
             on { retrieveCertificates(eq(id)) }.then { certs }
         }
 
-        val keyStore = tempFolder.root.toPath().resolve("sslkeystore.jks")
-        val tmpTrustStore = tempFolder.root.toPath().resolve("truststore.jks")
-
-        assertFalse(Files.exists(keyStore))
-        assertFalse(Files.exists(tmpTrustStore))
 
         val config = object : NodeConfiguration {
+            override val basedir: Path = tempFolder.root.toPath()
             override val myLegalName: String = "me"
             override val nearestCity: String = "London"
             override val emailAddress: String = ""
@@ -52,12 +49,15 @@ class CertificateSignerTest {
             override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
         }
 
-        CertificateSigner(tempFolder.root.toPath(), config, certService).buildKeyStore()
+        assertFalse(Files.exists(config.keyStorePath))
+        assertFalse(Files.exists(config.trustStorePath))
 
-        assertTrue(Files.exists(keyStore))
-        assertTrue(Files.exists(tmpTrustStore))
+        CertificateSigner(config, certService).buildKeyStore()
 
-        X509Utilities.loadKeyStore(keyStore, config.keyStorePassword).run {
+        assertTrue(Files.exists(config.keyStorePath))
+        assertTrue(Files.exists(config.trustStorePath))
+
+        X509Utilities.loadKeyStore(config.keyStorePath, config.keyStorePassword).run {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -66,7 +66,7 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        X509Utilities.loadKeyStore(tmpTrustStore, config.trustStorePassword).run {
+        X509Utilities.loadKeyStore(config.trustStorePath, config.trustStorePassword).run {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
@@ -75,7 +75,7 @@ class CertificateSignerTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        assertEquals(id, Files.readAllLines(tempFolder.root.toPath() / "certificate-request-id.txt").first())
+        assertEquals(id, Files.readAllLines(config.certificatesPath / "certificate-request-id.txt").first())
     }
 
 }

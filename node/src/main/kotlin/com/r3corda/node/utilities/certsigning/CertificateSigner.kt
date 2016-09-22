@@ -11,10 +11,8 @@ import com.r3corda.core.minutes
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import joptsimple.OptionParser
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.cert.Certificate
@@ -26,23 +24,25 @@ import kotlin.system.exitProcess
  * This process will enter a slow polling loop until the request has been approved, and then
  * the certificate chain will be downloaded and stored in [KeyStore] reside in [certificatePath].
  */
-class CertificateSigner(certificatePath: Path, val nodeConfig: NodeConfiguration, val certService: CertificateSigningService) : ArtemisMessagingComponent(certificatePath, nodeConfig) {
+class CertificateSigner(val config: NodeConfiguration, val certService: CertificateSigningService) {
     companion object {
         val pollInterval = 1.minutes
         val log = loggerFor<CertificateSigner>()
     }
 
     fun buildKeyStore() {
-        val caKeyStore = X509Utilities.loadOrCreateKeyStore(keyStorePath, config.keyStorePassword)
+        Files.createDirectories(config.certificatesPath)
+
+        val caKeyStore = X509Utilities.loadOrCreateKeyStore(config.keyStorePath, config.keyStorePassword)
 
         if (!caKeyStore.containsAlias(CORDA_CLIENT_CA)) {
             // No certificate found in key store, create certificate signing request and post request to signing server.
             log.info("No certificate found in key store, creating certificate signing request...")
 
             // Create or load key pair from the key store.
-            val keyPair = X509Utilities.loadOrCreateKeyPairFromKeyStore(keyStorePath, config.keyStorePassword,
+            val keyPair = X509Utilities.loadOrCreateKeyPairFromKeyStore(config.keyStorePath, config.keyStorePassword,
                     config.keyStorePassword, CORDA_CLIENT_CA_PRIVATE_KEY) {
-                X509Utilities.createSelfSignedCACert(nodeConfig.myLegalName)
+                X509Utilities.createSelfSignedCACert(config.myLegalName)
             }
             log.info("Submitting certificate signing request to Corda certificate signing server.")
             val requestId = submitCertificateSigningRequest(keyPair)
@@ -58,15 +58,15 @@ class CertificateSigner(certificatePath: Path, val nodeConfig: NodeConfiguration
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             caKeyStore.addOrReplaceCertificate(CORDA_CLIENT_CA, certificates.first())
 
-            X509Utilities.saveKeyStore(caKeyStore, keyStorePath, config.keyStorePassword)
+            X509Utilities.saveKeyStore(caKeyStore, config.keyStorePath, config.keyStorePassword)
 
             // Save certificates to trust store.
-            val trustStore = X509Utilities.loadOrCreateKeyStore(trustStorePath, config.trustStorePassword)
+            val trustStore = X509Utilities.loadOrCreateKeyStore(config.trustStorePath, config.trustStorePassword)
 
             // Assumes certificate chain always starts with client certificate and end with root certificate.
             trustStore.addOrReplaceCertificate(CORDA_ROOT_CA, certificates.last())
 
-            X509Utilities.saveKeyStore(trustStore, trustStorePath, config.trustStorePassword)
+            X509Utilities.saveKeyStore(trustStore, config.trustStorePath, config.trustStorePassword)
         } else {
             log.trace("Certificate already exists, exiting certificate signer...")
         }
@@ -96,10 +96,10 @@ class CertificateSigner(certificatePath: Path, val nodeConfig: NodeConfiguration
      * @return Request ID return from the server.
      */
     private fun submitCertificateSigningRequest(keyPair: KeyPair): String {
-        val requestIdStore = certificatePath / "certificate-request-id.txt"
+        val requestIdStore = config.certificatesPath / "certificate-request-id.txt"
         // Retrieve request id from file if exists, else post a request to server.
         return if (!Files.exists(requestIdStore)) {
-            val request = X509Utilities.createCertificateSigningRequest(nodeConfig.myLegalName, nodeConfig.nearestCity, nodeConfig.emailAddress, keyPair)
+            val request = X509Utilities.createCertificateSigningRequest(config.myLegalName, config.nearestCity, config.emailAddress, keyPair)
             // Post request to signing server via http.
             val requestId = certService.submitRequest(request)
             // Persists request ID to file in case of node shutdown.
@@ -128,6 +128,6 @@ fun main(args: Array<String>) {
     val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
     val conf = FullNodeConfiguration(NodeConfiguration.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true))
     // TODO: Use HTTPS instead
-    CertificateSigner(baseDirectoryPath / "certificate", conf, HTTPCertificateSigningService(conf.certificateSigningService)).buildKeyStore()
+    CertificateSigner(conf, HTTPCertificateSigningService(conf.certificateSigningService)).buildKeyStore()
 }
 

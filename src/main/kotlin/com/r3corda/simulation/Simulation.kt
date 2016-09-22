@@ -45,22 +45,22 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     // This puts together a mock network of SimulatedNodes.
 
-    open class SimulatedNode(dir: Path, config: NodeConfiguration, mockNet: MockNetwork, networkMapAddress: SingleMessageRecipient?,
-                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?) : MockNetwork.MockNode(dir, config, mockNet, networkMapAddress, advertisedServices, id, keyPair) {
+    open class SimulatedNode(config: NodeConfiguration, mockNet: MockNetwork, networkMapAddress: SingleMessageRecipient?,
+                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?) : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, keyPair) {
         override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
     }
 
     inner class BankFactory : MockNetwork.Factory {
         var counter = 0
 
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             val letter = 'A' + counter
             val city = bankLocations[counter++ % bankLocations.size]
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
-
+                override val basedir: Path = config.basedir
                 // TODO: Set this back to "Bank of $city" after video day.
                 override val myLegalName: String = "Bank $letter"
                 override val nearestCity: String = city
@@ -71,7 +71,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
-            return SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair)
+            return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
 
         fun createAll(): List<SimulatedNode> = bankLocations.
@@ -81,12 +81,13 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val bankFactory = BankFactory()
 
     object NetworkMapNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork,
+        override fun create(config: NodeConfiguration, network: MockNetwork,
                             networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             require(advertisedServices.contains(NetworkMapService.Type))
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
+                override val basedir: Path = config.basedir
                 override val myLegalName: String = "Network coordination center"
                 override val nearestCity: String = "Amsterdam"
                 override val emailAddress: String = ""
@@ -97,17 +98,18 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
 
-            return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
+            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {}
         }
     }
 
     object NotaryNodeFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             require(advertisedServices.contains(SimpleNotaryService.Type))
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
+                override val basedir: Path = config.basedir
                 override val myLegalName: String = "Notary Service"
                 override val nearestCity: String = "Zurich"
                 override val emailAddress: String = ""
@@ -117,17 +119,18 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val trustStorePassword: String = "trustpass"
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
-            return SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair)
+            return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
     }
 
     object RatesOracleFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             require(advertisedServices.contains(NodeInterestRates.Type))
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
+                override val basedir: Path = config.basedir
                 override val myLegalName: String = "Rates Service Provider"
                 override val nearestCity: String = "Madrid"
                 override val emailAddress: String = ""
@@ -138,7 +141,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
 
-            return object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
+            return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
                     findService<NodeInterestRates.Service>().upload(javaClass.getResourceAsStream("example.rates.txt"))
@@ -149,11 +152,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     object RegulatorFactory : MockNetwork.Factory {
-        override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+        override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
+                override val basedir: Path = config.basedir
                 override val myLegalName: String = "Regulator A"
                 override val nearestCity: String = "Paris"
                 override val emailAddress: String = ""
@@ -164,7 +168,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
             }
 
-            val n = object : SimulatedNode(dir, cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
+            val n = object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
                 //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
                 //       But that's fine for visualisation purposes.
