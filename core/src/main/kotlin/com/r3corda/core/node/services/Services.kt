@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.transactions.WireTransaction
+import rx.Observable
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -94,6 +95,18 @@ interface VaultService {
     val currentVault: Vault
 
     /**
+     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the Vault will already incorporate
+     * the update.
+     */
+    val updates: Observable<Vault.Update>
+
+    /**
+     * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
+     * first subscriber is registered so as to avoid racing with early updates.
+     */
+    fun track(): Pair<Vault, Observable<Vault.Update>>
+
+    /**
      * Returns a snapshot of the heads of LinearStates.
      */
     val linearHeads: Map<UniqueIdentifier, StateAndRef<LinearState>>
@@ -123,12 +136,6 @@ interface VaultService {
 
     /** Same as notifyAll but with a single transaction. */
     fun notify(tx: WireTransaction): Vault = notifyAll(listOf(tx))
-
-    /**
-     * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
-     * incorporate the update.
-     */
-    val updates: rx.Observable<Vault.Update>
 
     /**
      * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.

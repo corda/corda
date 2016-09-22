@@ -1,6 +1,8 @@
 package com.r3corda.node.services.vault
 
 import com.google.common.collect.Sets
+import com.r3corda.core.ThreadBox
+import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.ServiceHub
@@ -17,8 +19,6 @@ import org.jetbrains.exposed.sql.statements.InsertStatement
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 /**
  * Currently, the node vault service is a very simple RDBMS backed implementation.  It will change significantly when
@@ -42,23 +42,48 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val index = integer("output_index")
     }
 
-    private val unconsumedStates = object : AbstractJDBCHashSet<StateRef, StatesSetTable>(StatesSetTable) {
-        override fun elementFromRow(it: ResultRow): StateRef = StateRef(SecureHash.SHA256(it[table.txhash]), it[table.index])
+    private val mutex = ThreadBox(object {
+        val unconsumedStates = object : AbstractJDBCHashSet<StateRef, StatesSetTable>(StatesSetTable) {
+            override fun elementFromRow(it: ResultRow): StateRef = StateRef(SecureHash.SHA256(it[table.txhash]), it[table.index])
 
-        override fun addElementToInsert(insert: InsertStatement, entry: StateRef, finalizables: MutableList<() -> Unit>) {
-            insert[table.txhash] = entry.txhash.bits
-            insert[table.index] = entry.index
+            override fun addElementToInsert(it: InsertStatement, entry: StateRef, finalizables: MutableList<() -> Unit>) {
+                it[table.txhash] = entry.txhash.bits
+                it[table.index] = entry.index
+            }
         }
-    }
+        val _updatesPublisher = PublishSubject.create<Vault.Update>()
 
-    protected val mutex = ReentrantLock()
+        fun allUnconsumedStates(): Iterable<StateAndRef<ContractState>> {
+            // Order by txhash for if and when transaction storage has some caching.
+            // Map to StateRef and then to StateAndRef.  Use Sequence to avoid conversion to ArrayList that Iterable.map() performs.
+            return unconsumedStates.asSequence().map {
+                val storedTx = services.storageService.validatedTransactions.getTransaction(it.txhash) ?: throw Error("Found transaction hash ${it.txhash} in unconsumed contract states that is not in transaction storage.")
+                StateAndRef(storedTx.tx.outputs[it.index], it)
+            }.asIterable()
+        }
 
-    override val currentVault: Vault get() = mutex.withLock { Vault(allUnconsumedStates()) }
+        fun recordUpdate(update: Vault.Update): Vault.Update {
+            if (update != Vault.NoUpdate) {
+                val producedStateRefs = update.produced.map { it.ref }
+                val consumedStateRefs = update.consumed
+                log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
+                unconsumedStates.removeAll(consumedStateRefs)
+                unconsumedStates.addAll(producedStateRefs)
+            }
+            return update
+        }
+    })
 
-    private val _updatesPublisher = PublishSubject.create<Vault.Update>()
+    override val currentVault: Vault get() = mutex.locked { Vault(allUnconsumedStates()) }
 
     override val updates: Observable<Vault.Update>
-        get() = _updatesPublisher
+        get() = mutex.locked { _updatesPublisher }
+
+    override fun track(): Pair<Vault, Observable<Vault.Update>> {
+        return mutex.locked {
+            Pair(Vault(allUnconsumedStates()), _updatesPublisher.bufferUntilSubscribed())
+        }
+    }
 
     /**
      * Returns a snapshot of the heads of LinearStates.
@@ -72,10 +97,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         val ourKeys = services.keyManagementService.keys.keys
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, netDelta, ourKeys) }
         if (netDelta != Vault.NoUpdate) {
-            mutex.withLock {
+            mutex.locked {
                 recordUpdate(netDelta)
             }
-            _updatesPublisher.onNext(netDelta)
         }
         return currentVault
     }
@@ -91,7 +115,9 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         // i.e. retainAll() iterates over consumed, checking contains() on the parameter.  Sets.union() does not physically create
         // a new collection and instead contains() just checks the contains() of both parameters, and so we don't end up
         // iterating over all (a potentially very large) unconsumedStates at any point.
-        consumed.retainAll(Sets.union(netDelta.produced, unconsumedStates))
+        mutex.locked {
+            consumed.retainAll(Sets.union(netDelta.produced, unconsumedStates))
+        }
 
         // Is transaction irrelevant?
         if (consumed.isEmpty() && ourNewStates.isEmpty()) {
@@ -111,25 +137,5 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         } else {
             false
         }
-    }
-
-    private fun recordUpdate(update: Vault.Update): Vault.Update {
-        if (update != Vault.NoUpdate) {
-            val producedStateRefs = update.produced.map { it.ref }
-            val consumedStateRefs = update.consumed
-            log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
-            unconsumedStates.removeAll(consumedStateRefs)
-            unconsumedStates.addAll(producedStateRefs)
-        }
-        return update
-    }
-
-    private fun allUnconsumedStates(): Iterable<StateAndRef<ContractState>> {
-        // Order by txhash for if and when transaction storage has some caching.
-        // Map to StateRef and then to StateAndRef.  Use Sequence to avoid conversion to ArrayList that Iterable.map() performs.
-        return unconsumedStates.asSequence().map {
-            val storedTx = services.storageService.validatedTransactions.getTransaction(it.txhash) ?: throw Error("Found transaction hash ${it.txhash} in unconsumed contract states that is not in transaction storage.")
-            StateAndRef(storedTx.tx.outputs[it.index], it)
-        }.asIterable()
     }
 }

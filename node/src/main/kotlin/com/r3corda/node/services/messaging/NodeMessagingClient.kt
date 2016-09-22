@@ -54,8 +54,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                           val myIdentity: PublicKey?,
                           val executor: AffinityExecutor,
                           val persistentInbox: Boolean = true,
-                          val persistenceTx: (() -> Unit) -> Unit = { it() },
-                          private val rpcOps: CordaRPCOps? = null) : ArtemisMessagingComponent(config), MessagingServiceInternal {
+                          val persistenceTx: (() -> Unit) -> Unit = { it() }) : ArtemisMessagingComponent(config), MessagingServiceInternal {
     companion object {
         val log = loggerFor<NodeMessagingClient>()
 
@@ -113,7 +112,7 @@ class NodeMessagingClient(config: NodeConfiguration,
         require(config.basedir.fileSystem == FileSystems.getDefault()) { "Artemis only uses the default file system" }
     }
 
-    fun start() {
+    fun start(rpcOps: CordaRPCOps? = null) {
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
@@ -150,6 +149,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                 session.createTemporaryQueue("activemq.notifications", "rpc.qremovals", "_AMQ_NotifType = 1")
                 rpcConsumer = session.createConsumer(RPC_REQUESTS_QUEUE)
                 rpcNotificationConsumer = session.createConsumer("rpc.qremovals")
+                dispatcher = createRPCDispatcher(state, rpcOps)
             }
         }
     }
@@ -392,7 +392,9 @@ class NodeMessagingClient(config: NodeConfiguration,
         }
     }
 
-    private fun createRPCDispatcher(ops: CordaRPCOps) = object : RPCDispatcher(ops) {
+    var dispatcher: RPCDispatcher? = null
+
+    private fun createRPCDispatcher(state: ThreadBox<InnerState>, ops: CordaRPCOps) = object : RPCDispatcher(ops) {
         override fun send(bits: SerializedBytes<*>, toAddress: String) {
             state.locked {
                 val msg = session!!.createMessage(false).apply {
@@ -404,6 +406,4 @@ class NodeMessagingClient(config: NodeConfiguration,
             }
         }
     }
-
-    private val dispatcher = if (rpcOps != null) createRPCDispatcher(rpcOps) else null
 }

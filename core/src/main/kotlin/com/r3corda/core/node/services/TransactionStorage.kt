@@ -1,7 +1,8 @@
 package com.r3corda.core.node.services
 
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.transactions.SignedTransaction
+import rx.Observable
 
 /**
  * Thread-safe storage of transactions.
@@ -16,7 +17,12 @@ interface ReadOnlyTransactionStorage {
      * Get a synchronous Observable of updates.  When observations are pushed to the Observer, the vault will already
      * incorporate the update.
      */
-    val updates: rx.Observable<SignedTransaction>
+    val updates: Observable<SignedTransaction>
+
+    /**
+     * Returns all currently stored transactions and further fresh ones.
+     */
+    fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>>
 }
 
 /**

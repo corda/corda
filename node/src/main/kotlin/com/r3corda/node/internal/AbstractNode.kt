@@ -31,13 +31,17 @@ import com.r3corda.node.services.events.NodeSchedulerService
 import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.PersistentKeyManagementService
+import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.monitor.NodeMonitorService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.network.PersistentNetworkMapService
-import com.r3corda.node.services.persistence.*
+import com.r3corda.node.services.persistence.NodeAttachmentService
+import com.r3corda.node.services.persistence.PerFileCheckpointStorage
+import com.r3corda.node.services.persistence.PerFileTransactionStorage
+import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -225,7 +229,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             ScheduledActivityObserver(services)
         }
 
-        startMessagingService()
+        startMessagingService(ServerRPCOps(services, smm, database))
         runOnStop += Runnable { net.stop() }
         _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
         isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
@@ -412,7 +416,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
     protected abstract fun makeMessagingService(): MessagingServiceInternal
 
-    protected abstract fun startMessagingService()
+    protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps?)
 
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)

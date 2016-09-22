@@ -123,7 +123,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
      * Atomic get snapshot + subscribe. This is needed so we don't miss updates between subscriptions to [changes] and
      * calls to [allStateMachines]
      */
-    fun getAllStateMachinesAndChanges(): Pair<List<ProtocolStateMachineImpl<*>>, Observable<Change>> {
+    fun track(): Pair<List<ProtocolStateMachineImpl<*>>, Observable<Change>> {
         return mutex.locked {
             val bufferedChanges = UnicastSubject.create<Change>()
             changesPublisher.subscribe(bufferedChanges)

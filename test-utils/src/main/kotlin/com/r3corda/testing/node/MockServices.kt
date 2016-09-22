@@ -117,6 +117,10 @@ class MockAttachmentStorage : AttachmentStorage {
 }
 
 open class MockTransactionStorage : TransactionStorage {
+    override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+        return Pair(txns.values.toList(), _updatesPublisher)
+    }
+
     private val txns = HashMap<SecureHash, SignedTransaction>()
 
     private val _updatesPublisher = PublishSubject.create<SignedTransaction>()

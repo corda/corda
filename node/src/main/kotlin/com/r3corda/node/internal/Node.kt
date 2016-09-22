@@ -11,6 +11,7 @@ import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.servlets.AttachmentDownloadServlet
@@ -123,14 +124,12 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             messageBroker = ArtemisMessagingServer(configuration, p2pAddr, services.networkMapCache)
             p2pAddr
         }()
-        val ops = ServerRPCOps(services)
         val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) services.storageService.myLegalIdentityKey.public else null
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread,
-                persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } },
-                rpcOps = ops)
+                persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } })
     }
 
-    override fun startMessagingService() {
+    override fun startMessagingService(cordaRPCOps: CordaRPCOps?) {
         // Start up the embedded MQ server
         messageBroker?.apply {
             runOnStop += Runnable { messageBroker?.stop() }
@@ -139,9 +138,9 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         }
 
         // Start up the MQ client.
-        (net as NodeMessagingClient).apply {
-            start()
-        }
+        val net = net as NodeMessagingClient
+        net.configureWithDevSSLCertificate() // TODO: Client might need a separate certificate
+        net.start(cordaRPCOps)
     }
 
     private fun initWebServer(): Server {

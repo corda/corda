@@ -22,6 +22,7 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
+import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.utilities.databaseTransaction
@@ -102,7 +103,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeKeyManagementService(): KeyManagementService = E2ETestKeyManagementService(setOf(storage.myLegalIdentityKey))
 
-        override fun startMessagingService() {
+        override fun startMessagingService(cordaRPCOps: CordaRPCOps?) {
             // Nothing to do
         }
 

@@ -35,7 +35,6 @@ import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
@@ -437,6 +436,9 @@ class TwoPartyTradeProtocolTests {
     }
 
     class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {
+        override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+            return delegate.track()
+        }
 
         val records: MutableList<TxRecord> = Collections.synchronizedList(ArrayList<TxRecord>())
         override val updates: Observable<SignedTransaction>
