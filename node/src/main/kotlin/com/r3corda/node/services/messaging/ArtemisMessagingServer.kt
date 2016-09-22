@@ -163,6 +163,10 @@ class ArtemisMessagingServer(config: NodeConfiguration,
         config.acceptorConfigurations = setOf(
                 tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port)
         )
+        // Enable built in message deduplication. Note we still have to do our own as the delayed commits
+        // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
+        config.idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
+        config.isPersistIDCache = true
         return config
     }
 
@@ -198,6 +202,7 @@ class ArtemisMessagingServer(config: NodeConfiguration,
             forwardingAddress = nameStr
             staticConnectors = listOf(hostAndPort.toString())
             confirmationWindowSize = 100000 // a guess
+            isUseDuplicateDetection = true // Enable the bridges automatic deduplication logic
         })
     }
 
