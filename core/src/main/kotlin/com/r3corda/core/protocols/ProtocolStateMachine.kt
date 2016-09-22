@@ -1,6 +1,7 @@
 package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
@@ -10,7 +11,7 @@ import java.util.*
 
 data class StateMachineRunId private constructor(val uuid: UUID) {
     companion object {
-        fun createRandom() = StateMachineRunId(UUID.randomUUID())
+        fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
     }
 }
 

@@ -80,14 +80,14 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
             topic: String,
             loggerName: String,
             crossinline protocolFactory: (H) -> ProtocolLogic<R>,
-            crossinline onResultFuture: (ListenableFuture<R>, H) -> Unit) {
+            crossinline onResultFuture: ProtocolLogic<R>.(ListenableFuture<R>, H) -> Unit) {
         net.addMessageHandler(topic, DEFAULT_SESSION_ID, null) { message, reg ->
             try {
                 val handshake = message.data.deserialize<H>()
                 val protocol = protocolFactory(handshake)
                 protocol.registerSession(handshake)
                 val resultFuture = services.startProtocol(loggerName, protocol)
-                onResultFuture(resultFuture, handshake)
+                protocol.onResultFuture(resultFuture, handshake)
             } catch (e: Exception) {
                 logger.error("Unable to process ${H::class.java.name} message", e)
             }

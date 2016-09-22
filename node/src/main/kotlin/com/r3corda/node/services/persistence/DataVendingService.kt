@@ -6,6 +6,7 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.success
 import com.r3corda.core.transactions.SignedTransaction
@@ -81,7 +82,7 @@ object DataVending {
                     },
                     { future, req ->
                         future.success {
-                            services.recordTransactions(req.tx)
+                            serviceHub.recordTransactions(req.tx)
                         }.failure { throwable ->
                             logger.warn("Received invalid transaction ${req.tx.id} from ${req.replyToParty}", throwable)
                         }

@@ -150,4 +150,12 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         createTransaction()
     }
 
+    companion object {
+        /**
+         * Retrieves our state machine id if we are running a [ProtocolStateMachineImpl].
+         */
+        fun retrieveCurrentStateMachine(): ProtocolStateMachineImpl<*>? {
+            return Strand.currentStrand() as? ProtocolStateMachineImpl<*>
+        }
+    }
 }

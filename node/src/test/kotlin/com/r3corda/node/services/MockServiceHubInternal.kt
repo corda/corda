@@ -6,6 +6,7 @@ import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.MonitoringService
@@ -56,8 +57,7 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    override fun recordTransactions(txs: Iterable<SignedTransaction>) =
-            recordTransactionsInternal(txStorageService, txs)
+    override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
     lateinit var smm: StateMachineManager
 

@@ -7,7 +7,8 @@ import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
-import com.r3corda.core.protocols.StateMachineRunId
+import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
+import org.slf4j.LoggerFactory
 
 interface MessagingServiceInternal : MessagingService {
     /**
@@ -32,6 +33,8 @@ interface MessagingServiceBuilder<out T : MessagingServiceInternal> {
     fun start(): ListenableFuture<out T>
 }
 
+private val log = LoggerFactory.getLogger(ServiceHubInternal::class.java)
+
 abstract class ServiceHubInternal : ServiceHub {
     abstract val monitoringService: MonitoringService
     abstract val protocolLogicRefFactory: ProtocolLogicRefFactory
@@ -46,6 +49,14 @@ abstract class ServiceHubInternal : ServiceHub {
      * @param txs The transactions to record.
      */
     internal fun recordTransactionsInternal(writableStorageService: TxWritableStorageService, txs: Iterable<SignedTransaction>) {
+        val stateMachineRunId = ProtocolStateMachineImpl.retrieveCurrentStateMachine()?.id
+        if (stateMachineRunId != null) {
+            txs.forEach {
+                storageService.stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+            }
+        } else {
+            log.warn("Transaction recorded from outside of a state machine")
+        }
         txs.forEach { writableStorageService.validatedTransactions.addTransaction(it) }
         vaultService.notifyAll(txs.map { it.tx })
     }

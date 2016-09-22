@@ -37,14 +37,6 @@ interface ServiceHub {
     fun recordTransactions(txs: Iterable<SignedTransaction>)
 
     /**
-     * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
-     * sends them to the vault for further processing.
-     *
-     * @param txs The transactions to record.
-     */
-    fun recordTransactions(vararg txs: SignedTransaction) = recordTransactions(txs.toList())
-
-    /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
      * @throws TransactionResolutionException if the [StateRef] points to a non-existent transaction.
@@ -61,3 +53,10 @@ interface ServiceHub {
      */
     fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T>
 }
+/**
+ * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
+ * sends them to the vault for further processing.
+ *
+ * @param txs The transactions to record.
+ */
+fun ServiceHub.recordTransactions(vararg txs: SignedTransaction) = recordTransactions(txs.toList())

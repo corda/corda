@@ -9,9 +9,8 @@ import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.node.services.TransactionStorage
-import com.r3corda.core.node.services.Vault
+import com.r3corda.core.node.services.*
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
@@ -121,7 +120,7 @@ class TwoPartyTradeProtocolTests {
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
-            val aliceFuture = runBuyerAndSeller("alice's paper".outputStateAndRef()).second
+            val aliceFuture = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerFuture
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
@@ -187,11 +186,14 @@ class TwoPartyTradeProtocolTests {
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     // That constructs the storage service object in a customised way ...
-                    override fun constructStorageService(attachments: NodeAttachmentService,
-                                                         transactionStorage: TransactionStorage,
-                                                         keyPair: KeyPair,
-                                                         identity: Party): StorageServiceImpl {
-                        return StorageServiceImpl(attachments, RecordingTransactionStorage(transactionStorage), keyPair, identity)
+                    override fun constructStorageService(
+                            attachments: NodeAttachmentService,
+                            transactionStorage: TransactionStorage,
+                            stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage,
+                            keyPair: KeyPair,
+                            identity: Party
+                    ): StorageServiceImpl {
+                        return StorageServiceImpl(attachments, RecordingTransactionStorage(transactionStorage), stateMachineRecordedTransactionMappingStorage, keyPair, identity)
                     }
                 }
             }
@@ -289,6 +291,69 @@ class TwoPartyTradeProtocolTests {
     }
 
     @Test
+    fun `track() works`() {
+
+        notaryNode = net.createNotaryNode(DUMMY_NOTARY.name, DUMMY_NOTARY_KEY)
+        aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name, ALICE_KEY)
+        bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name, BOB_KEY)
+
+        ledger(aliceNode.services) {
+
+            // Insert a prospectus type attachment into the commercial paper transaction.
+            val stream = ByteArrayOutputStream()
+            JarOutputStream(stream).use {
+                it.putNextEntry(ZipEntry("Prospectus.txt"))
+                it.write("Our commercial paper is top notch stuff".toByteArray())
+                it.closeEntry()
+            }
+            val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
+
+            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
+            val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
+            val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
+                    1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID).second
+            val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
+
+            net.runNetwork() // Clear network map registration messages
+
+            val aliceTxStream = aliceNode.storage.validatedTransactions.track().second
+            val aliceTxMappings = aliceNode.storage.stateMachineRecordedTransactionMapping.track().second
+            val (bobResult, aliceResult, bobSmId, aliceSmId) = runBuyerAndSeller("alice's paper".outputStateAndRef())
+
+            net.runNetwork()
+
+            // We need to declare this here, if we do it inside [expectEvents] kotlin throws an internal compiler error(!).
+            val aliceTxExpectations = sequence(
+                    expect { tx: SignedTransaction ->
+                        require(tx.id == bobsFakeCash[0].id)
+                    },
+                    expect { tx: SignedTransaction ->
+                        require(tx.id == bobsFakeCash[2].id)
+                    },
+                    expect { tx: SignedTransaction ->
+                        require(tx.id == bobsFakeCash[1].id)
+                    }
+            )
+            aliceTxStream.expectEvents { aliceTxExpectations }
+            val aliceMappingExpectations = sequence(
+                    expect { mapping: StateMachineTransactionMapping ->
+                        require(mapping.stateMachineRunId == aliceSmId)
+                        require(mapping.transactionId == bobsFakeCash[0].id)
+                    },
+                    expect { mapping: StateMachineTransactionMapping ->
+                        require(mapping.stateMachineRunId == aliceSmId)
+                        require(mapping.transactionId == bobsFakeCash[2].id)
+                    },
+                    expect { mapping: StateMachineTransactionMapping ->
+                        require(mapping.stateMachineRunId == aliceSmId)
+                        require(mapping.transactionId == bobsFakeCash[1].id)
+                    }
+            )
+            aliceTxMappings.expectEvents { aliceMappingExpectations }
+        }
+    }
+
+    @Test
     fun `dependency with error on buyer side`() {
         ledger {
             runWithError(true, false, "at least one asset input")
@@ -302,15 +367,21 @@ class TwoPartyTradeProtocolTests {
         }
     }
 
+    data class RunResult(
+            val buyerFuture: Future<SignedTransaction>,
+            val sellerFuture: Future<SignedTransaction>,
+            val buyerSmId: StateMachineRunId,
+            val sellerSmId: StateMachineRunId
+    )
 
-    private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>) : Pair<Future<SignedTransaction>, Future<SignedTransaction>> {
+    private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>): RunResult {
         val buyer = Buyer(aliceNode.info.identity, notaryNode.info.identity, 1000.DOLLARS, CommercialPaper.State::class.java)
         val seller = Seller(bobNode.info.identity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
         connectProtocols(buyer, seller)
         // We start the Buyer first, as the Seller sends the first message
-        val buyerResult = bobNode.smm.add("$TOPIC.buyer", buyer).resultFuture
-        val sellerResult = aliceNode.smm.add("$TOPIC.seller", seller).resultFuture
-        return Pair(buyerResult, sellerResult)
+        val buyerPsm = bobNode.smm.add("$TOPIC.buyer", buyer)
+        val sellerPsm = aliceNode.smm.add("$TOPIC.seller", seller)
+        return RunResult(buyerPsm.resultFuture, sellerPsm.resultFuture, buyerPsm.id, sellerPsm.id)
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(

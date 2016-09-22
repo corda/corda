@@ -2,6 +2,8 @@ package com.r3corda.node.services.messaging
 
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
+import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
@@ -71,4 +73,6 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>>
+    @RPCReturnsObservables
+    fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>>
 }

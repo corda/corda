@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory

@@ -16,6 +16,7 @@ import com.r3corda.node.utilities.AbstractJDBCHashSet
 import com.r3corda.node.utilities.JDBCHashedTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
+import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
@@ -99,6 +100,7 @@ class NodeVaultService(private val services: ServiceHub) : SingletonSerializeAsT
         if (netDelta != Vault.NoUpdate) {
             mutex.locked {
                 recordUpdate(netDelta)
+                _updatesPublisher.onNext(netDelta)
             }
         }
         return currentVault

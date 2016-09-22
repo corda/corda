@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.checkedAdd
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.transactions.SignedTransaction

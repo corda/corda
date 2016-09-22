@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
 import com.r3corda.core.transactions.SignedTransaction
@@ -66,7 +67,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             }
 
             val finalTx = stx + signatures
-            serviceHub.recordTransactions(listOf(finalTx))
+            serviceHub.recordTransactions(finalTx)
             return finalTx.tx.outRef(0)
         }
 
@@ -164,7 +165,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             val finalTx = stx + allSignatures
             finalTx.verifySignatures()
-            serviceHub.recordTransactions(listOf(finalTx))
+            serviceHub.recordTransactions(finalTx)
         }
 
         @Suspendable

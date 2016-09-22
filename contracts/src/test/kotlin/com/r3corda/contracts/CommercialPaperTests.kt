@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.transactions.SignedTransaction

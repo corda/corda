@@ -9,6 +9,7 @@ import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.OwnableState
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.days
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.protocols.TwoPartyTradeProtocol

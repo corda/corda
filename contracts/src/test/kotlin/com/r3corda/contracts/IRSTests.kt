@@ -1,6 +1,7 @@
 package com.r3corda.contracts
 
 import com.r3corda.core.contracts.*
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY

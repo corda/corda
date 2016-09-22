@@ -186,6 +186,8 @@ interface StorageService {
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
 
+    val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
+
     /**
      * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
      * first installed.

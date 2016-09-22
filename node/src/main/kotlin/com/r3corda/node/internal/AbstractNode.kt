@@ -38,10 +38,7 @@ import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.network.PersistentNetworkMapService
-import com.r3corda.node.services.persistence.NodeAttachmentService
-import com.r3corda.node.services.persistence.PerFileCheckpointStorage
-import com.r3corda.node.services.persistence.PerFileTransactionStorage
-import com.r3corda.node.services.persistence.StorageServiceImpl
+import com.r3corda.node.services.persistence.*
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -112,8 +109,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             return smm.add(loggerName, logic).resultFuture
         }
 
-        override fun recordTransactions(txs: Iterable<SignedTransaction>) =
-                recordTransactionsInternal(storage, txs)
+        override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(storage, txs)
     }
 
     val info: NodeInfo by lazy {
@@ -424,14 +420,19 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
         val (identity, keyPair) = obtainKeyPair(dir)
-        return Pair(constructStorageService(attachments, transactionStorage, keyPair, identity), checkpointStorage)
+        val stateMachineTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
+        return Pair(
+                constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage, keyPair, identity),
+                checkpointStorage
+        )
     }
 
     protected open fun constructStorageService(attachments: NodeAttachmentService,
                                                transactionStorage: TransactionStorage,
+                                               stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage,
                                                keyPair: KeyPair,
                                                identity: Party) =
-            StorageServiceImpl(attachments, transactionStorage, keyPair, identity)
+            StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage, keyPair, identity)
 
     private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that

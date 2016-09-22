@@ -10,9 +10,11 @@ import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
+import com.r3corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import com.r3corda.testing.MEGA_CORP
 import com.r3corda.testing.MINI_CORP
 import rx.Observable
@@ -42,6 +44,9 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     }
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+        txs.forEach {
+            storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
+        }
         for (stx in txs) {
             storageService.validatedTransactions.addTransaction(stx)
         }
@@ -116,6 +121,10 @@ class MockAttachmentStorage : AttachmentStorage {
     }
 }
 
+class MockStateMachineRecordedTransactionMappingStorage(
+        val storage: StateMachineRecordedTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
+) : StateMachineRecordedTransactionMappingStorage by storage
+
 open class MockTransactionStorage : TransactionStorage {
     override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
         return Pair(txns.values.toList(), _updatesPublisher)
@@ -142,7 +151,8 @@ open class MockTransactionStorage : TransactionStorage {
 class MockStorageService(override val attachments: AttachmentStorage = MockAttachmentStorage(),
                          override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
                          override val myLegalIdentityKey: KeyPair = generateKeyPair(),
-                         override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public))
+                         override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public),
+                         override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage())
 : SingletonSerializeAsToken(), TxWritableStorageService
 
 /**

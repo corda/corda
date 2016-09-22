@@ -5,6 +5,7 @@ import com.r3corda.contracts.asset.DUMMY_CASH_ISSUER
 import com.r3corda.contracts.asset.cashBalances
 import com.r3corda.contracts.testing.fillWithSomeTestCash
 import com.r3corda.core.contracts.*
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY

@@ -3,6 +3,7 @@ package com.r3corda.testing
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.ServiceHub
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.TransactionBuilder

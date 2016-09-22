@@ -7,6 +7,7 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.random63BitValue
@@ -139,7 +140,7 @@ object TwoPartyDealProtocol {
 
             progressTracker.currentStep = RECORDING
 
-            serviceHub.recordTransactions(listOf(fullySigned))
+            serviceHub.recordTransactions(fullySigned)
 
             logger.trace { "Deal stored" }
 
@@ -219,7 +220,7 @@ object TwoPartyDealProtocol {
             logger.trace { "Signatures received are valid. Deal transaction complete! :-)" }
 
             progressTracker.currentStep = RECORDING
-            serviceHub.recordTransactions(listOf(fullySigned))
+            serviceHub.recordTransactions(fullySigned)
 
             logger.trace { "Deal transaction stored" }
             return fullySigned
