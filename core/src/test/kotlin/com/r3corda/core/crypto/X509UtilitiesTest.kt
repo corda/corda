@@ -33,7 +33,7 @@ class X509UtilitiesTest {
         assertTrue { caCertAndKey.certificate.subjectDN.name.contains("CN=Test Cert") } // using our subject common name
         assertEquals(caCertAndKey.certificate.issuerDN, caCertAndKey.certificate.subjectDN) //self-signed
         caCertAndKey.certificate.checkValidity(Date()) // throws on verification problems
-        caCertAndKey.certificate.verify(caCertAndKey.keypair.public) // throws on verification problems
+        caCertAndKey.certificate.verify(caCertAndKey.keyPair.public) // throws on verification problems
         assertTrue { caCertAndKey.certificate.keyUsage[5] } // Bit 5 == keyCertSign according to ASN.1 spec (see full comment on KeyUsage property)
         assertTrue { caCertAndKey.certificate.basicConstraints > 0 } // This returns the signing path length Would be -1 for non-CA certificate
     }
@@ -54,12 +54,12 @@ class X509UtilitiesTest {
     fun `create valid server certificate chain`() {
         val caCertAndKey = X509Utilities.createSelfSignedCACert("Test CA Cert")
         val subjectDN = X509Utilities.getDevX509Name("Server Cert")
-        val keypair = X509Utilities.generateECDSAKeyPairForSSL()
-        val serverCert = X509Utilities.createServerCert(subjectDN, keypair.public, caCertAndKey, listOf("alias name"), listOf("10.0.0.54"))
+        val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
+        val serverCert = X509Utilities.createServerCert(subjectDN, keyPair.public, caCertAndKey, listOf("alias name"), listOf("10.0.0.54"))
         assertTrue { serverCert.subjectDN.name.contains("CN=Server Cert") } // using our subject common name
         assertEquals(caCertAndKey.certificate.issuerDN, serverCert.issuerDN) // Issued by our CA cert
         serverCert.checkValidity(Date()) // throws on verification problems
-        serverCert.verify(caCertAndKey.keypair.public) // throws on verification problems
+        serverCert.verify(caCertAndKey.keyPair.public) // throws on verification problems
         assertFalse { serverCert.keyUsage[5] } // Bit 5 == keyCertSign according to ASN.1 spec (see full comment on KeyUsage property)
         assertTrue { serverCert.basicConstraints === -1 } // This returns the signing path length should be -1 for non-CA certificate
         assertEquals(3, serverCert.subjectAlternativeNames.size)
@@ -166,7 +166,7 @@ class X509UtilitiesTest {
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
         val signer = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
-        signer.initSign(serverCertAndKey.keypair.private)
+        signer.initSign(serverCertAndKey.keyPair.private)
         signer.update(testData)
         val signature = signer.sign()
         val verifier = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)

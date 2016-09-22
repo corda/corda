@@ -59,7 +59,7 @@ class KryoTests {
     }
 
     @Test
-    fun `deserialised keypair functions the same as serialised one`() {
+    fun `deserialised key pair functions the same as serialised one`() {
         val keyPair = generateKeyPair()
         val bitsToSign: ByteArray = Ints.toByteArray(0x01234567)
         val wrongBits: ByteArray = Ints.toByteArray(0x76543210)
