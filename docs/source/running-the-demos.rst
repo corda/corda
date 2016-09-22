@@ -174,3 +174,46 @@ In the second terminal, run:
     ./build/install/r3prototyping/bin/attachment-demo --role=SENDER
 
 You should see some log lines scroll past, and within a few seconds the message "File received - we're happy!" should be printed.
+
+Simm and Portfolio Demo
+-----------------------
+
+To run the demo run:
+
+**Windows**
+
+Open a terminal window and navigate to the root directory of Corda and run:
+
+.. sourcecode:: shell
+
+    gradlew apps:vega:installTemplateNodes
+    cd build\nodes\nameserver
+    java -jar corda.jar
+
+Now open another terminal in the root directory of Corda and run:
+
+.. sourcecode:: shell
+
+    cd build\nodes\nodea
+    java -jar corda.jar
+
+Now open a third terminal in the root directory of Corda and run:
+
+.. sourcecode:: shell
+
+    cd build\nodes\nodeb
+    java -jar corda.jar
+
+**Other**
+
+Open one terminal window and run the following commands from the root directory of Corda:
+
+.. sourcecode:: shell
+
+     ./gradlew apps:vega:installTemplateNodes
+     cd build/nodes
+     ./runnodes
+
+Now open http://localhost:31339/web/vega and http://localhost:31340/web/vega to view the two nodes that this
+will have started respectively.
+
