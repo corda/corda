@@ -154,9 +154,9 @@ class TwoPartyTradeProtocolTests {
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
             bobNode = net.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
-                override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+                override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                     advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, bobAddr.id, BOB_KEY)
+                    return MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, bobAddr.id, BOB_KEY)
                 }
             }, true, BOB.name, BOB_KEY)
 
@@ -184,9 +184,9 @@ class TwoPartyTradeProtocolTests {
     private fun makeNodeWithTracking(networkMapAddr: SingleMessageRecipient?, name: String, keyPair: KeyPair): MockNetwork.MockNode {
         // Create a node in the mock network ...
         return net.createNode(networkMapAddr, -1, object : MockNetwork.Factory {
-            override fun create(dir: Path, config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
+            override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-                return object : MockNetwork.MockNode(dir, config, network, networkMapAddr, advertisedServices, id, keyPair) {
+                return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     // That constructs the storage service object in a customised way ...
                     override fun constructStorageService(attachments: NodeAttachmentService,
                                                          transactionStorage: TransactionStorage,

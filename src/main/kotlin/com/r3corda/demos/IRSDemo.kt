@@ -321,7 +321,7 @@ private fun setup(params: CliParams.SetupNode): Int {
     val configFile = params.dir.resolve("config")
     val config = loadConfigFile(params.dir, configFile, params.defaultLegalName)
     if (!Files.exists(params.dir.resolve(AbstractNode.PUBLIC_IDENTITY_FILE_NAME))) {
-        createIdentities(params, config)
+        createIdentities(config)
     }
     return 0
 }
@@ -407,7 +407,7 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
             }
 
     val node = logElapsedTime("Node startup", log) {
-        Node(params.dir, params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).setup().start()
+        Node(params.networkAddress, params.apiAddress, config, networkMapId, advertisedServices, DemoClock()).setup().start()
     }
 
     return node
@@ -459,9 +459,9 @@ private fun loadConfigFile(baseDir: Path, configFile: Path, defaultLegalName: St
     return NodeConfigurationFromConfig(NodeConfiguration.loadConfig(baseDir, configFileOverride = configFile))
 }
 
-private fun createIdentities(params: CliParams.SetupNode, nodeConf: NodeConfiguration) {
+private fun createIdentities(nodeConf: NodeConfiguration) {
     val mockNetwork = MockNetwork(false)
-    val node = MockNetwork.MockNode(params.dir, nodeConf, mockNetwork, null, setOf(NetworkMapService.Type, SimpleNotaryService.Type), 0, null)
+    val node = MockNetwork.MockNode(nodeConf, mockNetwork, null, setOf(NetworkMapService.Type, SimpleNotaryService.Type), 0, null)
     node.start()
     node.stop()
 }

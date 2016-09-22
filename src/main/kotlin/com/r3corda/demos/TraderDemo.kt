@@ -140,7 +140,7 @@ fun main(args: Array<String>) {
 
     // And now construct then start the node object. It takes a little while.
     val node = logElapsedTime("Node startup", log) {
-        Node(directory, myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
+        Node(myNetAddr, apiNetAddr, config, networkMapId, advertisedServices).setup().start()
     }
 
     // What happens next depends on the role. The buyer sits around waiting for a trade to start. The seller role

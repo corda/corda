@@ -66,7 +66,7 @@ import java.util.concurrent.TimeUnit
 // TODO: Where this node is the initial network map service, currently no networkMapService is provided.
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
-abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration, val networkMapService: SingleMessageRecipient?,
+abstract class AbstractNode(val configuration: NodeConfiguration, val networkMapService: SingleMessageRecipient?,
                             val advertisedServices: Set<ServiceType>, val platformClock: Clock): SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
@@ -162,7 +162,7 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence() {
-            val storageServices = initialiseStorageService(dir)
+            val storageServices = initialiseStorageService(configuration.basedir)
             storage = storageServices.first
             checkpointStorage = storageServices.second
             netMapCache = InMemoryNetworkMapCache()
@@ -453,8 +453,8 @@ abstract class AbstractNode(val dir: Path, val configuration: NodeConfiguration,
     }
 
     protected fun createNodeDir() {
-        if (!Files.exists(dir)) {
-            Files.createDirectories(dir)
+        if (!Files.exists(configuration.basedir)) {
+            Files.createDirectories(configuration.basedir)
         }
     }
 }

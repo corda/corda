@@ -5,17 +5,19 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.testing.freeLocalHostAndPort
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.net.ServerSocket
+import java.nio.file.Path
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import kotlin.concurrent.thread
@@ -29,24 +31,29 @@ class ArtemisMessagingTests {
     val topic = "platform.self"
     val identity = generateKeyPair()
 
-    // TODO: create a base class that provides a default implementation
-    val config = object : NodeConfiguration {
-
-        override val myLegalName: String = "me"
-        override val nearestCity: String = "London"
-        override val emailAddress: String = ""
-        override val devMode: Boolean = true
-        override val exportJMXto: String = ""
-        override val keyStorePassword: String = "testpass"
-        override val trustStorePassword: String = "trustpass"
-        override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
-
-    }
+    lateinit var config: NodeConfiguration
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
     val networkMapCache = InMemoryNetworkMapCache()
+
+    @Before
+    fun setUp() {
+        // TODO: create a base class that provides a default implementation
+        config = object : NodeConfiguration {
+            override val basedir: Path = temporaryFolder.newFolder().toPath()
+            override val myLegalName: String = "me"
+            override val nearestCity: String = "London"
+            override val emailAddress: String = ""
+            override val devMode: Boolean = true
+            override val exportJMXto: String = ""
+            override val keyStorePassword: String = "testpass"
+            override val trustStorePassword: String = "trustpass"
+            override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
+
+        }
+    }
 
     @After
     fun cleanUp() {
@@ -111,14 +118,14 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
-        return NodeMessagingClient(temporaryFolder.newFolder().toPath(), config, server, identity.public, AffinityExecutor.SAME_THREAD).apply {
+        return NodeMessagingClient(config, server, identity.public, AffinityExecutor.SAME_THREAD).apply {
             configureWithDevSSLCertificate()
             messagingClient = this
         }
     }
 
     private fun createMessagingServer(local: HostAndPort = hostAndPort): ArtemisMessagingServer {
-        return ArtemisMessagingServer(temporaryFolder.newFolder().toPath(), config, local, networkMapCache).apply {
+        return ArtemisMessagingServer(config, local, networkMapCache).apply {
             configureWithDevSSLCertificate()
             messagingServer = this
         }

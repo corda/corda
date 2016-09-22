@@ -4,9 +4,7 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.ThreadBox
 import com.r3corda.core.crypto.AddressFormatException
 import com.r3corda.core.crypto.newSecureRandom
-import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.services.config.NodeConfiguration
@@ -39,10 +37,9 @@ import javax.annotation.concurrent.ThreadSafe
  * a fully connected network, trusted network or on localhost.
  */
 @ThreadSafe
-class ArtemisMessagingServer(directory: Path,
-                             config: NodeConfiguration,
+class ArtemisMessagingServer(config: NodeConfiguration,
                              val myHostPort: HostAndPort,
-                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent(directory / "certificates", config) {
+                             val networkMapCache: NetworkMapCache) : ArtemisMessagingComponent(config) {
     companion object {
         val log = loggerFor<ArtemisMessagingServer>()
     }
@@ -119,7 +116,7 @@ class ArtemisMessagingServer(directory: Path,
     }
 
     private fun configureAndStartServer() {
-        val config = createArtemisConfig(certificatePath, myHostPort).apply {
+        val config = createArtemisConfig(config.certificatesPath, myHostPort).apply {
             securityRoles = mapOf(
                     "#" to setOf(Role("internal", true, true, true, true, true, true, true))
             )

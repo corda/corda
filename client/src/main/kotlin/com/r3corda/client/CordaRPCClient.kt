@@ -24,11 +24,12 @@ import kotlin.concurrent.thread
  * useful tasks. See the documentation for [proxy] or review the docsite to learn more about how this API works.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, certificatesPath: Path) : Closeable, ArtemisMessagingComponent(certificatesPath, sslConfig()) {
+class CordaRPCClient(val host: HostAndPort, certificatesPath: Path) : Closeable, ArtemisMessagingComponent(sslConfig(certificatesPath)) {
     companion object {
         private val rpcLog = LoggerFactory.getLogger("com.r3corda.rpc")
 
-        private fun sslConfig(): NodeSSLConfiguration = object : NodeSSLConfiguration {
+        private fun sslConfig(certificatesPath: Path): NodeSSLConfiguration = object : NodeSSLConfiguration {
+            override val certificatesPath: Path = certificatesPath
             override val keyStorePassword = "cordacadevpass"
             override val trustStorePassword = "trustpass"
         }

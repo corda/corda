@@ -10,8 +10,8 @@ import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
-import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
+import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.node.services.transactions.PersistentUniquenessProvider
 import com.r3corda.node.servlets.AttachmentDownloadServlet
 import com.r3corda.node.servlets.Config
@@ -38,7 +38,6 @@ import java.time.Clock
 import java.util.*
 import javax.management.ObjectName
 import javax.servlet.*
-import javax.servlet.http.HttpServletResponse
 import kotlin.concurrent.thread
 
 class ConfigurationException(message: String) : Exception(message)
@@ -58,10 +57,10 @@ class ConfigurationException(message: String) : Exception(message)
  * @param clock The clock used within the node and by all protocols etc.
  * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
-class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
+class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
            configuration: NodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceType>, clock: Clock = NodeClock(),
-           val messagingServerAddr: HostAndPort? = null) : AbstractNode(dir, configuration, networkMapAddress, advertisedServices, clock) {
+           val messagingServerAddr: HostAndPort? = null) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
         @JvmField
@@ -120,14 +119,14 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
     override fun makeMessagingService(): MessagingServiceInternal {
         val serverAddr = messagingServerAddr ?: {
-            messageBroker = ArtemisMessagingServer(dir, configuration, p2pAddr, services.networkMapCache)
+            messageBroker = ArtemisMessagingServer(configuration, p2pAddr, services.networkMapCache)
             p2pAddr
         }()
         val ops = ServerRPCOps(services)
         if (networkMapService != null) {
-            return NodeMessagingClient(dir, configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread, rpcOps = ops)
+            return NodeMessagingClient(configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread, rpcOps = ops)
         } else {
-            return NodeMessagingClient(dir, configuration, serverAddr, null, serverThread, rpcOps = ops)
+            return NodeMessagingClient(configuration, serverAddr, null, serverThread, rpcOps = ops)
         }
     }
 
@@ -172,12 +171,10 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
             val sslContextFactory = SslContextFactory()
-            val keyStorePath = dir.resolve("certificates").resolve("sslkeystore.jks")
-            val trustStorePath = dir.resolve("certificates").resolve("truststore.jks")
-            sslContextFactory.setKeyStorePath(keyStorePath.toString())
+            sslContextFactory.setKeyStorePath(configuration.keyStorePath.toString())
             sslContextFactory.setKeyStorePassword(configuration.keyStorePassword)
             sslContextFactory.setKeyManagerPassword(configuration.keyStorePassword)
-            sslContextFactory.setTrustStorePath(trustStorePath.toString())
+            sslContextFactory.setTrustStorePath(configuration.trustStorePath.toString())
             sslContextFactory.setTrustStorePassword(configuration.trustStorePassword)
             sslContextFactory.setExcludeProtocols("SSL.*", "TLSv1", "TLSv1.1")
             sslContextFactory.setIncludeProtocols("TLSv1.2")
@@ -316,7 +313,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
         // twice with the same directory: that's a user error and we should bail out.
-        val pidPath = dir.resolve("process-id")
+        val pidPath = configuration.basedir.resolve("process-id")
         val file = pidPath.toFile()
         if (!file.exists()) {
             file.createNewFile()
@@ -325,7 +322,7 @@ class Node(dir: Path, val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         val f = RandomAccessFile(file, "rw")
         val l = f.channel.tryLock()
         if (l == null) {
-            log.error("It appears there is already a node running with the specified data directory $dir")
+            log.error("It appears there is already a node running with the specified data directory ${configuration.basedir}")
             log.error("Shut that other node down and try again. It may have process ID ${file.readText()}")
             System.exit(1)
         }
