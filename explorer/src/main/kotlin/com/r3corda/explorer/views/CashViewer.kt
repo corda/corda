@@ -254,7 +254,7 @@ class CashViewer : View() {
      * We re-display the exchanged sum amount, if we have a selection.
      */
     private val noSelectionSumEquiv = reportingCurrency.map { Amount(0, it) }
-    private val selectedViewerNodeSumEquiv = selectedViewerNode.bind { selection ->
+    private val selectedViewerNodeSumEquiv = selectedViewerNode.bindOut { selection ->
         when (selection) {
             is SingleRowSelection.None -> noSelectionSumEquiv
             is SingleRowSelection.Selected ->

@@ -1,16 +1,12 @@
 package com.r3corda.explorer.views
 
-import com.r3corda.client.fxutils.ChosenList
-import com.r3corda.client.fxutils.bind
-import com.r3corda.client.fxutils.lift
-import com.r3corda.client.fxutils.map
+import com.r3corda.client.fxutils.*
 import com.r3corda.client.model.*
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.toStringShort
-import com.r3corda.core.transactions.LedgerTransaction
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.explorer.AmountDiff
 import com.r3corda.explorer.formatters.AmountFormatter
@@ -33,7 +29,6 @@ import javafx.scene.layout.BackgroundFill
 import javafx.scene.layout.CornerRadii
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
-import org.fxmisc.easybind.EasyBind
 import tornadofx.View
 import java.security.PublicKey
 import java.time.Instant
@@ -61,20 +56,20 @@ class TransactionViewer: View() {
     private val contractStatesInputsCountLabel: Label by fxid()
     private val contractStatesInputStatesTable: TableView<StateNode> by fxid()
     private val contractStatesInputStatesId: TableColumn<StateNode, String> by fxid()
-    private val contractStatesInputStatesType: TableColumn<StateNode, Class<out ContractState>> by fxid()
+    private val contractStatesInputStatesType: TableColumn<StateNode, String> by fxid()
     private val contractStatesInputStatesOwner: TableColumn<StateNode, String> by fxid()
     private val contractStatesInputStatesLocalCurrency: TableColumn<StateNode, Currency?> by fxid()
-    private val contractStatesInputStatesAmount: TableColumn<StateNode, Long> by fxid()
-    private val contractStatesInputStatesEquiv: TableColumn<StateNode, Amount<Currency>> by fxid()
+    private val contractStatesInputStatesAmount: TableColumn<StateNode, Long?> by fxid()
+    private val contractStatesInputStatesEquiv: TableColumn<StateNode, Amount<Currency>?> by fxid()
 
     private val contractStatesOutputsCountLabel: Label by fxid()
     private val contractStatesOutputStatesTable: TableView<StateNode> by fxid()
     private val contractStatesOutputStatesId: TableColumn<StateNode, String> by fxid()
-    private val contractStatesOutputStatesType: TableColumn<StateNode, Class<out ContractState>> by fxid()
+    private val contractStatesOutputStatesType: TableColumn<StateNode, String> by fxid()
     private val contractStatesOutputStatesOwner: TableColumn<StateNode, String> by fxid()
     private val contractStatesOutputStatesLocalCurrency: TableColumn<StateNode, Currency?> by fxid()
-    private val contractStatesOutputStatesAmount: TableColumn<StateNode, Long> by fxid()
-    private val contractStatesOutputStatesEquiv: TableColumn<StateNode, Amount<Currency>> by fxid()
+    private val contractStatesOutputStatesAmount: TableColumn<StateNode, Long?> by fxid()
+    private val contractStatesOutputStatesEquiv: TableColumn<StateNode, Amount<Currency>?> by fxid()
 
     private val signaturesTitledPane: TitledPane by fxid()
     private val signaturesList: ListView<PublicKey> by fxid()
@@ -108,7 +103,7 @@ class TransactionViewer: View() {
             val statusUpdated: ObservableValue<Instant>,
             val commandTypes: ObservableValue<Collection<Class<CommandData>>>,
             val totalValueEquiv: ObservableValue<AmountDiff<Currency>?>,
-            val transaction: ObservableValue<LedgerTransaction?>,
+            val transaction: ObservableValue<PartiallyResolvedTransaction?>,
             val allEvents: ObservableList<out ServiceToClientEvent>
     )
 
@@ -116,7 +111,7 @@ class TransactionViewer: View() {
      * Holds information about a single input/output state, to be displayed in the [contractStatesTitledPane]
      */
     data class StateNode(
-            val transactionState: TransactionState<*>,
+            val state: ObservableValue<PartiallyResolvedTransaction.InputResolution>,
             val stateRef: StateRef
     )
 
@@ -144,12 +139,37 @@ class TransactionViewer: View() {
                 statusUpdated = it.lastUpdate,
                 commandTypes = it.transaction.map {
                     val commands = mutableSetOf<Class<CommandData>>()
-                    it?.commands?.forEach {
+                    it?.transaction?.tx?.commands?.forEach {
                         commands.add(it.value.javaClass)
                     }
                     commands
                 },
-                totalValueEquiv = ::calculateTotalEquiv.lift(myIdentity, reportingExchange, it.transaction),
+                totalValueEquiv = it.transaction.bind { transaction ->
+                    if (transaction == null) {
+                        null.lift<AmountDiff<Currency>?>()
+                    } else {
+
+                        val resolvedInputs = transaction.inputs.sequence().map { resolution ->
+                            when (resolution) {
+                                is PartiallyResolvedTransaction.InputResolution.Unresolved -> null
+                                is PartiallyResolvedTransaction.InputResolution.Resolved -> resolution.stateAndRef
+                            }
+                        }.fold(listOf()) { inputs: List<StateAndRef<ContractState>>?, state: StateAndRef<ContractState>? ->
+                            if (inputs != null && state != null) {
+                                inputs + state
+                            } else {
+                                null
+                            }
+                        }
+
+                        ::calculateTotalEquiv.lift(
+                                myIdentity,
+                                reportingExchange,
+                                resolvedInputs,
+                                transaction.transaction.tx.outputs.lift()
+                        )
+                    }
+                },
                 transaction = it.transaction,
                 allEvents = it.allEvents
         )
@@ -159,18 +179,20 @@ class TransactionViewer: View() {
      * The detail panes are only filled out if a transaction is selected
      */
     private val selectedViewerNode = transactionViewTable.singleRowSelection()
-    private val selectedTransaction = selectedViewerNode.bind {
+    private val selectedTransaction = selectedViewerNode.bindOut {
         when (it) {
             is SingleRowSelection.None -> null.lift()
             is SingleRowSelection.Selected -> it.node.transaction
         }
     }
 
-    private val inputStateNodes = ChosenList(selectedTransaction.map {
-        if (it == null) {
+    private val inputStateNodes = ChosenList(selectedTransaction.map { transaction ->
+        if (transaction == null) {
             FXCollections.emptyObservableList<StateNode>()
         } else {
-            FXCollections.observableArrayList(it.inputs.map { StateNode(it.state, it.ref) })
+            FXCollections.observableArrayList(transaction.inputs.map { inputResolution ->
+                StateNode(inputResolution, inputResolution.value.stateRef)
+            })
         }
     })
 
@@ -178,8 +200,9 @@ class TransactionViewer: View() {
         if (it == null) {
             FXCollections.emptyObservableList<StateNode>()
         } else {
-            FXCollections.observableArrayList(it.outputs.mapIndexed { index, transactionState ->
-                StateNode(transactionState, StateRef(it.id, index))
+            FXCollections.observableArrayList(it.transaction.tx.outputs.mapIndexed { index, transactionState ->
+                val stateRef = StateRef(it.id, index)
+                StateNode(PartiallyResolvedTransaction.InputResolution.Resolved(StateAndRef(transactionState, stateRef)).lift(), stateRef)
             })
         }
     })
@@ -188,7 +211,7 @@ class TransactionViewer: View() {
         if (it == null) {
             FXCollections.emptyObservableList<PublicKey>()
         } else {
-            FXCollections.observableArrayList(it.mustSign)
+            FXCollections.observableArrayList(it.transaction.sigs.map { it.by })
         }
     })
 
@@ -228,52 +251,67 @@ class TransactionViewer: View() {
             statesCountLabel: Label,
             statesTable: TableView<StateNode>,
             statesId: TableColumn<StateNode, String>,
-            statesType: TableColumn<StateNode, Class<out ContractState>>,
+            statesType: TableColumn<StateNode, String>,
             statesOwner: TableColumn<StateNode, String>,
             statesLocalCurrency: TableColumn<StateNode, Currency?>,
-            statesAmount: TableColumn<StateNode, Long>,
-            statesEquiv: TableColumn<StateNode, Amount<Currency>>
+            statesAmount: TableColumn<StateNode, Long?>,
+            statesEquiv: TableColumn<StateNode, Amount<Currency>?>
     ) {
         statesCountLabel.textProperty().bind(Bindings.size(states).map { "$it" })
 
         Bindings.bindContent(statesTable.items, states)
 
+        val unknownString = "???"
+
         statesId.setCellValueFactory { it.value.stateRef.toString().lift() }
-        statesType.setCellValueFactory { it.value.transactionState.data.javaClass.lift() }
+        statesType.setCellValueFactory {
+            resolvedOrDefault(it.value.state, unknownString) {
+                it.state.data.javaClass.toString()
+            }
+        }
         statesOwner.setCellValueFactory {
-            val state = it.value.transactionState.data
-            if (state is OwnableState) {
-                state.owner.toStringShort().lift()
-            } else {
-                "???".lift()
+            resolvedOrDefault(it.value.state, unknownString) {
+                val contractState = it.state.data
+                if (contractState is OwnableState) {
+                    contractState.owner.toStringShort()
+                } else {
+                    unknownString
+                }
             }
         }
         statesLocalCurrency.setCellValueFactory {
-            val state = it.value.transactionState.data
-            if (state is Cash.State) {
-                state.amount.token.product.lift()
-            } else {
-                null.lift()
+            resolvedOrDefault<Currency?>(it.value.state, null) {
+                val contractState = it.state.data
+                if (contractState is Cash.State) {
+                    contractState.amount.token.product
+                } else {
+                    null
+                }
             }
         }
         statesAmount.setCellValueFactory {
-            val state = it.value.transactionState.data
-            if (state is Cash.State) {
-                state.amount.quantity.lift()
-            } else {
-                null.lift()
+            resolvedOrDefault<Long?>(it.value.state, null) {
+                val contractState = it.state.data
+                if (contractState is Cash.State) {
+                    contractState.amount.quantity
+                } else {
+                    null
+                }
             }
         }
         statesAmount.cellFactory = NumberFormatter.boringLong.toTableCellFactory()
         statesEquiv.setCellValueFactory {
-            val state = it.value.transactionState.data
-            if (state is Cash.State) {
-                reportingExchange.map { exchange ->
-                    exchange.second(state.amount.withoutIssuer())
+            resolvedOrDefault<ObservableValue<Amount<Currency>?>>(it.value.state, null.lift()) {
+                val contractState = it.state.data
+                if (contractState is Cash.State) {
+                    reportingExchange.map { exchange ->
+                        exchange.second(contractState.amount.withoutIssuer())
+                    }
+                } else {
+                    null.lift()
                 }
-            } else {
-                null.lift()
-            }
+            }.bind { it }
+
         }
         statesEquiv.cellFactory = AmountFormatter.boring.toTableCellFactory()
     }
@@ -364,7 +402,7 @@ class TransactionViewer: View() {
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / lowLevelEventsTable.columns.size).toInt()
         }
 
-        matchingTransactionsLabel.textProperty().bind(EasyBind.map(Bindings.size(viewerNodes)) {
+        matchingTransactionsLabel.textProperty().bind(Bindings.size(viewerNodes).map {
             "$it matching transaction${if (it == 1) "" else "s"}"
         })
     }
@@ -376,20 +414,21 @@ class TransactionViewer: View() {
 private fun calculateTotalEquiv(
         identity: Party,
         reportingCurrencyExchange: Pair<Currency, (Amount<Currency>) -> Amount<Currency>>,
-        transaction: LedgerTransaction?): AmountDiff<Currency>? {
-    if (transaction == null) {
+        inputs: List<StateAndRef<ContractState>>?,
+        outputs: List<TransactionState<ContractState>>): AmountDiff<Currency>? {
+    if (inputs == null) {
         return null
     }
     var sum = 0L
     val (reportingCurrency, exchange) = reportingCurrencyExchange
     val publicKey = identity.owningKey
-    transaction.inputs.forEach {
+    inputs.forEach {
         val contractState = it.state.data
         if (contractState is Cash.State && publicKey == contractState.owner) {
             sum -= exchange(contractState.amount.withoutIssuer()).quantity
         }
     }
-    transaction.outputs.forEach {
+    outputs.forEach {
         val contractState = it.data
         if (contractState is Cash.State && publicKey == contractState.owner) {
             sum += exchange(contractState.amount.withoutIssuer()).quantity
@@ -398,3 +437,15 @@ private fun calculateTotalEquiv(
     return AmountDiff.fromLong(sum, reportingCurrency)
 }
 
+fun <A> resolvedOrDefault(
+        state: ObservableValue<PartiallyResolvedTransaction.InputResolution>,
+        default: A,
+        resolved: (StateAndRef<*>) -> A
+): ObservableValue<A> {
+    return state.map {
+        when (it) {
+            is PartiallyResolvedTransaction.InputResolution.Unresolved -> default
+            is PartiallyResolvedTransaction.InputResolution.Resolved -> resolved(it.stateAndRef)
+        }
+    }
+}

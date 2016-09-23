@@ -3,6 +3,7 @@ package com.r3corda.client.fxutils
 import javafx.beans.binding.Bindings
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.collections.transformation.FilteredList
 import org.fxmisc.easybind.EasyBind
@@ -58,8 +59,13 @@ fun <A, B, C, D, R> ((A, B, C, D) -> R).lift(
  * val person: ObservableValue<Person> = (..)
  * val personHeight: ObservableValue<Long> = person.bind { it.height }
  */
-fun <A, B> ObservableValue<out A>.bind(function: (A) -> ObservableValue<out B>): ObservableValue<out B> =
-        // We cast here to enforce variance, flatMap should be covariant
+fun <A, B> ObservableValue<out A>.bind(function: (A) -> ObservableValue<B>): ObservableValue<B> =
+        EasyBind.monadic(this).flatMap(function)
+/**
+ * A variant of [bind] that has out variance on the output type. This is sometimes useful when kotlin is too eager to
+ * propagate variance constraints and type inference fails.
+ */
+fun <A, B> ObservableValue<out A>.bindOut(function: (A) -> ObservableValue<out B>): ObservableValue<out B> =
         @Suppress("UNCHECKED_CAST")
         EasyBind.monadic(this).flatMap(function as (A) -> ObservableValue<B>)
 
@@ -71,7 +77,7 @@ fun <A, B> ObservableValue<out A>.bind(function: (A) -> ObservableValue<out B>):
  *
  * val filteredPeople: ObservableList<Person> = people.filter(filterCriterion.map(filterFunction))
  */
-fun <A> ObservableList<out A>.filter(predicate: ObservableValue<out (A) -> Boolean>): ObservableList<out A> {
+fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>): ObservableList<A> {
     // We cast here to enforce variance, FilteredList should be covariant
     @Suppress("UNCHECKED_CAST")
     return FilteredList<A>(this as ObservableList<A>).apply {
@@ -101,4 +107,10 @@ fun <A, B> ObservableList<out A>.fold(initial: B, folderFunction: (B, A) -> B): 
  * val people: ObservableList<Person> = (..)
  * val heights: ObservableList<Long> = people.map(Person::height).flatten()
  */
-fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<out A> = FlattenedList(this)
+fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<A> = FlattenedList(this)
+
+/**
+ * val people: List<Person> = listOf(alice, bob)
+ * val heights: ObservableList<Long> = people.map(Person::height).sequence()
+ */
+fun <A> List<ObservableValue<out A>>.sequence(): ObservableList<A> = FlattenedList(FXCollections.observableArrayList(this))
