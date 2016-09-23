@@ -49,7 +49,7 @@ Milestone 2
 
 * Big improvements to the interest rate swap app:
 
-    * A new web app demonstrating the IRS contract has been added. This can x``be used as an example for how to interact with
+    * A new web app demonstrating the IRS contract has been added. This can be used as an example for how to interact with
       the Corda API from the web.
     * Simplifications to the way the demo is used from the command line.
     * :doc:`Detailed documentation on how the contract works and can be used <contract-irs>` has been written.
