@@ -51,6 +51,7 @@ Read on to learn:
    tutorial-clientrpc-api
    protocol-state-machines
    oracles
+   tutorial-attachments
    event-scheduling
    secure-coding-guidelines
 

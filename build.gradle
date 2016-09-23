@@ -124,6 +124,15 @@ dependencies {
 }
 
 // Package up the demo programs.
+
+task getAttachmentDemo(type: CreateStartScripts) {
+    mainClassName = "com.r3corda.demos.attachment.AttachmentDemoKt"
+    applicationName = "attachment-demo"
+    defaultJvmOpts = ["-javaagent:${configurations.quasar.singleFile}"]
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
 task getRateFixDemo(type: CreateStartScripts) {
     mainClassName = "com.r3corda.demos.RateFixDemoKt"
     applicationName = "get-rate-fix"
@@ -193,6 +202,7 @@ tasks.withType(Test) {
 quasarScan.dependsOn('classes', 'core:classes', 'contracts:classes', 'node:classes')
 
 applicationDistribution.into("bin") {
+    from(getAttachmentDemo)
     from(getRateFixDemo)
     from(getIRSDemo)
     from(getTraderDemo)
