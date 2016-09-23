@@ -1,0 +1,106 @@
+<HTML>
+<HEAD>
+<title>NodeInterestRates - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.demos.api</a>&nbsp;/&nbsp;<a href=".">NodeInterestRates</a><br/>
+<br/>
+<h1>NodeInterestRates</h1>
+<code><span class="keyword">object </span><span class="identifier">NodeInterestRates</span></code><br/>
+<p>An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
+rate fix (e.g. LIBOR, EURIBOR ...).</p>
+<p>The oracle has two functions. It can be queried for a fix for the given day. And it can sign a transaction that
+includes a fix that it finds acceptable. So to use it you would query the oracle, incorporate its answer into the
+transaction you are building, and then (after possibly extra steps) hand the final transaction back to the oracle
+for signing.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-fix-container/index.html">FixContainer</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FixContainer</span></code><p>Fix container, for every fix name &amp; date pair stores a tenor to interest rate map - <a href="-interpolating-rate-map/index.html">InterpolatingRateMap</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-interpolating-rate-map/index.html">InterpolatingRateMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">InterpolatingRateMap</span></code><p>Stores a mapping between tenors and interest rates.
+Interpolates missing values using the provided interpolation mechanism.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-oracle/index.html">Oracle</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Oracle</span></code><p>An implementation of an interest rate fix oracle which is given data in a simple string format.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-plugin/index.html">Plugin</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Plugin</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-corda-plugin-registry/index.html"><span class="identifier">CordaPluginRegistry</span></a></code><p>Register the protocol that is used with the Fixing integration tests.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.api/-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><a href="../../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><p>The Service that wraps <a href="-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-type.html">Type</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">Type</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-unknown-fix/index.html">UnknownFix</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">UnknownFix</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core/-retryable-exception/index.html"><span class="identifier">RetryableException</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="parse-file.html">parseFile</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseFile</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates$parseFile(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="-fix-container/index.html"><span class="identifier">FixContainer</span></a></code><p>Parses lines containing fixes</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="parse-fix.html">parseFix</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates$parseFix(kotlin.String)/s">s</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a></code><p>Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a <a href="../../com.r3corda.core.contracts/-fix/index.html">Fix</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="parse-fix-of.html">parseFixOf</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseFixOf</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates$parseFixOf(kotlin.String)/key">key</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.contracts/-fix-of/index.html"><span class="identifier">FixOf</span></a></code><p>Parses a string of the form "LIBOR 16-March-2016 1M" into a <a href="../../com.r3corda.core.contracts/-fix-of/index.html">FixOf</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

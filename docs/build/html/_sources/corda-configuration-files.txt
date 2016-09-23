@@ -19,95 +19,82 @@ Corda uses the Typesafe configuration library to parse the configuration see the
 uses HOCON format see `HOCON documents <https://github.com/typesafehub/config/blob/master/HOCON.md>`_
 
 Configuration File Examples
---------------------------
+---------------------------
 
 General node configuration file for hosting the IRSDemo services.
 
 .. code-block:: text
 
-	basedir : "./nodea"
-	myLegalName : "Bank A"
-	nearestCity : "London"
-	keyStorePassword : "cordacadevpass"
-	trustStorePassword : "trustpass"
-	dataSourceProperties : {
-	   dataSourceClassName : org.h2.jdbcx.JdbcDataSource
-	   "dataSource.url" : "jdbc:h2:"${basedir}"/persistence"
-	   "dataSource.user" : sa
-	   "dataSource.password" : ""
-	}
-	artemisAddress : "localhost:31337"
-	webAddress : "localhost:31339"
-	hostNotaryServiceLocally: false
-	extraAdvertisedServiceIds: "corda.interest_rates"
-	mapService : {
-	   hostServiceLocally : false
-	   address : "localhost:12345"
-	   identity : "Notary Service"
-	}
-	useHTTPS : false
+    basedir : "./nodea"
+    myLegalName : "Bank A"
+    nearestCity : "London"
+    keyStorePassword : "cordacadevpass"
+    trustStorePassword : "trustpass"
+    dataSourceProperties : {
+       dataSourceClassName : org.h2.jdbcx.JdbcDataSource
+       "dataSource.url" : "jdbc:h2:"${basedir}"/persistence"
+       "dataSource.user" : sa
+       "dataSource.password" : ""
+    }
+    artemisAddress : "localhost:31337"
+    webAddress : "localhost:31339"
+    hostNotaryServiceLocally: false
+    extraAdvertisedServiceIds: "corda.interest_rates"
+    networkMapAddress : "localhost:12345"
+    useHTTPS : false
 
 NetworkMapService plus Simple Notary configuration file.
 
 .. code-block:: text
 
-	basedir : "./nameserver"
-	myLegalName : "Notary Service"
-	nearestCity : "London"
-	keyStorePassword : "cordacadevpass"
-	trustStorePassword : "trustpass"
-	artemisAddress : "localhost:12345"
-	webAddress : "localhost:12346"
-	hostNotaryServiceLocally: true
-	extraAdvertisedServiceIds: ""
-	mapService : {
-	   hostServiceLocally : true
-	   address : ${artemisAddress}
-	   identity : ${myLegalName}
-	}
-	useHTTPS : false
+    basedir : "./nameserver"
+    myLegalName : "Notary Service"
+    nearestCity : "London"
+    keyStorePassword : "cordacadevpass"
+    trustStorePassword : "trustpass"
+    artemisAddress : "localhost:12345"
+    webAddress : "localhost:12346"
+    hostNotaryServiceLocally: true
+    extraAdvertisedServiceIds: ""
+    useHTTPS : false
 
 Configuration File Fields
---------------------------
+-------------------------
 
 :basedir: This specifies the node workspace folder either as an absolute path, or relative to the current working directory. It can be overidden by the ``--base-directory`` command line option, in which case the the value in the file is ignored and a ``node.conf`` file is expected in that workspace directory as the configuration source.
 
 :myLegalName: The legal identity of the node acts as a human readable alias to the node's public key and several demos use this to lookup the NodeInfo.
 
-:nearestCity: The location of the node as used to locate coordinates on the world map when running the network visualiser demo. See :doc:`visualiser`.
+:nearestCity: The location of the node as used to locate coordinates on the world map when running the network simulator demo. See :doc:`network-simulator`.
 
 :keyStorePassword:
-	The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the node certificate and private key.
+    The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the node certificate and private key.
 
-	note:: This is the non-secret value for the development certificates automatically generated during the first node run. Longer term these keys will be managed in secure hardware devices. 
+    note:: This is the non-secret value for the development certificates automatically generated during the first node run. Longer term these keys will be managed in secure hardware devices.
 
 :trustStorePassword:
-	The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing the R3 Corda root certificate. This is the non-secret value for the development certificates automatically generated during the first node run.
+    The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing the R3 Corda root certificate. This is the non-secret value for the development certificates automatically generated during the first node run.
 
-	.. note:: Longer term these keys will be managed in secure hardware devices.
+    .. note:: Longer term these keys will be managed in secure hardware devices.
 
 :dataSourceProperties:
     This section is used to configure the jdbc connection and database driver used for the nodes persistence. Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
 :artemisAddress:
-	The host and port on which the node is available for protocol operations over ArtemisMQ.
+    The host and port on which the node is available for protocol operations over ArtemisMQ.
 
-	.. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However, note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed here must be externally accessible when running nodes across a cluster of machines.
+    .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However, note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed here must be externally accessible when running nodes across a cluster of machines.
 
 :webAddress:
-	The host and port on which the node is available for web operations.
+    The host and port on which the node is available for web operations.
 
-	.. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative Names contained within the development certificates. This is addition to requiring the ``/config/dev/corda_dev_ca.cer`` root certificate be installed as a Trusted CA.
-	
+    .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative Names contained within the development certificates. This is addition to requiring the ``/config/dev/corda_dev_ca.cer`` root certificate be installed as a Trusted CA.
+
 :hostNotaryServiceLocally: If true the Node will host and advertise a verifying Notary service.
 
 :extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the 
 
-:mapService.hostServiceLocally: If true the node is declaring itself as the NetworkMapService host. Otherwise the configuration below is the remote connection details for the node to connect to the NetworkMapService.
-
-:mapService.address: If the node is hosting the NetworkMapService this should be exactly equal to the artemisAddress (hence $ substitution above). Otherwise this value is the remote HostAndPort string for the ArtemisMQ service on the hosting node.
-
-:mapService.identity: If the node is hosting the NetworkMapService this should be exactly equal to the myLegalName (hence $ substitution above). Otherwise this value must match the myLegalName of the hosting node.
+:networkMapAddress: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise the configuration value is the remote HostAndPort string for the ArtemisMQ service on the hosting node.
 
 :useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled then unencrypted HTTP traffic to the node's **webAddress** port is not supported.
 

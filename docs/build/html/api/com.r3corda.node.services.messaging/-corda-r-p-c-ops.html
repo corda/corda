@@ -1,0 +1,41 @@
+<HTML>
+<HEAD>
+<title>CordaRPCOps - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href="index.html">com.r3corda.node.services.messaging</a>&nbsp;/&nbsp;<a href=".">CordaRPCOps</a><br/>
+<br/>
+<h1>CordaRPCOps</h1>
+<code><span class="keyword">interface </span><span class="identifier">CordaRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a></code><br/>
+<p>RPC operations that the node exposes to clients using the Java client library. These can be called from
+client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> class.</p>
+<br/>
+<br/>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-r-p-c-ops/protocol-version.html">protocolVersion</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">protocolVersion</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>Returns the RPC protocol version. Exists since version 0 so guaranteed to be present.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inheritors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../com.r3corda.node.internal/-server-r-p-c-ops/index.html">ServerRPCOps</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ServerRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">CordaRPCOps</span></code><p>Server side implementations of RPCs available to MQ based client tools. Execution takes place on the server
+thread (i.e. serially). Arguments are serialised and deserialised automatically.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

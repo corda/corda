@@ -96,11 +96,7 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -118,6 +114,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#how-multi-party-transactions-are-constructed-and-transmitted">How multi-party transactions are constructed and transmitted</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#non-asset-oriented-smart-contracts">Non-asset-oriented smart contracts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#making-things-happen-at-a-particular-time">Making things happen at a particular time</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#encumbrances">Encumbrances</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#clauses">Clauses</a></li>
 </ul>
 </li>
@@ -126,13 +123,25 @@
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -816,6 +825,66 @@ is by default ignored, if the corresponding <em>Cordapp</em> is installed and ac
 considered relevant by your wallet (e.g. because you own it), then the node can automatically begin the process
 of creating a transaction and taking it through the life cycle. You can learn more about this in the article
 &#8220;<a class="reference internal" href="event-scheduling.html"><span class="doc">Event scheduling</span></a>&#8221;.</p>
+</div>
+<div class="section" id="encumbrances">
+<h2>Encumbrances<a class="headerlink" href="#encumbrances" title="Permalink to this headline">¶</a></h2>
+<p>All contract states may be <em>encumbered</em> by up to one other state, which we call an <strong>encumbrance</strong>.</p>
+<p>The encumbrance state, if present, forces additional controls over the encumbered state, since the encumbrance state contract
+will also be verified during the execution of the transaction. For example, a contract state could be encumbered
+with a time-lock contract state; the state is then only processable in a transaction that verifies that the time
+specified in the encumbrance time-lock has passed.</p>
+<p>The encumbered state refers to its encumbrance by index, and the referred encumbrance state
+is an output state in a particular position on the same transaction that created the encumbered state. Note that an
+encumbered state that is being consumed must have its encumbrance consumed in the same transaction, otherwise the
+transaction is not valid.</p>
+<p>The encumbrance reference is optional in the <code class="docutils literal"><span class="pre">ContractState</span></code> interface:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">val</span> <span class="py">encumbrance</span><span class="p">:</span> <span class="n">Int</span><span class="p">?</span> <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="k">null</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="nd">@Nullable</span>
+<span class="nd">@Override</span>
+<span class="kd">public</span> <span class="n">Integer</span> <span class="nf">getEncumbrance</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>The time-lock contract mentioned above can be implemented very simply:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">TestTimeLock</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForContract</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">val</span> <span class="py">time</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">timestamp</span><span class="p">.</span><span class="n">before</span> <span class="o">?:</span> <span class="k">throw</span> <span class="n">IllegalStateException</span><span class="p">(...)</span>
+        <span class="p">...</span>
+        <span class="n">requireThat</span> <span class="p">{</span>
+            <span class="s">&quot;the time specified in the time-lock has passed&quot;</span> <span class="k">by</span>
+                    <span class="p">(</span><span class="n">time</span> <span class="p">&gt;=</span> <span class="n">tx</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">filterIsInstance</span><span class="p">&lt;</span><span class="n">TestTimeLock</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;().</span><span class="n">single</span><span class="p">().</span><span class="n">validFrom</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>We can then set up an encumbered state:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span>val encumberedState = Cash.State(amount = 1000.DOLLARS `issued by` defaultIssuer, owner = DUMMY_PUBKEY_1, encumbrance = 1)
+val fourPmTimelock = TestTimeLock.State(Instant.parse(&quot;2015-04-17T16:00:00.00Z&quot;))
+</pre></div>
+</div>
+</div>
+<p>When we construct a transaction that generates the encumbered state, we must place the encumbrance in the corresponding output
+position of that transaction. And when we subsequently consume that encumbered state, the same encumbrance state must be
+available somewhere within the input set of states.</p>
+<p>In future, we will consider the concept of a <em>covenant</em>. This is where the encumbrance travels alongside each iteration of
+the encumbered state. For example, a cash state may be encumbered with a <em>domicile</em> encumbrance, which checks the domicile of
+the identity of the owner that the cash state is being moved to, in order to uphold sanction screening regulations, and prevent
+cash being paid to parties domiciled in e.g. North Korea. In this case, the encumbrance should be permanently attached to
+the all future cash states stemming from this one.</p>
+<p>We will also consider marking states that are capable of being encumbrances as such. This will prevent states being used
+as encumbrances inadvertently. For example, the time-lock above would be usable as an encumbrance, but it makes no sense to
+be able to encumber a cash state with another one.</p>
 </div>
 <div class="section" id="clauses">
 <h2>Clauses<a class="headerlink" href="#clauses" title="Permalink to this headline">¶</a></h2>

@@ -64,10 +64,10 @@ Clauses
 -------
 
 We'll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
-grouping of input/output states later. The clauses must implement the ``Clause`` interface, which defines
+grouping of input/output states later. The clauses must extend the ``Clause`` abstract class, which defines
 the ``verify`` function, and the ``requiredCommands`` property used to determine the conditions under which a clause
-is triggered. Normally clauses would extend ``ConcreteClause`` which provides defaults suitable for a clause which
-verifies transactions, rather than delegating to other clauses.
+is triggered. Composite clauses should extend the ``CompositeClause`` abstract class, which extends ``Clause`` to
+add support for wrapping around multiple clauses.
 
 The ``verify`` function defined in the ``Clause`` interface is similar to the conventional ``Contract`` verification
 function, although it adds new parameters and returns the set of commands which it has processed. Normally this returned
@@ -80,7 +80,7 @@ The ``Move`` clause for the commercial paper contract is relatively simple, so w
 
    .. sourcecode:: kotlin
 
-        class Move: ConcreteClause<State, Commands, Issued<Terms>>() {
+        class Move: Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>>
                 get() = setOf(Commands.Move::class.java)
 
@@ -103,7 +103,7 @@ The ``Move`` clause for the commercial paper contract is relatively simple, so w
 
    .. sourcecode:: java
 
-        class Move extends ConcreteClause<State, Commands, State> {
+        class Move extends Clause<State, Commands, State> {
             @NotNull
             @Override
             public Set<Class<? extends CommandData>> getRequiredCommands() {

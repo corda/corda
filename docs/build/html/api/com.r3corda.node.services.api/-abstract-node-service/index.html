@@ -18,7 +18,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">AbstractNodeService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.services.NetworkMapCache)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$<init>(com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.services.NetworkMapCache)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span></code><p>Abstract superclass for services that a node can host, which provides helper functions.</p>
+<code><span class="identifier">AbstractNodeService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$<init>(com.r3corda.node.services.api.ServiceHubInternal)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a><span class="symbol">)</span></code><p>Abstract superclass for services that a node can host, which provides helper functions.</p>
 </td>
 </tr>
 </tbody>
@@ -30,13 +30,13 @@
 <td>
 <a href="net.html">net</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">net</span><span class="symbol">: </span><a href="../-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="network-map-cache.html">networkMapCache</a></td>
+<a href="services.html">services</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">networkMapCache</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">services</span><span class="symbol">: </span><a href="../-service-hub-internal/index.html"><span class="identifier">ServiceHubInternal</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -47,13 +47,21 @@
 <td>
 <a href="add-message-handler.html">addMessageHandler</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)), kotlin.Function2((com.r3corda.core.messaging.Message, java.lang.Exception, kotlin.Unit)))/exceptionConsumer">exceptionConsumer</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><a href="../../com.r3corda.core.messaging/-message/index.html"><span class="identifier">Message</span></a><span class="symbol">,</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
 common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
 acknowledgement response with no content, use <a href="#">com.r3corda.core.messaging.Ack</a>.</p>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">Q</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-service-request-message/index.html"><span class="identifier">ServiceRequestMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addMessageHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addMessageHandler(kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.Q, com.r3corda.node.services.api.AbstractNodeService.addMessageHandler.R)))/handler">handler</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Q</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">R</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-message-handler-registration.html"><span class="identifier">MessageHandlerRegistration</span></a></code><p>Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
 common boilerplate code. Exceptions are propagated to the messaging layer.  If you just want a simple
 acknowledgement response with no content, use <a href="#">com.r3corda.core.messaging.Ack</a>.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="add-protocol-handler.html">addProtocolHandler</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">H</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addProtocolHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/loggerName">loggerName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/protocolFactory">protocolFactory</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">H</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))), kotlin.Function2((((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)), com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, kotlin.Unit)))/onResultFuture">onResultFuture</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">,</span>&nbsp;<span class="identifier">H</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Register a handler to kick-off a protocol when a <a href="../../com.r3corda.protocols/-handshake-message/index.html">HandshakeMessage</a> is received by the node. This performs the
+necessary steps to enable communication between the two protocols, including calling ProtocolLogic.registerSession.</p>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">H</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.protocols/-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a><span class="symbol">, </span><span class="identifier">R</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">addProtocolHandler</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))))/topic">topic</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))))/loggerName">loggerName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.api.AbstractNodeService$addProtocolHandler(kotlin.String, kotlin.String, kotlin.Function1((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.H, com.r3corda.core.protocols.ProtocolLogic((com.r3corda.node.services.api.AbstractNodeService.addProtocolHandler.R)))))/protocolFactory">protocolFactory</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">H</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">R</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -68,14 +76,35 @@ acknowledgement response with no content, use <a href="#">com.r3corda.core.messa
 </tr>
 </tbody>
 </table>
+<h3>Companion Object Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="logger.html">logger</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">logger</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
 <h3>Inheritors</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.network/-in-memory-network-map-service/index.html">InMemoryNetworkMapService</a></td>
+<a href="../../com.r3corda.node.services.network/-abstract-network-map-service/index.html">AbstractNetworkMapService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.network/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.network/-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code><p>Abstracted out core functionality as the basis for a persistent implementation, as well as existing in-memory implementation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.monitor/-node-monitor-service/index.html">NodeMonitorService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeMonitorService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>Service which allows external clients to monitor the nodes vault and state machine manager, as well as trigger
+actions within the node. The service also sends requests for user input back to clients, for example to enter
+additional information while a protocol runs, or confirm an action.</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -86,10 +115,9 @@ acknowledgement response with no content, use <a href="#">com.r3corda.core.messa
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-service/index.html">Service</a></td>
+<a href="../../com.r3corda.node.services.clientapi/-fixing-session-initiation/-service/index.html">Service</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code><p>The Service that wraps <a href="../../com.r3corda.node.services.clientapi/-node-interest-rates/-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
-</td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code></td>
 </tr>
 <tr>
 <td>
@@ -109,12 +137,16 @@ glue that sits between the network layer and the database layer.</p>
 </tr>
 <tr>
 <td>
-<a href="../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html">WalletMonitorService</a></td>
+<a href="../../com.r3corda.demos.api/-node-interest-rates/-service/index.html">Service</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">WalletMonitorService</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code><p>Service which allows external clients to monitor the wallet service and state machine manager, as well as trigger
-actions within the node. The service also sends requests for user input back to clients, for example to enter
-additional information while a protocol runs, or confirm an action.</p>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-accepts-file-upload/index.html"><span class="identifier">AcceptsFileUpload</span></a><span class="symbol">, </span><span class="identifier">AbstractNodeService</span></code><p>The Service that wraps <a href="../../com.r3corda.demos.api/-node-interest-rates/-oracle/index.html">Oracle</a> and handles messages/network interaction/request scrubbing.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.demos.protocols/-auto-offer-protocol/-service/index.html">Service</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">Service</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNodeService</span></code></td>
 </tr>
 </tbody>
 </table>

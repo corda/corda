@@ -56,7 +56,7 @@ attachments are saved to local storage automatically.</p>
 <td>
 <a href="-fetch-transactions-protocol/index.html">FetchTransactionsProtocol</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">FetchTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
+<code><span class="keyword">class </span><span class="identifier">FetchTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-fetch-data-protocol/index.html"><span class="identifier">FetchDataProtocol</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.</p>
 </td>
 </tr>
 <tr>
@@ -64,6 +64,15 @@ attachments are saved to local storage automatically.</p>
 <a href="-finality-protocol/index.html">FinalityProtocol</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FinalityProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Finalise a transaction by notarising it, then recording it locally, and then sending it to all involved parties.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-handshake-message/index.html">HandshakeMessage</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">HandshakeMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code><p>A Handshake message is sent to initiate communication between two protocol instances. It contains the two session IDs
+the two protocols will need to communicate.
+Note: This is a temperary interface and will be removed once the protocol session work is implemented.</p>
 </td>
 </tr>
 <tr>
@@ -106,7 +115,7 @@ for each step.</p>
 <td>
 <a href="-resolve-transactions-protocol/index.html">ResolveTransactionsProtocol</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
+<code><span class="keyword">class </span><span class="identifier">ResolveTransactionsProtocol</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../com.r3corda.core.transactions/-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>This protocol is used to verify the validity of a transaction by recursively checking the validity of all the
 dependencies. Once a transaction is checked its inserted into local storage so it can be relayed and wont be
 checked again.</p>
 </td>

@@ -27,6 +27,13 @@ are all free.</p>
 </tr>
 <tr>
 <td>
+<a href="encumbrance.html">encumbrance</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">encumbrance</span><span class="symbol">: </span><span class="identifier">Int</span><span class="symbol">?</span></code><p>All contract states may be <emph>encumbered</emph> by up to one other state.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="participants.html">participants</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
@@ -66,7 +73,7 @@ are all free.</p>
 <td>
 <a href="../-dummy-state/index.html">DummyState</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code><p>Dummy state for use in testing. Not part of any real contract.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">DummyState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ContractState</span></code><p>Dummy state for use in testing. Not part of any contract, not even the <a href="../-dummy-contract/index.html">DummyContract</a>.</p>
 </td>
 </tr>
 <tr>

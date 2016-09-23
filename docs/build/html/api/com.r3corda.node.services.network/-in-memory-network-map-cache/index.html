@@ -35,6 +35,13 @@
 </tr>
 <tr>
 <td>
+<a href="map-service-registered.html">mapServiceRegistered</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">mapServiceRegistered</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Future to track completion of the NetworkMapService registration.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="network-map-nodes.html">networkMapNodes</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">networkMapNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code><p>A list of nodes that advertise a network map service</p>
@@ -52,13 +59,6 @@
 <a href="party-nodes.html">partyNodes</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">partyNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code><p>A list of all nodes the cache is aware of</p>
-</td>
-</tr>
-<tr>
-<td>
-<a href="rates-oracle-nodes.html">ratesOracleNodes</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">ratesOracleNodes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">&gt;</span></code><p>A list of nodes that advertise a rates oracle service</p>
 </td>
 </tr>
 <tr>
@@ -85,7 +85,7 @@ elsewhere.</p>
 <td>
 <a href="add-map-service.html">addMapService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">addMapService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/service">service</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/subscribe">subscribe</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.node.NodeInfo, kotlin.Boolean, kotlin.Int)/ifChangedSinceVer">ifChangedSinceVer</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">addMapService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/net">net</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-messaging-service/index.html"><span class="identifier">MessagingService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/networkMapAddress">networkMapAddress</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/subscribe">subscribe</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$addMapService(com.r3corda.core.messaging.MessagingService, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.Boolean, kotlin.Int)/ifChangedSinceVer">ifChangedSinceVer</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
 updates.</p>
 </td>
 </tr>
@@ -147,6 +147,13 @@ or the appropriate oracle for a contract.</p>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">removeNode</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.network.InMemoryNetworkMapCache$removeNode(com.r3corda.core.node.NodeInfo)/node">node</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Removes a node from the local cache.</p>
 </td>
 </tr>
+<tr>
+<td>
+<a href="run-without-map-service.html">runWithoutMapService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">runWithoutMapService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>For testing where the network map cache is manipulated marks the service as immediately ready.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3>Inherited Functions</h3>
@@ -157,18 +164,6 @@ or the appropriate oracle for a contract.</p>
 <a href="../../com.r3corda.core.serialization/-singleton-serialize-as-token/to-token.html">toToken</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">toToken</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.serialization.SingletonSerializeAsToken$toToken(com.r3corda.core.serialization.SerializeAsTokenContext)/context">context</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.serialization/-serialize-as-token-context/index.html"><span class="identifier">SerializeAsTokenContext</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.serialization/-serialization-token/index.html"><span class="identifier">SerializationToken</span></a></code></td>
-</tr>
-</tbody>
-</table>
-<h3>Inheritors</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../-mock-network-map-cache/index.html">MockNetworkMapCache</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">MockNetworkMapCache</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">InMemoryNetworkMapCache</span></code><p>Network map cache with no backing map service.</p>
-</td>
 </tr>
 </tbody>
 </table>

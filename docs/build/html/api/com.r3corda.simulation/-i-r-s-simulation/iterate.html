@@ -1,0 +1,25 @@
+<HTML>
+<HEAD>
+<title>IRSSimulation.iterate - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.simulation</a>&nbsp;/&nbsp;<a href="index.html">IRSSimulation</a>&nbsp;/&nbsp;<a href=".">iterate</a><br/>
+<br/>
+<h1>iterate</h1>
+<a name="com.r3corda.simulation.IRSSimulation$iterate()"></a>
+<code><span class="keyword">fun </span><span class="identifier">iterate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span></code><br/>
+Overrides <a href="../-simulation/iterate.html">Simulation.iterate</a><br/>
+<p>Iterates the simulation by one step.</p>
+<p>The default implementation circles around the nodes, pumping until one of them handles a message. The next call
+will carry on from where this one stopped. In an environment where you want to take actions between anything
+interesting happening, or control the precise speed at which things operate (beyond the latency injector), this
+is a useful way to do things.</p>
+<br/>
+<br/>
+<p><strong>Return</strong><br/>
+the message that was processed, or null if no node accepted a message in this round.</p>
+<br/>
+<br/>
+</BODY>
+</HTML>

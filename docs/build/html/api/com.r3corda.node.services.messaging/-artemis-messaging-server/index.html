@@ -25,7 +25,7 @@ a fully connected network, trusted network or on localhost.</p>
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">ArtemisMessagingServer</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/directory">directory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/myHostPort">myHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span></code><p>This class configures and manages an Apache Artemis message queue broker.</p>
+<code><span class="identifier">ArtemisMessagingServer</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/myHostPort">myHostPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$<init>(com.r3corda.node.services.config.NodeConfiguration, , com.r3corda.core.node.services.NetworkMapCache)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span></code><p>This class configures and manages an Apache Artemis message queue broker.</p>
 </td>
 </tr>
 </tbody>
@@ -54,13 +54,7 @@ a fully connected network, trusted network or on localhost.</p>
 <td>
 <a href="../-artemis-messaging-component/config.html">config</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-artemis-messaging-component/directory.html">directory</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">directory</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
+<code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -69,33 +63,9 @@ a fully connected network, trusted network or on localhost.</p>
 <tbody>
 <tr>
 <td>
-<a href="add-connector.html">addConnector</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">addConnector</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$addConnector()/hostAndPort">hostAndPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="bridge-exists.html">bridgeExists</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">bridgeExists</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$bridgeExists()/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="bridge-to-network-map-service.html">bridgeToNetworkMapService</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">bridgeToNetworkMapService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$bridgeToNetworkMapService(com.r3corda.core.node.NodeInfo)/networkMapService">networkMapService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="connector-exists.html">connectorExists</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">connectorExists</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$connectorExists()/hostAndPort">hostAndPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="deploy-bridge.html">deployBridge</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">deployBridge</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$deployBridge(, )/hostAndPort">hostAndPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$deployBridge(, )/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">bridgeToNetworkMapService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingServer$bridgeToNetworkMapService(com.r3corda.core.messaging.SingleMessageRecipient)/networkMapService">networkMapService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">?</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 <tr>
 <td>
@@ -116,6 +86,14 @@ a fully connected network, trusted network or on localhost.</p>
 <tbody>
 <tr>
 <td>
+<a href="../-artemis-messaging-component/check-store-passwords.html">checkStorePasswords</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkStorePasswords</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
+unfortunately Artemis tends to bury the exception when the password is wrong.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../-artemis-messaging-component/configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Strictly for dev only automatically construct a server certificate/private key signed from
@@ -124,15 +102,15 @@ the CA certs in Node resources. Then provision KeyStores into certificates folde
 </tr>
 <tr>
 <td>
-<a href="../-artemis-messaging-component/tcp-transport.html">tcpTransport</a></td>
+<a href="../-artemis-messaging-component/parse-key-from-queue-name.html">parseKeyFromQueueName</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">parseKeyFromQueueName</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$parseKeyFromQueueName(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="../-artemis-messaging-component/try-parse-key-from-queue-name.html">tryParseKeyFromQueueName</a></td>
+<a href="../-artemis-messaging-component/tcp-transport.html">tcpTransport</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">tryParseKeyFromQueueName</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tryParseKeyFromQueueName()/queueName">queueName</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">?</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

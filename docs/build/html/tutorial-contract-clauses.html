@@ -96,11 +96,7 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -118,13 +114,25 @@
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -232,17 +240,17 @@ definition and added elements, for brevity:</p>
 <div class="section" id="clauses">
 <h2>Clauses<a class="headerlink" href="#clauses" title="Permalink to this headline">¶</a></h2>
 <p>We&#8217;ll tackle the inner clauses that contain the bulk of the verification logic, first, and the clause which handles
-grouping of input/output states later. The clauses must implement the <code class="docutils literal"><span class="pre">Clause</span></code> interface, which defines
+grouping of input/output states later. The clauses must extend the <code class="docutils literal"><span class="pre">Clause</span></code> abstract class, which defines
 the <code class="docutils literal"><span class="pre">verify</span></code> function, and the <code class="docutils literal"><span class="pre">requiredCommands</span></code> property used to determine the conditions under which a clause
-is triggered. Normally clauses would extend <code class="docutils literal"><span class="pre">ConcreteClause</span></code> which provides defaults suitable for a clause which
-verifies transactions, rather than delegating to other clauses.</p>
+is triggered. Composite clauses should extend the <code class="docutils literal"><span class="pre">CompositeClause</span></code> abstract class, which extends <code class="docutils literal"><span class="pre">Clause</span></code> to
+add support for wrapping around multiple clauses.</p>
 <p>The <code class="docutils literal"><span class="pre">verify</span></code> function defined in the <code class="docutils literal"><span class="pre">Clause</span></code> interface is similar to the conventional <code class="docutils literal"><span class="pre">Contract</span></code> verification
 function, although it adds new parameters and returns the set of commands which it has processed. Normally this returned
 set is identical to the <code class="docutils literal"><span class="pre">requiredCommands</span></code> used to trigger the clause, however in some cases the clause may process
 further optional commands which it needs to report that it has handled.</p>
 <p>The <code class="docutils literal"><span class="pre">Move</span></code> clause for the commercial paper contract is relatively simple, so we will start there:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Move</span><span class="p">:</span> <span class="n">ConcreteClause</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;()</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Move</span><span class="p">:</span> <span class="n">Clause</span><span class="p">&lt;</span><span class="n">State</span><span class="p">,</span> <span class="n">Commands</span><span class="p">,</span> <span class="n">Issued</span><span class="p">&lt;</span><span class="n">Terms</span><span class="p">&gt;&gt;()</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">val</span> <span class="py">requiredCommands</span><span class="p">:</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">Class</span><span class="p">&lt;</span><span class="k">out</span> <span class="n">CommandData</span><span class="p">&gt;&gt;</span>
         <span class="k">get</span><span class="p">()</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Move</span><span class="o">::</span><span class="k">class</span><span class="p">.</span><span class="n">java</span><span class="p">)</span>
 
@@ -264,7 +272,7 @@ further optional commands which it needs to report that it has handled.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Move</span> <span class="kd">extends</span> <span class="n">ConcreteClause</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">Commands</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;</span> <span class="o">{</span>
+<div class="highlight-java"><div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Move</span> <span class="kd">extends</span> <span class="n">Clause</span><span class="o">&lt;</span><span class="n">State</span><span class="o">,</span> <span class="n">Commands</span><span class="o">,</span> <span class="n">State</span><span class="o">&gt;</span> <span class="o">{</span>
     <span class="nd">@NotNull</span>
     <span class="nd">@Override</span>
     <span class="kd">public</span> <span class="n">Set</span><span class="o">&lt;</span><span class="n">Class</span><span class="o">&lt;?</span> <span class="kd">extends</span> <span class="n">CommandData</span><span class="o">&gt;&gt;</span> <span class="nf">getRequiredCommands</span><span class="o">()</span> <span class="o">{</span>

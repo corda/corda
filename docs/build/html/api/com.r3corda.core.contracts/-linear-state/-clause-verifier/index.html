@@ -7,7 +7,7 @@
 <a href="../../index.html">com.r3corda.core.contracts</a>&nbsp;/&nbsp;<a href="../index.html">LinearState</a>&nbsp;/&nbsp;<a href=".">ClauseVerifier</a><br/>
 <br/>
 <h1>ClauseVerifier</h1>
-<code><span class="keyword">class </span><span class="identifier">ClauseVerifier</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts.clauses/-concrete-clause/index.html"><span class="identifier">ConcreteClause</span></a><span class="symbol">&lt;</span><a href="../../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<a href="../../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">class </span><span class="identifier">ClauseVerifier</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><a href="../../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<a href="../../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code><br/>
 <p>Standard clause to verify the LinearState safety properties.</p>
 <br/>
 <br/>
@@ -39,7 +39,7 @@
 <tbody>
 <tr>
 <td>
-<a href="../../../com.r3corda.core.contracts.clauses/-concrete-clause/required-commands.html">requiredCommands</a></td>
+<a href="../../../com.r3corda.core.contracts.clauses/-clause/required-commands.html">requiredCommands</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Determine whether this clause runs or not</p>
 </td>

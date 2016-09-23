@@ -13,14 +13,12 @@ To create an app plugin you must you must extend from `CordaPluginRegistry`_. Th
 specific details of the implementation, but you can extend the server in the following ways:
 
 1. Required protocols: Specify which protocols will be whitelisted for use in your web APIs.
-2. Service plugins: Register your :ref:`services`.
+2. Service plugins: Register your services (see below).
 3. Web APIs: You may register your own endpoints under /api/ of the built-in web server.
 4. Static web endpoints: You may register your own static serving directories for serving web content.
 
 Services
 --------
-
-.. _services:
 
 Services are classes which are constructed after the node has started. It is provided a `ServiceHubInternal`_ which
 allows a richer API than the `ServiceHub`_ exposed to contracts. It enables adding protocols, registering
@@ -44,7 +42,7 @@ execution of the node server there will be many other configuration and persiste
 .. warning:: Also note that the bootstrapping process of the ``corda.jar`` unpacks the Corda dependencies into a temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before starting the process to control this location.
 
 Installing Apps
-------------------
+---------------
 
 Once you have created your app JAR you can install it to a node by adding it to ``<node_dir>/plugins/``. In this
 case the ``node_dir`` is the location where your node server's JAR and configuration file is.
@@ -69,7 +67,7 @@ The configuration file and workspace paths can be overidden on the command line 
 Otherwise the workspace folder for the node is created based upon the ``basedir`` property in the ``node.conf`` file and if this is relative it is applied relative to the current working path.
 
 Debugging your Node
-------------------
+-------------------
 
 To enable remote debugging of the corda process use a command line such as:
 

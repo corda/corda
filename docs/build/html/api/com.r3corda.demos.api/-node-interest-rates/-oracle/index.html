@@ -1,0 +1,73 @@
+<HTML>
+<HEAD>
+<title>NodeInterestRates.Oracle - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.demos.api</a>&nbsp;/&nbsp;<a href="../index.html">NodeInterestRates</a>&nbsp;/&nbsp;<a href=".">Oracle</a><br/>
+<br/>
+<h1>Oracle</h1>
+<code><span class="keyword">class </span><span class="identifier">Oracle</span></code><br/>
+<p>An implementation of an interest rate fix oracle which is given data in a simple string format.</p>
+<p>The oracle will try to interpolate the missing value of a tenor for the given fix name and date.</p>
+<br/>
+<br/>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">Oracle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$<init>(com.r3corda.core.crypto.Party, java.security.KeyPair, java.time.Clock)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$<init>(com.r3corda.core.crypto.Party, java.security.KeyPair, java.time.Clock)/signingKey">signingKey</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$<init>(com.r3corda.core.crypto.Party, java.security.KeyPair, java.time.Clock)/clock">clock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">)</span></code><p>An implementation of an interest rate fix oracle which is given data in a simple string format.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="clock.html">clock</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">clock</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="identity.html">identity</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="known-fixes.html">knownFixes</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">knownFixes</span><span class="symbol">: </span><a href="../-fix-container/index.html"><span class="identifier">FixContainer</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="query.html">query</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$query(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant)/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$query(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant)/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code><p>This method will now wait until the given deadline if the fix for the given <a href="../../../com.r3corda.core.contracts/-fix-of/index.html">FixOf</a> is not immediately
+available.  To implement this, <a href="#">readWithDeadline</a> will loop if the deadline is not reached and we throw
+<a href="../-unknown-fix/index.html">UnknownFix</a> as it implements <a href="../../../com.r3corda.core/-retryable-exception/index.html">RetryableException</a> which has special meaning to this function.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="sign.html">sign</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">sign</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$sign(com.r3corda.core.transactions.WireTransaction)/wtx">wtx</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.crypto/-digital-signature/-legally-identifiable/index.html"><span class="identifier">LegallyIdentifiable</span></a></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

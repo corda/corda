@@ -29,6 +29,23 @@ if the terminal supports it. Otherwise it just prints out the name of the step w
 </tr>
 <tr>
 <td>
+<a href="-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractJDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-j-d-b-c-hashed-table/index.html"><span class="identifier">JDBCHashedTable</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableMap</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/AbstractMap.html"><span class="identifier">AbstractMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">&gt;</span></code><p>A base class for a JDBC table backed hash map that iterates in insertion order by using
+an ever increasing sequence number on entries.  Iterators supports remove() but entries are not really mutable and
+do not support setValue() method from <a href="#">MutableMap.MutableEntry</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-abstract-j-d-b-c-hash-set/index.html">AbstractJDBCHashSet</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractJDBCHashSet</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-j-d-b-c-hashed-table/index.html"><span class="identifier">JDBCHashedTable</span></a><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">MutableSet</span><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">&gt;</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/AbstractSet.html"><span class="identifier">AbstractSet</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">&gt;</span></code><p>Base class for JDBC backed hash set that delegates to a JDBC backed hash map where the values are all
+<a href="#">Unit</a> and not actually persisted.  Iteration order is order of insertion.  Iterators can remove().</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-add-or-remove/index.html">AddOrRemove</a></td>
 <td>
 <code><span class="keyword">enum</span> <span class="keyword">class </span><span class="identifier">AddOrRemove</span></code><p>Enum for when adding/removing something, for example adding or removing an entry in a directory.</p>
@@ -48,6 +65,28 @@ for ensuring code runs on the right thread, and also for unit testing.</p>
 <td>
 <code><span class="keyword">class </span><span class="identifier">FiberBox</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">T</span><span class="symbol">&gt;</span></code><p>Modelled on <a href="#">ThreadBox</a>, but with support for waiting that is compatible with Quasar <a href="#">Fiber</a>s and <a href="-mutable-clock/index.html">MutableClock</a>s.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-j-d-b-c-hash-map/index.html">JDBCHashMap</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">JDBCHashMap</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">, </span><span class="identifier">V</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-j-d-b-c-hash-map/index.html"><span class="identifier">AbstractJDBCHashMap</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<span class="identifier">V</span><span class="symbol">,</span>&nbsp;<a href="-j-d-b-c-hash-map/-blob-map-table/index.html"><span class="identifier">BlobMapTable</span></a><span class="symbol">&gt;</span></code><p>A convenient JDBC table backed hash map with iteration order based on insertion order.
+See <a href="-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a> for further implementation details.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-j-d-b-c-hash-set/index.html">JDBCHashSet</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">JDBCHashSet</span><span class="symbol">&lt;</span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-j-d-b-c-hash-set/index.html"><span class="identifier">AbstractJDBCHashSet</span></a><span class="symbol">&lt;</span><span class="identifier">K</span><span class="symbol">,</span>&nbsp;<a href="-j-d-b-c-hash-set/-blob-set-table/index.html"><span class="identifier">BlobSetTable</span></a><span class="symbol">&gt;</span></code><p>A convenient JDBC table backed hash set with iteration order based on insertion order.
+See <a href="-abstract-j-d-b-c-hash-set/index.html">AbstractJDBCHashSet</a> and <a href="-abstract-j-d-b-c-hash-map/index.html">AbstractJDBCHashMap</a> for further implementation details.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-j-d-b-c-hashed-table/index.html">JDBCHashedTable</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">JDBCHashedTable</span></code></td>
 </tr>
 <tr>
 <td>
@@ -92,6 +131,18 @@ adjusted externally.</p>
 <a href="database-transaction.html">databaseTransaction</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span> <span class="identifier">databaseTransaction</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$databaseTransaction(kotlin.Function1((, com.r3corda.node.utilities.databaseTransaction.T)))/statement">statement</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">T</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="deserialize-from-blob.html">deserializeFromBlob</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">deserializeFromBlob</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$deserializeFromBlob(java.sql.Blob)/blob">blob</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/sql/Blob.html"><span class="identifier">Blob</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="serialize-to-blob.html">serializeToBlob</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">serializeToBlob</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.utilities$serializeToBlob(com.r3corda.node.utilities.serializeToBlob.T, kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">T</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.utilities$serializeToBlob(com.r3corda.node.utilities.serializeToBlob.T, kotlin.collections.MutableList((kotlin.Function0((kotlin.Unit)))))/finalizables">finalizables</span><span class="symbol">:</span>&nbsp;<span class="identifier">MutableList</span><span class="symbol">&lt;</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/sql/Blob.html"><span class="identifier">Blob</span></a></code></td>
 </tr>
 </tbody>
 </table>

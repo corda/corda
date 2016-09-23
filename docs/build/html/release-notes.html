@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
-        <link rel="next" title="Using the visualiser" href="visualiser.html"/>
+        <link rel="next" title="Network Simulator" href="network-simulator.html"/>
         <link rel="prev" title="Release process" href="release-process.html"/> 
 
   
@@ -98,11 +98,6 @@
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-</ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
@@ -112,19 +107,32 @@
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-3">Milestone 3</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-2">Milestone 2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-1">Milestone 1</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-0">Milestone 0</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -174,6 +182,19 @@
   <div class="section" id="release-notes">
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are brief summaries of what&#8217;s changed between each snapshot release.</p>
+<div class="section" id="unreleased">
+<h2>Unreleased<a class="headerlink" href="#unreleased" title="Permalink to this headline">¶</a></h2>
+<p>API changes:</p>
+<ul class="simple">
+<li>The transaction types (Signed, Wire, LedgerTransaction) have moved to <code class="docutils literal"><span class="pre">com.r3corda.core.transactions</span></code>. You can
+update your code by just deleting the broken import lines and letting your IDE re-import them from the right
+location.</li>
+<li><code class="docutils literal"><span class="pre">AbstractStateReplacementProtocol.verifyProposal</span></code> has changed its prototype in a minor way.</li>
+<li>The <code class="docutils literal"><span class="pre">UntrustworthyData&lt;T&gt;.validate</span></code> method has been renamed to <code class="docutils literal"><span class="pre">unwrap</span></code> - the old name is now deprecated.</li>
+<li>The wallet, wallet service, etc. are now vault, vault service, etc. These better reflect the intent that they
+are a generic secure data store, rather than something which holds cash.</li>
+</ul>
+</div>
 <div class="section" id="milestone-3">
 <h2>Milestone 3<a class="headerlink" href="#milestone-3" title="Permalink to this headline">¶</a></h2>
 <ul>
@@ -401,7 +422,7 @@ the custom function forces the use of non-blocking random drivers on Linux.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="visualiser.html" class="btn btn-neutral float-right" title="Using the visualiser" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="network-simulator.html" class="btn btn-neutral float-right" title="Network Simulator" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="release-process.html" class="btn btn-neutral" title="Release process" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

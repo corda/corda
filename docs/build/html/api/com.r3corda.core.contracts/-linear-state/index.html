@@ -9,7 +9,7 @@
 <h1>LinearState</h1>
 <code><span class="keyword">interface </span><span class="identifier">LinearState</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a></code><br/>
 <p>A state that evolves by superseding itself, all of which share the common "linearId".</p>
-<p>This simplifies the job of tracking the current version of certain types of state in e.g. a wallet.</p>
+<p>This simplifies the job of tracking the current version of certain types of state in e.g. a vault.</p>
 <br/>
 <br/>
 <br/>
@@ -21,7 +21,7 @@
 <td>
 <a href="-clause-verifier/index.html">ClauseVerifier</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">ClauseVerifier</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">LinearState</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts.clauses/-concrete-clause/index.html"><span class="identifier">ConcreteClause</span></a><span class="symbol">&lt;</span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<a href="../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Standard clause to verify the LinearState safety properties.</p>
+<code><span class="keyword">class </span><span class="identifier">ClauseVerifier</span><span class="symbol">&lt;</span><span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">LinearState</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts.clauses/-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><a href="../-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">,</span>&nbsp;<a href="../-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Standard clause to verify the LinearState safety properties.</p>
 </td>
 </tr>
 </tbody>
@@ -33,7 +33,7 @@
 <td>
 <a href="linear-id.html">linearId</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">linearId</span><span class="symbol">: </span><a href="../-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a></code><p>Unique id shared by all LinearState states throughout history within the wallets of all parties.
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">linearId</span><span class="symbol">: </span><a href="../-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a></code><p>Unique id shared by all LinearState states throughout history within the vaults of all parties.
 Verify methods should check that one input and one output share the id in a transaction,
 except at issuance/termination.</p>
 </td>
@@ -52,6 +52,13 @@ except at issuance/termination.</p>
 </tr>
 <tr>
 <td>
+<a href="../-contract-state/encumbrance.html">encumbrance</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">encumbrance</span><span class="symbol">: </span><span class="identifier">Int</span><span class="symbol">?</span></code><p>All contract states may be <emph>encumbered</emph> by up to one other state.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="../-contract-state/participants.html">participants</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">participants</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span></code><p>A <emph>participant</emph> is any party that is able to consume this state in a valid transaction.</p>
@@ -66,7 +73,7 @@ except at issuance/termination.</p>
 <td>
 <a href="is-relevant.html">isRelevant</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">isRelevant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.LinearState$isRelevant(kotlin.collections.Set((java.security.PublicKey)))/ourKeys">ourKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>True if this should be tracked by our wallet(s).</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">isRelevant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.LinearState$isRelevant(kotlin.collections.Set((java.security.PublicKey)))/ourKeys">ourKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>True if this should be tracked by our vault(s).</p>
 </td>
 </tr>
 </tbody>
@@ -93,12 +100,6 @@ except at issuance/termination.</p>
 <code><span class="keyword">interface </span><span class="identifier">DealState</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">LinearState</span></code><p>Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
 implementation of general protocols that manipulate many agreement types.</p>
 </td>
-</tr>
-<tr>
-<td>
-<a href="../../com.r3corda.core.testing/-dummy-linear-contract/-state/index.html">State</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">State</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">LinearState</span></code></td>
 </tr>
 </tbody>
 </table>

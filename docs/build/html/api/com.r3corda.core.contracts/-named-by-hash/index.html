@@ -36,25 +36,27 @@ of how attachments are meant to be used include:</p>
 </tr>
 <tr>
 <td>
-<a href="../-ledger-transaction/index.html">LedgerTransaction</a></td>
+<a href="../../com.r3corda.core.transactions/-base-transaction/index.html">BaseTransaction</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">LedgerTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span></code><p>A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
-It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
-with the commands from the wire, and verified/looked up.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">BaseTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span></code><p>An abstract class defining fields shared by all transaction types in the system.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="../-signed-transaction/index.html">SignedTransaction</a></td>
+<a href="../../com.r3corda.core.transactions/-signed-transaction/-signatures-missing-exception/index.html">SignaturesMissingException</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignedTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span></code><p>Container for a <a href="../-wire-transaction/index.html">WireTransaction</a> and attached signatures.</p>
-</td>
+<code><span class="keyword">class </span><span class="identifier">SignaturesMissingException</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span><span class="symbol">, </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/SignatureException.html"><span class="identifier">SignatureException</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="../-wire-transaction/index.html">WireTransaction</a></td>
+<a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">WireTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span></code><p>Transaction ready for serialisation, without any signatures attached.</p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignedTransaction</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">NamedByHash</span></code><p>SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
+a public key that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
+and the type most frequently passed around the network and stored. The identity of a transaction is the hash
+of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
+map to the same key (and they could be different in important ways, like validity). The signatures on a
+SignedTransaction might be invalid or missing: the type does not imply validity.</p>
 </td>
 </tr>
 </tbody>

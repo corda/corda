@@ -49,7 +49,9 @@ building partially signed transactions.</p>
 <td>
 <a href="-secure-hash/index.html">SecureHash</a></td>
 <td>
-<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">SecureHash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a></code></td>
+<code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">SecureHash</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a></code><p>Container for a cryptographically secure hash value.
+Provides utilities for generating a cryptographic hash using different algorithms (currently only SHA-256 supported).</p>
+</td>
 </tr>
 <tr>
 <td>
@@ -144,7 +146,7 @@ that we can delegate most of the checking to the proper Java code. We simply add
 <td>
 <a href="entropy-to-key-pair.html">entropyToKeyPair</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">entropyToKeyPair</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.crypto$entropyToKeyPair(java.math.BigInteger)/entropy">entropy</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigInteger.html"><span class="identifier">BigInteger</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Returns a keypair derived from the given private key entropy. This is useful for unit tests and other cases where
+<code><span class="keyword">fun </span><span class="identifier">entropyToKeyPair</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.crypto$entropyToKeyPair(java.math.BigInteger)/entropy">entropy</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/math/BigInteger.html"><span class="identifier">BigInteger</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a></code><p>Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
 you want hard-coded private keys.</p>
 </td>
 </tr>

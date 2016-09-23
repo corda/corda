@@ -125,6 +125,20 @@ transaction.</p>
 </tr>
 <tr>
 <td>
+<a href="-d-u-m-m-y_-o-b-l-i-g-a-t-i-o-n_-i-s-s-u-e-r.html">DUMMY_OBLIGATION_ISSUER</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_OBLIGATION_ISSUER</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>A dummy, randomly generated issuer party by the name of "Snake Oil Issuer"</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-d-u-m-m-y_-o-b-l-i-g-a-t-i-o-n_-i-s-s-u-e-r_-k-e-y.html">DUMMY_OBLIGATION_ISSUER_KEY</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">DUMMY_OBLIGATION_ISSUER_KEY</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>A randomly generated key.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="-o-b-l-i-g-a-t-i-o-n.html">OBLIGATION</a></td>
 <td>
 <code><span class="keyword">val </span><a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.core.contracts/-issued/index.html"><span class="identifier">Issued</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">OBLIGATION</span><span class="symbol">: </span><a href="-obligation/-state/index.html"><span class="identifier">State</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span></code></td>
@@ -152,7 +166,7 @@ transaction.</p>
 <td>
 <a href="cash-balances.html">cashBalances</a></td>
 <td>
-<code><span class="keyword">val </span><a href="../com.r3corda.core.node.services/-wallet/index.html"><span class="identifier">Wallet</span></a><span class="symbol">.</span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
+<code><span class="keyword">val </span><a href="../com.r3corda.core.node.services/-vault/index.html"><span class="identifier">Vault</span></a><span class="symbol">.</span><span class="identifier">cashBalances</span><span class="symbol">: </span><span class="identifier">Map</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">,</span>&nbsp;<a href="../com.r3corda.core.contracts/-amount/index.html"><span class="identifier">Amount</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/Currency.html"><span class="identifier">Currency</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Returns a map of how much cash we have in each currency, ignoring details like issuer. Note: currencies for
 which we have no cash evaluate to null (not present in map), not 0.</p>
 </td>
 </tr>

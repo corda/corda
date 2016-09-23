@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<title>NodeInterestRates.Oracle.query - </title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">com.r3corda.demos.api</a>&nbsp;/&nbsp;<a href="../index.html">NodeInterestRates</a>&nbsp;/&nbsp;<a href="index.html">Oracle</a>&nbsp;/&nbsp;<a href=".">query</a><br/>
+<br/>
+<h1>query</h1>
+<a name="com.r3corda.demos.api.NodeInterestRates.Oracle$query(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant)"></a>
+<code><span class="keyword">fun </span><span class="identifier">query</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$query(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant)/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.demos.api.NodeInterestRates.Oracle$query(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant)/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">&gt;</span></code><br/>
+<p>This method will now wait until the given deadline if the fix for the given <a href="../../../com.r3corda.core.contracts/-fix-of/index.html">FixOf</a> is not immediately
+available.  To implement this, <a href="#">readWithDeadline</a> will loop if the deadline is not reached and we throw
+<a href="../-unknown-fix/index.html">UnknownFix</a> as it implements <a href="../../../com.r3corda.core/-retryable-exception/index.html">RetryableException</a> which has special meaning to this function.</p>
+<br/>
+<br/>
+</BODY>
+</HTML>

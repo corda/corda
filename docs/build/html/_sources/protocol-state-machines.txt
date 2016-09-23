@@ -260,7 +260,7 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
           val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, buyerSessionID, sessionID, hello)
 
-          maybeSTX.validate {
+          maybeSTX.unwrap {
               // Check that the tx proposed by the buyer is valid.
               val missingSigs: Set<PublicKey> = it.verifySignatures(throwIfSignaturesAreMissing = false)
               val expected = setOf(myKeyPair.public, notaryNode.identity.owningKey)
@@ -421,7 +421,7 @@ OK, let's do the same for the buyer side:
       private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
           // Wait for a trade request to come in on our pre-provided session ID.
           val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
-          maybeTradeRequest.validate {
+          maybeTradeRequest.unwrap {
               // What is the seller trying to sell us?
               val asset = it.assetForSale.state.data
               val assetTypeName = asset.javaClass.name
@@ -449,7 +449,7 @@ OK, let's do the same for the buyer side:
 
           // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-          return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).validate { it }
+          return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
       }
 
       private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

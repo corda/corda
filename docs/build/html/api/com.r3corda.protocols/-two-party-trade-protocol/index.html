@@ -12,7 +12,7 @@
 and seller) and the following steps:</p>
 <ol><li><p>S sends the <a href="../../com.r3corda.core.contracts/-state-and-ref/index.html">StateAndRef</a> pointing to what they want to sell to B, along with info about the price they require
 B to pay. For example this has probably been agreed on an exchange.</p>
-</li><li><p>B sends to S a <a href="../../com.r3corda.core.contracts/-signed-transaction/index.html">SignedTransaction</a> that includes the state as input, Bs cash as input, the state with the new
+</li><li><p>B sends to S a <a href="../../com.r3corda.core.transactions/-signed-transaction/index.html">SignedTransaction</a> that includes the state as input, Bs cash as input, the state with the new
 owner key as output, and any change cash as output. It contains a single signature from B but isnt valid because
 it lacks a signature from S authorising movement of the asset.</p>
 </li><li><p>S signs it and hands the now finalised SignedWireTransaction back to B.</p>
@@ -35,13 +35,13 @@ transaction is available: you can either block your thread waiting for the proto
 <td>
 <a href="-buyer/index.html">Buyer</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Buyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">Buyer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="-seller/index.html">Seller</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Seller</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">class </span><span class="identifier">Seller</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>

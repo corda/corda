@@ -9,9 +9,6 @@
 <h1>CompositeClause</h1>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">CompositeClause</span><span class="symbol">&lt;</span><span class="keyword">in</span>&nbsp;<span class="identifier">S</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">, </span><span class="identifier">C</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">, </span><span class="keyword">in</span>&nbsp;<span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span></code><br/>
 <p>Abstract supertype for clauses which compose other clauses together in some logical manner.</p>
-<p><strong>See Also</strong><br/>
-<p><a href="../-concrete-clause/index.html">ConcreteClause</a></p>
-</p>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -36,9 +33,14 @@
 <code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">clauses</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-clause/index.html"><span class="identifier">Clause</span></a><span class="symbol">&lt;</span><span class="identifier">S</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">K</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>List of clauses under this composite clause</p>
 </td>
 </tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
 <tr>
 <td>
-<a href="required-commands.html">requiredCommands</a></td>
+<a href="../-clause/required-commands.html">requiredCommands</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">requiredCommands</span><span class="symbol">: </span><span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html"><span class="identifier">Class</span></a><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../../com.r3corda.core.contracts/-command-data.html"><span class="identifier">CommandData</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p>Determine whether this clause runs or not</p>
 </td>

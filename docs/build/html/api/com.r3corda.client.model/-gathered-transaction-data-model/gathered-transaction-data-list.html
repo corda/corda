@@ -1,0 +1,25 @@
+<HTML>
+<HEAD>
+<title>GatheredTransactionDataModel.gatheredTransactionDataList - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.client.model</a>&nbsp;/&nbsp;<a href="index.html">GatheredTransactionDataModel</a>&nbsp;/&nbsp;<a href=".">gatheredTransactionDataList</a><br/>
+<br/>
+<h1>gatheredTransactionDataList</h1>
+<a name="com.r3corda.client.model.GatheredTransactionDataModel$gatheredTransactionDataList"></a>
+<code><span class="keyword">val </span><span class="identifier">gatheredTransactionDataList</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<a href="../-gathered-transaction-data/index.html"><span class="identifier">GatheredTransactionData</span></a><span class="symbol">&gt;</span></code><br/>
+<p>Aggregation of updates to transactions. We use the observable list as the only container and do linear search for
+matching transactions because we have three keys(fiber ID, UUID, tx id) and this way its easier to avoid syncing issues.</p>
+<p>The Fiber ID is used to identify events that relate to the same transaction server-side, whereas the UUID is
+generated on the UI and is used to identify events with the UI action that triggered them. Currently a UUID is
+generated for each outgoing <a href="#">ClientToServiceCommand</a>.</p>
+<p>TODO: Make this more efficient by maintaining and syncing two maps (for the two keys) in the accumulator
+(Note that a transaction may be mapped by one or both)
+TODO: Expose a writable stream to combine <a href="#">serviceToClient</a> with to allow recording of transactions made locally(UUID)</p>
+<br/>
+<br/>
+<br/>
+<br/>
+</BODY>
+</HTML>

@@ -61,9 +61,16 @@
 <td>
 <a href="linear-id.html">linearId</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">linearId</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a></code><p>Unique id shared by all LinearState states throughout history within the wallets of all parties.
+<code><span class="keyword">val </span><span class="identifier">linearId</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a></code><p>Unique id shared by all LinearState states throughout history within the vaults of all parties.
 Verify methods should check that one input and one output share the id in a transaction,
 except at issuance/termination.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="oracle-type.html">oracleType</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">oracleType</span><span class="symbol">: </span><a href="../../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code><p>What oracle service to use for the fixing</p>
 </td>
 </tr>
 <tr>
@@ -103,7 +110,7 @@ except at issuance/termination.</p>
 <td>
 <a href="generate-agreement.html">generateAgreement</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateAgreement(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
+<code><span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateAgreement(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
 deal/agreement protocol to generate the necessary transaction for potential implementations.</p>
 </td>
 </tr>
@@ -111,14 +118,14 @@ deal/agreement protocol to generate the necessary transaction for potential impl
 <td>
 <a href="generate-fix.html">generateFix</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">generateFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/ptx">ptx</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/oldState">oldState</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Generate a fixing command for this deal and fix.</p>
+<code><span class="keyword">fun </span><span class="identifier">generateFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateFix(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/ptx">ptx</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateFix(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/oldState">oldState</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$generateFix(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.contracts/-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Generate a fixing command for this deal and fix.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="is-relevant.html">isRelevant</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">isRelevant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$isRelevant(kotlin.collections.Set((java.security.PublicKey)))/ourKeys">ourKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>True if this should be tracked by our wallet(s).</p>
+<code><span class="keyword">fun </span><span class="identifier">isRelevant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.contracts.InterestRateSwap.State$isRelevant(kotlin.collections.Set((java.security.PublicKey)))/ourKeys">ourKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>True if this should be tracked by our vault(s).</p>
 </td>
 </tr>
 <tr>

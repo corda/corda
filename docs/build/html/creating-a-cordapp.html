@@ -106,11 +106,6 @@
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
-</ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="where-to-start.html">Where to start</a></li>
@@ -120,13 +115,25 @@
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -187,14 +194,14 @@ contained in separate JARs from the node server JAR that are created and distrib
 specific details of the implementation, but you can extend the server in the following ways:</p>
 <ol class="arabic simple">
 <li>Required protocols: Specify which protocols will be whitelisted for use in your web APIs.</li>
-<li>Service plugins: Register your <span class="xref std std-ref">services</span>.</li>
+<li>Service plugins: Register your services (see below).</li>
 <li>Web APIs: You may register your own endpoints under /api/ of the built-in web server.</li>
 <li>Static web endpoints: You may register your own static serving directories for serving web content.</li>
 </ol>
 </div>
 <div class="section" id="services">
 <h2>Services<a class="headerlink" href="#services" title="Permalink to this headline">¶</a></h2>
-<p id="id1">Services are classes which are constructed after the node has started. It is provided a <a class="reference external" href="api/com.r3corda.node.services.api/-service-hub-internal/index.html">ServiceHubInternal</a> which
+<p>Services are classes which are constructed after the node has started. It is provided a <a class="reference external" href="api/com.r3corda.node.services.api/-service-hub-internal/index.html">ServiceHubInternal</a> which
 allows a richer API than the <a class="reference external" href="api/com.r3corda.node.services.api/-service-hub/index.html">ServiceHub</a> exposed to contracts. It enables adding protocols, registering
 message handlers and more. The service does not run in a separate thread, so the only entry point to the service is during
 construction, where message handlers should be registered and threads started.</p>

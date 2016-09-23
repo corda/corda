@@ -1,0 +1,115 @@
+<HTML>
+<HEAD>
+<title>com.r3corda.client.fxutils - </title>
+<link rel="stylesheet" href="../style.css">
+</HEAD>
+<BODY>
+<a href=".">com.r3corda.client.fxutils</a><br/>
+<br/>
+<h2>Package com.r3corda.client.fxutils</h2>
+<h3>Types</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-aggregated-list/index.html">AggregatedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">AggregatedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">E</span><span class="symbol">, </span><span class="identifier">K</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">E</span><span class="symbol">&gt;</span></code><p>Given an <a href="#">ObservableList</a>&lt;<a href="#">E</a>&gt; and a grouping key <a href="#">K</a>, <a href="-aggregated-list/index.html">AggregatedList</a> groups the elements by the key into a fresh
+<a href="#">ObservableList</a>&lt;<a href="#">E</a>&gt; for each group and exposes the groups as an observable list of <a href="#">A</a>s by calling <a href="-aggregated-list/assemble.html">assemble</a> on each.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-amount-bindings/index.html">AmountBindings</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AmountBindings</span></code><p>Utility bindings for the <a href="../com.r3corda.core.contracts/-amount/index.html">Amount</a> type, similar in spirit to <a href="#">Bindings</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-chosen-list/index.html">ChosenList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">ChosenList</span><span class="symbol">&lt;</span><span class="identifier">E</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">ObservableListBase</span><span class="symbol">&lt;</span><span class="identifier">E</span><span class="symbol">&gt;</span></code><p><a href="-chosen-list/index.html">ChosenList</a> manages an <a href="#">ObservableList</a> that may be changed by the wrapping <a href="#">ObservableValue</a>. Whenever the underlying
+<a href="#">ObservableValue</a> changes the exposed list changes to the new value. Changes to the list are simply propagated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-flattened-list/index.html">FlattenedList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">FlattenedList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">TransformationList</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code><p><a href="-flattened-list/index.html">FlattenedList</a> flattens the passed in list of <a href="#">ObservableValue</a>s so that changes in individual updates to the values
+are reflected in the exposed list as expected.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Extensions for External Classes</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="javafx.beans.value.-observable-value/index.html">javafx.beans.value.ObservableValue</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="javafx.collections.-observable-list/index.html">javafx.collections.ObservableList</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function1/index.html">kotlin.Function1</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function2/index.html">kotlin.Function2</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function3/index.html">kotlin.Function3</a></td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<a href="kotlin.-function4/index.html">kotlin.Function4</a></td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="fold-to-observable-list.html">foldToObservableList</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">, </span><span class="identifier">C</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">foldToObservableList</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.fxutils$foldToObservableList(((com.r3corda.client.fxutils.foldToObservableList.A)), com.r3corda.client.fxutils.foldToObservableList.C, kotlin.Function3((com.r3corda.client.fxutils.foldToObservableList.A, com.r3corda.client.fxutils.foldToObservableList.C, javafx.collections.ObservableList((com.r3corda.client.fxutils.foldToObservableList.B)), )))/initialAccumulator">initialAccumulator</span><span class="symbol">:</span>&nbsp;<span class="identifier">C</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.client.fxutils$foldToObservableList(((com.r3corda.client.fxutils.foldToObservableList.A)), com.r3corda.client.fxutils.foldToObservableList.C, kotlin.Function3((com.r3corda.client.fxutils.foldToObservableList.A, com.r3corda.client.fxutils.foldToObservableList.C, javafx.collections.ObservableList((com.r3corda.client.fxutils.foldToObservableList.B)), )))/folderFun">folderFun</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">C</span><span class="symbol">,</span>&nbsp;<span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">C</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="fold-to-observable-value.html">foldToObservableValue</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">foldToObservableValue</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.fxutils$foldToObservableValue(((com.r3corda.client.fxutils.foldToObservableValue.A)), com.r3corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((com.r3corda.client.fxutils.foldToObservableValue.A, com.r3corda.client.fxutils.foldToObservableValue.B, )))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.client.fxutils$foldToObservableValue(((com.r3corda.client.fxutils.foldToObservableValue.A)), com.r3corda.client.fxutils.foldToObservableValue.B, kotlin.Function2((com.r3corda.client.fxutils.foldToObservableValue.A, com.r3corda.client.fxutils.foldToObservableValue.B, )))/folderFun">folderFun</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">A</span><span class="symbol">,</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code><p>Simple utilities for converting an <a href="#">rx.Observable</a> into a javafx <a href="#">ObservableValue</a>/<a href="#">ObservableList</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="lift.html">lift</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span> <span class="identifier">A</span><span class="symbol">.</span><span class="identifier">lift</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">&gt;</span></code><p>val aliceHeight: ObservableValue = (..)
+val bobHeight: ObservableValue = (..)
+fun sumHeight(a: Long, b: Long): Long { .. }</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

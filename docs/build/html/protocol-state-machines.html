@@ -96,11 +96,7 @@
 <li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">Creating a Cordapp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
 <li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Contracts</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-files.html">The Corda Configuration File</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -125,13 +121,25 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
 <li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#protocols">Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html#contracts">Contracts</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Contracts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest Rate Swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Node API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Appendix</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html#steps-to-cut-a-release">Steps to cut a release</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 </ul>
@@ -411,7 +419,7 @@ finished transaction.</p>
 
     <span class="k">val</span> <span class="py">maybeSTX</span> <span class="p">=</span> <span class="n">sendAndReceive</span><span class="p">&lt;</span><span class="n">SignedTransaction</span><span class="p">&gt;(</span><span class="n">otherSide</span><span class="p">,</span> <span class="n">buyerSessionID</span><span class="p">,</span> <span class="n">sessionID</span><span class="p">,</span> <span class="n">hello</span><span class="p">)</span>
 
-    <span class="n">maybeSTX</span><span class="p">.</span><span class="n">validate</span> <span class="p">{</span>
+    <span class="n">maybeSTX</span><span class="p">.</span><span class="n">unwrap</span> <span class="p">{</span>
         <span class="c1">// Check that the tx proposed by the buyer is valid.</span>
         <span class="k">val</span> <span class="py">missingSigs</span><span class="p">:</span> <span class="n">Set</span><span class="p">&lt;</span><span class="n">PublicKey</span><span class="p">&gt;</span> <span class="p">=</span> <span class="n">it</span><span class="p">.</span><span class="n">verifySignatures</span><span class="p">(</span><span class="n">throwIfSignaturesAreMissing</span> <span class="p">=</span> <span class="k">false</span><span class="p">)</span>
         <span class="k">val</span> <span class="py">expected</span> <span class="p">=</span> <span class="n">setOf</span><span class="p">(</span><span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">,</span> <span class="n">notaryNode</span><span class="p">.</span><span class="n">identity</span><span class="p">.</span><span class="n">owningKey</span><span class="p">)</span>
@@ -561,7 +569,7 @@ override fun call(): SignedTransaction {
 private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
     // Wait for a trade request to come in on our pre-provided session ID.
     val maybeTradeRequest = receive&lt;SellerTradeInfo&gt;(sessionID)
-    maybeTradeRequest.validate {
+    maybeTradeRequest.unwrap {
         // What is the seller trying to sell us?
         val asset = it.assetForSale.state.data
         val assetTypeName = asset.javaClass.name
@@ -589,7 +597,7 @@ private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Lon
 
     // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-    return sendAndReceive&lt;SignaturesFromSeller&gt;(otherSide, theirSessionID, sessionID, stx).validate { it }
+    return sendAndReceive&lt;SignaturesFromSeller&gt;(otherSide, theirSessionID, sessionID, stx).unwrap { it }
 }
 
 private fun signWithOurKeys(cashSigningPubKeys: List&lt;PublicKey&gt;, ptx: TransactionBuilder): SignedTransaction {

@@ -7,7 +7,7 @@
 <a href="../../index.html">com.r3corda.protocols</a>&nbsp;/&nbsp;<a href="../index.html">RatesFixProtocol</a>&nbsp;/&nbsp;<a href=".">QueryRequest</a><br/>
 <br/>
 <h1>QueryRequest</h1>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-party-request-message/index.html"><span class="identifier">PartyRequestMessage</span></a></code><br/>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a></code><br/>
 <br/>
 <br/>
 <h3>Constructors</h3>
@@ -17,7 +17,7 @@
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">QueryRequest</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), com.r3corda.core.crypto.Party, kotlin.Long, java.time.Instant)/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), com.r3corda.core.crypto.Party, kotlin.Long, java.time.Instant)/replyToParty">replyToParty</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), com.r3corda.core.crypto.Party, kotlin.Long, java.time.Instant)/sessionID">sessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), com.r3corda.core.crypto.Party, kotlin.Long, java.time.Instant)/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">)</span></code></td>
+<code><span class="identifier">QueryRequest</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long)/queries">queries</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../../com.r3corda.core.contracts/-fix-of/index.html"><span class="identifier">FixOf</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long)/deadline">deadline</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Instant.html"><span class="identifier">Instant</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long)/replyToParty">replyToParty</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long)/sendSessionID">sendSessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span>&nbsp;<span class="symbol">=</span>&nbsp;random63BitValue()<span class="symbol">, </span><span class="identifier" id="com.r3corda.protocols.RatesFixProtocol.QueryRequest$<init>(kotlin.collections.List((com.r3corda.core.contracts.FixOf)), java.time.Instant, com.r3corda.core.crypto.Party, kotlin.Long, kotlin.Long)/receiveSessionID">receiveSessionID</span><span class="symbol">:</span>&nbsp;<span class="identifier">Long</span>&nbsp;<span class="symbol">=</span>&nbsp;random63BitValue()<span class="symbol">)</span></code></td>
 </tr>
 </tbody>
 </table>
@@ -38,26 +38,32 @@
 </tr>
 <tr>
 <td>
+<a href="receive-session-i-d.html">receiveSessionID</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">receiveSessionID</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="reply-to-party.html">replyToParty</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">replyToParty</span><span class="symbol">: </span><a href="../../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="session-i-d.html">sessionID</a></td>
+<a href="send-session-i-d.html">sendSessionID</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">sessionID</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">sendSessionID</span><span class="symbol">: </span><span class="identifier">Long</span></code></td>
 </tr>
 </tbody>
 </table>
-<h3>Inherited Functions</h3>
+<h3>Inherited Properties</h3>
 <table>
 <tbody>
 <tr>
 <td>
-<a href="../../-party-request-message/get-reply-to.html">getReplyTo</a></td>
+<a href="../../-handshake-message/session-i-d.html">sessionID</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">getReplyTo</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.protocols.PartyRequestMessage$getReplyTo(com.r3corda.core.node.services.NetworkMapCache)/networkMapCache">networkMapCache</span><span class="symbol">:</span>&nbsp;<a href="../../../com.r3corda.core.node.services/-network-map-cache/index.html"><span class="identifier">NetworkMapCache</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../../com.r3corda.core.messaging/-message-recipients.html"><span class="identifier">MessageRecipients</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><s><span class="identifier">sessionID</span></s><span class="symbol">: </span><span class="identifier">Long</span></code></td>
 </tr>
 </tbody>
 </table>

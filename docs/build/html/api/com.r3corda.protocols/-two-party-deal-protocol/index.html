@@ -44,7 +44,7 @@
 <td>
 <a href="-fixing-session-initiation/index.html">FixingSessionInitiation</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixingSessionInitiation</span></code><p>Used to set up the session between <a href="-floater/index.html">Floater</a> and <a href="-fixer/index.html">Fixer</a></p>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">FixingSessionInitiation</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-handshake-message/index.html"><span class="identifier">HandshakeMessage</span></a></code><p>Used to set up the session between <a href="-floater/index.html">Floater</a> and <a href="-fixer/index.html">Fixer</a></p>
 </td>
 </tr>
 <tr>
@@ -71,14 +71,14 @@
 <td>
 <a href="-primary/index.html">Primary</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Primary</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that initiates communication/handshake.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Primary</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that initiates communication/handshake.</p>
 </td>
 </tr>
 <tr>
 <td>
 <a href="-secondary/index.html">Secondary</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Secondary</span><span class="symbol">&lt;</span><span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.contracts/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that is recipient of initial communication.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">Secondary</span><span class="symbol">&lt;</span><span class="identifier">U</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.protocols/-protocol-logic/index.html"><span class="identifier">ProtocolLogic</span></a><span class="symbol">&lt;</span><a href="../../com.r3corda.core.transactions/-signed-transaction/index.html"><span class="identifier">SignedTransaction</span></a><span class="symbol">&gt;</span></code><p>Abstracted bilateral deal protocol participant that is recipient of initial communication.</p>
 </td>
 </tr>
 <tr>

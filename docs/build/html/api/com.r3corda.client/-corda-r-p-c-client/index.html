@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+<title>CordaRPCClient - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.client</a>&nbsp;/&nbsp;<a href=".">CordaRPCClient</a><br/>
+<br/>
+<h1>CordaRPCClient</h1>
+<code><span class="keyword">class </span><span class="identifier">CordaRPCClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">, </span><a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code><br/>
+<p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">CordaRPCClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.CordaRPCClient$<init>(, java.nio.file.Path)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.client.CordaRPCClient$<init>(, java.nio.file.Path)/certificatesPath">certificatesPath</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span></code><p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
+useful tasks. See the documentation for <a href="proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="host.html">host</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">host</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="my-i-d.html">myID</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">myID</span><span class="symbol">: </span><span class="identifier">Int</span></code><p>An ID that we used to identify this connection on the server side: kind of like a local port number but
+it persists for the lifetime of this process and survives short TCP connection interruptions. Is -1
+until <a href="start.html">start</a> is called.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/config.html">config</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">config</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-s-s-l-configuration/index.html"><span class="identifier">NodeSSLConfiguration</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="close.html">close</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">close</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Shuts down the client and lets the server know it can free the used resources (in a nice way)</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="proxy.html">proxy</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">proxy</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/timeout">timeout</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Duration.html"><span class="identifier">Duration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="com.r3corda.client.CordaRPCClient$proxy(java.time.Duration, kotlin.Int)/minVersion">minVersion</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.messaging/-corda-r-p-c-ops.html"><span class="identifier">CordaRPCOps</span></a></code><p>Returns a fresh proxy that lets you invoke RPCs on the server. Calls on it block, and if the server throws an
+exception then it will be rethrown on the client. Proxies are thread safe but only one RPC can be in flight at
+once. If youd like to perform multiple RPCs in parallel, use this function multiple times to get multiple
+proxies.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start.html">start</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Opens the connection to the server and registers a JVM shutdown hook to cleanly disconnect.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/check-store-passwords.html">checkStorePasswords</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">checkStorePasswords</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Returns nothing if the keystore was opened OK or throws if not. Useful to check the password, as
+unfortunately Artemis tends to bury the exception when the password is wrong.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/configure-with-dev-s-s-l-certificate.html">configureWithDevSSLCertificate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">configureWithDevSSLCertificate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Strictly for dev only automatically construct a server certificate/private key signed from
+the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/parse-key-from-queue-name.html">parseKeyFromQueueName</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">parseKeyFromQueueName</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$parseKeyFromQueueName(kotlin.String)/name">name</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/tcp-transport.html">tcpTransport</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tcpTransport</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/direction">direction</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.messaging/-artemis-messaging-component/-connection-direction/index.html"><span class="identifier">ConnectionDirection</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.services.messaging.ArtemisMessagingComponent$tcpTransport(com.r3corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection, kotlin.String, kotlin.Int)/port">port</span><span class="symbol">:</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

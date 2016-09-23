@@ -1,0 +1,18 @@
+<HTML>
+<HEAD>
+<title>fold - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.client.fxutils</a>&nbsp;/&nbsp;<a href="index.html">javafx.collections.ObservableList</a>&nbsp;/&nbsp;<a href=".">fold</a><br/>
+<br/>
+<h1>fold</h1>
+<a name="com.r3corda.client.fxutils$fold(javafx.collections.ObservableList((com.r3corda.client.fxutils.fold.A)), com.r3corda.client.fxutils.fold.B, kotlin.Function2((com.r3corda.client.fxutils.fold.B, com.r3corda.client.fxutils.fold.A, )))"></a>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">A</span><span class="symbol">, </span><span class="identifier">B</span><span class="symbol">&gt;</span> <span class="identifier">ObservableList</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">A</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">fold</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.client.fxutils$fold(javafx.collections.ObservableList((com.r3corda.client.fxutils.fold.A)), com.r3corda.client.fxutils.fold.B, kotlin.Function2((com.r3corda.client.fxutils.fold.B, com.r3corda.client.fxutils.fold.A, )))/initial">initial</span><span class="symbol">:</span>&nbsp;<span class="identifier">B</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.client.fxutils$fold(javafx.collections.ObservableList((com.r3corda.client.fxutils.fold.A)), com.r3corda.client.fxutils.fold.B, kotlin.Function2((com.r3corda.client.fxutils.fold.B, com.r3corda.client.fxutils.fold.A, )))/folderFunction">folderFunction</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">B</span><span class="symbol">,</span>&nbsp;<span class="identifier">A</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">B</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ObservableValue</span><span class="symbol">&lt;</span><span class="identifier">B</span><span class="symbol">&gt;</span></code><br/>
+<p>val people: ObservableList = (..)
+val concatenatedNames = people.fold("", { names, person -&gt; names + person.name })
+val concatenatedNames2 = people.map(Person::name).fold("", String::plus)</p>
+<br/>
+<br/>
+</BODY>
+</HTML>

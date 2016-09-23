@@ -38,7 +38,7 @@ implementation of general protocols that manipulate many agreement types.</p>
 <td>
 <a href="../-linear-state/linear-id.html">linearId</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">linearId</span><span class="symbol">: </span><a href="../-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a></code><p>Unique id shared by all LinearState states throughout history within the wallets of all parties.
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">linearId</span><span class="symbol">: </span><a href="../-unique-identifier/index.html"><span class="identifier">UniqueIdentifier</span></a></code><p>Unique id shared by all LinearState states throughout history within the vaults of all parties.
 Verify methods should check that one input and one output share the id in a transaction,
 except at issuance/termination.</p>
 </td>
@@ -52,7 +52,7 @@ except at issuance/termination.</p>
 <td>
 <a href="generate-agreement.html">generateAgreement</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DealState$generateAgreement(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DealState$generateAgreement(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
 deal/agreement protocol to generate the necessary transaction for potential implementations.</p>
 </td>
 </tr>
@@ -71,7 +71,7 @@ deal/agreement protocol to generate the necessary transaction for potential impl
 <td>
 <a href="../-linear-state/is-relevant.html">isRelevant</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">isRelevant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.LinearState$isRelevant(kotlin.collections.Set((java.security.PublicKey)))/ourKeys">ourKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>True if this should be tracked by our wallet(s).</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">isRelevant</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.LinearState$isRelevant(kotlin.collections.Set((java.security.PublicKey)))/ourKeys">ourKeys</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/security/PublicKey.html"><span class="identifier">PublicKey</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code><p>True if this should be tracked by our vault(s).</p>
 </td>
 </tr>
 </tbody>

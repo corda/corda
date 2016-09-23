@@ -11,6 +11,18 @@
 <p>Interface adding fixing specific methods.</p>
 <br/>
 <br/>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="oracle-type.html">oracleType</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">val </span><span class="identifier">oracleType</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a></code><p>What oracle service to use for the fixing</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3>Inherited Properties</h3>
 <table>
 <tbody>
@@ -37,7 +49,7 @@
 <td>
 <a href="generate-fix.html">generateFix</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/ptx">ptx</span><span class="symbol">:</span>&nbsp;<a href="../-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/oldState">oldState</span><span class="symbol">:</span>&nbsp;<a href="../-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.contracts.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="../-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Generate a fixing command for this deal and fix.</p>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateFix</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/ptx">ptx</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/oldState">oldState</span><span class="symbol">:</span>&nbsp;<a href="../-state-and-ref/index.html"><span class="identifier">StateAndRef</span></a><span class="symbol">&lt;</span><span class="identifier">*</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.core.contracts.FixableDealState$generateFix(com.r3corda.core.transactions.TransactionBuilder, com.r3corda.core.contracts.StateAndRef((com.r3corda.core.contracts.ContractState)), com.r3corda.core.contracts.Fix)/fix">fix</span><span class="symbol">:</span>&nbsp;<a href="../-fix/index.html"><span class="identifier">Fix</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Generate a fixing command for this deal and fix.</p>
 </td>
 </tr>
 <tr>
@@ -56,7 +68,7 @@
 <td>
 <a href="../-deal-state/generate-agreement.html">generateAgreement</a></td>
 <td>
-<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DealState$generateAgreement(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">generateAgreement</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.core.contracts.DealState$generateAgreement(com.r3corda.core.crypto.Party)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.transactions/-transaction-builder/index.html"><span class="identifier">TransactionBuilder</span></a></code><p>Generate a partial transaction representing an agreement (command) to this deal, allowing a general
 deal/agreement protocol to generate the necessary transaction for potential implementations.</p>
 </td>
 </tr>

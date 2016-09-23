@@ -12,15 +12,6 @@
 <tbody>
 <tr>
 <td>
-<a href="-artemis-messaging-client/index.html">ArtemisMessagingClient</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">ArtemisMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
-Artemis is a message queue broker and here we run a client connecting to the specified broker instance
-<a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="-artemis-messaging-component/index.html">ArtemisMessagingComponent</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">ArtemisMessagingComponent</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>The base class for Artemis services that defines shared data structures and transport configuration</p>
@@ -31,6 +22,119 @@ Artemis is a message queue broker and here we run a client connecting to the spe
 <a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ArtemisMessagingServer</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a></code><p>This class configures and manages an Apache Artemis message queue broker.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-client-r-p-c-request-message/index.html">ClientRPCRequestMessage</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">ClientRPCRequestMessage</span></code><p>The contents of an RPC request message, separated from the MQ layer.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-corda-r-p-c-ops.html">CordaRPCOps</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">CordaRPCOps</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-r-p-c-ops/index.html"><span class="identifier">RPCOps</span></a></code><p>RPC operations that the node exposes to clients using the Java client library. These can be called from
+client apps and are implemented by the node in the <a href="#">ServerRPCOps</a> class.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-marshalled-observation/index.html">MarshalledObservation</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">MarshalledObservation</span></code><p>Used in the RPC wire protocol to wrap an observation with the handle of the observable its intended for.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-messaging-client/index.html">NodeMessagingClient</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">NodeMessagingClient</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-artemis-messaging-component/index.html"><span class="identifier">ArtemisMessagingComponent</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code><p>This class implements the <a href="../com.r3corda.core.messaging/-messaging-service/index.html">MessagingService</a> API using Apache Artemis, the successor to their ActiveMQ product.
+Artemis is a message queue broker and here we run a client connecting to the specified broker instance
+<a href="-artemis-messaging-server/index.html">ArtemisMessagingServer</a>. Its primarily concerned with peer-to-peer messaging.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c-dispatcher/index.html">RPCDispatcher</a></td>
+<td>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">RPCDispatcher</span></code><p>Intended to service transient clients only (not p2p nodes) for short-lived, transient request/response pairs.
+If you need robustness, this is the wrong system. If you dont want a response, this is probably the
+wrong system (you could just send a message). If you want complex customisation of how requests/responses
+are handled, this is probably the wrong system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c-ops/index.html">RPCOps</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">RPCOps</span></code><p>Base interface that all RPC servers must implement. Note: in Corda theres only one RPC interface. This base
+interface is here in case we split the RPC system out into a separate library one day.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Annotations</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-r-p-c-returns-observables/index.html">RPCReturnsObservables</a></td>
+<td>
+<code><span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">RPCReturnsObservables</span></code><p>If an RPC is tagged with this annotation it may return one or more observables anywhere in its response graph.
+Calling such a method comes with consequences: its slower, and consumes server side resources as observations
+will buffer up on the server until theyre consumed by the client.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-r-p-c-since-version/index.html">RPCSinceVersion</a></td>
+<td>
+<code><span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">RPCSinceVersion</span></code><p>Records the protocol version in which this RPC was added.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-r-p-c-exception/index.html">RPCException</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">RPCException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/RuntimeException.html"><span class="identifier">RuntimeException</span></a></code><p>Thrown to indicate a fatal error in the RPC system itself, as opposed to an error generated by the invoked
+method.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="rpc-log.html">rpcLog</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">rpcLog</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code><p>Global RPC logger</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="create-r-p-c-kryo.html">createRPCKryo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createRPCKryo</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.services.messaging$createRPCKryo(((((kotlin.Any)))))/observableSerializer">observableSerializer</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="to-r-p-c-request-message.html">toRPCRequestMessage</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">.</span><span class="identifier">toRPCRequestMessage</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="-client-r-p-c-request-message/index.html"><span class="identifier">ClientRPCRequestMessage</span></a></code><p>Convert an Artemis <a href="#">ClientMessage</a> to a MQ-neutral <a href="-client-r-p-c-request-message/index.html">ClientRPCRequestMessage</a>.</p>
 </td>
 </tr>
 </tbody>

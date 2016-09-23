@@ -108,21 +108,21 @@ if any of the inputs have already been used in another transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="-wallet/index.html">Wallet</a></td>
+<a href="-vault/index.html">Vault</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">Wallet</span></code><p>A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
-because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
-change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
+<code><span class="keyword">class </span><span class="identifier">Vault</span></code><p>A vault (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+because we own them. This class represents an immutable, stable state of a vault: it is guaranteed not to
+change out from underneath you, even though the canonical currently-best-known vault may change as we learn
 about new transactions from our peers and generate new transactions that consume states ourselves.</p>
 </td>
 </tr>
 <tr>
 <td>
-<a href="-wallet-service/index.html">WalletService</a></td>
+<a href="-vault-service/index.html">VaultService</a></td>
 <td>
-<code><span class="keyword">interface </span><span class="identifier">WalletService</span></code><p>A <a href="-wallet-service/index.html">WalletService</a> is responsible for securely and safely persisting the current state of a wallet to storage. The
-wallet service vends immutable snapshots of the current wallet for working with: if you build a transaction based
-on a wallet that isnt current, be aware that it may end up being invalid if the states that were used have been
+<code><span class="keyword">interface </span><span class="identifier">VaultService</span></code><p>A <a href="-vault-service/index.html">VaultService</a> is responsible for securely and safely persisting the current state of a vault to storage. The
+vault service vends immutable snapshots of the current vault for working with: if you build a transaction based
+on a vault that isnt current, be aware that it may end up being invalid if the states that were used have been
 consumed by someone else first</p>
 </td>
 </tr>
@@ -165,7 +165,7 @@ specific session ID has been established).</p>
 <td>
 <a href="linear-heads-of-type.html">linearHeadsOfType</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <a href="-wallet-service/index.html"><span class="identifier">WalletService</span></a><span class="symbol">.</span><span class="identifier">linearHeadsOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.contracts/-linear-state/index.html"><span class="identifier">LinearState</span></a><span class="symbol">&gt;</span> <a href="-vault-service/index.html"><span class="identifier">VaultService</span></a><span class="symbol">.</span><span class="identifier">linearHeadsOfType</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

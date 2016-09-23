@@ -48,39 +48,12 @@
 <tbody>
 <tr>
 <td>
-<a href="../-abstract-state-replacement-protocol/-handshake/index.html">Handshake</a></td>
+<a href="../-handshake-message/index.html">HandshakeMessage</a></td>
 <td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Handshake</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-notary-protocol/-handshake/index.html">Handshake</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Handshake</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-broadcast-transaction-protocol/-notify-tx-request-message/index.html">NotifyTxRequestMessage</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NotifyTxRequestMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-rates-fix-protocol/-query-request/index.html">QueryRequest</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">QueryRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-fetch-data-protocol/-request/index.html">Request</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">Request</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="../-rates-fix-protocol/-sign-request/index.html">SignRequest</a></td>
-<td>
-<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">SignRequest</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code></td>
+<code><span class="keyword">interface </span><span class="identifier">HandshakeMessage</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">PartyRequestMessage</span></code><p>A Handshake message is sent to initiate communication between two protocol instances. It contains the two session IDs
+the two protocols will need to communicate.
+Note: This is a temperary interface and will be removed once the protocol session work is implemented.</p>
+</td>
 </tr>
 </tbody>
 </table>

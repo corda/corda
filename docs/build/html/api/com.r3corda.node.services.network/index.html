@@ -12,13 +12,9 @@
 <tbody>
 <tr>
 <td>
-<a href="-in-memory-messaging-network/index.html">InMemoryMessagingNetwork</a></td>
+<a href="-abstract-network-map-service/index.html">AbstractNetworkMapService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InMemoryMessagingNetwork</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.serialization/-singleton-serialize-as-token/index.html"><span class="identifier">SingletonSerializeAsToken</span></a></code><p>An in-memory network allows you to manufacture <a href="-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a>s for a set of participants. Each
-<a href="-in-memory-messaging-network/-in-memory-messaging/index.html">InMemoryMessaging</a> maintains a queue of messages it has received, and a background thread that dispatches
-messages one by one to registered handlers. Alternatively, a messaging system may be manually pumped, in which
-case no thread is created and a caller is expected to force delivery one at a time (this is useful for unit
-testing).</p>
+<code><span class="keyword">abstract</span> <span class="keyword">class </span><span class="identifier">AbstractNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code><p>Abstracted out core functionality as the basis for a persistent implementation, as well as existing in-memory implementation.</p>
 </td>
 </tr>
 <tr>
@@ -32,14 +28,13 @@ testing).</p>
 <td>
 <a href="-in-memory-network-map-service/index.html">InMemoryNetworkMapService</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-network-map-service/index.html"><span class="identifier">NetworkMapService</span></a><span class="symbol">, </span><a href="../com.r3corda.node.services.api/-abstract-node-service/index.html"><span class="identifier">AbstractNodeService</span></a></code></td>
+<code><span class="keyword">class </span><span class="identifier">InMemoryNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-network-map-service/index.html"><span class="identifier">AbstractNetworkMapService</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="-mock-network-map-cache/index.html">MockNetworkMapCache</a></td>
+<a href="-last-acknowledge-info/index.html">LastAcknowledgeInfo</a></td>
 <td>
-<code><span class="keyword">class </span><span class="identifier">MockNetworkMapCache</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-in-memory-network-map-cache/index.html"><span class="identifier">InMemoryNetworkMapCache</span></a></code><p>Network map cache with no backing map service.</p>
-</td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">LastAcknowledgeInfo</span></code></td>
 </tr>
 <tr>
 <td>
@@ -56,6 +51,19 @@ replace each other based on a serial number present in the change.</p>
 <a href="-node-registration/index.html">NodeRegistration</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">NodeRegistration</span></code><p>A node registration state in the network map.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-node-registration-info/index.html">NodeRegistrationInfo</a></td>
+<td>
+<code><span class="keyword">data</span> <span class="keyword">class </span><span class="identifier">NodeRegistrationInfo</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-persistent-network-map-service/index.html">PersistentNetworkMapService</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">PersistentNetworkMapService</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-abstract-network-map-service/index.html"><span class="identifier">AbstractNetworkMapService</span></a></code><p>A network map service backed by a database to survive restarts of the node hosting it.</p>
 </td>
 </tr>
 <tr>

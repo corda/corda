@@ -31,12 +31,6 @@
 </tr>
 <tr>
 <td>
-<a href="-node-runner/index.html">NodeRunner</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">NodeRunner</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="-port-allocation/index.html">PortAllocation</a></td>
 <td>
 <code><span class="keyword">sealed</span> <span class="keyword">class </span><span class="identifier">PortAllocation</span></code></td>
@@ -57,12 +51,6 @@
 <a href="address-must-not-be-bound.html">addressMustNotBeBound</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">addressMustNotBeBound</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$addressMustNotBeBound()/hostAndPort">hostAndPort</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="create-node-run-directory.html">createNodeRunDirectory</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">createNodeRunDirectory</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$createNodeRunDirectory(java.nio.file.Path)/directory">directory</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
 </tr>
 <tr>
 <td>
@@ -94,14 +82,14 @@ class SomeOtherDSL(val driverDSL : DriverDSL) : DriverDSLInternalInterface by dr
 <td>
 <a href="start-client.html">startClient</a></td>
 <td>
-<code><span class="keyword">fun </span><a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">.</span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.node.services.messaging.ArtemisMessagingServer)/localServer">localServer</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html"><span class="identifier">ArtemisMessagingServer</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.node.services.messaging/-artemis-messaging-client/index.html"><span class="identifier">ArtemisMessagingClient</span></a><span class="symbol">&gt;</span></code><br/>
-<code><span class="keyword">fun </span><a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">.</span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.core.node.NodeInfo, kotlin.String)/remoteNodeInfo">remoteNodeInfo</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.core.node.NodeInfo, kotlin.String)/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.node.services.messaging/-artemis-messaging-client/index.html"><span class="identifier">ArtemisMessagingClient</span></a><span class="symbol">&gt;</span></code></td>
+<code><span class="keyword">fun </span><a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">.</span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.node.services.messaging.ArtemisMessagingServer)/localServer">localServer</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.node.services.messaging/-artemis-messaging-server/index.html"><span class="identifier">ArtemisMessagingServer</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.node.services.messaging/-node-messaging-client/index.html"><span class="identifier">NodeMessagingClient</span></a><span class="symbol">&gt;</span></code><br/>
+<code><span class="keyword">fun </span><a href="-driver-d-s-l-exposed-interface/index.html"><span class="identifier">DriverDSLExposedInterface</span></a><span class="symbol">.</span><span class="identifier">startClient</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.core.node.NodeInfo, kotlin.String)/remoteNodeInfo">remoteNodeInfo</span><span class="symbol">:</span>&nbsp;<a href="../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$startClient(com.r3corda.node.driver.DriverDSLExposedInterface, com.r3corda.core.node.NodeInfo, kotlin.String)/providedName">providedName</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/concurrent/Future.html"><span class="identifier">Future</span></a><span class="symbol">&lt;</span><a href="../com.r3corda.node.services.messaging/-node-messaging-client/index.html"><span class="identifier">NodeMessagingClient</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="write-config.html">writeConfig</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">writeConfig</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$writeConfig(kotlin.String, kotlin.String, )/path">path</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$writeConfig(kotlin.String, kotlin.String, )/filename">filename</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$writeConfig(kotlin.String, kotlin.String, )/config">config</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">writeConfig</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.driver$writeConfig(java.nio.file.Path, kotlin.String, )/path">path</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$writeConfig(java.nio.file.Path, kotlin.String, )/filename">filename</span><span class="symbol">:</span>&nbsp;<span class="identifier">String</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.driver$writeConfig(java.nio.file.Path, kotlin.String, )/config">config</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
 </tr>
 </tbody>
 </table>

@@ -16,6 +16,17 @@ sweeping up the Node into the Kryo checkpoint serialization via any protocols ho
 <br/>
 <br/>
 <br/>
+<h3>Exceptions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-database-configuration-exception/index.html">DatabaseConfigurationException</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">DatabaseConfigurationException</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Exception.html"><span class="identifier">Exception</span></a></code></td>
+</tr>
+</tbody>
+</table>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -23,7 +34,7 @@ sweeping up the Node into the Kryo checkpoint serialization via any protocols ho
 <td>
 <a href="-init-.html">&lt;init&gt;</a></td>
 <td>
-<code><span class="identifier">AbstractNode</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/configuration">configuration</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/networkMapService">networkMapService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(java.nio.file.Path, com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.node.NodeInfo, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/platformClock">platformClock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">)</span></code><p>A base node implementation that can be customised either for production (with real implementations that do real
+<code><span class="identifier">AbstractNode</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/configuration">configuration</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/networkMapService">networkMapService</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/advertisedServices">advertisedServices</span><span class="symbol">:</span>&nbsp;<span class="identifier">Set</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-service-type/index.html"><span class="identifier">ServiceType</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$<init>(com.r3corda.node.services.config.NodeConfiguration, com.r3corda.core.messaging.SingleMessageRecipient, kotlin.collections.Set((com.r3corda.core.node.services.ServiceType)), java.time.Clock)/platformClock">platformClock</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/time/Clock.html"><span class="identifier">Clock</span></a><span class="symbol">)</span></code><p>A base node implementation that can be customised either for production (with real implementations that do real
 I/O), or a mock implementation suitable for unit test environments.</p>
 </td>
 </tr>
@@ -58,12 +69,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="close-on-stop.html">closeOnStop</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">closeOnStop</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/io/Closeable.html"><span class="identifier">Closeable</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="configuration.html">configuration</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">configuration</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.config/-node-configuration/index.html"><span class="identifier">NodeConfiguration</span></a></code></td>
@@ -76,15 +81,15 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="dir.html">dir</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">dir</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a></code></td>
-</tr>
-<tr>
-<td>
 <a href="identity.html">identity</a></td>
 <td>
 <code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">identity</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-identity-service/index.html"><span class="identifier">IdentityService</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="in-node-monitor-service.html">inNodeMonitorService</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">inNodeMonitorService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.monitor/-node-monitor-service/index.html"><span class="identifier">NodeMonitorService</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -97,12 +102,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="in-node-notary-service.html">inNodeNotaryService</a></td>
 <td>
 <code><span class="keyword">var </span><span class="identifier">inNodeNotaryService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.transactions/-notary-service/index.html"><span class="identifier">NotaryService</span></a><span class="symbol">?</span></code></td>
-</tr>
-<tr>
-<td>
-<a href="in-node-wallet-monitor-service.html">inNodeWalletMonitorService</a></td>
-<td>
-<code><span class="keyword">var </span><span class="identifier">inNodeWalletMonitorService</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html"><span class="identifier">WalletMonitorService</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -120,7 +119,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="key-management.html">keyManagement</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">keyManagement</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.keys/-e2-e-test-key-management-service/index.html"><span class="identifier">E2ETestKeyManagementService</span></a></code></td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">keyManagement</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -157,7 +156,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="network-map-service.html">networkMapService</a></td>
 <td>
-<code><span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="../../com.r3corda.core.node/-node-info/index.html"><span class="identifier">NodeInfo</span></a><span class="symbol">?</span></code></td>
+<code><span class="keyword">val </span><span class="identifier">networkMapService</span><span class="symbol">: </span><a href="../../com.r3corda.core.messaging/-single-message-recipient.html"><span class="identifier">SingleMessageRecipient</span></a><span class="symbol">?</span></code></td>
 </tr>
 <tr>
 <td>
@@ -177,6 +176,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <a href="protocol-logic-factory.html">protocolLogicFactory</a></td>
 <td>
 <code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">protocolLogicFactory</span><span class="symbol">: </span><a href="../../com.r3corda.core.protocols/-protocol-logic-ref-factory/index.html"><span class="identifier">ProtocolLogicRefFactory</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="run-on-stop.html">runOnStop</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">runOnStop</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/util/ArrayList.html"><span class="identifier">ArrayList</span></a><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/Runnable.html"><span class="identifier">Runnable</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 <tr>
 <td>
@@ -223,9 +228,15 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="wallet.html">wallet</a></td>
+<a href="uniqueness-provider.html">uniquenessProvider</a></td>
 <td>
-<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">wallet</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+<code><span class="keyword">var </span><span class="identifier">uniquenessProvider</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a><span class="symbol">?</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="vault.html">vault</a></td>
+<td>
+<code><span class="keyword">lateinit</span> <span class="keyword">var </span><span class="identifier">vault</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-vault-service/index.html"><span class="identifier">VaultService</span></a></code></td>
 </tr>
 </tbody>
 </table>
@@ -236,7 +247,7 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <td>
 <a href="construct-storage-service.html">constructStorageService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">constructStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.persistence/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/transactionStorage">transactionStorage</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-transaction-storage/index.html"><span class="identifier">TransactionStorage</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/keypair">keypair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.persistence/-storage-service-impl/index.html"><span class="identifier">StorageServiceImpl</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">constructStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.node.services.persistence/-node-attachment-service/index.html"><span class="identifier">NodeAttachmentService</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/transactionStorage">transactionStorage</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.node.services/-transaction-storage/index.html"><span class="identifier">TransactionStorage</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/keyPair">keyPair</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/security/KeyPair.html"><span class="identifier">KeyPair</span></a><span class="symbol">, </span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$constructStorageService(com.r3corda.node.services.persistence.NodeAttachmentService, com.r3corda.core.node.services.TransactionStorage, java.security.KeyPair, com.r3corda.core.crypto.Party)/identity">identity</span><span class="symbol">:</span>&nbsp;<a href="../../com.r3corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.persistence/-storage-service-impl/index.html"><span class="identifier">StorageServiceImpl</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -265,6 +276,12 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="initialise-database-persistence.html">initialiseDatabasePersistence</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseDatabasePersistence</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseDatabasePersistence(kotlin.Function0((kotlin.Unit)))/insideTransaction">insideTransaction</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="initialise-storage-service.html">initialiseStorageService</a></td>
 <td>
 <code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">initialiseStorageService</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.node.internal.AbstractNode$initialiseStorageService(java.nio.file.Path)/dir">dir</span><span class="symbol">:</span>&nbsp;<a href="http://docs.oracle.com/javase/6/docs/api/java/nio/file/Path.html"><span class="identifier">Path</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../../com.r3corda.core.node.services/-tx-writable-storage-service/index.html"><span class="identifier">TxWritableStorageService</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.node.services.api/-checkpoint-storage/index.html"><span class="identifier">CheckpointStorage</span></a><span class="symbol">&gt;</span></code></td>
@@ -283,9 +300,21 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
+<a href="make-key-management-service.html">makeKeyManagementService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeKeyManagementService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-key-management-service/index.html"><span class="identifier">KeyManagementService</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="make-messaging-service.html">makeMessagingService</a></td>
 <td>
 <code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeMessagingService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.api/-messaging-service-internal/index.html"><span class="identifier">MessagingServiceInternal</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="make-monitor-service.html">makeMonitorService</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeMonitorService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.monitor/-node-monitor-service/index.html"><span class="identifier">NodeMonitorService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -301,15 +330,15 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 </tr>
 <tr>
 <td>
-<a href="make-wallet-monitor-service.html">makeWalletMonitorService</a></td>
+<a href="make-uniqueness-provider.html">makeUniquenessProvider</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeWalletMonitorService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.node.services.monitor/-wallet-monitor-service/index.html"><span class="identifier">WalletMonitorService</span></a></code></td>
+<code><span class="keyword">abstract</span> <span class="keyword">fun </span><span class="identifier">makeUniquenessProvider</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-uniqueness-provider/index.html"><span class="identifier">UniquenessProvider</span></a></code></td>
 </tr>
 <tr>
 <td>
-<a href="make-wallet-service.html">makeWalletService</a></td>
+<a href="make-vault-service.html">makeVaultService</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeWalletService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-wallet-service/index.html"><span class="identifier">WalletService</span></a></code></td>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">makeVaultService</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../com.r3corda.core.node.services/-vault-service/index.html"><span class="identifier">VaultService</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -376,12 +405,6 @@ I/O), or a mock implementation suitable for unit test environments.</p>
 <h3>Inheritors</h3>
 <table>
 <tbody>
-<tr>
-<td>
-<a href="../../com.r3corda.node.internal.testing/-mock-network/-mock-node/index.html">MockNode</a></td>
-<td>
-<code><span class="keyword">class </span><span class="identifier">MockNode</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">AbstractNode</span></code></td>
-</tr>
 <tr>
 <td>
 <a href="../-node/index.html">Node</a></td>

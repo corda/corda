@@ -1,0 +1,206 @@
+<HTML>
+<HEAD>
+<title>IRSSimulation - </title>
+<link rel="stylesheet" href="../../style.css">
+</HEAD>
+<BODY>
+<a href="../index.html">com.r3corda.simulation</a>&nbsp;/&nbsp;<a href=".">IRSSimulation</a><br/>
+<br/>
+<h1>IRSSimulation</h1>
+<code><span class="keyword">class </span><span class="identifier">IRSSimulation</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-simulation/index.html"><span class="identifier">Simulation</span></a></code><br/>
+<p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
+<br/>
+<br/>
+<h3>Constructors</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-init-.html">&lt;init&gt;</a></td>
+<td>
+<code><span class="identifier">IRSSimulation</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.simulation.IRSSimulation$<init>(kotlin.Boolean, kotlin.Boolean, )/networkSendManuallyPumped">networkSendManuallyPumped</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.simulation.IRSSimulation$<init>(kotlin.Boolean, kotlin.Boolean, )/runAsync">runAsync</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span><span class="symbol">, </span><span class="identifier" id="com.r3corda.simulation.IRSSimulation$<init>(kotlin.Boolean, kotlin.Boolean, )/latencyInjector">latencyInjector</span><span class="symbol">:</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span><span class="symbol">)</span></code><p>A simulation in which banks execute interest rate swaps with each other, including the fixing events.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="om.html">om</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">om</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-simulation/all-protocol-steps.html">allProtocolSteps</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">allProtocolSteps</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">,</span>&nbsp;<a href="../../com.r3corda.core.utilities/-progress-tracker/-change/index.html"><span class="identifier">Change</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/bank-factory.html">bankFactory</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bankFactory</span><span class="symbol">: </span><a href="../-simulation/-bank-factory/index.html"><span class="identifier">BankFactory</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/bank-locations.html">bankLocations</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">bankLocations</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/banks.html">banks</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">banks</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/clocks.html">clocks</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">clocks</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/current-date-and-time.html">currentDateAndTime</a></td>
+<td>
+<code><span class="keyword">var </span><span class="identifier">currentDateAndTime</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDateTime.html"><span class="identifier">LocalDateTime</span></a></code><p>The current simulated date. By default this never changes. If you want it to change, you should do so from
+within your overridden <a href="../-simulation/iterate.html">iterate</a> call. Changes in the current day surface in the <a href="../-simulation/date-changes.html">dateChanges</a> observable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/date-changes.html">dateChanges</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">dateChanges</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><a href="http://docs.oracle.com/javase/6/docs/api/java/time/LocalDateTime.html"><span class="identifier">LocalDateTime</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/done-steps.html">doneSteps</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">doneSteps</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Collection</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/extra-node-labels.html">extraNodeLabels</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">extraNodeLabels</span><span class="symbol">: </span><span class="identifier">MutableMap</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">,</span>&nbsp;<span class="identifier">String</span><span class="symbol">&gt;</span></code><p>A place for simulations to stash human meaningful text about what the node is "thinking", which might appear
+in the UI somewhere.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network.html">network</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">network</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network-initialisation-finished.html">networkInitialisationFinished</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkInitialisationFinished</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network-map.html">networkMap</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkMap</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/network-send-manually-pumped.html">networkSendManuallyPumped</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">networkSendManuallyPumped</span><span class="symbol">: </span><span class="identifier">Boolean</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/notary.html">notary</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">notary</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/rates-oracle.html">ratesOracle</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">ratesOracle</span><span class="symbol">: </span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/regulators.html">regulators</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">regulators</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/service-providers.html">serviceProviders</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">serviceProviders</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="iterate.html">iterate</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">iterate</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">?</span></code><p>Iterates the simulation by one step.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="start-main-simulation.html">startMainSimulation</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">startMainSimulation</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code><p>Sub-classes should override this to trigger whatever they want to simulate. This method will be invoked once the
+network bringup has been simulated.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3>Inherited Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="../-simulation/show-consensus-for.html">showConsensusFor</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">showConsensusFor</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.simulation.Simulation$showConsensusFor(kotlin.collections.List((com.r3corda.simulation.Simulation.SimulatedNode)))/nodes">nodes</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/show-progress-for.html">showProgressFor</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">showProgressFor</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.simulation.Simulation$showProgressFor(kotlin.collections.List((com.r3corda.simulation.Simulation.SimulatedNode)))/nodes">nodes</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../-simulation/-simulated-node/index.html"><span class="identifier">SimulatedNode</span></a><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/start.html">start</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">start</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="identifier">Unit</span><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/start-trading-circle.html">startTradingCircle</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">startTradingCircle</span><span class="symbol">(</span><span class="identifier" id="com.r3corda.simulation.Simulation$startTradingCircle(kotlin.Function2((kotlin.Int, , (()))))/tradeBetween">tradeBetween</span><span class="symbol">:</span>&nbsp;<span class="symbol">(</span><span class="identifier">Int</span><span class="symbol">,</span>&nbsp;<span class="identifier">Int</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&lt;</span><span class="keyword">out</span>&nbsp;<span class="identifier">&lt;ERROR CLASS&gt;</span><span class="symbol">&gt;</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code><p>Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
+each time the returned future completes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-simulation/stop.html">stop</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stop</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>
