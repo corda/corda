@@ -50,6 +50,10 @@ object JsonSupport {
         cordaModule.addSerializer(EdDSAPublicKey::class.java, PublicKeySerializer)
         cordaModule.addDeserializer(EdDSAPublicKey::class.java, PublicKeyDeserializer)
 
+        // For public key trees
+        cordaModule.addSerializer(PublicKeyTree::class.java, PublicKeyTreeSerializer)
+        cordaModule.addDeserializer(PublicKeyTree::class.java, PublicKeyTreeDeserializer)
+
         mapper.registerModule(timeModule)
         mapper.registerModule(cordaModule)
         mapper.registerModule(KotlinModule())
@@ -145,6 +149,22 @@ object JsonSupport {
                 parsePublicKeyBase58(parser.text)
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
+            }
+        }
+    }
+
+    object PublicKeyTreeSerializer : JsonSerializer<PublicKeyTree>() {
+        override fun serialize(obj: PublicKeyTree, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.toBase58String())
+        }
+    }
+
+    object PublicKeyTreeDeserializer : JsonDeserializer<PublicKeyTree>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): PublicKeyTree {
+            return try {
+                PublicKeyTree.parseFromBase58(parser.text)
+            } catch (e: Exception) {
+                throw JsonParseException(parser, "Invalid public key tree ${parser.text}: ${e.message}")
             }
         }
     }

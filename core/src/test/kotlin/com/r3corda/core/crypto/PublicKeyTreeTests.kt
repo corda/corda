@@ -2,6 +2,7 @@ package com.r3corda.core.crypto
 
 import com.r3corda.core.serialization.OpaqueBytes
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class PublicKeyTreeTests {
@@ -45,5 +46,16 @@ class PublicKeyTreeTests {
         val signatures = listOf(aliceSignature, bobSignature)
 
         assertTrue { aliceAndBobOrCharlie.isFulfilledBy(signatures.byKeys()) }
+    }
+
+    @Test
+    fun `encoded tree decodes correctly`() {
+        val aliceAndBob = PublicKeyTree.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+        val aliceAndBobOrCharlie = PublicKeyTree.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
+
+        val encoded = aliceAndBobOrCharlie.toBase58String()
+        val decoded = PublicKeyTree.parseFromBase58(encoded)
+
+        assertEquals(decoded, aliceAndBobOrCharlie)
     }
 }

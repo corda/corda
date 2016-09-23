@@ -9,9 +9,9 @@ import java.security.PublicKey
 /**
  * A tree data structure that enables the representation of composite public keys.
  *
- * It the simplest case it may just contain a single node encapsulating a [PublicKey] – a [Leaf].
+ * In the simplest case it may just contain a single node encapsulating a [PublicKey] – a [Leaf].
  *
- * For more complex scenarios, such as *"Both Alice and Bob need to sign to consume a sate S"*, we can represent
+ * For more complex scenarios, such as *"Both Alice and Bob need to sign to consume a state S"*, we can represent
  * the requirement by creating a tree with a root [Node], and Alice and Bob as children – [Leaf]s.
  * The root node would specify *weights* for each of its children and a *threshold* – the minimum total weight required
  * (e.g. the minimum number of child signatures required) to satisfy the tree signature requirement.
