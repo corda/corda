@@ -2,9 +2,12 @@ package com.r3corda.client.fxutils
 
 import javafx.beans.binding.Bindings
 import javafx.beans.property.ReadOnlyObjectWrapper
+import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
+import javafx.collections.MapChangeListener
 import javafx.collections.ObservableList
+import javafx.collections.ObservableMap
 import javafx.collections.transformation.FilteredList
 import org.fxmisc.easybind.EasyBind
 import java.util.function.Predicate
@@ -114,3 +117,57 @@ fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<A> 
  * val heights: ObservableList<Long> = people.map(Person::height).sequence()
  */
 fun <A> List<ObservableValue<out A>>.sequence(): ObservableList<A> = FlattenedList(FXCollections.observableArrayList(this))
+
+/**
+ * val people: ObservableList<Person> = (..)
+ * val nameToHeight: ObservableMap<String, Long> = people.associateBy(Person::name) { name, person -> person.height }
+ */
+fun <K, A, B> ObservableList<out A>.associateBy(toKey: (A) -> K, assemble: (K, A) -> B): ObservableMap<K, B> {
+    return AssociatedList(this, toKey, assemble)
+}
+
+/**
+ * val people: ObservableList<Person> = (..)
+ * val nameToPerson: ObservableMap<String, Person> = people.associateBy(Person::name)
+ */
+fun <K, A> ObservableList<out A>.associateBy(toKey: (A) -> K): ObservableMap<K, A> {
+    return associateBy(toKey) { key, value -> value }
+}
+
+/**
+ * val people: ObservableList<Person> = (..)
+ * val heightToNames: ObservableMap<Long, ObservableList<String>> = people.associateByAggregation(Person::height) { name, person -> person.name }
+ */
+fun <K : Any, A : Any, B> ObservableList<out A>.associateByAggregation(toKey: (A) -> K, assemble: (K, A) -> B): ObservableMap<K, ObservableList<B>> {
+    return AssociatedList(AggregatedList(this, toKey) { key, members -> Pair(key, members) }, { it.first }) { key, pair ->
+        pair.second.map { assemble(key, it) }
+    }
+}
+
+/**
+ * val people: ObservableList<Person> = (..)
+ * val heightToPeople: ObservableMap<Long, ObservableList<Person>> = people.associateByAggregation(Person::height)
+ */
+fun <K : Any, A : Any> ObservableList<out A>.associateByAggregation(toKey: (A) -> K): ObservableMap<K, ObservableList<A>> {
+    return associateByAggregation(toKey) { key, value -> value }
+}
+
+/**
+ * val nameToPerson: ObservableMap<String, Person> = (..)
+ * val john: ObservableValue<Person?> = nameToPerson.getObservableValue("John")
+ */
+fun <K, V> ObservableMap<K, V>.getObservableValue(key: K): ObservableValue<V?> {
+    val property = SimpleObjectProperty(get(key))
+    addListener { change: MapChangeListener.Change<out K, out V> ->
+        if (change.key == key) {
+            // This is true both when a fresh element was inserted and when an existing was updated
+            if (change.wasAdded()) {
+                property.set(change.valueAdded)
+            } else if (change.wasRemoved()) {
+                property.set(null)
+            }
+        }
+    }
+    return property
+}
+

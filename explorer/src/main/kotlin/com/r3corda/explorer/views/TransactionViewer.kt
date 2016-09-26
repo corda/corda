@@ -154,7 +154,7 @@ class TransactionViewer: View() {
                                 is PartiallyResolvedTransaction.InputResolution.Unresolved -> null
                                 is PartiallyResolvedTransaction.InputResolution.Resolved -> resolution.stateAndRef
                             }
-                        }.fold(listOf()) { inputs: List<StateAndRef<ContractState>>?, state: StateAndRef<ContractState>? ->
+                        }.foldObservable(listOf()) { inputs: List<StateAndRef<ContractState>>?, state: StateAndRef<ContractState>? ->
                             if (inputs != null && state != null) {
                                 inputs + state
                             } else {

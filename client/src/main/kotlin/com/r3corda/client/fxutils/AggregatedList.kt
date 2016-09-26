@@ -15,6 +15,10 @@ import kotlin.comparisons.compareValues
  * adding/deleting aggregations as expected.
  *
  * The ordering of the exposed list is based on the [hashCode] of keys.
+ * The ordering of the groups themselves is based on the [hashCode] of elements.
+ *
+ * Warning: If there are two elements [E] in the source list that have the same [hashCode] then it is not deterministic
+ * which one will be removed if one is removed from the source list!
  *
  * Example:
  *   val statesGroupedByCurrency = AggregatedList(states, { state -> state.currency }) { currency, group ->
@@ -33,7 +37,7 @@ import kotlin.comparisons.compareValues
  * @param toKey Function to extract the key from an element.
  * @param assemble Function to assemble the aggregation into the exposed [A].
  */
-class AggregatedList<A, E, K : Any>(
+class AggregatedList<A, E : Any, K : Any>(
         list: ObservableList<out E>,
         val toKey: (E) -> K,
         val assemble: (K, ObservableList<E>) -> A
@@ -42,6 +46,7 @@ class AggregatedList<A, E, K : Any>(
     private class AggregationGroup<E, out A>(
             val keyHashCode: Int,
             val value: A,
+            // Invariant: sorted by E.hashCode()
             val elements: ObservableList<E>
     )
 
@@ -102,7 +107,15 @@ class AggregatedList<A, E, K : Any>(
             if (aggregationGroup.elements.size == 1) {
                 return Pair(index, aggregationList.removeAt(index))
             }
-            aggregationGroup.elements.remove(removedItem)
+            val elementHashCode = removedItem.hashCode()
+            val removeIndex = aggregationGroup.elements.binarySearch(
+                    comparison = { element -> compareValues(elementHashCode, element.hashCode()) }
+            )
+            if (removeIndex < 0) {
+                throw IllegalStateException("Cannot find removed element $removedItem in group")
+            } else {
+                aggregationGroup.elements.removeAt(removeIndex)
+            }
         }
         return null
     }
@@ -110,10 +123,10 @@ class AggregatedList<A, E, K : Any>(
     private fun addItem(addedItem: E): Int? {
         val key = toKey(addedItem)
         val keyHashCode = key.hashCode()
-        val index = aggregationList.binarySearch(
+        val aggregationIndex = aggregationList.binarySearch(
                 comparison = { group -> compareValues(keyHashCode, group.keyHashCode.hashCode()) }
         )
-        if (index < 0) {
+        if (aggregationIndex < 0) {
             // New aggregation
             val observableGroupElements = FXCollections.observableArrayList<E>()
             observableGroupElements.add(addedItem)
@@ -122,11 +135,21 @@ class AggregatedList<A, E, K : Any>(
                     value = assemble(key, observableGroupElements),
                     elements = observableGroupElements
             )
-            val insertIndex = -index - 1
+            val insertIndex = -aggregationIndex - 1
             aggregationList.add(insertIndex, aggregationGroup)
             return insertIndex
         } else {
-            aggregationList[index].elements.add(addedItem)
+            val elements = aggregationList[aggregationIndex].elements
+            val elementIndex = elements.binarySearch(
+                    comparison = { element -> compareValues(keyHashCode, element.hashCode()) }
+            )
+            val addIndex = if (elementIndex < 0) {
+                -elementIndex - 1
+            } else {
+                // There is an existing element with the same hash (which is fine)
+                elementIndex
+            }
+            elements.add(addIndex, addedItem)
             return null
         }
     }

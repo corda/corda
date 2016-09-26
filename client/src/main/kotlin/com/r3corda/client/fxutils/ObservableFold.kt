@@ -36,3 +36,12 @@ fun <A, B, C> Observable<A>.foldToObservableList(
     }
     return result
 }
+
+/**
+ * This variant simply exposes all events in the list, in order of arrival.
+ */
+fun <A> Observable<A>.foldToObservableList(): ObservableList<A> {
+    return foldToObservableList(Unit) { newElement, _unit, list ->
+        list.add(newElement)
+    }
+}

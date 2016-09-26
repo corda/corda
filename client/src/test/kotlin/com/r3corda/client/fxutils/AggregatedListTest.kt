@@ -79,6 +79,22 @@ class AggregatedListTest {
         sourceList.removeAll(0, 1)
         require(replayedList.size == 0)
     }
+
+    @Test
+    fun multipleElementsWithSameHashWorks() {
+        sourceList.addAll(0, 0)
+        require(replayedList.size == 1)
+        replayedList.forEach {
+            when (it.first) {
+                0 -> {
+                    require(it.second.size == 2)
+                    require(it.second[0] == 0)
+                    require(it.second[1] == 0)
+                }
+                else -> fail("No aggregation expected with key ${it.first}")
+            }
+        }
+    }
 }
 
 
