@@ -40,7 +40,7 @@ using namespace std;
 
 typedef struct _section_info_t
 {
-    uint8_t *raw_data;          //The file pointer to the first page of the section.
+    const uint8_t *raw_data;    //The file pointer to the first page of the section.
     uint64_t raw_data_size;     //The size of the section or the size of the initialized section on disk.
     uint64_t rva;               //The address of the first byte of the section relative to the image base when section is loaded into memory.
     uint64_t virtual_size;      //The total size of the section when loaded into memory.
