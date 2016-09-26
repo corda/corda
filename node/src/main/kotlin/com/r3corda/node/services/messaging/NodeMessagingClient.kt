@@ -345,7 +345,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             if (knownQueues.add(queueName)) {
                 maybeCreateQueue(queueName)
             }
-            log.info("send to: $queueName topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} uuid: $message.uniqueMessageId")
+            log.info("send to: $queueName topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}")
             producer!!.send(queueName, artemisMessage)
         }
     }
