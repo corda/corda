@@ -1,5 +1,5 @@
 Secure coding guidelines
-------------------------
+========================
 
 The platform does what it can to be secure by default and safe by design. Unfortunately the platform cannot
 prevent every kind of security mistake. This document describes what to think about when writing applications
