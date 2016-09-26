@@ -3,6 +3,7 @@ package com.r3corda.node.services.api
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.MessageHandlerRegistration
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.serialization.SingletonSerializeAsToken

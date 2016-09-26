@@ -85,7 +85,7 @@ class NodeMessagingClient(config: NodeConfiguration,
         var rpcNotificationConsumer: ClientConsumer? = null
 
         // TODO: This is not robust and needs to be replaced by more intelligently using the message queue server.
-        var undeliveredMessages = listOf<Pair<Message, UUID>>()
+        var undeliveredMessages = listOf<Message>()
     }
 
     /** A registration to handle messages of different types */
@@ -122,7 +122,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             clientFactory = locator.createSessionFactory()
 
             // Create a session. Note that the acknowledgement of messages is not flushed to
-            // the DB until the default buffer size of 1MB is acknowledged.
+            // the Artermis journal until the default buffer size of 1MB is acknowledged.
             val session = clientFactory!!.createSession(true, true, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
             this.session = session
             session.start()
@@ -179,11 +179,9 @@ class NodeMessagingClient(config: NodeConfiguration,
                 null
             } ?: break
 
-            // Use the magic deduplication property built into Artemis as our message identity too
-            val uuid = UUID.fromString(artemisMessage.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID))
-            val message: Message? = artemisToCordaMessage(artemisMessage, uuid)
+            val message: Message? = artemisToCordaMessage(artemisMessage)
             if (message != null)
-                deliver(message, uuid)
+                deliver(message)
 
             // Ack the message so it won't be redelivered. We should only really do this when there were no
             // transient failures. If we caught an exception in the handler, we could back off and retry delivery
@@ -203,7 +201,7 @@ class NodeMessagingClient(config: NodeConfiguration,
         shutdownLatch.countDown()
     }
 
-    private fun artemisToCordaMessage(message: ClientMessage, uuid: UUID): Message? {
+    private fun artemisToCordaMessage(message: ClientMessage): Message? {
         try {
             if (!message.containsProperty(TOPIC_PROPERTY)) {
                 log.warn("Received message without a $TOPIC_PROPERTY property, ignoring")
@@ -215,6 +213,8 @@ class NodeMessagingClient(config: NodeConfiguration,
             }
             val topic = message.getStringProperty(TOPIC_PROPERTY)
             val sessionID = message.getLongProperty(SESSION_ID_PROPERTY)
+            // Use the magic deduplication property built into Artemis as our message identity too
+            val uuid = UUID.fromString(message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID))
             log.info("received message from: ${message.address} topic: $topic sessionID: $sessionID uuid: $uuid")
 
             val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
@@ -223,7 +223,7 @@ class NodeMessagingClient(config: NodeConfiguration,
                 override val topicSession = TopicSession(topic, sessionID)
                 override val data: ByteArray = body
                 override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
-                override val debugMessageID: String = message.messageID.toString()
+                override val uniqueMessageId: UUID = uuid
                 override fun serialise(): ByteArray = body
                 override fun toString() = topic + "#" + data.opaque()
             }
@@ -235,7 +235,7 @@ class NodeMessagingClient(config: NodeConfiguration,
         }
     }
 
-    private fun deliver(msg: Message, uuid: UUID): Boolean {
+    private fun deliver(msg: Message): Boolean {
         state.checkNotLocked()
         // Because handlers is a COW list, the loop inside filter will operate on a snapshot. Handlers being added
         // or removed whilst the filter is executing will not affect anything.
@@ -249,7 +249,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             // This is a hack; transient messages held in memory isn't crash resistant.
             // TODO: Use Artemis API more effectively so we don't pop messages off a queue that we aren't ready to use.
             state.locked {
-                undeliveredMessages += Pair(msg, uuid)
+                undeliveredMessages += msg
             }
             return false
         }
@@ -268,10 +268,10 @@ class NodeMessagingClient(config: NodeConfiguration,
                 //       interpret persistent as "server" and non-persistent as "client".
                 if (persistentInbox) {
                     databaseTransaction {
-                        callHandlers(msg, uuid, deliverTo)
+                        callHandlers(msg, deliverTo)
                     }
                 } else {
-                    callHandlers(msg, uuid, deliverTo)
+                    callHandlers(msg, deliverTo)
                 }
             }
         } catch(e: Exception) {
@@ -280,16 +280,16 @@ class NodeMessagingClient(config: NodeConfiguration,
         return true
     }
 
-    private fun callHandlers(msg: Message, uuid: UUID, deliverTo: List<Handler>) {
-        if (uuid in processedMessages) {
-            log.trace { "discard duplicate message $uuid for ${msg.topicSession}" }
+    private fun callHandlers(msg: Message, deliverTo: List<Handler>) {
+        if (msg.uniqueMessageId in processedMessages) {
+            log.trace { "discard duplicate message ${msg.uniqueMessageId} for ${msg.topicSession}" }
             return
         }
         for (handler in deliverTo) {
             handler.callback(msg, handler)
         }
         // TODO We will at some point need to decide a trimming policy for the id's
-        processedMessages += uuid
+        processedMessages += msg.uniqueMessageId
     }
 
     override fun stop() {
@@ -332,7 +332,6 @@ class NodeMessagingClient(config: NodeConfiguration,
 
     override fun send(message: Message, target: MessageRecipients) {
         val queueName = toQueueName(target)
-        val uuid = UUID.randomUUID()
         state.locked {
             val artemisMessage = session!!.createMessage(true).apply {
                 val sessionID = message.topicSession.sessionID
@@ -340,13 +339,13 @@ class NodeMessagingClient(config: NodeConfiguration,
                 putLongProperty(SESSION_ID_PROPERTY, sessionID)
                 writeBodyBufferBytes(message.data)
                 // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(uuid.toString()))
+                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
             }
 
             if (knownQueues.add(queueName)) {
                 maybeCreateQueue(queueName)
             }
-            log.info("send to: $queueName topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} uuid: $uuid")
+            log.info("send to: $queueName topic: ${message.topicSession.topic} sessionID: ${message.topicSession.sessionID} uuid: $message.uniqueMessageId")
             producer!!.send(queueName, artemisMessage)
         }
     }
@@ -376,7 +375,7 @@ class NodeMessagingClient(config: NodeConfiguration,
             undeliveredMessages = listOf()
             messagesToRedeliver
         }
-        messagesToRedeliver.forEach { deliver(it.first, it.second) }
+        messagesToRedeliver.forEach { deliver(it) }
         return handler
     }
 
@@ -384,25 +383,26 @@ class NodeMessagingClient(config: NodeConfiguration,
         handlers.remove(registration)
     }
 
-    override fun createMessage(topicSession: TopicSession, data: ByteArray): Message {
+    override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
         // TODO: We could write an object that proxies directly to an underlying MQ message here and avoid copying.
         return object : Message {
             override val topicSession: TopicSession get() = topicSession
             override val data: ByteArray get() = data
             override val debugTimestamp: Instant = Instant.now()
             override fun serialise(): ByteArray = this.serialise()
-            override val debugMessageID: String get() = Instant.now().toEpochMilli().toString()
+            override val uniqueMessageId: UUID = uuid
             override fun toString() = topicSession.toString() + "#" + String(data)
         }
     }
 
-    override fun createMessage(topic: String, sessionID: Long, data: ByteArray) = createMessage(TopicSession(topic, sessionID), data)
-
     private fun createRPCDispatcher(ops: CordaRPCOps) = object : RPCDispatcher(ops) {
         override fun send(bits: SerializedBytes<*>, toAddress: String) {
             state.locked {
-                val msg = session!!.createMessage(false)
-                msg.writeBodyBufferBytes(bits.bits)
+                val msg = session!!.createMessage(false).apply {
+                    writeBodyBufferBytes(bits.bits)
+                    // Use the magic deduplication property built into Artemis as our message identity too
+                    putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
+                }
                 producer!!.send(toAddress, msg)
             }
         }

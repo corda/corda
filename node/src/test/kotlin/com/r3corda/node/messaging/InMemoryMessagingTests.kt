@@ -4,6 +4,7 @@ package com.r3corda.node.messaging
 
 import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.TopicStringValidator
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.testing.node.MockNetwork
@@ -106,9 +107,11 @@ class InMemoryMessagingTests {
         assertEquals(1, received)
 
         // Here's the core of the test; previously the unhandled message would cause runNetwork() to abort early, so
-        // this would fail.
-        node2.net.send(invalidMessage, node1.net.myAddress)
-        node2.net.send(validMessage, node1.net.myAddress)
+        // this would fail. Make fresh messages to stop duplicate uniqueMessageId causing drops
+        val invalidMessage2 = node2.net.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        val validMessage2 = node2.net.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        node2.net.send(invalidMessage2, node1.net.myAddress)
+        node2.net.send(validMessage2, node1.net.myAddress)
         network.runNetwork()
         assertEquals(2, received)
 

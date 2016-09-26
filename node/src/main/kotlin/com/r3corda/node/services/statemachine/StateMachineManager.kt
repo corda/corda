@@ -147,9 +147,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                     logError(e, it, topicSession, fiber)
                 }
             }
+            if (checkpoint.request is SendRequest) {
+                sendMessage(fiber, checkpoint.request)
+            }
         } else {
             fiber.logger.info("Restored ${fiber.logic} - it was not waiting on any message; received payload: ${checkpoint.receivedPayload.toString().abbreviate(50)}")
             executor.executeASAP {
+                if (checkpoint.request is SendRequest) {
+                    sendMessage(fiber, checkpoint.request)
+                }
                 iterateStateMachine(fiber, checkpoint.receivedPayload) {
                     try {
                         Fiber.unparkDeserialized(fiber, scheduler)
@@ -279,21 +285,21 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     }
 
     private fun onNextSuspend(psm: ProtocolStateMachineImpl<*>, request: ProtocolIORequest) {
+        val serialisedFiber = serializeFiber(psm)
+        updateCheckpoint(psm, serialisedFiber, request, null)
         // We have a request to do something: send, receive, or send-and-receive.
         if (request is ReceiveRequest<*>) {
             // Prepare a listener on the network that runs in the background thread when we receive a message.
-            prepareToReceiveForRequest(psm, request)
+            prepareToReceiveForRequest(psm, serialisedFiber, request)
         }
         if (request is SendRequest) {
             performSendRequest(psm, request)
         }
     }
 
-    private fun prepareToReceiveForRequest(psm: ProtocolStateMachineImpl<*>, request: ReceiveRequest<*>) {
+    private fun prepareToReceiveForRequest(psm: ProtocolStateMachineImpl<*>, serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>, request: ReceiveRequest<*>) {
         executor.checkOnThread()
         val queueID = request.receiveTopicSession
-        val serialisedFiber = serializeFiber(psm)
-        updateCheckpoint(psm, serialisedFiber, request, null)
         psm.logger.trace { "Preparing to receive message of type ${request.receiveType.name} on queue $queueID" }
         iterateOnResponse(psm, serialisedFiber, request) {
             try {
@@ -305,12 +311,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
     }
 
     private fun performSendRequest(psm: ProtocolStateMachineImpl<*>, request: SendRequest) {
-        val topicSession = TopicSession(request.topic, request.sendSessionID)
-        val payload = request.payload
-        psm.logger.trace { "Sending message of type ${payload.javaClass.name} using queue $topicSession to ${request.destination} (${payload.toString().abbreviate(50)})" }
-        val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination.name) ?:
-                throw IllegalArgumentException("Don't know about ${request.destination} but trying to send a message of type ${payload.javaClass.name} on $topicSession (${payload.toString().abbreviate(50)})", request.stackTraceInCaseOfProblems)
-        serviceHub.networkService.send(topicSession, payload, node.address)
+        val topicSession = sendMessage(psm, request)
 
         if (request is SendOnly) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
@@ -322,6 +323,16 @@ class StateMachineManager(val serviceHub: ServiceHubInternal, tokenizableService
                 }
             }
         }
+    }
+
+    private fun sendMessage(psm: ProtocolStateMachineImpl<*>, request: SendRequest): TopicSession {
+        val topicSession = TopicSession(request.topic, request.sendSessionID)
+        val payload = request.payload
+        psm.logger.trace { "Sending message of type ${payload.javaClass.name} using queue $topicSession to ${request.destination} (${payload.toString().abbreviate(50)})" }
+        val node = serviceHub.networkMapCache.getNodeByLegalName(request.destination.name) ?:
+                throw IllegalArgumentException("Don't know about ${request.destination} but trying to send a message of type ${payload.javaClass.name} on $topicSession (${payload.toString().abbreviate(50)})", request.stackTraceInCaseOfProblems)
+        serviceHub.networkService.send(topicSession, payload, node.address, request.uniqueMessageId)
+        return topicSession
     }
 
     /**

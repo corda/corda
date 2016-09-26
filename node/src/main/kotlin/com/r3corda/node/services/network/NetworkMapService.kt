@@ -9,6 +9,7 @@ import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.messaging.MessageHandlerRegistration
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkMapCache

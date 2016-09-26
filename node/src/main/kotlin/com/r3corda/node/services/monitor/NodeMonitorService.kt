@@ -7,6 +7,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.messaging.MessageRecipients
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.ProtocolLogic

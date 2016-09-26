@@ -17,6 +17,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.SQLException
+import java.util.*
 import java.util.concurrent.ExecutionException
 
 /**
@@ -121,7 +122,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
                                           sessionIDForReceive: Long,
                                           payload: Any,
                                           receiveType: Class<T>): UntrustworthyData<T> {
-        return suspendAndExpectReceive(SendAndReceive(topic, destination, payload, sessionIDForSend, receiveType, sessionIDForReceive))
+        return suspendAndExpectReceive(SendAndReceive(topic, destination, payload, sessionIDForSend, UUID.randomUUID(), receiveType, sessionIDForReceive))
     }
 
     @Suspendable
@@ -131,7 +132,7 @@ class ProtocolStateMachineImpl<R>(val logic: ProtocolLogic<R>,
 
     @Suspendable
     override fun send(topic: String, destination: Party, sessionID: Long, payload: Any) {
-        suspend(SendOnly(destination, topic, payload, sessionID))
+        suspend(SendOnly(destination, topic, payload, sessionID, UUID.randomUUID()))
     }
 
     @Suspendable

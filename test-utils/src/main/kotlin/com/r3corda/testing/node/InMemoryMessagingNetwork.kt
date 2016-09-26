@@ -5,13 +5,10 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.ThreadBox
-import com.r3corda.core.crypto.sha256
 import com.r3corda.core.messaging.*
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.core.utilities.trace
-import com.r3corda.node.services.api.MessagingServiceBuilder
-import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -50,7 +47,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     // The corresponding sentMessages stream reflects when a message was pumpSend'd
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
-    @Suppress("unused")  // Used by the visualiser tool.
+    @Suppress("unused") // Used by the visualiser tool.
     /** A stream of (sender, message, recipients) triples */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
@@ -63,7 +60,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
     private val messageReceiveQueues = HashMap<Handle, LinkedBlockingQueue<MessageTransfer>>()
     private val _receivedMessages = PublishSubject.create<MessageTransfer>()
 
-    @Suppress("unused")  // Used by the visualiser tool.
+    @Suppress("unused") // Used by the visualiser tool.
     /** A stream of (sender, message, recipients) triples */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
@@ -213,6 +210,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
         }
 
         private val state = ThreadBox(InnerState())
+        private val processedMessages: MutableSet<UUID> = Collections.synchronizedSet(HashSet<UUID>())
 
         override val myAddress: SingleMessageRecipient = handle
 
@@ -228,7 +226,7 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
             }
 
         override fun addMessageHandler(topic: String, sessionID: Long, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
-            = addMessageHandler(TopicSession(topic, sessionID), executor, callback)
+                = addMessageHandler(TopicSession(topic, sessionID), executor, callback)
 
         override fun addMessageHandler(topicSession: TopicSession, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
             check(running)
@@ -267,17 +265,13 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
         }
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topic: String, sessionID: Long, data: ByteArray): Message
-                = createMessage(TopicSession(topic, sessionID), data)
-
-        /** Returns the given (topic & session, data) pair as a newly created message object. */
-        override fun createMessage(topicSession: TopicSession, data: ByteArray): Message {
+        override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
             return object : Message {
                 override val topicSession: TopicSession get() = topicSession
                 override val data: ByteArray get() = data
                 override val debugTimestamp: Instant = Instant.now()
                 override fun serialise(): ByteArray = this.serialise()
-                override val debugMessageID: String get() = serialise().sha256().prefixChars()
+                override val uniqueMessageId: UUID = uuid
 
                 override fun toString() = topicSession.toString() + "#" + String(data)
             }
@@ -335,18 +329,22 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
             val next = getNextQueue(q, block) ?: return null
             val (transfer, deliverTo) = next
 
-            for (handler in deliverTo) {
-                // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.
-                (handler.executor ?: MoreExecutors.directExecutor()).execute {
-                    try {
-                        handler.callback(transfer.message, handler)
-                    } catch(e: Exception) {
-                        loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topicSession}", e)
+            if (transfer.message.uniqueMessageId !in processedMessages) {
+                for (handler in deliverTo) {
+                    // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.
+                    (handler.executor ?: MoreExecutors.directExecutor()).execute {
+                        try {
+                            handler.callback(transfer.message, handler)
+                        } catch(e: Exception) {
+                            loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topicSession}", e)
+                        }
                     }
                 }
+                _receivedMessages.onNext(transfer)
+                processedMessages += transfer.message.uniqueMessageId
+            } else {
+                log.info("Drop duplicate message ${transfer.message.uniqueMessageId}")
             }
-
-            _receivedMessages.onNext(transfer)
 
             return transfer
         }
