@@ -26,7 +26,6 @@ import java.security.KeyPair
  */
 class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
     lateinit var network: MockNetwork
-    lateinit var dataSource: Closeable
 
     @Before
     fun setup() {
@@ -35,7 +34,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
 
     @After
     fun tearDown() {
-        dataSource.close()
+        network.stopNodes()
     }
 
     /**
@@ -50,7 +49,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
 
         fun swizzle() {
             delegate.unregisterNetworkHandlers()
-            delegate=makeNetworkMapService(delegate.services)
+            delegate = makeNetworkMapService(delegate.services)
         }
 
         private fun makeNetworkMapService(services: ServiceHubInternal): AbstractNetworkMapService {
@@ -72,17 +71,17 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
 
     /**
      * Perform basic tests of registering, de-registering and fetching the full network map.
+     *
+     * TODO: make the names of these and those in [AbstractNetworkMapServiceTest] and [InMemoryNetworkMapServiceTest] more
+     *       meaningful.
      */
     @Test
     fun success() {
         val (mapServiceNode, registerNode) = network.createTwoNodes(NodeFactory)
         val service = mapServiceNode.inNodeNetworkMapService!! as SwizzleNetworkMapService
 
-        // We have to set this up after the non-persistent nodes as they install a dummy transaction manager.
-        dataSource = configureDatabase(makeTestDataSourceProperties()).first
-
-        databaseTransaction {
-            success(mapServiceNode, registerNode, { service.delegate }, {service.swizzle()})
+        databaseTransaction(mapServiceNode.database) {
+            success(mapServiceNode, registerNode, { service.delegate }, { service.swizzle() })
         }
     }
 
@@ -93,10 +92,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
         // Confirm there's a network map service on node 0
         val service = mapServiceNode.inNodeNetworkMapService!! as SwizzleNetworkMapService
 
-        // We have to set this up after the non-persistent nodes as they install a dummy transaction manager.
-        dataSource = configureDatabase(makeTestDataSourceProperties()).first
-
-        databaseTransaction {
+        databaseTransaction(mapServiceNode.database) {
             `success with network`(network, mapServiceNode, registerNode, { service.swizzle() })
         }
     }
@@ -108,10 +104,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
         // Confirm there's a network map service on node 0
         val service = mapServiceNode.inNodeNetworkMapService!! as SwizzleNetworkMapService
 
-        // We have to set this up after the non-persistent nodes as they install a dummy transaction manager.
-        dataSource = configureDatabase(makeTestDataSourceProperties()).first
-
-        databaseTransaction {
+        databaseTransaction(mapServiceNode.database) {
             `subscribe with network`(network, mapServiceNode, registerNode, { service.delegate }, { service.swizzle() })
         }
     }

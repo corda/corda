@@ -75,11 +75,15 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * in order to cause the delivery of a single message, which will occur on the thread of the caller. If set to false
      * then this class will set up a background thread to deliver messages asynchronously, if the handler specifies no
      * executor.
+     *
+     * @param persistenceTx a lambda to wrap message handling in a transaction if necessary. Defaults to a no-op.
      */
     @Synchronized
-    fun createNode(manuallyPumped: Boolean): Pair<Handle, com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging>> {
+    fun createNode(manuallyPumped: Boolean,
+                   persistenceTx: (() -> Unit) -> Unit)
+            : Pair<Handle, com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging>> {
         check(counter >= 0) { "In memory network stopped: please recreate." }
-        val builder = createNodeWithID(manuallyPumped, counter) as Builder
+        val builder = createNodeWithID(manuallyPumped, counter, persistenceTx = persistenceTx) as Builder
         counter++
         val id = builder.id
         return Pair(id, builder)
@@ -91,9 +95,12 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * @param manuallyPumped see [createNode].
      * @param id the numeric ID to use, e.g. set to whatever ID the node used last time.
      * @param description text string that identifies this node for message logging (if is enabled) or null to autogenerate.
+     * @param persistenceTx a lambda to wrap message handling in a transaction if necessary.
      */
-    fun createNodeWithID(manuallyPumped: Boolean, id: Int, description: String? = null): com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"))
+    fun createNodeWithID(manuallyPumped: Boolean, id: Int, description: String? = null,
+                         persistenceTx: (() -> Unit) -> Unit)
+            : com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
+        return Builder(manuallyPumped, Handle(id, description ?: "In memory node $id"), persistenceTx)
     }
 
     interface LatencyCalculator {
@@ -133,10 +140,11 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
         messageReceiveQueues.clear()
     }
 
-    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
+    inner class Builder(val manuallyPumped: Boolean, val id: Handle, val persistenceTx: (() -> Unit) -> Unit)
+    : com.r3corda.node.services.api.MessagingServiceBuilder<InMemoryMessaging> {
         override fun start(): ListenableFuture<InMemoryMessaging> {
             synchronized(this@InMemoryMessagingNetwork) {
-                val node = InMemoryMessaging(manuallyPumped, id)
+                val node = InMemoryMessaging(manuallyPumped, id, persistenceTx)
                 handleEndpointMap[id] = node
                 return Futures.immediateFuture(node)
             }
@@ -197,7 +205,10 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
      * An instance can be obtained by creating a builder and then using the start method.
      */
     @ThreadSafe
-    inner class InMemoryMessaging(private val manuallyPumped: Boolean, private val handle: Handle) : SingletonSerializeAsToken(), com.r3corda.node.services.api.MessagingServiceInternal {
+    inner class InMemoryMessaging(private val manuallyPumped: Boolean,
+                                  private val handle: Handle,
+                                  private val persistenceTx: (() -> Unit) -> Unit)
+    : SingletonSerializeAsToken(), com.r3corda.node.services.api.MessagingServiceInternal {
         inner class Handler(val executor: Executor?, val topicSession: TopicSession,
                             val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
@@ -334,7 +345,9 @@ class InMemoryMessagingNetwork(val sendManuallyPumped: Boolean) : SingletonSeria
                     // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.
                     (handler.executor ?: MoreExecutors.directExecutor()).execute {
                         try {
-                            handler.callback(transfer.message, handler)
+                            persistenceTx {
+                                handler.callback(transfer.message, handler)
+                            }
                         } catch(e: Exception) {
                             loggerFor<InMemoryMessagingNetwork>().error("Caught exception in handler for $this/${handler.topicSession}", e)
                         }

@@ -3,11 +3,10 @@ package com.r3corda.node.utilities
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import junit.framework.TestSuite
 import org.assertj.core.api.Assertions.assertThat
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
 import java.io.Closeable
@@ -19,22 +18,26 @@ import java.util.*
         JDBCHashMapTestSuite.MapLoadOnInitFalse::class,
         JDBCHashMapTestSuite.MapLoadOnInitTrue::class,
         JDBCHashMapTestSuite.SetLoadOnInitFalse::class,
-        JDBCHashMapTestSuite.SetLoadOnInitTrue::class,
-        JDBCHashMapTestSuite.MapCanBeReloaded::class)
+        JDBCHashMapTestSuite.SetLoadOnInitTrue::class)
 class JDBCHashMapTestSuite {
     companion object {
         lateinit var dataSource: Closeable
         lateinit var transaction: Transaction
+        lateinit var database: Database
 
         @JvmStatic
         @BeforeClass
         fun before() {
-            dataSource = configureDatabase(makeTestDataSourceProperties()).first
+            val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+            dataSource = dataSourceAndDatabase.first
+            database = dataSourceAndDatabase.second
+            setUpDatabaseTx()
         }
 
         @JvmStatic
         @AfterClass
         fun after() {
+            closeDatabaseTx()
             dataSource.close()
         }
 
@@ -51,8 +54,6 @@ class JDBCHashMapTestSuite {
                 )
                 // putAll(null) not supported by Kotlin MutableMap interface
                 .suppressing(com.google.common.collect.testing.testers.MapPutAllTester::class.java.getMethod("testPutAll_nullCollectionReference"))
-                .withSetUp { setUpDatabaseTx() }
-                .withTearDown { closeDatabaseTx() }
                 .createTestSuite()
 
         @JvmStatic
@@ -74,8 +75,6 @@ class JDBCHashMapTestSuite {
                 .suppressing(com.google.common.collect.testing.testers.CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceEmptySubject"))
                 .suppressing(com.google.common.collect.testing.testers.CollectionRetainAllTester::class.java.getMethod("testRetainAll_nullCollectionReferenceNonEmptySubject"))
                 .suppressing(com.google.common.collect.testing.testers.CollectionRetainAllTester::class.java.getMethod("testRetainAll_nullCollectionReferenceEmptySubject"))
-                .withSetUp { setUpDatabaseTx() }
-                .withTearDown { closeDatabaseTx() }
                 .createTestSuite()
 
         private fun setUpDatabaseTx() {
@@ -84,6 +83,7 @@ class JDBCHashMapTestSuite {
 
         private fun closeDatabaseTx() {
             transaction.commit()
+            transaction.close()
         }
     }
 
@@ -179,36 +179,35 @@ class JDBCHashMapTestSuite {
 
         private val transientMapForComparison = applyOpsToMap(LinkedHashMap())
 
-        companion object {
-            lateinit var dataSource: Closeable
+        lateinit var dataSource: Closeable
+        lateinit var database: Database
 
-            @JvmStatic
-            @BeforeClass
-            fun before() {
-                dataSource = configureDatabase(makeTestDataSourceProperties()).first
-            }
+        @Before
+        fun before() {
+            val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+            dataSource = dataSourceAndDatabase.first
+            database = dataSourceAndDatabase.second
+        }
 
-            @JvmStatic
-            @AfterClass
-            fun after() {
-                dataSource.close()
-            }
+        @After
+        fun after() {
+            dataSource.close()
         }
 
 
         @Test
         fun `fill map and check content after reconstruction`() {
-            databaseTransaction {
+            databaseTransaction(database) {
                 val persistentMap = JDBCHashMap<String, String>("the_table")
                 // Populate map the first time.
                 applyOpsToMap(persistentMap)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }
-            databaseTransaction {
+            databaseTransaction(database) {
                 val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = false)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }
-            databaseTransaction {
+            databaseTransaction(database) {
                 val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = true)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }

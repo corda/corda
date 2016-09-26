@@ -30,6 +30,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
+import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
@@ -123,11 +124,10 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             p2pAddr
         }()
         val ops = ServerRPCOps(services)
-        if (networkMapService != null) {
-            return NodeMessagingClient(configuration, serverAddr, services.storageService.myLegalIdentityKey.public, serverThread, rpcOps = ops)
-        } else {
-            return NodeMessagingClient(configuration, serverAddr, null, serverThread, rpcOps = ops)
-        }
+        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) services.storageService.myLegalIdentityKey.public else null
+        return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread,
+                persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } },
+                rpcOps = ops)
     }
 
     override fun startMessagingService() {
@@ -237,7 +237,7 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             jerseyServlet.initOrder = 0 // Initialise at server start
 
             // Wrap all API calls in a database transaction.
-            val filterHolder = FilterHolder(DatabaseTransactionFilter())
+            val filterHolder = FilterHolder(DatabaseTransactionFilter(database))
             addFilter(filterHolder, "/api/*", EnumSet.of(DispatcherType.REQUEST))
         }
     }
@@ -292,7 +292,7 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             shutdown = true
 
             // Unregister shutdown hook to prevent any unnecessary second calls to stop
-            if((shutdownThread != null) && (Thread.currentThread() != shutdownThread)){
+            if ((shutdownThread != null) && (Thread.currentThread() != shutdownThread)) {
                 Runtime.getRuntime().removeShutdownHook(shutdownThread)
                 shutdownThread = null
             }
@@ -334,7 +334,7 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
     }
 
     // Servlet filter to wrap API requests with a database transaction.
-    private class DatabaseTransactionFilter : Filter {
+    private class DatabaseTransactionFilter(val database: Database) : Filter {
         override fun init(filterConfig: FilterConfig?) {
         }
 
@@ -342,7 +342,7 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
         }
 
         override fun doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
-            databaseTransaction {
+            databaseTransaction(database) {
                 chain.doFilter(request, response)
             }
         }

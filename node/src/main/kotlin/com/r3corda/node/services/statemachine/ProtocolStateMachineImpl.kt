@@ -13,10 +13,11 @@ import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.node.utilities.createDatabaseTransaction
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.ExecutionException
@@ -40,6 +41,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal lateinit var suspendAction: (ProtocolIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: () -> Unit
     @Transient internal var receivedPayload: Any? = null
+    @Transient internal lateinit var database: Database
 
     @Transient private var _logger: Logger? = null
     override val logger: Logger get() {
@@ -85,7 +87,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun createTransaction() {
         // Make sure we have a database transaction
-        TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+        createDatabaseTransaction(database)
         logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}." }
     }
 

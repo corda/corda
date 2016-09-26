@@ -13,6 +13,7 @@ import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.MockServices
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -21,11 +22,14 @@ import java.util.*
 
 class NodeVaultServiceTest {
     lateinit var dataSource: Closeable
+    lateinit var database: Database
 
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        dataSource = configureDatabase(makeTestDataSourceProperties()).first
+        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        dataSource = dataSourceAndDatabase.first
+        database = dataSourceAndDatabase.second
     }
 
     @After
@@ -36,7 +40,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `states not local to instance`() {
-        databaseTransaction {
+        databaseTransaction(database) {
             val services1 = object : MockServices() {
                 override val vaultService: VaultService = NodeVaultService(this)
 
