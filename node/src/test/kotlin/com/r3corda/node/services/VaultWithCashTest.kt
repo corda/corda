@@ -83,7 +83,7 @@ class VaultWithCashTest {
     fun `issue and spend total correctly and irrelevant ignored`() {
         databaseTransaction(database) {
             // A tx that sends us money.
-            val freshKey = services.keyManagementService.freshKey()
+            val freshKey = services.storageService.myLegalIdentityKey
             val usefulTX = TransactionType.General.Builder(null).apply {
                 Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
@@ -121,7 +121,7 @@ class VaultWithCashTest {
     @Test
     fun `branching LinearStates fails to verify`() {
         databaseTransaction(database) {
-            val freshKey = services.keyManagementService.freshKey()
+            val freshKey = services.storageService.myLegalIdentityKey
             val linearId = UniqueIdentifier()
 
             // Issue a linear state
@@ -141,7 +141,7 @@ class VaultWithCashTest {
     @Test
     fun `sequencing LinearStates works`() {
         databaseTransaction(database) {
-            val freshKey = services.keyManagementService.freshKey()
+            val freshKey = services.storageService.myLegalIdentityKey
 
             val linearId = UniqueIdentifier()
 

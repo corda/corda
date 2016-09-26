@@ -231,7 +231,7 @@ object X509Utilities {
     fun generateECDSAKeyPairForSSL(): KeyPair {
         val keyGen = KeyPairGenerator.getInstance(KEY_GENERATION_ALGORITHM, BouncyCastleProvider.PROVIDER_NAME)
         val ecSpec = ECGenParameterSpec(ECDSA_CURVE) // Force named curve, because TLS implementations don't support many curves
-        keyGen.initialize(ecSpec, SecureRandom())
+        keyGen.initialize(ecSpec, newSecureRandom())
         return keyGen.generateKeyPair()
     }
 

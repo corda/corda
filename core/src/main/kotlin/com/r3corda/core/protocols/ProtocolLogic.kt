@@ -2,8 +2,11 @@ package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.messaging.Message
+import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
+import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.core.utilities.debug
@@ -11,6 +14,7 @@ import com.r3corda.protocols.HandshakeMessage
 import org.slf4j.Logger
 import rx.Observable
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 /**
  * A sub-class of [ProtocolLogic<T>] implements a protocol flow using direct, straight line blocking code. Thus you
@@ -107,6 +111,11 @@ abstract class ProtocolLogic<out T> {
         return sessions[otherParty]?.receiveSessionId ?:
                 throw IllegalStateException("Session with party $otherParty hasn't been established yet")
     }
+
+    /**
+     * Check if we already have a session with this party
+     */
+    protected fun hasSession(otherParty: Party) = sessions.containsKey(otherParty)
 
     /**
      * Invokes the given subprotocol by simply passing through this [ProtocolLogic]s reference to the

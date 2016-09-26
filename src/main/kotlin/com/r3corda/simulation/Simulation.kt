@@ -3,6 +3,7 @@ package com.r3corda.simulation
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.PhysicalLocation
@@ -73,8 +74,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
         }
 
-        fun createAll(): List<SimulatedNode> = bankLocations.
-                map { network.createNode(networkMap.info.address, start = false, nodeFactory = this) as SimulatedNode }
+        fun createAll(): List<SimulatedNode> {
+            return bankLocations.map {
+                network.createNode(networkMap.info.address, start = false, nodeFactory = this, keyPair = generateKeyPair()) as SimulatedNode
+            }
+        }
     }
 
     val bankFactory = BankFactory()

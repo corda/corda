@@ -279,9 +279,6 @@ interface DealState : LinearState {
     /** Exposes the Parties involved in a generic way */
     val parties: List<Party>
 
-    // TODO: This works by editing the keys used by a Party which is invalid.
-    fun withPublicKey(before: Party, after: PublicKey): DealState
-
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
      * deal/agreement protocol to generate the necessary transaction for potential implementations.

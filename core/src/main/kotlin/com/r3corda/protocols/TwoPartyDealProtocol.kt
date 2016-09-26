@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
+import com.r3corda.core.crypto.toBase58String
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
@@ -285,22 +286,11 @@ object TwoPartyDealProtocol {
         override fun validateHandshake(handshake: Handshake<T>): Handshake<T> {
             // What is the seller trying to sell us?
             val deal: T = handshake.payload
-            val otherKey = handshake.publicKey
             logger.trace { "Got deal request for: ${handshake.payload.ref}" }
 
             check(dealToBuy == deal)
 
-            // We need to substitute in the new public keys for the Parties
-            val myName = serviceHub.storageService.myLegalIdentity.name
-            val myOldParty = deal.parties.single { it.name == myName }
-            val theirOldParty = deal.parties.single { it.name != myName }
-
-            @Suppress("UNCHECKED_CAST")
-            val newDeal = deal.
-                    withPublicKey(myOldParty, serviceHub.keyManagementService.freshKey().public).
-                    withPublicKey(theirOldParty, otherKey) as T
-
-            return handshake.copy(payload = newDeal)
+            return handshake.copy(payload = deal)
 
         }
 

@@ -6,11 +6,8 @@ import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.TEST_TX_TIME
-import com.r3corda.testing.LedgerDSL
-import com.r3corda.testing.TestLedgerDSLInterpreter
-import com.r3corda.testing.TestTransactionDSLInterpreter
-import com.r3corda.testing.node.MockServices
 import com.r3corda.testing.*
+import com.r3corda.testing.node.MockServices
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -92,7 +89,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     threshold = Amount(0, EUR),
                     minimumTransferAmount = Amount(250000 * 100, EUR),
                     rounding = Amount(10000 * 100, EUR),
-                    valuationDate = "Every Local Business Day",
+                    valuationDateDescription = "Every Local Business Day",
                     notificationTime = "2:00pm London",
                     resolutionTime = "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
                     interestRate = ReferenceRate("T3270", Tenor("6M"), "EONIA"),
@@ -182,7 +179,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     threshold = Amount(0, EUR),
                     minimumTransferAmount = Amount(250000 * 100, EUR),
                     rounding = Amount(10000 * 100, EUR),
-                    valuationDate = "Every Local Business Day",
+                    valuationDateDescription = "Every Local Business Day",
                     notificationTime = "2:00pm London",
                     resolutionTime = "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",
                     interestRate = ReferenceRate("T3270", Tenor("6M"), "EONIA"),

@@ -23,6 +23,7 @@ fun commodity(code: String) = Commodity.getInstance(code)!!
 
 @JvmField val USD = currency("USD")
 @JvmField val GBP = currency("GBP")
+@JvmField val EUR = currency("EUR")
 @JvmField val CHF = currency("CHF")
 @JvmField val FCOJ = commodity("FCOJ")
 

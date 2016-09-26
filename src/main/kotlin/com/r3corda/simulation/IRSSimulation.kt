@@ -32,16 +32,10 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()
     }
 
-    private var nodeAKey: KeyPair? = null
-    private var nodeBKey: KeyPair? = null
-
     private val executeOnNextIteration = Collections.synchronizedList(LinkedList<() -> Unit>())
 
     override fun startMainSimulation(): ListenableFuture<Unit> {
         val future = SettableFuture.create<Unit>()
-
-        nodeAKey = banks[0].keyManagement.freshKey()
-        nodeBKey = banks[1].keyManagement.freshKey()
 
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
@@ -121,7 +115,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         irs.fixedLeg.fixedRatePayer = node1.info.identity
         irs.floatingLeg.floatingRatePayer = node2.info.identity
 
-        val instigator = TwoPartyDealProtocol.Instigator(node2.info.identity, notary.info.identity, irs, nodeAKey!!)
+        val instigator = TwoPartyDealProtocol.Instigator(node2.info.identity, notary.info.identity, irs, node1.keyPair!!)
         val acceptor = TwoPartyDealProtocol.Acceptor(node1.info.identity, notary.info.identity, irs)
         connectProtocols(instigator, acceptor)
 

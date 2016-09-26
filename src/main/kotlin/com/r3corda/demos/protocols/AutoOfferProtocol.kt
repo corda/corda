@@ -107,7 +107,7 @@ object AutoOfferProtocol {
                     otherParty,
                     notary,
                     dealToBeOffered,
-                    serviceHub.keyManagementService.freshKey(),
+                    serviceHub.storageService.myLegalIdentityKey,
                     progressTracker.getChildProgressTracker(DEALING)!!
             )
             val stx = subProtocol(instigator, inheritParentSessions = true)

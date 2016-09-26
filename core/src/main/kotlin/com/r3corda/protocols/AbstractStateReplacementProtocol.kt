@@ -70,8 +70,8 @@ abstract class AbstractStateReplacementProtocol<T> {
             return finalTx.tx.outRef(0)
         }
 
-        abstract internal fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): Proposal<T>
-        abstract internal fun assembleTx(): Pair<SignedTransaction, List<PublicKey>>
+        abstract protected fun assembleProposal(stateRef: StateRef, modification: T, stx: SignedTransaction): Proposal<T>
+        abstract protected fun assembleTx(): Pair<SignedTransaction, List<PublicKey>>
 
         @Suspendable
         private fun collectSignatures(participants: List<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
@@ -93,7 +93,10 @@ abstract class AbstractStateReplacementProtocol<T> {
         private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
             val proposal = assembleProposal(originalState.ref, modification, stx)
 
-            send(party, Handshake(serviceHub.storageService.myLegalIdentity))
+            // TODO: Move this into protocol logic as a func on the lines of handshake(Party, HandshakeMessage)
+            if (!hasSession(party)) {
+                send(party, Handshake(serviceHub.storageService.myLegalIdentity))
+            }
 
             val response = sendAndReceive<Result>(party, proposal)
             val participantSignature = response.unwrap {
@@ -179,7 +182,7 @@ abstract class AbstractStateReplacementProtocol<T> {
          * on the change proposed, and may further depend on the node itself (for example configuration). The
          * proposal is returned if acceptable, otherwise an exception is thrown.
          */
-        abstract fun verifyProposal(maybeProposal: UntrustworthyData<Proposal<T>>): Proposal<T>
+        abstract protected fun verifyProposal(maybeProposal: UntrustworthyData<Proposal<T>>): Proposal<T>
 
         @Suspendable
         private fun verifyTx(stx: SignedTransaction) {
