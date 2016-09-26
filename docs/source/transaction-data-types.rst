@@ -145,6 +145,40 @@ that has been signed by a set of parties.
 .. note:: These types are provisional and will change significantly in future as the identity framework becomes more
    fleshed out.
 
+Multi-signature support
+----------------------
+
+Corda supports scenarios where more than one key or party is required to authorise a state object transition, for example:
+"Either the CEO or 3 out of 5 of his assistants need to provide signatures".
+
+Key Trees
+^^^^^^^^^
+
+This is achieved by public key composition, using a tree data structure ``PublicKeyTree``. A ``PublicKeyTree`` stores the
+cryptographic public key primitives in its leaves and the composition logic in the intermediary nodes. Every intermediary
+node specifies a *threshold* of how many child signatures it requires.
+
+An illustration of an *"either Alice and Bob, or Charlie"* public key tree:
+
+.. image:: resources/public-key-tree.png
+:width: 300px
+
+To allow further flexibility, each child node can have an associated custom *weight* (the default is 1). The *threshold*
+then specifies the minimum total weight of all children required. Our previous example can also be expressed as:
+
+.. image:: resources/public-key-tree-2.png
+:width: 300px
+
+Verification
+^^^^^^^^^^^^
+
+Signature verification is performed in two stages:
+
+  1. Given a list of signatures, each signature is verified against the expected content.
+  2. The public keys corresponding to the signatures are matched against the leaves of the public key tree in question,
+     and the total combined weight of all children is calculated for every intermediary node. If all thresholds are satisfied,
+     the public key tree requirement is considered to be met.
+
 Date support
 ------------
 
