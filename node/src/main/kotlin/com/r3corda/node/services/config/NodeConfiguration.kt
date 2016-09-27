@@ -1,6 +1,7 @@
 package com.r3corda.node.services.config
 
 import com.google.common.net.HostAndPort
+import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.services.ServiceType
@@ -14,6 +15,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.LoggerFactory
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
@@ -29,6 +31,24 @@ interface NodeSSLConfiguration {
     val certificatesPath: Path
     val keyStorePath: Path get() = certificatesPath / "sslkeystore.jks"
     val trustStorePath: Path get() = certificatesPath / "truststore.jks"
+
+    /**
+     * Strictly for dev only automatically construct a server certificate/private key signed from
+     * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
+     */
+    fun configureWithDevSSLCertificate() {
+        Files.createDirectories(certificatesPath)
+        if (!Files.exists(trustStorePath)) {
+            Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
+                    trustStorePath)
+        }
+        if (!Files.exists(keyStorePath)) {
+            val caKeyStore = X509Utilities.loadKeyStore(
+                    javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordadevcakeys.jks"),
+                    "cordacadevpass")
+            X509Utilities.createKeystoreForSSL(keyStorePath, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass")
+        }
+    }
 }
 
 interface NodeConfiguration : NodeSSLConfiguration {

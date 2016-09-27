@@ -2,10 +2,8 @@ package com.r3corda.node.services.messaging
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
-import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.crypto.parsePublicKeyBase58
 import com.r3corda.core.crypto.toBase58String
-import com.r3corda.core.div
 import com.r3corda.core.messaging.MessageRecipients
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.serialization.SingletonSerializeAsToken
@@ -16,8 +14,6 @@ import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
-import java.nio.file.Files
-import java.nio.file.Path
 import java.security.KeyStore
 import java.security.PublicKey
 
@@ -154,21 +150,7 @@ abstract class ArtemisMessagingComponent(val config: NodeSSLConfiguration) : Sin
                     )
             )
 
-    /**
-     * Strictly for dev only automatically construct a server certificate/private key signed from
-     * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
-     */
     fun configureWithDevSSLCertificate() {
-        Files.createDirectories(config.certificatesPath)
-        if (!Files.exists(config.trustStorePath)) {
-            Files.copy(javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordatruststore.jks"),
-                    config.trustStorePath)
-        }
-        if (!Files.exists(config.keyStorePath)) {
-            val caKeyStore = X509Utilities.loadKeyStore(
-                    javaClass.classLoader.getResourceAsStream("com/r3corda/node/internal/certificates/cordadevcakeys.jks"),
-                    "cordacadevpass")
-            X509Utilities.createKeystoreForSSL(config.keyStorePath, config.keyStorePassword, config.keyStorePassword, caKeyStore, "cordacadevkeypass")
-        }
+        config.configureWithDevSSLCertificate()
     }
 }
