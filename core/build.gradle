@@ -84,4 +84,26 @@ dependencies {
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncycastle_version}"
 }
 
+task sourceJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+publishing {
+    publications {
+        core(MavenPublication) {
+            from components.java
+            artifactId 'core'
+
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
+
 quasarScan.dependsOn('classes')

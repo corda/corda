@@ -34,6 +34,7 @@ apply plugin: 'application'
 apply plugin: 'project-report'
 apply plugin: QuasarPlugin
 apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'maven-publish'
 
 allprojects {
     apply plugin: 'java'
