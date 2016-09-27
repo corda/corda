@@ -4,11 +4,18 @@ import com.r3corda.contracts.clause.AbstractConserveAmount
 import com.r3corda.contracts.clause.AbstractIssue
 import com.r3corda.contracts.clause.NoZeroSizedOutputs
 import com.r3corda.core.contracts.*
-import com.r3corda.core.contracts.clauses.*
+import com.r3corda.core.contracts.clauses.AllComposition
+import com.r3corda.core.contracts.clauses.FirstComposition
+import com.r3corda.core.contracts.clauses.GroupClauseVerifier
+import com.r3corda.core.contracts.clauses.verifyClause
 import com.r3corda.core.crypto.*
 import com.r3corda.core.node.services.Vault
+import com.r3corda.core.schemas.MappedSchema
+import com.r3corda.core.schemas.PersistentState
+import com.r3corda.core.schemas.QueryableState
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.Emoji
+import com.r3corda.schemas.CashSchemaV1
 import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
@@ -79,7 +86,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             /** There must be a MoveCommand signed by this key to claim the amount. */
             override val owner: PublicKey,
             override val encumbrance: Int? = null
-    ) : FungibleAsset<Currency> {
+    ) : FungibleAsset<Currency>, QueryableState {
         constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
         : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
@@ -95,6 +102,24 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+
+        /** Object Relational Mapping support. */
+        override fun generateMappedObject(schema: MappedSchema): PersistentState {
+            return when (schema) {
+                is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
+                        encumbrance = this.encumbrance,
+                        owner = this.owner.toBase58String(),
+                        pennies = this.amount.quantity,
+                        currency = this.amount.token.product.currencyCode,
+                        issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
+                        issuerRef = this.amount.token.issuer.reference.bits
+                )
+                else -> throw IllegalArgumentException("Unrecognised schema $schema")
+            }
+        }
+
+        /** Object Relational Mapping support. */
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CashSchemaV1)
     }
 
     // Just for grouping

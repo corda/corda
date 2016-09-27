@@ -12,7 +12,9 @@ import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
+import com.r3corda.node.services.api.SchemaService
 import com.r3corda.node.services.persistence.DataVending
+import com.r3corda.node.services.schema.NodeSchemaService
 import com.r3corda.node.services.statemachine.StateMachineManager
 import com.r3corda.testing.MOCK_IDENTITY_SERVICE
 import com.r3corda.testing.node.MockNetworkMapCache
@@ -31,7 +33,8 @@ open class MockServiceHubInternal(
         val mapCache: NetworkMapCache? = MockNetworkMapCache(),
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
-        val protocolFactory: ProtocolLogicRefFactory? = ProtocolLogicRefFactory()
+        val protocolFactory: ProtocolLogicRefFactory? = ProtocolLogicRefFactory(),
+        val schemas: SchemaService? = NodeSchemaService()
 ) : ServiceHubInternal() {
     override val vaultService: VaultService = customVault ?: InMemoryVaultService(this)
     override val keyManagementService: KeyManagementService
@@ -52,6 +55,8 @@ open class MockServiceHubInternal(
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val protocolLogicRefFactory: ProtocolLogicRefFactory
         get() = protocolFactory ?: throw UnsupportedOperationException()
+    override val schemaService: SchemaService
+        get() = schemas ?: throw UnsupportedOperationException()
 
     // We isolate the storage service with writable TXes so that it can't be accessed except via recordTransactions()
     private val txStorageService: TxWritableStorageService

@@ -130,6 +130,10 @@ dependencies {
     // SQL connection pooling library
     compile "com.zaxxer:HikariCP:2.4.7"
 
+    // Hibernate: an object relational mapper for writing state objects to the database automatically.
+    compile "org.hibernate:hibernate-core:5.2.2.Final"
+    compile "org.hibernate:hibernate-java8:5.2.2.Final"
+
     // Integration test helpers
     integrationTestCompile 'junit:junit:4.12'
 

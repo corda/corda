@@ -40,6 +40,7 @@ private val log = LoggerFactory.getLogger(ServiceHubInternal::class.java)
 abstract class ServiceHubInternal : ServiceHub {
     abstract val monitoringService: MonitoringService
     abstract val protocolLogicRefFactory: ProtocolLogicRefFactory
+    abstract val schemaService: SchemaService
 
     abstract override val networkService: MessagingServiceInternal
 

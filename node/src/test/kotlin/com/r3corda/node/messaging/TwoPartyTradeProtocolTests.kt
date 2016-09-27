@@ -18,6 +18,7 @@ import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.core.utilities.TEST_TX_TIME
+import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
@@ -88,12 +89,12 @@ class TwoPartyTradeProtocolTests {
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
-            bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
+            databaseTransaction(bobNode.database) {
+                bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
+            }
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
-
-            insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey, notaryNode.storage.myLegalIdentityKey)
-
+            insertFakeTransactions(alicesFakePaper, aliceNode, aliceNode.storage.myLegalIdentityKey, notaryNode.storage.myLegalIdentityKey)
             val (bobPsm, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
 
             // TODO: Verify that the result was inserted into the transaction database.
@@ -126,11 +127,12 @@ class TwoPartyTradeProtocolTests {
 
             net.runNetwork() // Clear network map registration messages
 
-            bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
+            databaseTransaction(bobNode.database) {
+                bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
+            }
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
-            insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
-
+            insertFakeTransactions(alicesFakePaper, aliceNode, aliceNode.storage.myLegalIdentityKey)
             val aliceFuture = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerResult
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
@@ -227,10 +229,10 @@ class TwoPartyTradeProtocolTests {
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
-            val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
+            val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID).second
-            val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
+            val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode, aliceNode.storage.myLegalIdentityKey)
 
             net.runNetwork() // Clear network map registration messages
 
@@ -318,10 +320,10 @@ class TwoPartyTradeProtocolTests {
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
-            insertFakeTransactions(bobsFakeCash, bobNode.services)
+            insertFakeTransactions(bobsFakeCash, bobNode)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID).second
-            insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
+            insertFakeTransactions(alicesFakePaper, aliceNode, aliceNode.storage.myLegalIdentityKey)
 
             net.runNetwork() // Clear network map registration messages
 
@@ -407,8 +409,8 @@ class TwoPartyTradeProtocolTests {
         val alicesFakePaper = fillUpForSeller(aliceError, aliceNode.storage.myLegalIdentity.owningKey,
                 1200.DOLLARS `issued by` issuer, null).second
 
-        insertFakeTransactions(bobsBadCash, bobNode.services, bobNode.storage.myLegalIdentityKey, bobNode.storage.myLegalIdentityKey)
-        insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
+        insertFakeTransactions(bobsBadCash, bobNode, bobNode.storage.myLegalIdentityKey, bobNode.storage.myLegalIdentityKey)
+        insertFakeTransactions(alicesFakePaper, aliceNode, aliceNode.storage.myLegalIdentityKey)
 
         net.runNetwork() // Clear network map registration messages
 
@@ -435,15 +437,17 @@ class TwoPartyTradeProtocolTests {
 
     private fun insertFakeTransactions(
             wtxToSign: List<WireTransaction>,
-            services: ServiceHub,
+            node: AbstractNode,
             vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
-        val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList() + DUMMY_CASH_ISSUER_KEY)
-        services.recordTransactions(signed)
-        val validatedTransactions = services.storageService.validatedTransactions
-        if (validatedTransactions is RecordingTransactionStorage) {
-            validatedTransactions.records.clear()
+        return databaseTransaction(node.database) {
+            val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList() + DUMMY_CASH_ISSUER_KEY)
+            node.services.recordTransactions(signed)
+            val validatedTransactions = node.services.storageService.validatedTransactions
+            if (validatedTransactions is RecordingTransactionStorage) {
+                validatedTransactions.records.clear()
+            }
+            return@databaseTransaction signed.associateBy { it.id }
         }
-        return signed.associateBy { it.id }
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
