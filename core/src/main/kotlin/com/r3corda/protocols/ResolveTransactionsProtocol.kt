@@ -127,8 +127,6 @@ class ResolveTransactionsProtocol(private val txHashes: Set<SecureHash>,
         return result
     }
 
-    override val topic: String get() = throw UnsupportedOperationException()
-
     @Suspendable
     private fun downloadDependencies(depsToCheck: Set<SecureHash>): Collection<SignedTransaction> {
         // Maintain a work queue of all hashes to load/download, initialised with our starting set. Then do a breadth

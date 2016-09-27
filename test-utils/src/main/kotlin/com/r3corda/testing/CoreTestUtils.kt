@@ -4,22 +4,28 @@ package com.r3corda.testing
 
 import com.google.common.base.Throwables
 import com.google.common.net.HostAndPort
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.contracts.StateRef
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
+import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.transactions.TransactionBuilder
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
-import com.r3corda.protocols.HandshakeMessage
+import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.services.statemachine.StateMachineManager.Change
+import com.r3corda.node.utilities.AddOrRemove.ADD
 import com.r3corda.testing.node.MockIdentityService
 import com.r3corda.testing.node.MockServices
+import rx.Subscriber
 import java.net.ServerSocket
 import java.security.KeyPair
 import java.security.PublicKey
+import kotlin.reflect.KClass
 
 /**
  *  JAVA INTEROP
@@ -129,22 +135,32 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
 ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
 
-
 /**
- * Connect two protocols together for communication. Both protocols must have a property called otherParty of type Party
- * which points to the other party in the communication.
+ * The given protocol factory will be used to initiate just one instance of a protocol of type [P] when a counterparty
+ * protocol requests for it using [markerClass].
+ * @return Returns a [ListenableFuture] holding the single [ProtocolStateMachine] created by the request.
  */
-fun connectProtocols(protocol1: ProtocolLogic<*>, protocol2: ProtocolLogic<*>) {
+inline fun <R, reified P : ProtocolLogic<R>> AbstractNode.initiateSingleShotProtocol(
+        markerClass: KClass<*>,
+        noinline protocolFactory: (Party) -> P): ListenableFuture<ProtocolStateMachine<R>> {
+    services.registerProtocolInitiator(markerClass, protocolFactory)
 
-    data class Handshake(override val replyToParty: Party,
-                         override val sendSessionID: Long,
-                         override val receiveSessionID: Long) : HandshakeMessage
+    val future = SettableFuture.create<ProtocolStateMachine<R>>()
 
-    val sessionId1 = random63BitValue()
-    val sessionId2 = random63BitValue()
-    protocol1.registerSession(Handshake(protocol1.otherParty, sessionId1, sessionId2))
-    protocol2.registerSession(Handshake(protocol2.otherParty, sessionId2, sessionId1))
+    val subscriber = object : Subscriber<Change>() {
+        override fun onNext(change: Change) {
+            if (change.logic is P && change.addOrRemove == ADD) {
+                unsubscribe()
+                future.set(change.logic.psm as ProtocolStateMachine<R>)
+            }
+        }
+        override fun onError(e: Throwable) {
+            future.setException(e)
+        }
+        override fun onCompleted() {}
+    }
+
+    smm.changes.subscribe(subscriber)
+
+    return future
 }
-
-private val ProtocolLogic<*>.otherParty: Party
-    get() = javaClass.getDeclaredField("otherParty").apply { isAccessible = true }.get(this) as Party

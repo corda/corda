@@ -1,17 +1,19 @@
 package com.r3corda.node.services
 
-import com.r3corda.core.contracts.Timestamp
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.seconds
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
-import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.NotaryError
 import com.r3corda.protocols.NotaryException
 import com.r3corda.protocols.NotaryProtocol
 import com.r3corda.testing.MINI_CORP_KEY
+import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -45,10 +47,7 @@ class NotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
-        net.runNetwork()
-
+        val future = runNotaryClient(stx)
         val signature = future.get()
         signature.verifyWithECDSA(stx.txBits)
     }
@@ -61,10 +60,7 @@ class NotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
-        net.runNetwork()
-
+        val future = runNotaryClient(stx)
         val signature = future.get()
         signature.verifyWithECDSA(stx.txBits)
     }
@@ -78,15 +74,12 @@ class NotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
-        net.runNetwork()
+        val future = runNotaryClient(stx)
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
         val error = (ex.cause as NotaryException).error
         assertTrue(error is NotaryError.TimestampInvalid)
     }
-
 
     @Test fun `should report conflict for a duplicate transaction`() {
         val stx = run {
@@ -98,8 +91,8 @@ class NotaryServiceTests {
 
         val firstSpend = NotaryProtocol.Client(stx)
         val secondSpend = NotaryProtocol.Client(stx)
-        clientNode.services.startProtocol("${NotaryProtocol.TOPIC}.first", firstSpend)
-        val future = clientNode.services.startProtocol("${NotaryProtocol.TOPIC}.second", secondSpend)
+        clientNode.services.startProtocol("notary.first", firstSpend)
+        val future = clientNode.services.startProtocol("notary.second", secondSpend)
 
         net.runNetwork()
 
@@ -107,5 +100,13 @@ class NotaryServiceTests {
         val notaryError = (ex.cause as NotaryException).error as NotaryError.Conflict
         assertEquals(notaryError.tx, stx.tx)
         notaryError.conflict.verified()
+    }
+
+
+    private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.LegallyIdentifiable> {
+        val protocol = NotaryProtocol.Client(stx)
+        val future = clientNode.services.startProtocol("notary-test", protocol)
+        net.runNetwork()
+        return future
     }
 }

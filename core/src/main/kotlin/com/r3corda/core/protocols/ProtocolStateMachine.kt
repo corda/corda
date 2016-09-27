@@ -1,7 +1,6 @@
 package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
-import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.ServiceHub
@@ -10,9 +9,12 @@ import org.slf4j.Logger
 import java.util.*
 
 data class StateMachineRunId private constructor(val uuid: UUID) {
+
     companion object {
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
     }
+
+    override fun toString(): String = "${javaClass.simpleName}($uuid)"
 }
 
 /**
@@ -20,18 +22,16 @@ data class StateMachineRunId private constructor(val uuid: UUID) {
  */
 interface ProtocolStateMachine<R> {
     @Suspendable
-    fun <T : Any> sendAndReceive(topic: String,
-                                 destination: Party,
-                                 sessionIDForSend: Long,
-                                 sessionIDForReceive: Long,
+    fun <T : Any> sendAndReceive(otherParty: Party,
                                  payload: Any,
-                                 receiveType: Class<T>): UntrustworthyData<T>
+                                 receiveType: Class<T>,
+                                 sessionProtocol: ProtocolLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, receiveType: Class<T>): UntrustworthyData<T>
+    fun <T : Any> receive(otherParty: Party, receiveType: Class<T>, sessionProtocol: ProtocolLogic<*>): UntrustworthyData<T>
 
     @Suspendable
-    fun send(topic: String, destination: Party, sessionID: Long, payload: Any)
+    fun send(otherParty: Party, payload: Any, sessionProtocol: ProtocolLogic<*>)
 
     val serviceHub: ServiceHub
     val logger: Logger
@@ -41,3 +41,5 @@ interface ProtocolStateMachine<R> {
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R>
 }
+
+class ProtocolSessionException(message: String) : Exception(message)

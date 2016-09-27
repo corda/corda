@@ -23,18 +23,15 @@ class ProtocolLogicRefTest {
         constructor(kotlinType: Int) : this(ParamType1(kotlinType), ParamType2("b"))
 
         override fun call() = Unit
-        override val topic: String get() = throw UnsupportedOperationException()
     }
 
     class KotlinNoArgProtocolLogic : ProtocolLogic<Unit>() {
         override fun call() = Unit
-        override val topic: String get() = throw UnsupportedOperationException()
     }
 
     @Suppress("UNUSED_PARAMETER") // We will never use A or b
     class NotWhiteListedKotlinProtocolLogic(A: Int, b: String) : ProtocolLogic<Unit>() {
         override fun call() = Unit
-        override val topic: String get() = throw UnsupportedOperationException()
     }
 
     lateinit var factory: ProtocolLogicRefFactory

@@ -5,7 +5,6 @@
 tags
 .DS_Store
 *.log
-*.log.gz
 *.orig
 
 # Created by .ignore support plugin (hsz.mobi)
@@ -100,3 +99,4 @@ crashlytics-build.properties
 
 # docs related
 docs/virtualenv/
+/logs/

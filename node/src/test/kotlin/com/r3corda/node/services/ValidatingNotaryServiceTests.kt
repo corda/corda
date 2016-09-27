@@ -1,8 +1,11 @@
 package com.r3corda.node.services
 
+import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.Command
 import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.crypto.DigitalSignature
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.services.network.NetworkMapService
@@ -44,9 +47,7 @@ class ValidatingNotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
-        net.runNetwork()
+        val future = runValidatingClient(stx)
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
         val notaryError = (ex.cause as NotaryException).error
@@ -64,9 +65,7 @@ class ValidatingNotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val protocol = NotaryProtocol.Client(stx)
-        val future = clientNode.services.startProtocol(NotaryProtocol.TOPIC, protocol)
-        net.runNetwork()
+        val future = runValidatingClient(stx)
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
         val notaryError = (ex.cause as NotaryException).error
@@ -74,5 +73,12 @@ class ValidatingNotaryServiceTests {
 
         val missingKeys = (notaryError as NotaryError.SignaturesMissing).missingSigners
         assertEquals(setOf(expectedMissingKey), missingKeys)
+    }
+
+    private fun runValidatingClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.LegallyIdentifiable> {
+        val protocol = NotaryProtocol.ValidatingClient(stx)
+        val future = clientNode.services.startProtocol("notary", protocol)
+        net.runNetwork()
+        return future
     }
 }

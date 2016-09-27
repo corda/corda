@@ -10,6 +10,7 @@ import com.r3corda.core.days
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.*
+import com.r3corda.core.protocols.ProtocolStateMachine
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
@@ -23,7 +24,6 @@ import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
 import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
 import com.r3corda.protocols.TwoPartyTradeProtocol.Seller
-import com.r3corda.protocols.TwoPartyTradeProtocol.TOPIC
 import com.r3corda.testing.*
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockNetwork
@@ -89,11 +89,11 @@ class TwoPartyTradeProtocolTests {
 
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey, notaryNode.storage.myLegalIdentityKey)
 
-            val (bobResult, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
+            val (bobPsm, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
 
             // TODO: Verify that the result was inserted into the transaction database.
             // assertEquals(bobResult.get(), aliceNode.storage.validatedTransactions[aliceResult.get().id])
-            assertEquals(aliceResult.get(), bobResult.get())
+            assertEquals(aliceResult.get(), bobPsm.get().resultFuture.get())
 
             aliceNode.stop()
             bobNode.stop()
@@ -120,21 +120,19 @@ class TwoPartyTradeProtocolTests {
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
             insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
-            val aliceFuture = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerFuture
+            val aliceFuture = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerResult
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
-            fun pumpAlice() = (aliceNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(false)
-
-            fun pumpBob() = (bobNode.net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(false)
-
-            pumpBob()
+            bobNode.pumpReceive(false)
 
             // Bob sends a couple of queries for the dependencies back to Alice. Alice reponds.
-            pumpAlice()
-            pumpBob()
-            pumpAlice()
-            pumpBob()
+            aliceNode.pumpReceive(false)
+            bobNode.pumpReceive(false)
+            aliceNode.pumpReceive(false)
+            bobNode.pumpReceive(false)
+            aliceNode.pumpReceive(false)
+            bobNode.pumpReceive(false)
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
             assertThat(bobNode.checkpointStorage.checkpoints).hasSize(1)
@@ -147,7 +145,7 @@ class TwoPartyTradeProtocolTests {
 
             // Alice doesn't know that and carries on: she wants to know about the cash transactions he's trying to use.
             // She will wait around until Bob comes back.
-            assertThat(pumpAlice()).isNotNull()
+            assertThat(aliceNode.pumpReceive(false)).isNotNull()
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
@@ -309,16 +307,16 @@ class TwoPartyTradeProtocolTests {
             val attachmentID = attachment(ByteArrayInputStream(stream.toByteArray()))
 
             val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public).second
-            val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode.services)
+            insertFakeTransactions(bobsFakeCash, bobNode.services)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID).second
-            val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
+            insertFakeTransactions(alicesFakePaper, aliceNode.services, aliceNode.storage.myLegalIdentityKey)
 
             net.runNetwork() // Clear network map registration messages
 
             val aliceTxStream = aliceNode.storage.validatedTransactions.track().second
             val aliceTxMappings = aliceNode.storage.stateMachineRecordedTransactionMapping.track().second
-            val (bobResult, aliceResult, bobSmId, aliceSmId) = runBuyerAndSeller("alice's paper".outputStateAndRef())
+            val aliceSmId = runBuyerAndSeller("alice's paper".outputStateAndRef()).sellerId
 
             net.runNetwork()
 
@@ -367,21 +365,20 @@ class TwoPartyTradeProtocolTests {
         }
     }
 
-    data class RunResult(
-            val buyerFuture: Future<SignedTransaction>,
-            val sellerFuture: Future<SignedTransaction>,
-            val buyerSmId: StateMachineRunId,
-            val sellerSmId: StateMachineRunId
+    private data class RunResult(
+            // The buyer is not created immediately, only when the seller starts running
+            val buyer: Future<ProtocolStateMachine<SignedTransaction>>,
+            val sellerResult: Future<SignedTransaction>,
+            val sellerId: StateMachineRunId
     )
 
-    private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>): RunResult {
-        val buyer = Buyer(aliceNode.info.identity, notaryNode.info.identity, 1000.DOLLARS, CommercialPaper.State::class.java)
+    private fun runBuyerAndSeller(assetToSell: StateAndRef<OwnableState>) : RunResult {
+        val buyerFuture = bobNode.initiateSingleShotProtocol(Seller::class) { otherParty ->
+            Buyer(otherParty, notaryNode.info.identity, 1000.DOLLARS, CommercialPaper.State::class.java)
+        }
         val seller = Seller(bobNode.info.identity, notaryNode.info, assetToSell, 1000.DOLLARS, ALICE_KEY)
-        connectProtocols(buyer, seller)
-        // We start the Buyer first, as the Seller sends the first message
-        val buyerPsm = bobNode.smm.add("$TOPIC.buyer", buyer)
-        val sellerPsm = aliceNode.smm.add("$TOPIC.seller", seller)
-        return RunResult(buyerPsm.resultFuture, sellerPsm.resultFuture, buyerPsm.id, sellerPsm.id)
+        val sellerResultFuture = aliceNode.smm.add("seller", seller).resultFuture
+        return RunResult(buyerFuture, sellerResultFuture, seller.psm.id)
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
@@ -404,7 +401,7 @@ class TwoPartyTradeProtocolTests {
 
         net.runNetwork() // Clear network map registration messages
 
-        val (bobResult, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
+        val (bobPsm, aliceResult) = runBuyerAndSeller("alice's paper".outputStateAndRef())
 
         net.runNetwork()
 
@@ -412,7 +409,7 @@ class TwoPartyTradeProtocolTests {
             if (bobError)
                 aliceResult.get()
             else
-                bobResult.get()
+                bobPsm.get().resultFuture.get()
         }
         assertTrue(e.cause is TransactionVerificationException)
         assertNotNull(e.cause!!.cause)
@@ -506,6 +503,7 @@ class TwoPartyTradeProtocolTests {
         return Pair(vault, listOf(ap))
     }
 
+
     class RecordingTransactionStorage(val delegate: TransactionStorage) : TransactionStorage {
         override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
             return delegate.track()
@@ -530,4 +528,5 @@ class TwoPartyTradeProtocolTests {
         data class Add(val transaction: SignedTransaction) : TxRecord
         data class Get(val id: SecureHash) : TxRecord
     }
+
 }

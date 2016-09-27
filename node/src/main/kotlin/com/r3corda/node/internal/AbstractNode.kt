@@ -24,6 +24,7 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.utilities.debug
 import com.r3corda.node.api.APIServer
 import com.r3corda.node.services.api.*
 import com.r3corda.node.services.config.NodeConfiguration
@@ -54,8 +55,10 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.reflect.KClass
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -91,6 +94,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
     protected val _servicesThatAcceptUploads = ArrayList<AcceptsFileUpload>()
     val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
+    private val protocolFactories = ConcurrentHashMap<Class<*>, (Party) -> ProtocolLogic<*>>()
+
     val services = object : ServiceHubInternal() {
         override val networkService: MessagingServiceInternal get() = net
         override val networkMapCache: NetworkMapCache get() = netMapCache
@@ -107,6 +112,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
         override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
             return smm.add(loggerName, logic).resultFuture
+        }
+
+        override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
+            require(markerClass !in protocolFactories) { "${markerClass.java.name} has already been used to register a protocol" }
+            log.debug { "Registering ${markerClass.java.name}" }
+            protocolFactories[markerClass.java] = protocolFactory
+        }
+
+        override fun getProtocolFactory(markerClass: Class<*>): ((Party) -> ProtocolLogic<*>)? {
+            return protocolFactories[markerClass]
         }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(storage, txs)

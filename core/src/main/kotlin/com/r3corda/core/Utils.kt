@@ -1,5 +1,6 @@
 package com.r3corda.core
 
+import com.google.common.base.Function
 import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.Futures
@@ -17,8 +18,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.time.temporal.Temporal
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executor
-import java.util.concurrent.Future
 import java.util.concurrent.locks.ReentrantLock
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.withLock
@@ -66,19 +67,20 @@ fun <T> ListenableFuture<T>.success(executor: Executor, body: (T) -> Unit) = the
 fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Unit) = then(executor) {
     try {
         get()
-    } catch(e: Throwable) {
-        body(e)
+    } catch (e: ExecutionException) {
+        body(e.cause!!)
+    } catch (t: Throwable) {
+        body(t)
     }
 }
 
-infix fun <F, T> Future<F>.map(mapper: (F) -> T): Future<T> = Futures.lazyTransform(this) { mapper(it!!) }
 infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = apply { then(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
-
-fun <R> Path.use(block: (InputStream) -> R): R = Files.newInputStream(this).use(block)
-
+infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, Function { mapper(it!!) })
+infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
+// TODO This is not used but there's existing code that can be replaced by this
 fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): SettableFuture<T> {
     try {
         set(block())
@@ -88,6 +90,8 @@ fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): Setta
     }
     return this
 }
+
+fun <R> Path.use(block: (InputStream) -> R): R = Files.newInputStream(this).use(block)
 
 // Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
 infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)

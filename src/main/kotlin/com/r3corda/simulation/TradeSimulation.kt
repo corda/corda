@@ -9,12 +9,13 @@ import com.r3corda.core.contracts.DOLLARS
 import com.r3corda.core.contracts.OwnableState
 import com.r3corda.core.contracts.`issued by`
 import com.r3corda.core.days
+import com.r3corda.core.flatMap
 import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.protocols.TwoPartyTradeProtocol
-import com.r3corda.protocols.TwoPartyTradeProtocol.TOPIC
-import com.r3corda.testing.connectProtocols
+import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
+import com.r3corda.protocols.TwoPartyTradeProtocol.Seller
+import com.r3corda.testing.initiateSingleShotProtocol
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import java.time.Instant
 
@@ -45,25 +46,24 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         seller.services.recordTransactions(issuance)
 
         val amount = 1000.DOLLARS
-        val buyerProtocol = TwoPartyTradeProtocol.Buyer(
-                seller.info.identity,
-                notary.info.identity,
-                amount,
-                CommercialPaper.State::class.java)
-        val sellerProtocol = TwoPartyTradeProtocol.Seller(
+
+        val buyerFuture = buyer.initiateSingleShotProtocol(Seller::class) {
+            Buyer(it, notary.info.identity, amount, CommercialPaper.State::class.java)
+        }.flatMap { it.resultFuture }
+
+        val sellerProtocol = Seller(
                 buyer.info.identity,
                 notary.info,
                 issuance.tx.outRef<OwnableState>(0),
                 amount,
                 seller.storage.myLegalIdentityKey)
-        connectProtocols(buyerProtocol, sellerProtocol)
 
         showConsensusFor(listOf(buyer, seller, notary))
         showProgressFor(listOf(buyer, seller))
 
-        val buyerFuture = buyer.services.startProtocol("bank.$buyerBankIndex.$TOPIC.buyer", buyerProtocol)
-        val sellerFuture = seller.services.startProtocol("bank.$sellerBankIndex.$TOPIC.seller", sellerProtocol)
+        val sellerFuture = seller.services.startProtocol("bank.$sellerBankIndex.seller", sellerProtocol)
 
         return Futures.successfulAsList(buyerFuture, sellerFuture)
     }
+
 }

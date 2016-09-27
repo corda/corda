@@ -5,12 +5,10 @@ import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SignedData
 import com.r3corda.core.crypto.signWithECDSA
-import com.r3corda.core.messaging.Ack
 import com.r3corda.core.node.services.TimestampChecker
 import com.r3corda.core.node.services.UniquenessException
 import com.r3corda.core.node.services.UniquenessProvider
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.serialize
 import com.r3corda.core.transactions.SignedTransaction
@@ -21,8 +19,6 @@ import java.security.PublicKey
 
 object NotaryProtocol {
 
-    val TOPIC = "platform.notary"
-
     /**
      * A protocol to be used for obtaining a signature from a [NotaryService] ascertaining the transaction
      * timestamp is correct and none of its inputs have been used in another completed transaction.
@@ -30,8 +26,8 @@ object NotaryProtocol {
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the timestamp is invalid.
      */
-    class Client(private val stx: SignedTransaction,
-                 override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
+    open class Client(private val stx: SignedTransaction,
+                      override val progressTracker: ProgressTracker = Client.tracker()) : ProtocolLogic<DigitalSignature.LegallyIdentifiable>() {
 
         companion object {
 
@@ -42,8 +38,6 @@ object NotaryProtocol {
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
         }
 
-        override val topic: String get() = TOPIC
-
         lateinit var notaryParty: Party
 
         @Suspendable
@@ -51,9 +45,9 @@ object NotaryProtocol {
             progressTracker.currentStep = REQUESTING
             val wtx = stx.tx
             notaryParty = wtx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
-            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) { "Input states must have the same Notary" }
-
-            sendAndReceive<Ack>(notaryParty, Handshake(serviceHub.storageService.myLegalIdentity))
+            check(wtx.inputs.all { stateRef -> serviceHub.loadState(stateRef).notary == notaryParty }) {
+                "Input states must have the same Notary"
+            }
 
             val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
             val response = sendAndReceive<Result>(notaryParty, request)
@@ -80,6 +74,10 @@ object NotaryProtocol {
         }
     }
 
+
+    class ValidatingClient(stx: SignedTransaction) : Client(stx)
+
+
     /**
      * Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
      * if any of the input states have been previously committed.
@@ -92,11 +90,9 @@ object NotaryProtocol {
                        val timestampChecker: TimestampChecker,
                        val uniquenessProvider: UniquenessProvider) : ProtocolLogic<Unit>() {
 
-        override val topic: String get() = TOPIC
-
         @Suspendable
         override fun call() {
-            val (stx, reqIdentity) = sendAndReceive<SignRequest>(otherSide, Ack).unwrap { it }
+            val (stx, reqIdentity) = receive<SignRequest>(otherSide).unwrap { it }
             val wtx = stx.tx
 
             val result = try {
@@ -148,10 +144,6 @@ object NotaryProtocol {
         }
     }
 
-    data class Handshake(override val replyToParty: Party,
-                         override val sendSessionID: Long = random63BitValue(),
-                         override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
-
     /** TODO: The caller must authenticate instead of just specifying its identity */
     data class SignRequest(val tx: SignedTransaction, val callerIdentity: Party)
 
@@ -162,23 +154,10 @@ object NotaryProtocol {
         }
     }
 
-    interface Factory {
-        fun create(otherSide: Party,
-                   timestampChecker: TimestampChecker,
-                   uniquenessProvider: UniquenessProvider): Service
-    }
-
-    object DefaultFactory : Factory {
-        override fun create(otherSide: Party,
-                            timestampChecker: TimestampChecker,
-                            uniquenessProvider: UniquenessProvider): Service {
-            return Service(otherSide, timestampChecker, uniquenessProvider)
-        }
-    }
 }
 
 class NotaryException(val error: NotaryError) : Exception() {
-    override fun toString() = "${super.toString()}: Error response from Notary - ${error.toString()}"
+    override fun toString() = "${super.toString()}: Error response from Notary - $error"
 }
 
 sealed class NotaryError {

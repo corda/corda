@@ -10,12 +10,14 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.Path
 
 class PerFileCheckpointStorageTests {
 
-    val fileSystem = Jimfs.newFileSystem(unix())
-    val storeDir = fileSystem.getPath("store")
+    val fileSystem: FileSystem = Jimfs.newFileSystem(unix())
+    val storeDir: Path = fileSystem.getPath("store")
     lateinit var checkpointStorage: PerFileCheckpointStorage
 
     @Before
@@ -92,6 +94,6 @@ class PerFileCheckpointStorageTests {
     }
 
     private var checkpointCount = 1
-    private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)), null, null)
+    private fun newCheckpoint() = Checkpoint(SerializedBytes(Ints.toByteArray(checkpointCount++)))
 
 }

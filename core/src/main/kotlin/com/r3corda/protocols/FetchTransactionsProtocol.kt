@@ -1,8 +1,8 @@
 package com.r3corda.protocols
 
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.transactions.SignedTransaction
 
 /**
  * Given a set of tx hashes (IDs), either loads them from local disk or asks the remote peer to provide them.
@@ -14,12 +14,6 @@ import com.r3corda.core.crypto.SecureHash
  */
 class FetchTransactionsProtocol(requests: Set<SecureHash>, otherSide: Party) :
         FetchDataProtocol<SignedTransaction, SignedTransaction>(requests, otherSide) {
-
-    companion object {
-        const val TOPIC = "platform.fetch.tx"
-    }
-
-    override val topic: String get() = TOPIC
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.storageService.validatedTransactions.getTransaction(txid)
 }

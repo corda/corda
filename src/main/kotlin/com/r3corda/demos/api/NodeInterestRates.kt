@@ -12,16 +12,14 @@ import com.r3corda.core.math.InterpolatorFactory
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
-import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.AcceptsFileUpload
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.FiberBox
-import com.r3corda.protocols.RatesFixProtocol
-import com.r3corda.protocols.ServiceRequestMessage
+import com.r3corda.protocols.RatesFixProtocol.*
 import com.r3corda.protocols.TwoPartyDealProtocol
-import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
@@ -55,46 +53,31 @@ object NodeInterestRates {
     /**
      * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
      */
-    class Service(services: ServiceHubInternal) : AcceptsFileUpload, AbstractNodeService(services) {
+    class Service(services: ServiceHubInternal) : AcceptsFileUpload, SingletonSerializeAsToken() {
         val ss = services.storageService
         val oracle = Oracle(ss.myLegalIdentity, ss.myLegalIdentityKey, services.clock)
 
-        private val logger = LoggerFactory.getLogger(Service::class.java)
-
         init {
-            addMessageHandler(RatesFixProtocol.TOPIC,
-                    { req: ServiceRequestMessage ->
-                        if (req is RatesFixProtocol.SignRequest) {
-                            oracle.sign(req.tx)
-                        }
-                        else {
-                            /**
-                             * We put this into a protocol so that if it blocks waiting for the interest rate to become
-                             * available, we a) don't block this thread and b) allow the fact we are waiting
-                             * to be persisted/checkpointed.
-                             * Interest rates become available when they are uploaded via the web as per [DataUploadServlet],
-                             * if they haven't already been uploaded that way.
-                             */
-                            req as RatesFixProtocol.QueryRequest
-                            val handler = FixQueryHandler(this, req)
-                            handler.registerSession(req)
-                            services.startProtocol("fixing", handler)
-                            Unit
-                        }
-                    },
-                    { message, e -> logger.error("Exception during interest rate oracle request processing", e) }
-            )
+            services.registerProtocolInitiator(FixSignProtocol::class) { FixSignHandler(it, oracle) }
+            services.registerProtocolInitiator(FixQueryProtocol::class) { FixQueryHandler(it, oracle) }
         }
 
-        private class FixQueryHandler(val service: Service,
-                                      val request: RatesFixProtocol.QueryRequest) : ProtocolLogic<Unit>() {
+
+        private class FixSignHandler(val otherParty: Party, val oracle: Oracle) : ProtocolLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val request = receive<SignRequest>(otherParty).unwrap { it }
+                send(otherParty, oracle.sign(request.tx))
+            }
+        }
+
+        private class FixQueryHandler(val otherParty: Party, val oracle: Oracle) : ProtocolLogic<Unit>() {
 
             companion object {
                 object RECEIVED : ProgressTracker.Step("Received fix request")
                 object SENDING : ProgressTracker.Step("Sending fix response")
             }
 
-            override val topic: String get() = RatesFixProtocol.TOPIC
             override val progressTracker = ProgressTracker(RECEIVED, SENDING)
 
             init {
@@ -103,9 +86,10 @@ object NodeInterestRates {
 
             @Suspendable
             override fun call(): Unit {
-                val answers = service.oracle.query(request.queries, request.deadline)
+                val request = receive<QueryRequest>(otherParty).unwrap { it }
+                val answers = oracle.query(request.queries, request.deadline)
                 progressTracker.currentStep = SENDING
-                send(request.replyToParty, answers)
+                send(otherParty, answers)
             }
         }
 

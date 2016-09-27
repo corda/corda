@@ -9,7 +9,6 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.signWithECDSA
 import com.r3corda.core.node.recordTransactions
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import com.r3corda.core.utilities.ProgressTracker
@@ -34,10 +33,6 @@ abstract class AbstractStateReplacementProtocol<T> {
         val modification: T
         val stx: SignedTransaction
     }
-
-    data class Handshake(override val replyToParty: Party,
-                         override val sendSessionID: Long = random63BitValue(),
-                         override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
 
     abstract class Instigator<out S : ContractState, T>(val originalState: StateAndRef<S>,
                                                         val modification: T,
@@ -93,11 +88,6 @@ abstract class AbstractStateReplacementProtocol<T> {
         @Suspendable
         private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
             val proposal = assembleProposal(originalState.ref, modification, stx)
-
-            // TODO: Move this into protocol logic as a func on the lines of handshake(Party, HandshakeMessage)
-            if (!hasSession(party)) {
-                send(party, Handshake(serviceHub.storageService.myLegalIdentity))
-            }
 
             val response = sendAndReceive<Result>(party, proposal)
             val participantSignature = response.unwrap {

@@ -1,14 +1,16 @@
 package com.r3corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.messaging.MessagingService
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.TxWritableStorageService
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
 import org.slf4j.LoggerFactory
+import kotlin.reflect.KClass
 
 interface MessagingServiceInternal : MessagingService {
     /**
@@ -49,7 +51,7 @@ abstract class ServiceHubInternal : ServiceHub {
      * @param txs The transactions to record.
      */
     internal fun recordTransactionsInternal(writableStorageService: TxWritableStorageService, txs: Iterable<SignedTransaction>) {
-        val stateMachineRunId = ProtocolStateMachineImpl.retrieveCurrentStateMachine()?.id
+        val stateMachineRunId = ProtocolStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
             txs.forEach {
                 storageService.stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
@@ -67,6 +69,23 @@ abstract class ServiceHubInternal : ServiceHub {
      *       itself, at which point this method would not be needed (by the scheduler).
      */
     abstract fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T>
+
+    /**
+     * Register the protocol factory we wish to use when a initiating party attempts to communicate with us. The
+     * registration is done against a marker [KClass] which is sent in the session handsake by the other party. If this
+     * marker class has been registered then the corresponding factory will be used to create the protocol which will
+     * communicate with the other side. If there is no mapping then the session attempt is rejected.
+     * @param markerClass The marker [KClass] present in a session initiation attempt, which is a 1:1 mapping to a [Class]
+     * using the <pre>::class</pre> construct. Any marker class can be used, with the default being the class of the initiating
+     * protocol. This enables the registration to be of the form: registerProtocolInitiator(InitiatorProtocol::class, ::InitiatedProtocol)
+     * @param protocolFactory The protocol factory generating the initiated protocol.
+     */
+    abstract fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>)
+
+    /**
+     * Return the protocol factory that has been registered with [markerClass], or null if no factory is found.
+     */
+    abstract fun getProtocolFactory(markerClass: Class<*>): ((Party) -> ProtocolLogic<*>)?
 
     override fun <T : Any> invokeProtocolAsync(logicType: Class<out ProtocolLogic<T>>, vararg args: Any?): ListenableFuture<T> {
         val logicRef = protocolLogicRefFactory.create(logicType, *args)

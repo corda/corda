@@ -24,8 +24,6 @@ import java.security.PublicKey
  */
 object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
 
-    val TOPIC = "platform.notary.change"
-
     data class Proposal(override val stateRef: StateRef,
                         override val modification: Party,
                         override val stx: SignedTransaction) : AbstractStateReplacementProtocol.Proposal<Party>
@@ -34,8 +32,6 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
                                         newNotary: Party,
                                         progressTracker: ProgressTracker = tracker())
         : AbstractStateReplacementProtocol.Instigator<T, Party>(originalState, newNotary, progressTracker) {
-
-        override val topic: String get() = TOPIC
 
         override fun assembleProposal(stateRef: StateRef, modification: Party, stx: SignedTransaction): AbstractStateReplacementProtocol.Proposal<Party>
             = Proposal(stateRef, modification, stx)
@@ -55,8 +51,6 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
     class Acceptor(otherSide: Party,
                    override val progressTracker: ProgressTracker = tracker())
     : AbstractStateReplacementProtocol.Acceptor<Party>(otherSide) {
-
-        override val topic: String get() = TOPIC
 
         /**
          * Check the notary change proposal.

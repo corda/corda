@@ -5,7 +5,6 @@ import com.r3corda.core.contracts.NamedByHash
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.ProtocolLogic
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.protocols.FetchDataProtocol.DownloadedVsRequestedDataMismatch
 import com.r3corda.protocols.FetchDataProtocol.HashNotFound
@@ -21,8 +20,8 @@ import java.util.*
  * [HashNotFound] exception being thrown.
  *
  * By default this class does not insert data into any local database, if you want to do that after missing items were
- * fetched then override [maybeWriteToDisk]. You *must* override [load] and [queryTopic]. If the wire type is not the
- * same as the ultimate type, you must also override [convert].
+ * fetched then override [maybeWriteToDisk]. You *must* override [load]. If the wire type is not the same as the
+ * ultimate type, you must also override [convert].
  *
  * @param T The ultimate type of the data being fetched.
  * @param W The wire type of the data being fetched, for when it isn't the same as the ultimate type.
@@ -35,10 +34,7 @@ abstract class FetchDataProtocol<T : NamedByHash, in W : Any>(
     class HashNotFound(val requested: SecureHash) : BadAnswer()
     class DownloadedVsRequestedDataMismatch(val requested: SecureHash, val got: SecureHash) : BadAnswer()
 
-    data class Request(val hashes: List<SecureHash>,
-                       override val replyToParty: Party,
-                       override val sendSessionID: Long = random63BitValue(),
-                       override val receiveSessionID: Long = random63BitValue()) : HandshakeMessage
+    data class Request(val hashes: List<SecureHash>)
     data class Result<out T : NamedByHash>(val fromDisk: List<T>, val downloaded: List<T>)
 
     @Suspendable
@@ -51,9 +47,8 @@ abstract class FetchDataProtocol<T : NamedByHash, in W : Any>(
         } else {
             logger.trace("Requesting ${toFetch.size} dependency(s) for verification")
 
-            val fetchReq = Request(toFetch, serviceHub.storageService.myLegalIdentity)
             // TODO: Support "large message" response streaming so response sizes are not limited by RAM.
-            val maybeItems = sendAndReceive<ArrayList<W?>>(otherSide, fetchReq)
+            val maybeItems = sendAndReceive<ArrayList<W?>>(otherSide, Request(toFetch))
             // Check for a buggy/malicious peer answering with something that we didn't ask for.
             val downloaded = validateFetchResponse(maybeItems, toFetch)
             maybeWriteToDisk(downloaded)

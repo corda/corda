@@ -1,7 +1,7 @@
 package com.r3corda.node.services.api
 
+import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.serialization.SerializedBytes
-import com.r3corda.node.services.statemachine.ProtocolIORequest
 import com.r3corda.node.services.statemachine.ProtocolStateMachineImpl
 
 /**
@@ -30,14 +30,13 @@ interface CheckpointStorage {
 }
 
 // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
-data class Checkpoint(
-        val serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>,
-        val request: ProtocolIORequest?,
-        val receivedPayload: Any?
-) {
-    // This flag is always false when loaded from storage as it isn't serialised.
-    // It is used to track when the associated fiber has been created, but not necessarily started when
-    // messages for protocols arrive before the system has fully loaded at startup.
-    @Transient
-    var fiberCreated: Boolean = false
+class Checkpoint(val serialisedFiber: SerializedBytes<ProtocolStateMachineImpl<*>>) {
+
+    val id: SecureHash get() = serialisedFiber.hash
+
+    override fun equals(other: Any?): Boolean = other === this || other is Checkpoint && other.id == this.id
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }

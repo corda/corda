@@ -33,18 +33,3 @@ interface PartyRequestMessage : ServiceRequestMessage {
         return networkMapCache.partyNodes.single { it.identity == replyToParty }.address
     }
 }
-
-/**
- * A Handshake message is sent to initiate communication between two protocol instances. It contains the two session IDs
- * the two protocols will need to communicate.
- * Note: This is a temperary interface and will be removed once the protocol session work is implemented.
- */
-interface HandshakeMessage : PartyRequestMessage {
-
-    val sendSessionID: Long
-    val receiveSessionID: Long
-    @Deprecated("sessionID functions as receiveSessionID but it's recommended to use the later for clarity",
-            replaceWith = ReplaceWith("receiveSessionID"))
-    override val sessionID: Long get() = receiveSessionID
-
-}

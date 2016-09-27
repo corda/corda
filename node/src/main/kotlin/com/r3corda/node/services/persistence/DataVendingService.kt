@@ -1,17 +1,12 @@
 package com.r3corda.node.services.persistence
 
+import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.failure
-import com.r3corda.core.messaging.MessagingService
-import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.node.CordaPluginRegistry
-import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.recordTransactions
-import com.r3corda.core.serialization.serialize
-import com.r3corda.core.success
-import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.protocols.ProtocolLogic
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.node.services.api.AbstractNodeService
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.*
 import java.io.InputStream
@@ -39,78 +34,73 @@ object DataVending {
     // TODO:  I don't like that this needs ServiceHubInternal, but passing in a state machine breaks MockServices because
 //        the state machine isn't set when this is constructed. [NodeSchedulerService] has the same problem, and both
 //        should be fixed at the same time.
-    class Service(services: ServiceHubInternal) : AbstractNodeService(services) {
+    class Service(services: ServiceHubInternal) : SingletonSerializeAsToken() {
+
         companion object {
             val logger = loggerFor<DataVending.Service>()
-
-            /**
-             * Notify a node of a transaction. Normally any notarisation required would happen before this is called.
-             */
-            fun notify(net: MessagingService,
-                       myIdentity: Party,
-                       recipient: NodeInfo,
-                       transaction: SignedTransaction) {
-                val msg = BroadcastTransactionProtocol.NotifyTxRequestMessage(transaction, emptySet(), myIdentity)
-                net.send(net.createMessage(TopicSession(BroadcastTransactionProtocol.TOPIC, 0), msg.serialize().bits), recipient.address)
-            }
         }
-
-        val storage = services.storageService
 
         class TransactionRejectedError(msg: String) : Exception(msg)
 
         init {
-            addMessageHandler(FetchTransactionsProtocol.TOPIC,
-                    { req: FetchDataProtocol.Request -> handleTXRequest(req) },
-                    { message, e -> logger.error("Failure processing data vending request.", e) }
-            )
-
-            addMessageHandler(FetchAttachmentsProtocol.TOPIC,
-                    { req: FetchDataProtocol.Request -> handleAttachmentRequest(req) },
-                    { message, e -> logger.error("Failure processing data vending request.", e) }
-            )
-
-            // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
-            //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
-            // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
-            //       cash without from unknown parties?
-            addProtocolHandler(
-                    BroadcastTransactionProtocol.TOPIC,
-                    "Resolving transactions",
-                    { req: BroadcastTransactionProtocol.NotifyTxRequestMessage ->
-                        ResolveTransactionsProtocol(req.tx, req.replyToParty)
-                    },
-                    { future, req ->
-                        future.success {
-                            serviceHub.recordTransactions(req.tx)
-                        }.failure { throwable ->
-                            logger.warn("Received invalid transaction ${req.tx.id} from ${req.replyToParty}", throwable)
-                        }
-                    })
+            services.registerProtocolInitiator(FetchTransactionsProtocol::class, ::FetchTransactionsHandler)
+            services.registerProtocolInitiator(FetchAttachmentsProtocol::class, ::FetchAttachmentsHandler)
+            services.registerProtocolInitiator(BroadcastTransactionProtocol::class, ::NotifyTransactionHandler)
         }
 
-        private fun handleTXRequest(req: FetchDataProtocol.Request): List<SignedTransaction?> {
-            require(req.hashes.isNotEmpty())
-            return req.hashes.map {
-                val tx = storage.validatedTransactions.getTransaction(it)
-                if (tx == null)
-                    logger.info("Got request for unknown tx $it")
-                tx
+
+        private class FetchTransactionsHandler(val otherParty: Party) : ProtocolLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val request = receive<FetchDataProtocol.Request>(otherParty).unwrap {
+                    require(it.hashes.isNotEmpty())
+                    it
+                }
+                val txs = request.hashes.map {
+                    val tx = serviceHub.storageService.validatedTransactions.getTransaction(it)
+                    if (tx == null)
+                        logger.info("Got request for unknown tx $it")
+                    tx
+                }
+                send(otherParty, txs)
             }
         }
 
-        private fun handleAttachmentRequest(req: FetchDataProtocol.Request): List<ByteArray?> {
-            // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
-            require(req.hashes.isNotEmpty())
-            return req.hashes.map {
-                val jar: InputStream? = storage.attachments.openAttachment(it)?.open()
-                if (jar == null) {
-                    logger.info("Got request for unknown attachment $it")
-                    null
-                } else {
-                    jar.readBytes()
+
+        // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
+        private class FetchAttachmentsHandler(val otherParty: Party) : ProtocolLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val request = receive<FetchDataProtocol.Request>(otherParty).unwrap {
+                    require(it.hashes.isNotEmpty())
+                    it
                 }
+                val attachments = request.hashes.map {
+                    val jar: InputStream? = serviceHub.storageService.attachments.openAttachment(it)?.open()
+                    if (jar == null) {
+                        logger.info("Got request for unknown attachment $it")
+                        null
+                    } else {
+                        jar.readBytes()
+                    }
+                }
+                send(otherParty, attachments)
+            }
+        }
+
+
+        // TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
+        //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
+        // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
+        //       cash without from unknown parties?
+        class NotifyTransactionHandler(val otherParty: Party) : ProtocolLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val request = receive<BroadcastTransactionProtocol.NotifyTxRequest>(otherParty).unwrap { it }
+                subProtocol(ResolveTransactionsProtocol(request.tx, otherParty), shareParentSessions = true)
+                serviceHub.recordTransactions(request.tx)
             }
         }
     }
+
 }

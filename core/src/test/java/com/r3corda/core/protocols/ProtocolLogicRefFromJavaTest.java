@@ -1,10 +1,11 @@
 package com.r3corda.core.protocols;
 
+import org.junit.Test;
 
-import org.jetbrains.annotations.*;
-import org.junit.*;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ProtocolLogicRefFromJavaTest {
 
@@ -33,12 +34,6 @@ public class ProtocolLogicRefFromJavaTest {
         public Void call() {
             return null;
         }
-
-        @NotNull
-        @Override
-        protected String getTopic() {
-            throw new UnsupportedOperationException();
-        }
     }
 
     private static class JavaNoArgProtocolLogic extends ProtocolLogic<Void> {
@@ -49,12 +44,6 @@ public class ProtocolLogicRefFromJavaTest {
         @Override
         public Void call() {
             return null;
-        }
-
-        @NotNull
-        @Override
-        protected String getTopic() {
-            throw new UnsupportedOperationException();
         }
     }
 

@@ -14,12 +14,6 @@ import java.io.InputStream
 class FetchAttachmentsProtocol(requests: Set<SecureHash>,
                                otherSide: Party) : FetchDataProtocol<Attachment, ByteArray>(requests, otherSide) {
 
-    companion object {
-        const val TOPIC = "platform.fetch.attachment"
-    }
-
-    override val topic: String get() = TOPIC
-
     override fun load(txid: SecureHash): Attachment? = serviceHub.storageService.attachments.openAttachment(txid)
 
     override fun convert(wire: ByteArray): Attachment {

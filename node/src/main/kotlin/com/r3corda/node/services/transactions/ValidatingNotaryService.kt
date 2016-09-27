@@ -11,17 +11,13 @@ import com.r3corda.protocols.ValidatingNotaryProtocol
 
 /** A Notary service that validates the transaction chain of he submitted transaction before committing it */
 class ValidatingNotaryService(services: ServiceHubInternal,
-                              timestampChecker: TimestampChecker,
-                              uniquenessProvider: UniquenessProvider) : NotaryService(services, timestampChecker, uniquenessProvider) {
+                              val timestampChecker: TimestampChecker,
+                              val uniquenessProvider: UniquenessProvider) : NotaryService(NotaryProtocol.ValidatingClient::class, services) {
     object Type : ServiceType("corda.notary.validating")
 
     override val logger = loggerFor<ValidatingNotaryService>()
 
-    override val protocolFactory = object : NotaryProtocol.Factory {
-        override fun create(otherSide: Party,
-                            timestampChecker: TimestampChecker,
-                            uniquenessProvider: UniquenessProvider): NotaryProtocol.Service {
-            return ValidatingNotaryProtocol(otherSide, timestampChecker, uniquenessProvider)
-        }
+    override fun createProtocol(otherParty: Party): ValidatingNotaryProtocol {
+        return ValidatingNotaryProtocol(otherParty, timestampChecker, uniquenessProvider)
     }
 }

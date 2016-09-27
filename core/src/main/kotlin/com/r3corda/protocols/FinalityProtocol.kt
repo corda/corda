@@ -31,9 +31,6 @@ class FinalityProtocol(val transaction: SignedTransaction,
         fun tracker() = ProgressTracker(NOTARISING, BROADCASTING)
     }
 
-    override val topic: String
-        get() = throw UnsupportedOperationException()
-
     @Suspendable
     override fun call() {
         // TODO: Resolve the tx here: it's probably already been done, but re-resolution is a no-op and it'll make the API more forgiving.

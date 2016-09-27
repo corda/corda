@@ -91,7 +91,7 @@ Our protocol has two parties (B and S for buyer and seller) and will proceed as 
    it lacks a signature from S authorising movement of the asset.
 3. S signs it and hands the now finalised ``SignedTransaction`` back to B.
 
-You can find the implementation of this protocol in the file ``contracts/protocols/TwoPartyTradeProtocol.kt``.
+You can find the implementation of this protocol in the file ``contracts/src/main/kotlin/com/r3corda/protocols/TwoPartyTradeProtocol.kt``.
 
 Assuming no malicious termination, they both end the protocol being in posession of a valid, signed transaction that
 represents an atomic asset swap.
@@ -110,7 +110,6 @@ each side.
    .. sourcecode:: kotlin
 
       object TwoPartyTradeProtocol {
-          val TOPIC = "platform.trade"
 
           class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
           class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
@@ -118,21 +117,20 @@ each side.
           }
 
           // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-          class SellerTradeInfo(
+          data class SellerTradeInfo(
                   val assetForSale: StateAndRef<OwnableState>,
-                  val price: Amount,
-                  val sellerOwnerKey: PublicKey,
-                  val sessionID: Long
+                  val price: Amount<Currency>,
+                  val sellerOwnerKey: PublicKey
           )
 
-          class SignaturesFromSeller(val timestampAuthoritySig: DigitalSignature.WithKey, val sellerSig: DigitalSignature.WithKey)
+          data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
+                                          val notarySig: DigitalSignature.LegallyIdentifiable)
 
           open class Seller(val otherSide: Party,
                             val notaryNode: NodeInfo,
                             val assetToSell: StateAndRef<OwnableState>,
                             val price: Amount<Currency>,
                             val myKeyPair: KeyPair,
-                            val buyerSessionID: Long,
                             override val progressTracker: ProgressTracker = Seller.tracker()) : ProtocolLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
@@ -143,8 +141,7 @@ each side.
           open class Buyer(val otherSide: Party,
                            val notary: Party,
                            val acceptablePrice: Amount<Currency>,
-                           val typeToBuy: Class<out OwnableState>,
-                           val sessionID: Long) : ProtocolLogic<SignedTransaction>() {
+                           val typeToBuy: Class<out OwnableState>) : ProtocolLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
                   TODO()
@@ -152,25 +149,17 @@ each side.
           }
       }
 
-Let's unpack what this code does:
-
-- It defines a several classes nested inside the main ``TwoPartyTradeProtocol`` singleton. Some of the classes
-  are simply protocol messages or exceptions. The other two represent the buyer and seller side of the protocol.
-- It defines the "trade topic", which is just a string that namespaces this protocol. The prefix "platform." is reserved
-  by Corda, but you can define your own protocol namespaces using standard Java-style reverse DNS notation.
+This code defines several classes nested inside the main ``TwoPartyTradeProtocol`` singleton. Some of the classes are
+simply protocol messages or exceptions. The other two represent the buyer and seller side of the protocol.
 
 Going through the data needed to become a seller, we have:
 
-- ``otherSide: SingleMessageRecipient`` - the network address of the node with which you are trading.
+- ``otherSide: Party`` - the party with which you are trading.
 - ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`consensus`" for more
   information on notaries.
 - ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
 - ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint).
 - ``myKeyPair: KeyPair`` - the key pair that controls the asset being sold. It will be used to sign the transaction.
-- ``buyerSessionID: Long`` - a unique number that identifies this trade to the buyer. It is expected that the buyer
-  knows that the trade is going to take place and has sent you such a number already.
-
-.. note:: Session IDs will be automatically handled in a future version of the framework.
 
 And for the buyer:
 
@@ -178,7 +167,6 @@ And for the buyer:
   a price less than or equal to this, then the trade will go ahead.
 - ``typeToBuy: Class<out OwnableState>`` - the type of state that is being purchased. This is used to check that the
   sell side of the protocol isn't trying to sell us the wrong thing, whether by accident or on purpose.
-- ``sessionID: Long`` - the session ID that was handed to the seller in order to start the protocol.
 
 Alright, so using this protocol shouldn't be too hard: in the simplest case we can just create a Buyer or Seller
 with the details of the trade, depending on who we are. We then have to start the protocol in some way. Just
@@ -221,6 +209,27 @@ protocol are checked against a whitelist, which can be extended by apps themselv
 The process of starting a protocol returns a ``ListenableFuture`` that you can use to either block waiting for
 the result, or register a callback that will be invoked when the result is ready.
 
+In a two party protocol only one side is to be manually started using ``ServiceHub.invokeProtocolAsync``. The other side
+has to be registered by its node to respond to the initiating protocol via ``ServiceHubInternal.registerProtocolInitiator``.
+In our example it doesn't matter which protocol is the initiator and which is the initiated. For example, if we are to
+take the seller as the initiator then we would register the buyer as such:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      val services: ServiceHubInternal = TODO()
+
+      services.registerProtocolInitiator(Seller::class) { otherParty ->
+        val notary = services.networkMapCache.notaryNodes[0]
+        val acceptablePrice = TODO()
+        val typeToBuy = TODO()
+        Buyer(otherParty, notary, acceptablePrice, typeToBuy)
+      }
+
+This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating protocol
+is a seller (``Seller::class``).
+
 Implementing the seller
 -----------------------
 
@@ -253,12 +262,10 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
 
       @Suspendable
       private fun receiveAndCheckProposedTransaction(): SignedTransaction {
-          val sessionID = random63BitValue()
-
           // Make the first message we'll send to kick off the protocol.
-          val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
+          val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public)
 
-          val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, buyerSessionID, sessionID, hello)
+          val maybeSTX = sendAndReceive<SignedTransaction>(otherSide, hello)
 
           maybeSTX.unwrap {
               // Check that the tx proposed by the buyer is valid.
@@ -281,11 +288,10 @@ Let's fill out the ``receiveAndCheckProposedTransaction()`` method.
           }
       }
 
-Let's break this down. We generate a session ID to identify what's happening on the seller side, fill out
-the initial protocol message, and then call ``sendAndReceive``. This function takes a few arguments:
+Let's break this down. We fill out the initial protocol message with the trade info, and then call ``sendAndReceive``.
+This function takes a few arguments:
 
-- The topic string that ensures the message is routed to the right bit of code in the other side's node.
-- The session IDs that ensure the messages don't get mixed up with other simultaneous trades.
+- The party on the other side.
 - The thing to send. It'll be serialised and sent automatically.
 - Finally a type argument, which is the kind of object we're expecting to receive from the other side. If we get
   back something else an exception is thrown.
@@ -370,7 +376,7 @@ Here's the rest of the code:
                                  notarySignature: DigitalSignature.LegallyIdentifiable): SignedTransaction {
           val fullySigned = partialTX + ourSignature + notarySignature
           logger.trace { "Built finished transaction, sending back to secondary!" }
-          send(otherSide, buyerSessionID, SignaturesFromSeller(ourSignature, notarySignature))
+          send(otherSide, SignaturesFromSeller(ourSignature, notarySignature))
           return fullySigned
       }
 
@@ -406,7 +412,7 @@ OK, let's do the same for the buyer side:
           val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
           val stx = signWithOurKeys(cashSigningPubKeys, ptx)
 
-          val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
+          val signatures = swapSignaturesWithSeller(stx)
 
           logger.trace { "Got signatures from seller, verifying ... " }
 
@@ -419,16 +425,14 @@ OK, let's do the same for the buyer side:
 
       @Suspendable
       private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
-          // Wait for a trade request to come in on our pre-provided session ID.
-          val maybeTradeRequest = receive<SellerTradeInfo>(sessionID)
+          // Wait for a trade request to come in from the other side
+          val maybeTradeRequest = receive<SellerTradeInfo>(otherParty)
           maybeTradeRequest.unwrap {
               // What is the seller trying to sell us?
               val asset = it.assetForSale.state.data
               val assetTypeName = asset.javaClass.name
               logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
-              // Check the start message for acceptability.
-              check(it.sessionID > 0)
               if (it.price > acceptablePrice)
                   throw UnacceptablePriceException(it.price)
               if (!typeToBuy.isInstance(asset))
@@ -443,13 +447,13 @@ OK, let's do the same for the buyer side:
       }
 
       @Suspendable
-      private fun swapSignaturesWithSeller(stx: SignedTransaction, theirSessionID: Long): SignaturesFromSeller {
+      private fun swapSignaturesWithSeller(stx: SignedTransaction): SignaturesFromSeller {
           progressTracker.currentStep = SWAPPING_SIGNATURES
           logger.trace { "Sending partially signed transaction to seller" }
 
           // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-          return sendAndReceive<SignaturesFromSeller>(otherSide, theirSessionID, sessionID, stx).unwrap { it }
+          return sendAndReceive<SignaturesFromSeller>(otherSide, stx).unwrap { it }
       }
 
       private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
@@ -676,7 +680,6 @@ Future features
 The protocol framework is a key part of the platform and will be extended in major ways in future. Here are some of
 the features we have planned:
 
-* Automatic session ID management
 * Identity based addressing
 * Exposing progress trackers to local (inside the firewall) clients using message queues and/or WebSockets
 * Exception propagation and management, with a "protocol hospital" tool to manually provide solutions to unavoidable

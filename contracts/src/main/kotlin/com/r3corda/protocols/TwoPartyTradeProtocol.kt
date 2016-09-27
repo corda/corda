@@ -46,22 +46,20 @@ import java.util.*
 // and [AbstractStateReplacementProtocol].
 object TwoPartyTradeProtocol {
 
-    val TOPIC = "platform.trade"
-
     class UnacceptablePriceException(val givenPrice: Amount<Currency>) : Exception("Unacceptable price: $givenPrice")
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-    class SellerTradeInfo(
+    data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
             val sellerOwnerKey: PublicKey
     )
 
-    class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
-                               val notarySig: DigitalSignature.LegallyIdentifiable)
+    data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
+                                    val notarySig: DigitalSignature.LegallyIdentifiable)
 
     open class Seller(val otherParty: Party,
                       val notaryNode: NodeInfo,
@@ -83,8 +81,6 @@ object TwoPartyTradeProtocol {
 
             fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS)
         }
-
-        override val topic: String get() = TOPIC
 
         @Suspendable
         override fun call(): SignedTransaction {
@@ -172,7 +168,6 @@ object TwoPartyTradeProtocol {
 
         object SWAPPING_SIGNATURES : ProgressTracker.Step("Swapping signatures with the seller")
 
-        override val topic: String get() = TOPIC
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES)
 
         @Suspendable
@@ -197,7 +192,7 @@ object TwoPartyTradeProtocol {
         @Suspendable
         private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
             progressTracker.currentStep = RECEIVING
-            // Wait for a trade request to come in on our pre-provided session ID.
+            // Wait for a trade request to come in from the other side
             val maybeTradeRequest = receive<SellerTradeInfo>(otherParty)
 
             progressTracker.currentStep = VERIFYING
@@ -243,8 +238,8 @@ object TwoPartyTradeProtocol {
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionType.General.Builder(notary)
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
-            val wallet = serviceHub.vaultService.currentVault
-            val cashStates = wallet.statesOfType<Cash.State>()
+            val vault = serviceHub.vaultService.currentVault
+            val cashStates = vault.statesOfType<Cash.State>()
             val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
             // Add inputs/outputs/a command for the movement of the asset.
             ptx.addInputState(tradeRequest.assetForSale)

@@ -2,19 +2,11 @@ package com.r3corda.core.protocols
 
 import co.paralleluniverse.fibers.Suspendable
 import com.r3corda.core.crypto.Party
-import com.r3corda.core.messaging.Message
-import com.r3corda.core.messaging.runOnNextMessage
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.DEFAULT_SESSION_ID
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.ProgressTracker
 import com.r3corda.core.utilities.UntrustworthyData
-import com.r3corda.core.utilities.debug
-import com.r3corda.protocols.HandshakeMessage
 import org.slf4j.Logger
 import rx.Observable
-import java.util.*
-import java.util.concurrent.CompletableFuture
 
 /**
  * A sub-class of [ProtocolLogic<T>] implements a protocol flow using direct, straight line blocking code. Thus you
@@ -48,23 +40,14 @@ abstract class ProtocolLogic<out T> {
      */
     val serviceHub: ServiceHub get() = psm.serviceHub
 
-    /**
-     * The topic to use when communicating with other parties. If more than one topic is required then use sub-protocols.
-     * Note that this is temporary until protocol sessions are properly implemented.
-     */
-    protected abstract val topic: String
-
-    private val sessions = HashMap<Party, Session>()
+    private var sessionProtocol: ProtocolLogic<*> = this
 
     /**
-     * If a node receives a [HandshakeMessage] it needs to call this method on the initiated receipt protocol to enable
-     * communication between it and the sender protocol. Calling this method, and other initiation steps, are already
-     * handled by AbstractNodeService.addProtocolHandler.
+     * Return the marker [Class] which [party] has used to register the counterparty protocol that is to execute on the
+     * other side. The default implementation returns the class object of this ProtocolLogic, but any [Class] instance
+     * will do as long as the other side registers with it.
      */
-    fun registerSession(receivedHandshake: HandshakeMessage) {
-        // Note that the send and receive session IDs are swapped
-        addSession(receivedHandshake.replyToParty, receivedHandshake.receiveSessionID, receivedHandshake.sendSessionID)
-    }
+    open fun getCounterpartyMarker(party: Party): Class<*> = javaClass
 
     // Kotlin helpers that allow the use of generic types.
     inline fun <reified T : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<T> {
@@ -73,69 +56,41 @@ abstract class ProtocolLogic<out T> {
 
     @Suspendable
     fun <T : Any> sendAndReceive(otherParty: Party, payload: Any, receiveType: Class<T>): UntrustworthyData<T> {
-        val sendSessionId = getSendSessionId(otherParty, payload)
-        val receiveSessionId = getReceiveSessionId(otherParty)
-        return psm.sendAndReceive(topic, otherParty, sendSessionId, receiveSessionId, payload, receiveType)
+        return psm.sendAndReceive(otherParty, payload, receiveType, sessionProtocol)
     }
 
     inline fun <reified T : Any> receive(otherParty: Party): UntrustworthyData<T> = receive(otherParty, T::class.java)
 
     @Suspendable
     fun <T : Any> receive(otherParty: Party, receiveType: Class<T>): UntrustworthyData<T> {
-        return psm.receive(topic, getReceiveSessionId(otherParty), receiveType)
+        return psm.receive(otherParty, receiveType, sessionProtocol)
     }
 
     @Suspendable
     fun send(otherParty: Party, payload: Any) {
-        psm.send(topic, otherParty, getSendSessionId(otherParty, payload), payload)
+        psm.send(otherParty, payload, sessionProtocol)
     }
-
-    private fun addSession(party: Party, sendSesssionId: Long, receiveSessionId: Long) {
-        if (party in sessions) {
-            logger.debug { "Existing session with party $party to be overwritten by new one" }
-        }
-        sessions[party] = Session(sendSesssionId, receiveSessionId)
-    }
-
-    private fun getSendSessionId(otherParty: Party, payload: Any): Long {
-        return if (payload is HandshakeMessage) {
-            addSession(otherParty, payload.sendSessionID, payload.receiveSessionID)
-            DEFAULT_SESSION_ID
-        } else {
-            sessions[otherParty]?.sendSessionId ?:
-                    throw IllegalStateException("Session with party $otherParty hasn't been established yet")
-        }
-    }
-
-    private fun getReceiveSessionId(otherParty: Party): Long {
-        return sessions[otherParty]?.receiveSessionId ?:
-                throw IllegalStateException("Session with party $otherParty hasn't been established yet")
-    }
-
-    /**
-     * Check if we already have a session with this party
-     */
-    protected fun hasSession(otherParty: Party) = sessions.containsKey(otherParty)
 
     /**
      * Invokes the given subprotocol by simply passing through this [ProtocolLogic]s reference to the
      * [ProtocolStateMachine] and then calling the [call] method.
-     * @param inheritParentSessions In certain situations the subprotocol needs to inherit and use the same open
-     * sessions of the parent. However in most cases this is not desirable as it prevents the subprotocol from
-     * communicating with the same party on a different topic. For this reason the default value is false.
+     * @param shareParentSessions In certain situations the need arises to use the same sessions the parent protocol has
+     * already established. However this also prevents the subprotocol from creating new sessions with those parties.
+     * For this reason the default value is false.
      */
-    @JvmOverloads
+    // TODO Rethink the default value for shareParentSessions
+    // TODO shareParentSessions is a bit too low-level and perhaps can be expresed in a better way
     @Suspendable
-    fun <R> subProtocol(subLogic: ProtocolLogic<R>, inheritParentSessions: Boolean = false): R {
+    fun <R> subProtocol(subLogic: ProtocolLogic<R>, shareParentSessions: Boolean = false): R {
         subLogic.psm = psm
-        if (inheritParentSessions) {
-            subLogic.sessions.putAll(sessions)
-        }
         maybeWireUpProgressTracking(subLogic)
-        val r = subLogic.call()
+        if (shareParentSessions) {
+            subLogic.sessionProtocol = this
+        }
+        val result = subLogic.call()
         // It's easy to forget this when writing protocols so we just step it to the DONE state when it completes.
         subLogic.progressTracker?.currentStep = ProgressTracker.DONE
-        return r
+        return result
     }
 
     private fun maybeWireUpProgressTracking(subLogic: ProtocolLogic<*>) {
@@ -166,12 +121,11 @@ abstract class ProtocolLogic<out T> {
     @Suspendable
     abstract fun call(): T
 
-    private data class Session(val sendSessionId: Long, val receiveSessionId: Long)
-
     // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
     fun track(): Pair<String, Observable<String>>? {
         return progressTracker?.let {
             Pair(it.currentStep.toString(), it.changes.map { it.toString() })
         }
     }
+
 }

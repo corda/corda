@@ -1,12 +1,11 @@
 package com.r3corda.node.services.transactions
 
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.node.services.TimestampChecker
-import com.r3corda.core.node.services.UniquenessProvider
-import com.r3corda.node.services.api.AbstractNodeService
+import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.NotaryProtocol
-import com.r3corda.protocols.NotaryProtocol.TOPIC
+import kotlin.reflect.KClass
 
 /**
  * A Notary service acts as the final signer of a transaction ensuring two things:
@@ -17,22 +16,18 @@ import com.r3corda.protocols.NotaryProtocol.TOPIC
  *
  * This is the base implementation that can be customised with specific Notary transaction commit protocol.
  */
-abstract class NotaryService(services: ServiceHubInternal,
-                             val timestampChecker: TimestampChecker,
-                             val uniquenessProvider: UniquenessProvider) : AbstractNodeService(services) {
+abstract class NotaryService(markerClass: KClass<out NotaryProtocol.Client>, services: ServiceHubInternal) : SingletonSerializeAsToken() {
     // Do not specify this as an advertised service. Use a concrete implementation.
     // TODO: We do not want a service type that cannot be used. Fix the type system abuse here.
     object Type : ServiceType("corda.notary")
 
     abstract val logger: org.slf4j.Logger
 
-    /** Implement a factory that specifies the transaction commit protocol for the notary service to use */
-    abstract val protocolFactory: NotaryProtocol.Factory
-
     init {
-        addProtocolHandler(TOPIC, TOPIC) { req: NotaryProtocol.Handshake ->
-            protocolFactory.create(req.replyToParty, timestampChecker, uniquenessProvider)
-        }
+        services.registerProtocolInitiator(markerClass) { createProtocol(it) }
     }
+
+    /** Implement a factory that specifies the transaction commit protocol for the notary service to use */
+    abstract fun createProtocol(otherParty: Party): NotaryProtocol.Service
 
 }

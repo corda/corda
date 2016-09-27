@@ -131,6 +131,10 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
 
+        fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? {
+            return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
+        }
+
         fun send(topic: String, target: MockNode, payload: Any) {
             services.networkService.send(TopicSession(topic), payload, target.info.address)
         }

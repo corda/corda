@@ -10,14 +10,16 @@ import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.UniqueIdentifier
 import com.r3corda.core.failure
+import com.r3corda.core.flatMap
 import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.success
 import com.r3corda.core.transactions.SignedTransaction
-import com.r3corda.protocols.TwoPartyDealProtocol
-import com.r3corda.testing.connectProtocols
+import com.r3corda.protocols.TwoPartyDealProtocol.Acceptor
+import com.r3corda.protocols.TwoPartyDealProtocol.AutoOffer
+import com.r3corda.protocols.TwoPartyDealProtocol.Instigator
+import com.r3corda.testing.initiateSingleShotProtocol
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockIdentityService
-import java.security.KeyPair
 import java.time.LocalDate
 import java.util.*
 
@@ -73,7 +75,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.vaultService.linearHeadsOfType<com.r3corda.contracts.InterestRateSwap.State>()
+        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = node1.services.vaultService.linearHeadsOfType<InterestRateSwap.State>()
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
@@ -111,22 +113,19 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // We load the IRS afresh each time because the leg parts of the structure aren't data classes so they don't
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
-        val irs = om.readValue<com.r3corda.contracts.InterestRateSwap.State>(javaClass.getResource("trade.json"))
+        val irs = om.readValue<InterestRateSwap.State>(javaClass.getResource("trade.json"))
         irs.fixedLeg.fixedRatePayer = node1.info.identity
         irs.floatingLeg.floatingRatePayer = node2.info.identity
 
-        val instigator = TwoPartyDealProtocol.Instigator(node2.info.identity, notary.info.identity, irs, node1.keyPair!!)
-        val acceptor = TwoPartyDealProtocol.Acceptor(node1.info.identity, notary.info.identity, irs)
-        connectProtocols(instigator, acceptor)
+        val acceptorTx = node2.initiateSingleShotProtocol(Instigator::class) { Acceptor(it) }.flatMap { it.resultFuture }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
-        val instigatorFuture: ListenableFuture<SignedTransaction> = node1.services.startProtocol("instigator", instigator)
+        val instigator = Instigator(node2.info.identity, AutoOffer(notary.info.identity, irs), node1.keyPair!!)
+        val instigatorTx = node1.services.startProtocol("instigator", instigator)
 
-        return Futures.transformAsync(Futures.allAsList(instigatorFuture, node2.services.startProtocol("acceptor", acceptor))) {
-            instigatorFuture
-        }
+        return Futures.transformAsync(Futures.allAsList(instigatorTx, acceptorTx)) { instigatorTx }
     }
 
     override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {

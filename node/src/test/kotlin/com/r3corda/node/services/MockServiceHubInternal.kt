@@ -2,23 +2,24 @@ package com.r3corda.node.services
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.ListenableFuture
-import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.crypto.Party
 import com.r3corda.core.node.services.*
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
-import com.r3corda.core.protocols.StateMachineRunId
+import com.r3corda.core.testing.InMemoryVaultService
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.api.MonitoringService
 import com.r3corda.node.services.api.ServiceHubInternal
-import com.r3corda.testing.node.MockNetworkMapCache
-import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.DataVending
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.core.testing.InMemoryVaultService
-import com.r3corda.testing.node.MockStorageService
 import com.r3corda.testing.MOCK_IDENTITY_SERVICE
+import com.r3corda.testing.node.MockNetworkMapCache
+import com.r3corda.testing.node.MockStorageService
 import java.time.Clock
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KClass
 
 @Suppress("LeakingThis")
 open class MockServiceHubInternal(
@@ -28,7 +29,6 @@ open class MockServiceHubInternal(
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         val storage: TxWritableStorageService? = MockStorageService(),
         val mapCache: NetworkMapCache? = MockNetworkMapCache(),
-        val mapService: NetworkMapService? = null,
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
         val protocolFactory: ProtocolLogicRefFactory? = ProtocolLogicRefFactory()
@@ -57,13 +57,9 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
+    private val protocolFactories = ConcurrentHashMap<Class<*>, (Party) -> ProtocolLogic<*>>()
 
     lateinit var smm: StateMachineManager
-
-    override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
-        return smm.add(loggerName, logic).resultFuture
-    }
 
     init {
         if (net != null && storage != null) {
@@ -71,5 +67,19 @@ open class MockServiceHubInternal(
             // on the networking service, so that will keep it from being collected.
             DataVending.Service(this)
         }
+    }
+
+    override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
+
+    override fun <T> startProtocol(loggerName: String, logic: ProtocolLogic<T>): ListenableFuture<T> {
+        return smm.add(loggerName, logic).resultFuture
+    }
+
+    override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
+        protocolFactories[markerClass.java] = protocolFactory
+    }
+
+    override fun getProtocolFactory(markerClass: Class<*>): ((Party) -> ProtocolLogic<*>)? {
+        return protocolFactories[markerClass]
     }
 }

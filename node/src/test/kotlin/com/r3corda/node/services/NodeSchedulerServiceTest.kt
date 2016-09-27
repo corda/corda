@@ -3,7 +3,6 @@ package com.r3corda.node.services
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.r3corda.core.contracts.*
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.days
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.recordTransactions
@@ -12,18 +11,16 @@ import com.r3corda.core.protocols.ProtocolLogicRef
 import com.r3corda.core.protocols.ProtocolLogicRefFactory
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.utilities.DUMMY_NOTARY
-import com.r3corda.core.utilities.LogHelper
-import com.r3corda.testing.node.TestClock
 import com.r3corda.node.services.events.NodeSchedulerService
-import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.statemachine.StateMachineManager
-import com.r3corda.node.services.vault.NodeVaultService
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.testing.ALICE_KEY
+import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockKeyManagementService
+import com.r3corda.testing.node.TestClock
 import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -34,7 +31,9 @@ import java.nio.file.FileSystem
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
-import java.util.concurrent.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
@@ -128,8 +127,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             (serviceHub as TestReference).testReference.calls += increment
             (serviceHub as TestReference).testReference.countDown.countDown()
         }
-
-        override val topic: String get() = throw UnsupportedOperationException()
     }
 
     class Command : TypeOnlyCommandData()
