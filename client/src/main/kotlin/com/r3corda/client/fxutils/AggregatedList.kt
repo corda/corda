@@ -140,8 +140,9 @@ class AggregatedList<A, E : Any, K : Any>(
             return insertIndex
         } else {
             val elements = aggregationList[aggregationIndex].elements
+            val elementHashCode = addedItem.hashCode()
             val elementIndex = elements.binarySearch(
-                    comparison = { element -> compareValues(keyHashCode, element.hashCode()) }
+                    comparison = { element -> compareValues(elementHashCode, element.hashCode()) }
             )
             val addIndex = if (elementIndex < 0) {
                 -elementIndex - 1

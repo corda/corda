@@ -148,7 +148,7 @@ class CashViewer : View() {
                      * We sum the states in the subgroup, to be displayed in the "Local Currency" column
                      */
                     val amounts = memberStates.map { it.state.data.amount.withoutIssuer() }
-                    val sumAmount = amounts.fold(Amount(0, currency), Amount<Currency>::plus)
+                    val sumAmount = amounts.foldObservable(Amount(0, currency), Amount<Currency>::plus)
 
                     /**
                      * We exchange the sum to the reporting currency, to be displayed in the "<currency> Equiv" column.
@@ -168,7 +168,7 @@ class CashViewer : View() {
                  */
                 val equivAmounts = currencyNodes.map { it.value.equivAmount }.flatten()
                 val equivSumAmount = reportingCurrency.bind { currency ->
-                    equivAmounts.fold(Amount(0, currency), Amount<Currency>::plus)
+                    equivAmounts.foldObservable(Amount(0, currency), Amount<Currency>::plus)
                 }
 
                 /**

@@ -6,7 +6,8 @@ import javafx.collections.transformation.TransformationList
 import java.util.*
 
 /**
- * This list type just replays changes propagated from the underlying source list. Used for testing changes.
+ * This list type just replays changes propagated from the underlying source list. Used for testing changes and backing a
+ * non-backed observable
  */
 class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(sourceList) {
 
@@ -22,12 +23,13 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 val from = c.from
                 val to = c.to
                 val permutation = IntArray(to, { c.getPermutation(it) })
-                val permutedSubList = ArrayList<A>(to - from)
+                val permutedSubList = ArrayList<A?>(to - from)
+                permutedSubList.addAll(Collections.nCopies(to - from, null))
                 for (i in 0 .. (to - from - 1)) {
-                    permutedSubList.add(replayedList[permutation[from + i]])
+                    permutedSubList[permutation[from + i]] = replayedList[from + i]
                 }
                 permutedSubList.forEachIndexed { i, element ->
-                    replayedList[from + i] = element
+                    replayedList[from + i] = element!!
                 }
                 nextPermutation(from, to, permutation)
             } else if (c.wasUpdated()) {
@@ -37,7 +39,6 @@ class ReplayedList<A>(sourceList: ObservableList<A>) : TransformationList<A, A>(
                 }
             } else {
                 if (c.wasRemoved()) {
-                    // TODO this assumes that if wasAdded() == true then we are adding elements to the getFrom() position
                     val removePosition = c.from
                     for (i in 0 .. c.removedSize - 1) {
                         replayedList.removeAt(removePosition)

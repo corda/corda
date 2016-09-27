@@ -10,7 +10,9 @@ import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import javafx.collections.transformation.FilteredList
 import org.fxmisc.easybind.EasyBind
+import org.slf4j.LoggerFactory
 import java.util.function.Predicate
+import kotlin.concurrent.thread
 
 /**
  * Here follows utility extension functions that help reduce the visual load when developing RX code. Each function should
@@ -27,7 +29,8 @@ fun <A, B> ObservableValue<out A>.map(function: (A) -> B): ObservableValue<B> = 
  * val dogs: ObservableList<Dog> = (..)
  * val dogOwners: ObservableList<Person> = dogs.map { it.owner }
  */
-fun <A, B> ObservableList<out A>.map(function: (A) -> B): ObservableList<B> = EasyBind.map(this, function)
+fun <A, B> ObservableList<out A>.map(function: (A) -> B): ObservableList<B> = MappedList(this, function)
+fun <A, B> ObservableList<out A>.mapNonBacked(function: (A) -> B): ObservableList<B> = EasyBind.map(this, function)
 
 /**
  * val aliceHeight: ObservableValue<Long> = (..)
@@ -91,11 +94,21 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
 }
 
 /**
+ * data class Dog(val owner: Person?)
+ * val dogs: ObservableList<Dog> = (..)
+ * val owners: ObservableList<Person> = dogs.map(Dog::owner).filterNotNull()
+ */
+fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
+    @Suppress("UNCHECKED_CAST")
+    return filtered { it != null } as ObservableList<A>
+}
+
+/**
  * val people: ObservableList<Person> = (..)
- * val concatenatedNames = people.fold("", { names, person -> names + person.name })
+ * val concatenatedNames = people.foldObservable("", { names, person -> names + person.name })
  * val concatenatedNames2 = people.map(Person::name).fold("", String::plus)
  */
-fun <A, B> ObservableList<out A>.fold(initial: B, folderFunction: (B, A) -> B): ObservableValue<B> {
+fun <A, B> ObservableList<out A>.foldObservable(initial: B, folderFunction: (B, A) -> B): ObservableValue<B> {
     return Bindings.createObjectBinding({
         var current = initial
         forEach {
@@ -171,3 +184,73 @@ fun <K, V> ObservableMap<K, V>.getObservableValue(key: K): ObservableValue<V?> {
     return property
 }
 
+/**
+ * val nameToPerson: ObservableMap<String, Person> = (..)
+ * val people: ObservableList<Person> = nameToPerson.getObservableValues()
+ */
+fun <K, V> ObservableMap<K, V>.getObservableValues(): ObservableList<V> {
+    return MapValuesList.create(this) { it.value }
+}
+
+/**
+ * val nameToPerson: ObservableMap<String, Person> = (..)
+ * val people: ObservableList<Person> = nameToPerson.getObservableValues()
+ */
+fun <K, V> ObservableMap<K, V>.getObservableEntries(): ObservableList<Map.Entry<K, V>> {
+    return MapValuesList.create(this) { it }
+}
+
+/**
+ * val groups: ObservableList<ObservableList<Person>> = (..)
+ * val allPeople: ObservableList<Person> = groups.concatenate()
+ */
+fun <A> ObservableList<ObservableList<A>>.concatenate(): ObservableList<A> {
+    return ConcatenatedList(this)
+}
+
+/**
+ * val people: ObservableList<Person> = (..)
+ * val managerEmployeeMapping: ObservableList<Pair<Person, ObservableList<Person>>> =
+ *   people.leftOuterJoin(people, Person::name, Person::managerName) { manager, employees -> Pair(manager, employees) }
+ */
+fun <A : Any, B : Any, C, K : Any> ObservableList<A>.leftOuterJoin(
+        rightTable: ObservableList<B>,
+        leftToJoinKey: (A) -> K,
+        rightToJoinKey: (B) -> K,
+        assemble: (A, ObservableList<B>) -> C
+): ObservableList<C> {
+    val joinedMap = leftOuterJoin(rightTable, leftToJoinKey, rightToJoinKey)
+    return joinedMap.getObservableValues().map { pair ->
+        pair.first.map { assemble(it, pair.second) }
+    }.concatenate()
+}
+
+fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
+        rightTable: ObservableList<B>,
+        leftToJoinKey: (A) -> K,
+        rightToJoinKey: (B) -> K
+): ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> {
+    val leftTableMap = associateByAggregation(leftToJoinKey)
+    val rightTableMap = rightTable.associateByAggregation(rightToJoinKey)
+    val joinedMap: ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> =
+            LeftOuterJoinedMap(leftTableMap, rightTableMap) { _key, left, rightValue ->
+                Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }))
+            }
+    return joinedMap
+}
+
+fun <A> ObservableList<A>.getValueAt(index: Int): ObservableValue<A?> {
+    return Bindings.valueAt(this, index)
+}
+fun <A> ObservableList<A>.first(): ObservableValue<A?> {
+    return getValueAt(0)
+}
+fun <A> ObservableList<A>.last(): ObservableValue<A?> {
+    return Bindings.createObjectBinding({
+        if (size > 0) {
+            this[this.size - 1]
+        } else {
+            null
+        }
+    }, arrayOf(this))
+}

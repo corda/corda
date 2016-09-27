@@ -10,16 +10,16 @@ import kotlin.comparisons.compareValues
  * [MapValuesList] takes an [ObservableMap] and returns its values as an [ObservableList].
  * The order of returned elements is deterministic but unspecified.
  */
-class MapValuesList<K, A> private constructor(
-        sourceMap: ObservableMap<K, A>,
+class MapValuesList<K, A, C> private constructor(
+        val sourceMap: ObservableMap<K, A>,
         private val backingList: ObservableList<Map.Entry<K, A>>, // sorted by K.hashCode()
-        private val exposedList: ObservableList<A>
-) : ObservableList<A> by exposedList {
+        private val exposedList: ObservableList<C>
+) : ObservableList<C> by exposedList {
 
     companion object {
-        fun <K, A> create(sourceMap: ObservableMap<K, A>): MapValuesList<K, A> {
+        fun <K, A, C> create(sourceMap: ObservableMap<K, A>, assemble: (Map.Entry<K, A>) -> C): MapValuesList<K, A, C> {
             val backingList = FXCollections.observableArrayList<Map.Entry<K, A>>(sourceMap.entries.sortedBy { it.key!!.hashCode() })
-            return MapValuesList(sourceMap, backingList, backingList.map { it.value })
+            return MapValuesList(sourceMap, backingList, backingList.map { assemble(it) })
         }
     }
 
