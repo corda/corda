@@ -238,18 +238,18 @@ interface LinearState: ContractState {
     /**
      * Standard clause to verify the LinearState safety properties.
      */
-    class ClauseVerifier<S : LinearState>(val stateClass: Class<S>) : Clause<ContractState, CommandData, Unit>() {
+    class ClauseVerifier<S : LinearState, C : CommandData>() : Clause<S, C, Unit>() {
         override fun verify(tx: TransactionForContract,
-                            inputs: List<ContractState>,
-                            outputs: List<ContractState>,
-                            commands: List<AuthenticatedObject<CommandData>>,
-                            groupingKey: Unit?): Set<CommandData> {
-            val filteredInputs = inputs.filterIsInstance(stateClass)
-            val inputIds = filteredInputs.map { it.linearId }.distinct()
-            require(inputIds.count() == filteredInputs.count()) { "LinearStates cannot be merged" }
-            val filteredOutputs = outputs.filterIsInstance(stateClass)
-            val outputIds = filteredOutputs.map { it.linearId }.distinct()
-            require(outputIds.count() == filteredOutputs.count()) { "LinearStates cannot be split" }
+                            inputs: List<S>,
+                            outputs: List<S>,
+                            commands: List<AuthenticatedObject<C>>,
+                            groupingKey: Unit?): Set<C> {
+            val inputIds = inputs.map { it.linearId }.distinct()
+            val outputIds = outputs.map { it.linearId }.distinct()
+            requireThat {
+                "LinearStates are not merged" by (inputIds.count() == inputs.count())
+                "LinearStates are not split" by (outputIds.count() == outputs.count())
+            }
             return emptySet()
         }
     }

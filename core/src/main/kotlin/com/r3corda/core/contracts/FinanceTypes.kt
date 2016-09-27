@@ -448,13 +448,38 @@ data class Commodity(val commodityCode: String,
 
 /**
  * This class provides a truly unique identifier of a trade, state, or other business object.
- * @param externalId If there is an existing weak identifer e.g. trade reference id.
+ *
+ * @param externalId If there is an existing weak identifier e.g. trade reference id.
  * This should be set here the first time a UniqueIdentifier identifier is created as part of an issue,
  * or ledger on-boarding activity. This ensure that the human readable identity is paired with the strong id.
  * @param id Should never be set by user code and left as default initialised.
  * So that the first time a state is issued this should be given a new UUID.
  * Subsequent copies and evolutions of a state should just copy the externalId and Id fields unmodified.
  */
-data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) {
+data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) : Comparable<UniqueIdentifier> {
     override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
+    companion object {
+        fun fromString(name: String) : UniqueIdentifier
+            = UniqueIdentifier(null, UUID.fromString(name))
+    }
+
+    override fun compareTo(other: UniqueIdentifier): Int {
+        val idCompare = id.compareTo(other.id)
+        return if (idCompare == 0)
+            compareExternalIds(other)
+        else
+            idCompare
+    }
+
+    private fun compareExternalIds(other: UniqueIdentifier): Int
+        = if (other.externalId == null)
+            if (externalId == null)
+                0
+            else
+                1
+        else
+            if (externalId == null)
+                -1
+            else
+                externalId.compareTo(externalId)
 }
