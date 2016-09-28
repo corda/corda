@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.TopicSession
 import com.r3corda.core.messaging.runOnNextMessage
@@ -20,10 +21,13 @@ import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.internal.AbstractNode
+import com.r3corda.node.services.api.CheckpointStorage
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapService
+import com.r3corda.node.services.persistence.DBCheckpointStorage
+import com.r3corda.node.services.persistence.PerFileCheckpointStorage
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.ServiceRequestMessage
@@ -97,6 +101,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } }).start().get()
         }
 
+        override fun initialiseCheckpointService(dir: Path): CheckpointStorage {
+            return if (mockNet.threadPerNode) {
+                DBCheckpointStorage()
+            } else {
+                PerFileCheckpointStorage(dir / "checkpoints")
+            }
+        }
+
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
 
         override fun makeVaultService(): VaultService = InMemoryVaultService(services)
@@ -152,6 +164,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                                                     payload: ServiceRequestMessage): ListenableFuture<T> {
             send(topic, target, payload)
             return receive(topic, payload.sessionID)
+        }
+
+        fun disableDBCloseOnStop() {
+            runOnStop.remove(dbCloser)
+        }
+
+        fun manuallyCloseDB() {
+            dbCloser?.run()
+            dbCloser = null
         }
     }
 

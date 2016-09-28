@@ -21,11 +21,11 @@ interface CheckpointStorage {
     fun removeCheckpoint(checkpoint: Checkpoint)
 
     /**
-     * Returns a snapshot of all the checkpoints in the store.
-     * This may return more checkpoints than were added to this instance of the store; for example if the store persists
-     * checkpoints to disk.
+     * Allows the caller to process safely in a thread safe fashion the set of all checkpoints.
+     * The checkpoints are only valid during the lifetime of a single call to the block, to allow memory management.
+     * Return false from the block to terminate further iteration.
      */
-    val checkpoints: Iterable<Checkpoint>
+    fun forEach(block: (Checkpoint)->Boolean)
 
 }
 

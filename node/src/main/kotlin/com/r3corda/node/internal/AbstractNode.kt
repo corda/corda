@@ -151,6 +151,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
     lateinit var database: Database
+    protected var dbCloser: Runnable? = null
 
     /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
     inline fun <reified T : Any> findService() = customServices.filterIsInstance<T>().single()
@@ -238,13 +239,16 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             // Add vault observers
             CashBalanceAsMetricsObserver(services)
             ScheduledActivityObserver(services)
-        }
 
-        startMessagingService(ServerRPCOps(services, smm, database))
-        runOnStop += Runnable { net.stop() }
-        _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
-        isPreviousCheckpointsPresent = checkpointStorage.checkpoints.any()
-        smm.start()
+            checkpointStorage.forEach {
+                isPreviousCheckpointsPresent = true
+                false
+            }
+            startMessagingService(ServerRPCOps(services, smm, database))
+            runOnStop += Runnable { net.stop() }
+            _networkMapRegistrationFuture.setFuture(registerWithNetworkMap())
+            smm.start()
+        }
         started = true
         return this
     }
@@ -269,7 +273,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             this.database = database
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             log.info("Connected to ${database.vendor} database.")
-            runOnStop += Runnable { toClose.close() }
+            dbCloser = Runnable { toClose.close() }
+            runOnStop += dbCloser!!
             databaseTransaction(database) {
                 insideTransaction()
             }
@@ -429,9 +434,13 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
     protected abstract fun startMessagingService(cordaRPCOps: CordaRPCOps?)
 
+    protected open fun initialiseCheckpointService(dir: Path): CheckpointStorage {
+        return DBCheckpointStorage()
+    }
+
     protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
         val attachments = makeAttachmentStorage(dir)
-        val checkpointStorage = PerFileCheckpointStorage(dir.resolve("checkpoints"))
+        val checkpointStorage = initialiseCheckpointService(dir)
         val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
         val (identity, keyPair) = obtainKeyPair(dir)

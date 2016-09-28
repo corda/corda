@@ -35,6 +35,15 @@ fun configureDatabase(props: Properties): Pair<Closeable, Database> {
     return Pair(dataSource, database)
 }
 
+fun <T> isolatedTransaction(database: Database, block: Transaction.() -> T): T {
+    val oldContext = StrandLocalTransactionManager.setThreadLocalTx(null)
+    return try {
+        databaseTransaction(database, block)
+    } finally {
+        StrandLocalTransactionManager.restoreThreadLocalTx(oldContext)
+    }
+}
+
 /**
  * A relatively close copy of the [ThreadLocalTransactionManager] in Exposed but with the following adjustments to suit
  * our environment:
@@ -50,6 +59,17 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
     companion object {
         private val threadLocalDb = ThreadLocal<Database>()
         private val threadLocalTx = ThreadLocal<Transaction>()
+
+        fun setThreadLocalTx(tx: Transaction?): Pair<Database?, Transaction?> {
+            val oldTx = threadLocalTx.get()
+            threadLocalTx.set(tx)
+            return Pair(threadLocalDb.get(), oldTx)
+        }
+
+        fun restoreThreadLocalTx(context: Pair<Database?, Transaction?>) {
+            threadLocalDb.set(context.first)
+            threadLocalTx.set(context.second)
+        }
 
         var database: Database
             get() = threadLocalDb.get() ?: throw IllegalStateException("Was expecting to find database set on current strand: ${Strand.currentStrand()}")

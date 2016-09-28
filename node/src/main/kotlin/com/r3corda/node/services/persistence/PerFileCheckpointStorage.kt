@@ -60,9 +60,14 @@ class PerFileCheckpointStorage(val storeDir: Path) : CheckpointStorage {
         logger.trace { "Removed $checkpoint ($checkpointFile)" }
     }
 
-    override val checkpoints: Iterable<Checkpoint>
-        get() = synchronized(checkpointFiles) {
-            checkpointFiles.keys.toList()
+    override fun forEach(block: (Checkpoint)->Boolean) {
+        synchronized(checkpointFiles) {
+            for(checkpoint in checkpointFiles.keys) {
+                if (!block(checkpoint)) {
+                    break
+                }
+            }
         }
+    }
 
 }
