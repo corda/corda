@@ -1,9 +1,10 @@
 --- openjdk/Inet4AddressImpl.c
 +++ openjdk/Inet4AddressImpl.c
-@@ -461,6 +461,19 @@
+@@ -461,6 +461,21 @@
      return JNI_FALSE;
  }
- 
+
++#ifdef WIN32
 +DWORD WINAPI IcmpSendEcho2Ex(HANDLE,
 +			     HANDLE,
 +			     LPVOID,
@@ -16,6 +17,7 @@
 +			     LPVOID,
 +			     DWORD,
 +			     DWORD);
++#endif
 +
  /**
   * ping implementation.
