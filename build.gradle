@@ -245,3 +245,20 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
     }
 
 }
+
+task cordaJar(type: Jar, dependsOn: 'buildCordaJAR') {
+    classifier = 'sources'
+    from buildCordaJAR.outputs.getFiles()
+}
+
+// TODO: Rename capsule to "corda"
+publishing {
+    publications {
+        corda(MavenPublication) {
+            from components.java
+            artifactId 'corda'
+
+            artifact buildCordaJAR
+        }
+    }
+}
