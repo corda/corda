@@ -85,7 +85,7 @@ fun main(args: Array<String>) {
 
     // Make a garbage transaction that includes a rate fix.
     val tx = TransactionType.General.Builder(notaryNode.identity)
-    tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.keyManagement.freshKey().public), notaryNode.identity))
+    tx.addOutputState(TransactionState(Cash.State(1500.DOLLARS `issued by` node.storage.myLegalIdentity.ref(1), node.storage.myLegalIdentityKey.public), notaryNode.identity))
     val protocol = RatesFixProtocol(tx, rateOracle.identity, fixOf, expectedRate, rateTolerance)
     node.services.startProtocol("demo.ratefix", protocol).get()
     node.stop()

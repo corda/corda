@@ -150,6 +150,10 @@ interface VaultService {
 }
 
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() = linearHeadsOfType_(T::class.java)
+inline fun <reified T : DealState> VaultService.dealsWith(party: Party) = linearHeadsOfType<T>().values.filter {
+    // TODO: Replace name comparison with full party comparison (keys are currenty not equal)
+    it.state.data.parties.any { it.name == party.name }
+}
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,

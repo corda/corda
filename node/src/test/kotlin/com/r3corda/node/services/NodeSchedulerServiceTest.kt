@@ -262,7 +262,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     private fun scheduleTX(instant: Instant, increment: Int = 1): ScheduledStateRef? {
         var scheduledRef: ScheduledStateRef? = null
         apply {
-            val freshKey = services.keyManagementService.freshKey()
+            val freshKey = services.storageService.myLegalIdentityKey
             val state = TestState(factory.create(TestProtocolLogic::class.java, increment), instant)
             val usefulTX = TransactionType.General.Builder(null).apply {
                 addOutputState(state, DUMMY_NOTARY)

@@ -5,20 +5,28 @@
 tags
 .DS_Store
 *.log
+*.log.gz
+*.orig
 
 # Created by .ignore support plugin (hsz.mobi)
 
 .gradle
-/build/
-/node/build/
-/contracts/build
-/contracts/isolated/build
-/core/build
-/experimental/build
 /docs/build/doctrees
-/test-utils/build
-/client/build
-/explorer/build
+
+# General build files
+**/build/classes/**
+**/build/install/**
+**/build/kotlin-classes/**
+**/build/libs/**
+**/build/resources/**
+**/build/tmp/**
+**/build/reports/**
+**/build/jacoco/***
+**/build/test-results/**
+**/build/[0-9]*/**
+**/build/nodes/**
+**/build/scripts/**
+**/build/publications/**
 
 # gradle's buildSrc build/
 /buildSrc/build/

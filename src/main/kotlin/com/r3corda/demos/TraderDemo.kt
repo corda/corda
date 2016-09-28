@@ -202,7 +202,7 @@ private fun runBuyer(node: Node, amount: Amount<Currency>) {
     databaseTransaction(node.database) {
         node.services.fillWithSomeTestCash(300000.DOLLARS,
                 outputNotary = node.info.identity, // In this demo, the buyer and notary are the same.
-                ownedBy = node.services.keyManagementService.freshKey().public)
+                ownedBy = node.storage.myLegalIdentityKey.public)
     }
 
     // Wait around until a node asks to start a trade with us. In a real system, this part would happen out of band
@@ -314,7 +314,7 @@ private class TraderDemoProtocolSeller(val otherSide: Party,
         progressTracker.currentStep = SELF_ISSUING
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-        val cpOwnerKey = serviceHub.keyManagementService.freshKey()
+        val cpOwnerKey = serviceHub.storageService.myLegalIdentityKey
         val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, notary)
 
         progressTracker.currentStep = TRADING

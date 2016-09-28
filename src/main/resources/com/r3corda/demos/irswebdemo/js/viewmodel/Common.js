@@ -18,7 +18,7 @@ define([], () => {
         rounding: {
             quantity: 1000000
         },
-        valuationDate: "Every Local Business Day",
+        valuationDateDescription: "Every Local Business Day",
         notificationTime: "2:00pm London",
         resolutionTime: "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given",
         interestRate: {

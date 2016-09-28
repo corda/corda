@@ -201,7 +201,7 @@ class InterestRateSwap() : Contract {
             val threshold: Amount<Currency>,
             val minimumTransferAmount: Amount<Currency>,
             val rounding: Amount<Currency>,
-            val valuationDate: String,
+            val valuationDateDescription: String, // This describes (in english) how regularly the swap is to be valued, e.g. "every local working day"
             val notificationTime: String,
             val resolutionTime: String,
             val interestRate: ReferenceRate,
@@ -677,22 +677,6 @@ class InterestRateSwap() : Contract {
             // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
             val (instant, duration) = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay)
             return ScheduledActivity(protocolLogicRefFactory.create(TwoPartyDealProtocol.FixingRoleDecider::class.java, thisStateRef, duration), instant)
-        }
-
-        // TODO: This changing of the public key violates the assumption that Party is a fixed identity key.
-        override fun withPublicKey(before: Party, after: PublicKey): DealState {
-            val newParty = Party(before.name, after)
-            if (before == fixedLeg.fixedRatePayer) {
-                val deal = copy()
-                deal.fixedLeg.fixedRatePayer = newParty
-                return deal
-            } else if (before == floatingLeg.floatingRatePayer) {
-                val deal = copy()
-                deal.floatingLeg.floatingRatePayer = newParty
-                return deal
-            } else {
-                throw IllegalArgumentException("No such party: $before")
-            }
         }
 
         override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
