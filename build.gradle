@@ -246,13 +246,12 @@ task installTemplateNodes(dependsOn: 'buildCordaJAR') << {
 
 }
 
-// TODO: Rename capsule to "corda"
 publishing {
     publications {
         corda(MavenPublication) {
             artifactId 'corda'
 
-            artifact "${buildDir}/libs/corda.jar"
+            artifact buildCordaJAR
         }
     }
 }
