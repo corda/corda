@@ -1,6 +1,7 @@
 apply plugin: 'kotlin'
 apply plugin: QuasarPlugin
 // Applying the maven plugin means this will get installed locally when running "gradle install"
+apply plugin 'maven'
 apply plugin: DefaultPublishTasks
 
 buildscript {
