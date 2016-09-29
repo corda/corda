@@ -5,13 +5,23 @@ import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.DefaultSerializers
+import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.ErrorOr
+import com.r3corda.core.contracts.*
+import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.crypto.SecureHash
+import com.r3corda.core.node.services.StateMachineTransactionMapping
+import com.r3corda.core.node.services.Vault
+import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.*
 import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.transactions.WireTransaction
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.guava.*
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
+import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.LoggerFactory
@@ -118,7 +128,41 @@ private class RPCKryo(private val observableSerializer: Serializer<Observable<An
         register(Notification::class.java)
         register(Notification.Kind::class.java)
 
-        register(kotlin.Pair::class.java)
+        register(ArrayList::class.java)
+        register(listOf<Any>().javaClass) // EmptyList
+        register(IllegalStateException::class.java)
+        register(Pair::class.java)
+        register(StateMachineUpdate.Added::class.java)
+        register(StateMachineUpdate.Removed::class.java)
+        register(StateMachineInfo::class.java)
+        register(DigitalSignature.WithKey::class.java)
+        register(DigitalSignature.LegallyIdentifiable::class.java)
+        register(ByteArray::class.java)
+        register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
+        register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
+        register(Vault::class.java)
+        register(Vault.Update::class.java)
+        register(StateMachineRunId::class.java)
+        register(StateMachineTransactionMapping::class.java)
+        register(UUID::class.java)
+        register(LinkedHashSet::class.java)
+        register(StateAndRef::class.java)
+        register(setOf<Unit>().javaClass) // EmptySet
+        register(StateRef::class.java)
+        register(SecureHash.SHA256::class.java)
+        register(TransactionState::class.java)
+        register(Cash.State::class.java)
+        register(Amount::class.java)
+        register(Issued::class.java)
+        register(PartyAndReference::class.java)
+        register(OpaqueBytes::class.java)
+        register(Currency::class.java)
+        register(Cash::class.java)
+        register(Cash.Clauses.ConserveAmount::class.java)
+        register(listOf(Unit).javaClass) // SingletonList
+        register(setOf(Unit).javaClass) // SingletonSet
+        register(TransactionBuildResult.ProtocolStarted::class.java)
+        register(TransactionBuildResult.Failed::class.java)
 
         // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
         register(IllegalArgumentException::class.java)

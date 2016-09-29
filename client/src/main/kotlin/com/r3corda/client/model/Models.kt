@@ -8,6 +8,7 @@ import org.reactfx.EventSink
 import org.reactfx.EventStream
 import rx.Observable
 import rx.Observer
+import rx.subjects.Subject
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -72,6 +73,9 @@ inline fun <reified M : Any, T> observable(noinline observableProperty: (M) -> O
 inline fun <reified M : Any, T> observer(noinline observerProperty: (M) -> Observer<T>) =
         TrackedDelegate.ObserverDelegate(M::class, observerProperty)
 
+inline fun <reified M : Any, T> subject(noinline subjectProperty: (M) -> Subject<T, T>) =
+        TrackedDelegate.SubjectDelegate(M::class, subjectProperty)
+
 inline fun <reified M : Any, T> eventStream(noinline streamProperty: (M) -> EventStream<T>) =
         TrackedDelegate.EventStreamDelegate(M::class, streamProperty)
 
@@ -118,14 +122,19 @@ object Models {
 sealed class TrackedDelegate<M : Any>(val klass: KClass<M>) {
     init { Models.initModel(klass) }
 
-    class ObservableDelegate<M : Any, T> (klass: KClass<M>, val eventStreamProperty: (M) -> Observable<T>) : TrackedDelegate<M>(klass) {
+    class ObservableDelegate<M : Any, T> (klass: KClass<M>, val observableProperty: (M) -> Observable<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): Observable<T> {
-            return eventStreamProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return observableProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
-    class ObserverDelegate<M : Any, T> (klass: KClass<M>, val eventStreamProperty: (M) -> Observer<T>) : TrackedDelegate<M>(klass) {
+    class ObserverDelegate<M : Any, T> (klass: KClass<M>, val observerProperty: (M) -> Observer<T>) : TrackedDelegate<M>(klass) {
         operator fun getValue(thisRef: Any, property: KProperty<*>): Observer<T> {
-            return eventStreamProperty(Models.get(klass, thisRef.javaClass.kotlin))
+            return observerProperty(Models.get(klass, thisRef.javaClass.kotlin))
+        }
+    }
+    class SubjectDelegate<M : Any, T> (klass: KClass<M>, val subjectProperty: (M) -> Subject<T, T>) : TrackedDelegate<M>(klass) {
+        operator fun getValue(thisRef: Any, property: KProperty<*>): Subject<T, T> {
+            return subjectProperty(Models.get(klass, thisRef.javaClass.kotlin))
         }
     }
     class EventStreamDelegate<M : Any, T> (klass: KClass<M>, val eventStreamProperty: (M) -> org.reactfx.EventStream<T>) : TrackedDelegate<M>(klass) {

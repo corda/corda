@@ -5,7 +5,6 @@ import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.core.transactions.TransactionBuilder
-import com.r3corda.node.services.monitor.ServiceToClientEvent
 import java.time.Instant
 
 /**
@@ -34,7 +33,7 @@ class EventGenerator(
     val partyGenerator = Generator.oneOf(parties)
 
     val cashStateGenerator = amountIssuedGenerator.combine(publicKeyGenerator) { amount, from ->
-        val builder = TransactionBuilder()
+        val builder = TransactionBuilder(notary = notary)
         builder.addOutputState(Cash.State(amount, from))
         builder.addCommand(Command(Cash.Commands.Issue(), amount.token.issuer.party.owningKey))
         builder.toWireTransaction().outRef<Cash.State>(0)
@@ -59,10 +58,6 @@ class EventGenerator(
                 }
             }
     )
-
-    val outputStateGenerator = consumedGenerator.combine(producedGenerator) { consumed, produced ->
-        ServiceToClientEvent.OutputState(Instant.now(), consumed, produced)
-    }
 
     val issueRefGenerator = Generator.intRange(0, 1).map { number -> OpaqueBytes(ByteArray(1, { number.toByte() })) }
 
@@ -95,10 +90,6 @@ class EventGenerator(
                         it.token.issuer.reference
                 )
             }
-
-    val serviceToClientEventGenerator = Generator.frequency<ServiceToClientEvent>(
-            1.0 to outputStateGenerator
-    )
 
     val clientToServiceCommandGenerator = Generator.frequency(
             0.4 to issueCashGenerator,

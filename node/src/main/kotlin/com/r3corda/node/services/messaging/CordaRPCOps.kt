@@ -1,8 +1,8 @@
 package com.r3corda.node.services.messaging
 
+import com.r3corda.core.contracts.ClientToServiceCommand
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
-import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
@@ -28,9 +28,9 @@ data class StateMachineInfo(
     }
 }
 
-sealed class StateMachineUpdate {
-    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate()
-    class Removed(val stateMachineRunId: StateMachineRunId) : StateMachineUpdate()
+sealed class StateMachineUpdate(val id: StateMachineRunId) {
+    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id)
+    class Removed(id: StateMachineRunId) : StateMachineUpdate(id)
 
     companion object {
         fun fromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
@@ -48,6 +48,28 @@ sealed class StateMachineUpdate {
                 }
             }
         }
+    }
+}
+
+sealed class TransactionBuildResult {
+    /**
+     * State indicating that a protocol is managing this request, and that the client should track protocol state machine
+     * updates for further information. The monitor will separately receive notification of the state machine having been
+     * added, as it would any other state machine. This response is used solely to enable the monitor to identify
+     * the state machine (and its progress) as associated with the request.
+     *
+     * @param transaction the transaction created as a result, in the case where the protocol has completed.
+     */
+    class ProtocolStarted(val id: StateMachineRunId, val transaction: SignedTransaction?, val message: String?) : TransactionBuildResult() {
+        override fun toString() = "Started($message)"
+    }
+
+    /**
+     * State indicating the action undertaken failed, either directly (it is not something which requires a
+     * state machine), or before a state machine was started.
+     */
+    class Failed(val message: String?) : TransactionBuildResult() {
+        override fun toString() = "Failed($message)"
     }
 }
 
@@ -73,6 +95,15 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>>
+
+    /**
+     * Returns a pair of state machine id - recorded transaction hash pairs
+     */
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>>
+
+    /**
+     * Executes the given command, possibly triggering cash creation etc.
+     */
+    fun executeCommand(command: ClientToServiceCommand): TransactionBuildResult
 }

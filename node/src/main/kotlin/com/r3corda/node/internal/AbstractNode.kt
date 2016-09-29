@@ -33,7 +33,6 @@ import com.r3corda.node.services.events.ScheduledActivityObserver
 import com.r3corda.node.services.identity.InMemoryIdentityService
 import com.r3corda.node.services.keys.PersistentKeyManagementService
 import com.r3corda.node.services.messaging.CordaRPCOps
-import com.r3corda.node.services.monitor.NodeMonitorService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
@@ -140,7 +139,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
     lateinit var vault: VaultService
     lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
-    var inNodeMonitorService: NodeMonitorService? = null
     var inNodeNotaryService: NotaryService? = null
     var uniquenessProvider: UniquenessProvider? = null
     lateinit var identity: IdentityService
@@ -231,7 +229,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
                 }
             }
 
-            inNodeMonitorService = makeMonitorService() // Note this HAS to be after smm is set
             buildAdvertisedServices()
 
             // TODO: this model might change but for now it provides some de-coupling
@@ -409,8 +406,6 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
     protected open fun makeVaultService(): VaultService = NodeVaultService(services)
-
-    protected open fun makeMonitorService(): NodeMonitorService = NodeMonitorService(services, smm)
 
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the

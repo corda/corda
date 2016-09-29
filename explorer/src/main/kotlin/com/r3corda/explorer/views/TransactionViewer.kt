@@ -16,7 +16,6 @@ import com.r3corda.explorer.model.IdentityModel
 import com.r3corda.explorer.model.ReportingCurrencyModel
 import com.r3corda.explorer.sign
 import com.r3corda.explorer.ui.*
-import com.r3corda.node.services.monitor.ServiceToClientEvent
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -31,7 +30,6 @@ import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
 import tornadofx.View
 import java.security.PublicKey
-import java.time.Instant
 import java.util.*
 
 class TransactionViewer: View() {
@@ -74,11 +72,6 @@ class TransactionViewer: View() {
     private val signaturesTitledPane: TitledPane by fxid()
     private val signaturesList: ListView<PublicKey> by fxid()
 
-    private val lowLevelEventsTitledPane: TitledPane by fxid()
-    private val lowLevelEventsTable: TableView<ServiceToClientEvent> by fxid()
-    private val lowLevelEventsTimestamp: TableColumn<ServiceToClientEvent, Instant> by fxid()
-    private val lowLevelEventsEvent: TableColumn<ServiceToClientEvent, ServiceToClientEvent> by fxid()
-
     private val matchingTransactionsLabel: Label by fxid()
 
     // Inject data
@@ -93,18 +86,13 @@ class TransactionViewer: View() {
      * have the data.
      */
     data class ViewerNode(
-            val transactionId: ObservableValue<SecureHash?>,
+            val transaction: PartiallyResolvedTransaction,
+            val transactionId: SecureHash,
             val stateMachineRunId: ObservableValue<StateMachineRunId?>,
-            val clientUuid: ObservableValue<UUID?>,
-            val originator: ObservableValue<String>,
-            val transactionStatus: ObservableValue<TransactionCreateStatus?>,
-            val stateMachineStatus: ObservableValue<StateMachineStatus?>,
-            val protocolStatus: ObservableValue<ProtocolStatus?>,
-            val statusUpdated: ObservableValue<Instant>,
-            val commandTypes: ObservableValue<Collection<Class<CommandData>>>,
-            val totalValueEquiv: ObservableValue<AmountDiff<Currency>?>,
-            val transaction: ObservableValue<PartiallyResolvedTransaction?>,
-            val allEvents: ObservableList<out ServiceToClientEvent>
+            val stateMachineStatus: ObservableValue<out StateMachineStatus?>,
+            val protocolStatus: ObservableValue<out ProtocolStatus?>,
+            val commandTypes: Collection<Class<CommandData>>,
+            val totalValueEquiv: ObservableValue<AmountDiff<Currency>?>
     )
 
     /**
@@ -119,59 +107,40 @@ class TransactionViewer: View() {
      * We map the gathered data about transactions almost one-to-one to the nodes.
      */
     private val viewerNodes = gatheredTransactionDataList.map {
+        // TODO in theory there may be several associated state machines, we should at least give a warning if there are
+        // several, currently we just throw others away
+        val stateMachine = it.stateMachines.first()
+        fun <A> stateMachineProperty(property: (StateMachineData) -> ObservableValue<out A?>): ObservableValue<out A?> {
+            return stateMachine.map { it?.let(property) }.bindOut { it ?: null.lift() }
+        }
         ViewerNode(
-                transactionId = it.transaction.map { it?.id },
-                stateMachineRunId = it.stateMachineRunId,
-                clientUuid = it.uuid,
-                /**
-                 * We can't really do any better based on uuid, we need to store explicit data for this TODO
-                 */
-                originator = it.uuid.map { uuid ->
-                    if (uuid == null) {
-                        "Someone"
-                    } else {
-                        "Us"
-                    }
-                },
-                transactionStatus = it.status,
-                protocolStatus = it.protocolStatus,
-                stateMachineStatus = it.stateMachineStatus,
-                statusUpdated = it.lastUpdate,
-                commandTypes = it.transaction.map {
-                    val commands = mutableSetOf<Class<CommandData>>()
-                    it?.transaction?.tx?.commands?.forEach {
-                        commands.add(it.value.javaClass)
-                    }
-                    commands
-                },
-                totalValueEquiv = it.transaction.bind { transaction ->
-                    if (transaction == null) {
-                        null.lift<AmountDiff<Currency>?>()
-                    } else {
-
-                        val resolvedInputs = transaction.inputs.sequence().map { resolution ->
-                            when (resolution) {
-                                is PartiallyResolvedTransaction.InputResolution.Unresolved -> null
-                                is PartiallyResolvedTransaction.InputResolution.Resolved -> resolution.stateAndRef
-                            }
-                        }.foldObservable(listOf()) { inputs: List<StateAndRef<ContractState>>?, state: StateAndRef<ContractState>? ->
-                            if (inputs != null && state != null) {
-                                inputs + state
-                            } else {
-                                null
-                            }
-                        }
-
-                        ::calculateTotalEquiv.lift(
-                                myIdentity,
-                                reportingExchange,
-                                resolvedInputs,
-                                transaction.transaction.tx.outputs.lift()
-                        )
-                    }
-                },
                 transaction = it.transaction,
-                allEvents = it.allEvents
+                transactionId = it.transaction.id,
+                stateMachineRunId = stateMachine.map { it?.id },
+                protocolStatus = stateMachineProperty { it.protocolStatus },
+                stateMachineStatus = stateMachineProperty { it.stateMachineStatus },
+                commandTypes = it.transaction.transaction.tx.commands.map { it.value.javaClass },
+                totalValueEquiv = {
+                    val resolvedInputs = it.transaction.inputs.sequence().map { resolution ->
+                        when (resolution) {
+                            is PartiallyResolvedTransaction.InputResolution.Unresolved -> null
+                            is PartiallyResolvedTransaction.InputResolution.Resolved -> resolution.stateAndRef
+                        }
+                    }.fold(listOf()) { inputs: List<StateAndRef<ContractState>>?, state: StateAndRef<ContractState>? ->
+                        if (inputs != null && state != null) {
+                            inputs + state
+                        } else {
+                            null
+                        }
+                    }
+
+                    ::calculateTotalEquiv.lift(
+                            myIdentity,
+                            reportingExchange,
+                            resolvedInputs.lift(),
+                            it.transaction.transaction.tx.outputs.lift()
+                    )
+                }()
         )
     }
 
@@ -179,9 +148,9 @@ class TransactionViewer: View() {
      * The detail panes are only filled out if a transaction is selected
      */
     private val selectedViewerNode = transactionViewTable.singleRowSelection()
-    private val selectedTransaction = selectedViewerNode.bindOut {
+    private val selectedTransaction = selectedViewerNode.map {
         when (it) {
-            is SingleRowSelection.None -> null.lift()
+            is SingleRowSelection.None -> null
             is SingleRowSelection.Selected -> it.node.transaction
         }
     }
@@ -215,21 +184,13 @@ class TransactionViewer: View() {
         }
     })
 
-    private val lowLevelEvents = ChosenList(selectedViewerNode.map {
-        when (it) {
-            is SingleRowSelection.None -> FXCollections.emptyObservableList<ServiceToClientEvent>()
-            is SingleRowSelection.Selected -> it.node.allEvents
-        }
-    })
-
     /**
      * We only display the detail panes if there is a node selected.
      */
     private val allNodesShown = FXCollections.observableArrayList<Node>(
             transactionViewTable,
             contractStatesTitledPane,
-            signaturesTitledPane,
-            lowLevelEventsTitledPane
+            signaturesTitledPane
     )
     private val onlyTransactionsTableShown = FXCollections.observableArrayList<Node>(
             transactionViewTable
@@ -326,11 +287,9 @@ class TransactionViewer: View() {
             Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / transactionViewTable.columns.size).toInt()
         }
 
-        transactionViewTransactionId.setCellValueFactory { it.value.transactionId.map { "${it ?: ""}" } }
+        transactionViewTransactionId.setCellValueFactory { "${it.value.transactionId}".lift() }
         transactionViewStateMachineId.setCellValueFactory { it.value.stateMachineRunId.map { "${it?.uuid ?: ""}" } }
-        transactionViewClientUuid.setCellValueFactory { it.value.clientUuid.map { "${it ?: ""}" } }
         transactionViewProtocolStatus.setCellValueFactory { it.value.protocolStatus.map { "${it ?: ""}" } }
-        transactionViewTransactionStatus.setCellValueFactory { it.value.transactionStatus }
         transactionViewTransactionStatus.setCustomCellFactory {
             val label = Label()
             val backgroundFill = when (it) {
@@ -342,7 +301,7 @@ class TransactionViewer: View() {
             label.text = "$it"
             label
         }
-        transactionViewStateMachineStatus.setCellValueFactory { it.value.stateMachineStatus }
+        transactionViewStateMachineStatus.setCellValueFactory { it.value.stateMachineStatus.map { it } }
         transactionViewStateMachineStatus.setCustomCellFactory {
             val label = Label()
             val backgroundFill = when (it) {
@@ -356,7 +315,7 @@ class TransactionViewer: View() {
         }
 
         transactionViewCommandTypes.setCellValueFactory {
-            it.value.commandTypes.map { it.map { it.simpleName }.joinToString(",") }
+            it.value.commandTypes.map { it.simpleName }.joinToString(",").lift()
         }
         transactionViewTotalValueEquiv.setCellValueFactory<ViewerNode, AmountDiff<Currency>> { it.value.totalValueEquiv }
         transactionViewTotalValueEquiv.cellFactory = object : Formatter<AmountDiff<Currency>> {
@@ -393,14 +352,6 @@ class TransactionViewer: View() {
         signaturesList.cellFactory = object : Formatter<PublicKey> {
             override fun format(value: PublicKey) = value.toStringShort()
         }.toListCellFactory()
-
-        // Low level events
-        Bindings.bindContent(lowLevelEventsTable.items, lowLevelEvents)
-        lowLevelEventsTimestamp.setCellValueFactory { it.value.time.lift() }
-        lowLevelEventsEvent.setCellValueFactory { it.value.lift() }
-        lowLevelEventsTable.setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
-            Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / lowLevelEventsTable.columns.size).toInt()
-        }
 
         matchingTransactionsLabel.textProperty().bind(Bindings.size(viewerNodes).map {
             "$it matching transaction${if (it == 1) "" else "s"}"

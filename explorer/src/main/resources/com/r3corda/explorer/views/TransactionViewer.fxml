@@ -40,7 +40,7 @@
             </ImageView>
          </children>
       </StackPane>
-      <SplitPane fx:id="topSplitPane" dividerPositions="0.3, 0.6, 0.7" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
+      <SplitPane fx:id="topSplitPane" dividerPositions="0.3, 0.6" orientation="VERTICAL" prefHeight="562.0" prefWidth="1087.0" VBox.vgrow="ALWAYS">
          <items>
             <TableView fx:id="transactionViewTable" prefHeight="200.0" prefWidth="200.0">
               <columns>
@@ -121,19 +121,9 @@
                   </SplitPane>
                </content>
             </TitledPane>
-            <TitledPane fx:id="signaturesTitledPane" animated="false" text="Required signatures">
+            <TitledPane fx:id="signaturesTitledPane" animated="false" text="Signatures">
                <content>
                   <ListView fx:id="signaturesList" />
-               </content>
-            </TitledPane>
-            <TitledPane fx:id="lowLevelEventsTitledPane" animated="false" text="Low level events">
-               <content>
-                  <TableView fx:id="lowLevelEventsTable">
-                    <columns>
-                      <TableColumn fx:id="lowLevelEventsTimestamp" prefWidth="102.0" text="Timestamp" />
-                      <TableColumn fx:id="lowLevelEventsEvent" prefWidth="138.0" text="Event" />
-                    </columns>
-                  </TableView>
                </content>
             </TitledPane>
          </items>
