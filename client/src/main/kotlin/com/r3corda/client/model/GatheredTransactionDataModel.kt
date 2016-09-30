@@ -5,6 +5,7 @@ import com.r3corda.client.fxutils.getObservableValue
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.StateRef
+import com.r3corda.client.fxutils.recordInSequence
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.transactions.SignedTransaction

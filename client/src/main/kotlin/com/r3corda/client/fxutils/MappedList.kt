@@ -9,6 +9,7 @@ import java.util.*
 /**
  * This is a variant of [EasyBind.map] where the mapped list is backed, therefore the mapping function will only be run
  * when an element is inserted or updated.
+ * Use this instead of [EasyBind.map] to trade off memory vs CPU, or if (god forbid) the mapped function is side-effecting.
  */
 class MappedList<A, B>(list: ObservableList<A>, val function: (A) -> B) : TransformationList<B, A>(list) {
     private val backingList = ArrayList<B>(list.size)
@@ -23,12 +24,14 @@ class MappedList<A, B>(list: ObservableList<A>, val function: (A) -> B) : Transf
         beginChange()
         while (change.next()) {
             if (change.wasPermutated()) {
+                // Note how we don't re-run the mapping function on a permutation. If we supported mapIndexed we would
+                // have to.
                 val from = change.from
                 val to = change.to
-                val permutation = IntArray(to, { change.getPermutation(it) })
+                val permutation = IntArray(to) { change.getPermutation(it) }
                 val permutedSubList = ArrayList<B?>(to - from)
                 permutedSubList.addAll(Collections.nCopies(to - from, null))
-                for (i in 0 .. (to - from - 1)) {
+                for (i in 0.until(to - from)) {
                     permutedSubList[permutation[from + i]] = backingList[from + i]
                 }
                 permutedSubList.forEachIndexed { i, element ->
@@ -42,7 +45,7 @@ class MappedList<A, B>(list: ObservableList<A>, val function: (A) -> B) : Transf
                 if (change.wasRemoved()) {
                     val removePosition = change.from
                     val removed = ArrayList<B>(change.removedSize)
-                    for (i in 0 .. change.removedSize - 1) {
+                    for (i in 0.until(change.removedSize)) {
                         removed.add(backingList.removeAt(removePosition))
                     }
                     nextRemove(change.from, removed)
@@ -50,7 +53,7 @@ class MappedList<A, B>(list: ObservableList<A>, val function: (A) -> B) : Transf
                 if (change.wasAdded()) {
                     val addStart = change.from
                     val addEnd = change.to
-                    for (i in addStart .. addEnd - 1) {
+                    for (i in addStart.until(addEnd)) {
                         backingList.add(i, function(change.list[i]))
                     }
                     nextAdd(addStart, addEnd)

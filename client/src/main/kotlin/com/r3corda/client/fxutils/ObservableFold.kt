@@ -12,6 +12,12 @@ import rx.Observable
  * Simple utilities for converting an [rx.Observable] into a javafx [ObservableValue]/[ObservableList]
  */
 
+/**
+ * [foldToObservableValue] takes an [rx.Observable] stream and creates an [ObservableValue] out of it.
+ * @param initial The initial value of the returned observable.
+ * @param folderFun The transformation function to be called on the observable value when a new element is emitted on
+ *     the stream.
+ */
 fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> B): ObservableValue<B> {
     val result = SimpleObjectProperty<B>(initial)
     subscribe {
@@ -22,6 +28,13 @@ fun <A, B> Observable<A>.foldToObservableValue(initial: B, folderFun: (A, B) -> 
     return result
 }
 
+/**
+ * [foldToObservableList] takes an [rx.Observable] stream and creates an [ObservableList] out of it, while maintaining
+ * an accumulator.
+ * @param initialAccumulator The initial value of the accumulator.
+ * @param folderFun The transformation function to be called on the observable list when a new element is emitted on
+ *     the stream, which should modify the list as needed.
+ */
 fun <A, B, C> Observable<A>.foldToObservableList(
         initialAccumulator: C, folderFun: (A, C, ObservableList<B>) -> C
 ): ObservableList<B> {
@@ -39,14 +52,21 @@ fun <A, B, C> Observable<A>.foldToObservableList(
 }
 
 /**
- * This variant simply exposes all events in the list, in order of arrival.
+ * [recordInSequence] records incoming events on the [rx.Observable] in sequence.
  */
-fun <A> Observable<A>.foldToObservableList(): ObservableList<A> {
+fun <A> Observable<A>.recordInSequence(): ObservableList<A> {
     return foldToObservableList(Unit) { newElement, _unit, list ->
         list.add(newElement)
     }
 }
 
+/**
+ * [foldToObservableMap] takes an [rx.Observable] stream and creates an [ObservableMap] out of it, while maintaining
+ * an accumulator.
+ * @param initialAccumulator The initial value of the accumulator.
+ * @param folderFun The transformation function to be called on the observable map when a new element is emitted on
+ *     the stream, which should modify the map as needed.
+ */
 fun <A, B, K, C> Observable<A>.foldToObservableMap(
         initialAccumulator: C, folderFun: (A, C, ObservableMap<K, B>) -> C
 ): ObservableMap<K, out B> {
@@ -68,7 +88,7 @@ fun <A, B, K, C> Observable<A>.foldToObservableMap(
  * @param toKey Function retrieving the key to associate with.
  * @param merge The function to be called if there is an existing element at the key.
  */
-fun <A, K> Observable<A>.foldToObservableMap(
+fun <A, K> Observable<A>.recordAsAssociation(
         toKey: (A) -> K,
         merge: (K, oldValue: A, newValue: A) -> A = { _key, _oldValue, newValue -> newValue }
 ): ObservableMap<K, out A> {

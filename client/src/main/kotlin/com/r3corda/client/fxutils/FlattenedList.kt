@@ -8,6 +8,7 @@ import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 import org.eclipse.jetty.server.Authentication
 import java.util.*
+import kotlin.test.assertEquals
 
 /**
  * [FlattenedList] flattens the passed in list of [ObservableValue]s so that changes in individual updates to the values
@@ -106,7 +107,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
             }
         }
         endChange()
-        require(sourceList.size == indexMap.size)
+        assertEquals(sourceList.size, indexMap.size)
     }
 
     override fun get(index: Int) = sourceList.get(index).value

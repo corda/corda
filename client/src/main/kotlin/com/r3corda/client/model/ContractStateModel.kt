@@ -1,6 +1,7 @@
 package com.r3corda.client.model
 
 import com.r3corda.client.fxutils.foldToObservableList
+import com.r3corda.client.fxutils.recordInSequence
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.ContractState
 import com.r3corda.core.contracts.StateAndRef

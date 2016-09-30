@@ -17,6 +17,11 @@ class MapValuesList<K, A, C> private constructor(
 ) : ObservableList<C> by exposedList {
 
     companion object {
+        /**
+         * [create] is the factory of [MapValuesList].
+         * @param sourceMap The source map.
+         * @param assemble The function to be called for map each entry to construct the final list elements.
+         */
         fun <K, A, C> create(sourceMap: ObservableMap<K, A>, assemble: (Map.Entry<K, A>) -> C): MapValuesList<K, A, C> {
             val backingList = FXCollections.observableArrayList<Map.Entry<K, A>>(sourceMap.entries.sortedBy { it.key!!.hashCode() })
             return MapValuesList(sourceMap, backingList, backingList.map { assemble(it) })

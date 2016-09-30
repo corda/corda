@@ -1,15 +1,17 @@
 package com.r3corda.client.fxutils
 
 import javafx.collections.FXCollections
+import javafx.collections.ObservableList
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.fail
 
 class AggregatedListTest {
 
-    var sourceList = FXCollections.observableArrayList<Int>()
-    var aggregatedList = AggregatedList(sourceList, { it % 3 }) { mod3, group -> Pair(mod3, group) }
-    var replayedList = ReplayedList(aggregatedList)
+    lateinit var sourceList: ObservableList<Int>
+    lateinit var aggregatedList: ObservableList<Pair<Int, ObservableList<Int>>>
+    lateinit var replayedList: ObservableList<Pair<Int, ObservableList<Int>>>
 
     @Before
     fun setup() {
@@ -20,22 +22,22 @@ class AggregatedListTest {
 
     @Test
     fun addWorks() {
-        require(replayedList.size == 0) { "Aggregation is empty is source list is" }
+        assertEquals(replayedList.size, 0)
 
         sourceList.add(9)
-        require(replayedList.size == 1) { "Aggregation list has one element if one was added to source list" }
-        require(replayedList[0]!!.first == 0)
+        assertEquals(replayedList.size, 1)
+        assertEquals(replayedList[0]!!.first, 0)
 
         sourceList.add(8)
-        require(replayedList.size == 2) { "Aggregation list has two elements if two were added to source list with different keys" }
+        assertEquals(replayedList.size, 2)
 
         sourceList.add(6)
-        require(replayedList.size == 2) { "Aggregation list's size doesn't change if element with existing key is added" }
+        assertEquals(replayedList.size, 2)
 
         replayedList.forEach {
             when (it.first) {
-                0 -> require(it.second.toSet() == setOf(6, 9))
-                2 -> require(it.second.size == 1)
+                0 -> assertEquals(it.second.toSet(), setOf(6, 9))
+                2 -> assertEquals(it.second.size, 1)
                 else -> fail("No aggregation expected with key ${it.first}")
             }
         }
@@ -45,51 +47,51 @@ class AggregatedListTest {
     fun removeWorks() {
         sourceList.addAll(0, 1, 2, 3, 4)
 
-        require(replayedList.size == 3)
+        assertEquals(replayedList.size, 3)
         replayedList.forEach {
             when (it.first) {
-                0 -> require(it.second.toSet() == setOf(0, 3))
-                1 -> require(it.second.toSet() == setOf(1, 4))
-                2 -> require(it.second.toSet() == setOf(2))
+                0 -> assertEquals(it.second.toSet(), setOf(0, 3))
+                1 -> assertEquals(it.second.toSet(), setOf(1, 4))
+                2 -> assertEquals(it.second.toSet(), setOf(2))
                 else -> fail("No aggregation expected with key ${it.first}")
             }
         }
 
         sourceList.remove(4)
-        require(replayedList.size == 3)
+        assertEquals(replayedList.size, 3)
         replayedList.forEach {
             when (it.first) {
-                0 -> require(it.second.toSet() == setOf(0, 3))
-                1 -> require(it.second.toSet() == setOf(1))
-                2 -> require(it.second.toSet() == setOf(2))
+                0 -> assertEquals(it.second.toSet(), setOf(0, 3))
+                1 -> assertEquals(it.second.toSet(), setOf(1))
+                2 -> assertEquals(it.second.toSet(), setOf(2))
                 else -> fail("No aggregation expected with key ${it.first}")
             }
         }
 
         sourceList.remove(2, 4)
-        require(replayedList.size == 2)
+        assertEquals(replayedList.size, 2)
         replayedList.forEach {
             when (it.first) {
-                0 -> require(it.second.toSet() == setOf(0))
-                1 -> require(it.second.toSet() == setOf(1))
+                0 -> assertEquals(it.second.toSet(), setOf(0))
+                1 -> assertEquals(it.second.toSet(), setOf(1))
                 else -> fail("No aggregation expected with key ${it.first}")
             }
         }
 
         sourceList.removeAll(0, 1)
-        require(replayedList.size == 0)
+        assertEquals(replayedList.size, 0)
     }
 
     @Test
     fun multipleElementsWithSameHashWorks() {
         sourceList.addAll(0, 0)
-        require(replayedList.size == 1)
+        assertEquals(replayedList.size, 1)
         replayedList.forEach {
             when (it.first) {
                 0 -> {
-                    require(it.second.size == 2)
-                    require(it.second[0] == 0)
-                    require(it.second[1] == 0)
+                    assertEquals(it.second.size, 2)
+                    assertEquals(it.second[0], 0)
+                    assertEquals(it.second[1], 0)
                 }
                 else -> fail("No aggregation expected with key ${it.first}")
             }

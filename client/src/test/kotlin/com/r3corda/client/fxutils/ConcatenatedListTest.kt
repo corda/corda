@@ -5,12 +5,13 @@ import javafx.collections.ObservableList
 import org.junit.Before
 import org.junit.Test
 import java.util.*
+import kotlin.test.assertEquals
 
 class ConcatenatedListTest {
 
-    var sourceList = FXCollections.observableArrayList<ObservableList<String>>(FXCollections.observableArrayList("hello"))
-    var concatenatedList = ConcatenatedList(sourceList)
-    var replayedList = ReplayedList(concatenatedList)
+    lateinit var sourceList: ObservableList<ObservableList<String>>
+    lateinit var concatenatedList: ConcatenatedList<String>
+    lateinit var replayedList: ObservableList<String>
 
     @Before
     fun setup() {
@@ -19,42 +20,70 @@ class ConcatenatedListTest {
         replayedList = ReplayedList(concatenatedList)
     }
 
+    // A helper function for tests that checks internal invariants.
+    fun <A> ConcatenatedList<A>.checkInvariants() {
+        assertEquals(nestedIndexOffsets.size, source.size)
+        var currentOffset = 0
+        for (i in 0 .. source.size - 1) {
+            currentOffset += source[i].size
+            assertEquals(nestedIndexOffsets[i], currentOffset)
+        }
+
+        assertEquals(indexMap.size, source.size)
+        for (entry in indexMap) {
+            val (wrapped, pair) = entry
+            val index = pair.first
+            val foundListIndices = ArrayList<Int>()
+            source.forEachIndexed { i, list ->
+                if (wrapped.observableList == list) {
+                    foundListIndices.add(i)
+                }
+            }
+            require(foundListIndices.any { it == index })
+        }
+    }
+
     @Test
     fun addWorks() {
-        require(replayedList.size == 1)
-        require(replayedList[0] == "hello")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 1)
+        assertEquals(replayedList[0], "hello")
 
         sourceList.add(FXCollections.observableArrayList("a", "b"))
-        require(replayedList.size == 3)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "a")
-        require(replayedList[2] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 3)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "a")
+        assertEquals(replayedList[2], "b")
 
         sourceList.add(1, FXCollections.observableArrayList("c"))
-        require(replayedList.size == 4)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "c")
-        require(replayedList[2] == "a")
-        require(replayedList[3] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 4)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "c")
+        assertEquals(replayedList[2], "a")
+        assertEquals(replayedList[3], "b")
 
         sourceList[0].addAll("d", "e")
-        require(replayedList.size == 6)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "d")
-        require(replayedList[2] == "e")
-        require(replayedList[3] == "c")
-        require(replayedList[4] == "a")
-        require(replayedList[5] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 6)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "d")
+        assertEquals(replayedList[2], "e")
+        assertEquals(replayedList[3], "c")
+        assertEquals(replayedList[4], "a")
+        assertEquals(replayedList[5], "b")
 
         sourceList[1].add(0, "f")
-        require(replayedList.size == 7)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "d")
-        require(replayedList[2] == "e")
-        require(replayedList[3] == "f")
-        require(replayedList[4] == "c")
-        require(replayedList[5] == "a")
-        require(replayedList[6] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 7)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "d")
+        assertEquals(replayedList[2], "e")
+        assertEquals(replayedList[3], "f")
+        assertEquals(replayedList[4], "c")
+        assertEquals(replayedList[5], "a")
+        assertEquals(replayedList[6], "b")
     }
 
     @Test
@@ -65,38 +94,47 @@ class ConcatenatedListTest {
         sourceList[1].add(0, "f")
 
         sourceList.removeAt(1)
-        require(replayedList.size == 5)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "d")
-        require(replayedList[2] == "e")
-        require(replayedList[3] == "a")
-        require(replayedList[4] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 5)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "d")
+        assertEquals(replayedList[2], "e")
+        assertEquals(replayedList[3], "a")
+        assertEquals(replayedList[4], "b")
 
         sourceList[0].clear()
-        require(replayedList.size == 2)
-        require(replayedList[0] == "a")
-        require(replayedList[1] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 2)
+        assertEquals(replayedList[0], "a")
+        assertEquals(replayedList[1], "b")
+
+        sourceList[1].removeAt(0)
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 1)
+        assertEquals(replayedList[0], "b")
     }
 
     @Test
     fun permutationWorks() {
         sourceList.addAll(FXCollections.observableArrayList("a", "b"), FXCollections.observableArrayList("c"))
-        require(replayedList.size == 4)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "a")
-        require(replayedList[2] == "b")
-        require(replayedList[3] == "c")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 4)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "a")
+        assertEquals(replayedList[2], "b")
+        assertEquals(replayedList[3], "c")
 
         sourceList.sortWith(object : Comparator<ObservableList<String>> {
             override fun compare(p0: ObservableList<String>, p1: ObservableList<String>): Int {
                 return p0.size - p1.size
             }
         })
-        require(replayedList.size == 4)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "c")
-        require(replayedList[2] == "a")
-        require(replayedList[3] == "b")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 4)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "c")
+        assertEquals(replayedList[2], "a")
+        assertEquals(replayedList[3], "b")
 
         sourceList.add(0, FXCollections.observableArrayList("d", "e", "f"))
         sourceList.sortWith(object : Comparator<ObservableList<String>> {
@@ -104,14 +142,15 @@ class ConcatenatedListTest {
                 return p0.size - p1.size
             }
         })
-        require(replayedList.size == 7)
-        require(replayedList[0] == "hello")
-        require(replayedList[1] == "c")
-        require(replayedList[2] == "a")
-        require(replayedList[3] == "b")
-        require(replayedList[4] == "d")
-        require(replayedList[5] == "e")
-        require(replayedList[6] == "f")
+        concatenatedList.checkInvariants()
+        assertEquals(replayedList.size, 7)
+        assertEquals(replayedList[0], "hello")
+        assertEquals(replayedList[1], "c")
+        assertEquals(replayedList[2], "a")
+        assertEquals(replayedList[3], "b")
+        assertEquals(replayedList[4], "d")
+        assertEquals(replayedList[5], "e")
+        assertEquals(replayedList[6], "f")
     }
 
 }

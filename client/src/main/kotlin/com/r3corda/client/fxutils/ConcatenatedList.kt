@@ -1,19 +1,46 @@
 package com.r3corda.client.fxutils
 
+import co.paralleluniverse.common.util.VisibleForTesting
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 import java.util.*
 import kotlin.comparisons.compareValues
 
+/**
+ * [ConcatenatedList] takes a list of lists and concatenates them. Any change to the underlying lists or the outer list
+ * is propagated as expected.
+ */
 class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : TransformationList<A, ObservableList<A>>(sourceList) {
-    class WrappedObservableList<A>(
+    // A wrapper for input lists so we hash differently even if a list is reused in the input.
+    @VisibleForTesting
+    internal class WrappedObservableList<A>(
             val observableList: ObservableList<A>
     )
-    private val indexMap = HashMap<WrappedObservableList<out A>, Pair<Int, ListChangeListener<A>>>()
-    // Maps each list index to the offset of the next nested element
-    // Example: { {"a", "b"}, {"c"} } -> { 2, 3 }
-    private val nestedIndexOffsets = ArrayList<Int>(sourceList.size)
+    // First let's clarify some concepts as it's easy to confuse which list we're handling where.
+    // Throughout the commentary and the code we will refer to the lists contained in the source list as "nested lists",
+    // their elements "nested elements", whereas the containing list will be called "source list", its elements being
+    // the nested lists. We will refer to the final concatenated list as "result list".
+
+    // We maintain two bookkeeping data-structures.
+    // 'indexMap' stores a mapping from nested lists to their respective source list indices and listeners.
+    // 'nestedIndexOffsets' stores for each nested list the index of the *next* nested element in the result list.
+    // We also have a helper function 'startingOffsetOf', which given an index of a nested list in the source list
+    // returns the index of its first element in the result list, or where it would be if it had one.
+    // For example:
+    //   nested lists = { {"a", "b"}, {"c"}, {} }
+    //   result list = { "a", "b", "c" }
+    //   indexMap = [ {"c"} -> (1, listener),
+    //                {} -> (2, listener),
+    //                {"a", "b"} -> (0, listener) ]
+    //   nestedIndexOffsets = { 2, 3, 3 }
+    //   startingOffsetOf = { 0, 2, 3 }
+    // Note that similar to 'nestedIndexOffsets', 'startingOffsetOf' also isn't a one-to-one mapping because of
+    // potentially several empty nested lists.
+    @VisibleForTesting
+    internal val indexMap = HashMap<WrappedObservableList<out A>, Pair<Int, ListChangeListener<A>>>()
+    @VisibleForTesting
+    internal val nestedIndexOffsets = ArrayList<Int>(sourceList.size)
     init {
         var offset = 0
         sourceList.forEachIndexed { index, observableList ->
@@ -24,26 +51,40 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
         }
     }
 
+    private fun startingOffsetOf(listIndex: Int): Int {
+        if (listIndex == 0) {
+            return 0
+        } else {
+            return nestedIndexOffsets[listIndex - 1]
+        }
+    }
+
+    // This is where we create a listener for a *nested* list. Note that 'indexMap' doesn't need to be adjusted on any
+    // of these changes as the indices of nested lists don't change, just their contents.
     private fun createListener(wrapped: WrappedObservableList<A>): ListChangeListener<A> {
         val listener = ListChangeListener<A> { change ->
             beginChange()
             while (change.next()) {
                 if (change.wasPermutated()) {
-                    val listIndex = indexMap[wrapped]!!.first
+                    // If a nested list is permuted we simply offset the permutation by the startingOffsetOf the list.
+                    // Note that we don't need to invalidate offsets.
+                    val nestedListIndex = indexMap[wrapped]!!.first
                     val permutation = IntArray(change.to)
-                    if (listIndex >= firstInvalidatedPosition) {
-                        recalculateOffsets()
-                    }
-                    val startingOffset = startingOffsetOf(listIndex)
+                    val startingOffset = startingOffsetOf(nestedListIndex)
+                    // firstTouched is the result list index of the beginning of the permutation.
                     val firstTouched = startingOffset + change.from
+                    // We first set the non-permuted indices.
                     for (i in 0..firstTouched - 1) {
                         permutation[i] = i
                     }
-                    for (i in startingOffset + change.from..startingOffset + change.to - 1) {
+                    // Then the permuted ones.
+                    for (i in firstTouched .. startingOffset + change.to - 1) {
                         permutation[startingOffset + i] = change.getPermutation(i)
                     }
                     nextPermutation(firstTouched, startingOffset + change.to, permutation)
                 } else if (change.wasUpdated()) {
+                    // If a nested element is updated we simply propagate the update by offsetting the nested element index
+                    // by the startingOffsetOf the nested list.
                     val listIndex = indexMap[wrapped]!!.first
                     val startingOffset = startingOffsetOf(listIndex)
                     for (i in change.from..change.to - 1) {
@@ -51,14 +92,21 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                     }
                 } else {
                     if (change.wasRemoved()) {
+                        // If nested elements are removed we again simply offset the change. We also need to invalidate
+                        // 'nestedIndexOffsets' unless we removed the same number of elements as we added
                         val listIndex = indexMap[wrapped]!!.first
-                        invalidateOffsets(listIndex)
+                        if (!(change.wasAdded() && change.addedSize == change.removedSize)) {
+                            invalidateOffsets(listIndex)
+                        }
                         val startingOffset = startingOffsetOf(listIndex)
                         nextRemove(startingOffset + change.from, change.removed)
                     }
                     if (change.wasAdded()) {
+                        // Similar logic to remove.
                         val listIndex = indexMap[wrapped]!!.first
-                        invalidateOffsets(listIndex)
+                        if (!(change.wasRemoved() && change.addedSize == change.removedSize)) {
+                            invalidateOffsets(listIndex)
+                        }
                         val startingOffset = startingOffsetOf(listIndex)
                         nextAdd(startingOffset + change.from, startingOffset + change.to)
                     }
@@ -71,23 +119,28 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
         return listener
     }
 
-    // Tracks the first position where the *nested* offset is invalid
-    private var firstInvalidatedPosition = sourceList.size
-
+    // This is where we handle changes to the *source* list.
     override fun sourceChanged(change: ListChangeListener.Change<out ObservableList<A>>) {
         beginChange()
         while (change.next()) {
             if (change.wasPermutated()) {
-                // Update indexMap
+                // If the source list was permuted we adjust 'nestedIndexOffsets' and translate the permutation to apply
+                // to the nested elements.
+                // For example:
+                //   original list:          { {"a", "b"}, {"c", "d"}, {} }
+                //   original permutation:   { 2, 1, 0 }
+                //   permuted list:          { {}, {"c", "d"}, {"a", "b"} }
+                //   translated permutation: { 2, 3, 0, 1 }
+
+                // First we apply the permutation to the 'indexMap'
                 val iterator = indexMap.iterator()
                 for (entry in iterator) {
-                    val (wrapped, pair) = entry
-                    val (index, listener) = pair
+                    val (index, listener) = entry.value
                     if (index >= change.from && index < change.to) {
                         entry.setValue(Pair(change.getPermutation(index), listener))
                     }
                 }
-                // Calculate the permuted sublist of nestedIndexOffsets
+                // We apply the permutation to the relevant part of 'nestedIndexOffsets'.
                 val newSubNestedIndexOffsets = IntArray(change.to - change.from)
                 val firstTouched = if (change.from == 0) 0 else nestedIndexOffsets[change.from - 1]
                 var currentOffset = firstTouched
@@ -95,6 +148,7 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                     currentOffset += source[change.from + i].size
                     newSubNestedIndexOffsets[i] = currentOffset
                 }
+                // Now we create the permutation array for the result list.
                 val concatenatedPermutation = IntArray(newSubNestedIndexOffsets.last())
                 // Set the non-permuted part
                 var offset = 0
@@ -124,13 +178,14 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                 throw UnsupportedOperationException("Updates not supported")
             } else {
                 if (change.wasRemoved()) {
-                    // Update indexMap
+                    // If nested lists were removed we iterate over 'indexMap' and adjust the indices accordingly,
+                    // remove listeners and remove relevant mappings as well. We also invalidate nested offsets.
                     val iterator = indexMap.iterator()
                     for (entry in iterator) {
                         val (wrapped, pair) = entry
                         val (index, listener) = pair
-                        val removeEnd = change.from + change.removedSize
                         if (index >= change.from) {
+                            val removeEnd = change.from + change.removedSize
                             if (index < removeEnd) {
                                 wrapped.observableList.removeListener(listener)
                                 iterator.remove()
@@ -162,13 +217,9 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
                         indexMap[wrapped] = Pair(change.from + sublistIndex, createListener(wrapped))
                     }
                     invalidateOffsets(change.from)
+                    // We recalculate offsets early as we need the range anyway.
                     recalculateOffsets()
                     nextAdd(startingOffsetOf(change.from), nestedIndexOffsets[change.to - 1])
-                    for (i in change.from .. change.to - 1) {
-                        source[i].addListener { change: ListChangeListener.Change<out A> ->
-
-                        }
-                    }
                 }
             }
             recalculateOffsets()
@@ -176,16 +227,10 @@ class ConcatenatedList<A>(sourceList: ObservableList<ObservableList<A>>) : Trans
         endChange()
     }
 
+    // Tracks the first position where the *nested* offset is invalid
+    private var firstInvalidatedPosition = sourceList.size
     private fun invalidateOffsets(index: Int) {
         firstInvalidatedPosition = Math.min(firstInvalidatedPosition, index)
-    }
-
-    private fun startingOffsetOf(listIndex: Int): Int {
-        if (listIndex == 0) {
-            return 0
-        } else {
-            return nestedIndexOffsets[listIndex - 1]
-        }
     }
 
     private fun recalculateOffsets() {

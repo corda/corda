@@ -28,9 +28,17 @@ fun <A, B> ObservableValue<out A>.map(function: (A) -> B): ObservableValue<B> = 
 /**
  * val dogs: ObservableList<Dog> = (..)
  * val dogOwners: ObservableList<Person> = dogs.map { it.owner }
+ *
+ * @param cached If true the results of the mapped function are cached in a backing list. If false each get() will
+ *     re-run the function.
  */
-fun <A, B> ObservableList<out A>.map(function: (A) -> B): ObservableList<B> = MappedList(this, function)
-fun <A, B> ObservableList<out A>.mapNonBacked(function: (A) -> B): ObservableList<B> = EasyBind.map(this, function)
+fun <A, B> ObservableList<out A>.map(cached: Boolean = true, function: (A) -> B): ObservableList<B> {
+    if (cached) {
+        return MappedList(this, function)
+    } else {
+        return EasyBind.map(this, function)
+    }
+}
 
 /**
  * val aliceHeight: ObservableValue<Long> = (..)
@@ -126,12 +134,14 @@ fun <A, B> ObservableList<out A>.foldObservable(initial: B, folderFunction: (B, 
 fun <A> ObservableList<out ObservableValue<out A>>.flatten(): ObservableList<A> = FlattenedList(this)
 
 /**
+ * data class Person(val height: ObservableValue<Long>)
  * val people: List<Person> = listOf(alice, bob)
  * val heights: ObservableList<Long> = people.map(Person::height).sequence()
  */
-fun <A> List<ObservableValue<out A>>.sequence(): ObservableList<A> = FlattenedList(FXCollections.observableArrayList(this))
+fun <A> Collection<ObservableValue<out A>>.sequence(): ObservableList<A> = FlattenedList(FXCollections.observableArrayList(this))
 
 /**
+ * data class Person(val height: Long)
  * val people: ObservableList<Person> = (..)
  * val nameToHeight: ObservableMap<String, Long> = people.associateBy(Person::name) { name, person -> person.height }
  */
@@ -209,6 +219,7 @@ fun <A> ObservableList<ObservableList<A>>.concatenate(): ObservableList<A> {
 }
 
 /**
+ * data class Person(val name: String, val managerName: String)
  * val people: ObservableList<Person> = (..)
  * val managerEmployeeMapping: ObservableList<Pair<Person, ObservableList<Person>>> =
  *   people.leftOuterJoin(people, Person::name, Person::managerName) { manager, employees -> Pair(manager, employees) }
@@ -225,6 +236,18 @@ fun <A : Any, B : Any, C, K : Any> ObservableList<A>.leftOuterJoin(
     }.concatenate()
 }
 
+/**
+ * data class Person(name: String, favouriteSpecies: Species)
+ * data class Animal(name: String, species: Species)
+ * val people: ObservableList<Person> = (..)
+ * val animals: ObservableList<Animal> = (..)
+ * val peopleToFavouriteAnimals: ObservableMap<Species, Pair<ObservableList<Person>, ObservableList<Animal>>> =
+ *   people.leftOuterJoin(animals, Person::favouriteSpecies, Animal::species)
+ *
+ * This is the most general left join, given a joining key it returns for each key a pair of relevant elements from the
+ * left and right tables. It is "left outer" in the sense that all members of the left table are guaranteed to be in
+ * the result, but this may not be the case for the right table.
+ */
 fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
         rightTable: ObservableList<B>,
         leftToJoinKey: (A) -> K,

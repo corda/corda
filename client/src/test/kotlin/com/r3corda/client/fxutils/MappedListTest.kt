@@ -1,14 +1,16 @@
 package com.r3corda.client.fxutils
 
 import javafx.collections.FXCollections
+import javafx.collections.ObservableList
 import org.junit.Before
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class MappedListTest {
 
-    var sourceList = FXCollections.observableArrayList("Alice")
-    var mappedList = MappedList(sourceList) { it.length }
-    var replayedList = ReplayedList(mappedList)
+    lateinit var sourceList: ObservableList<String>
+    lateinit var mappedList: ObservableList<Int>
+    lateinit var replayedList: ObservableList<Int>
 
     @Before
     fun setup() {
@@ -19,19 +21,19 @@ class MappedListTest {
 
     @Test
     fun addWorks() {
-        require(replayedList.size == 1)
-        require(replayedList[0] == 5)
+        assertEquals(replayedList.size, 1)
+        assertEquals(replayedList[0], 5)
 
         sourceList.add("Bob")
-        require(replayedList.size == 2)
-        require(replayedList[0] == 5)
-        require(replayedList[1] == 3)
+        assertEquals(replayedList.size, 2)
+        assertEquals(replayedList[0], 5)
+        assertEquals(replayedList[1], 3)
 
         sourceList.add(0, "Charlie")
-        require(replayedList.size == 3)
-        require(replayedList[0] == 7)
-        require(replayedList[1] == 5)
-        require(replayedList[2] == 3)
+        assertEquals(replayedList.size, 3)
+        assertEquals(replayedList[0], 7)
+        assertEquals(replayedList[1], 5)
+        assertEquals(replayedList[2], 3)
 
     }
 
@@ -39,12 +41,12 @@ class MappedListTest {
     fun removeWorks() {
         sourceList.add("Bob")
         sourceList.add(0, "Charlie")
-        require(replayedList.size == 3)
+        assertEquals(replayedList.size, 3)
 
         sourceList.removeAt(1)
-        require(replayedList.size == 2)
-        require(replayedList[0] == 7)
-        require(replayedList[1] == 3)
+        assertEquals(replayedList.size, 2)
+        assertEquals(replayedList[0], 7)
+        assertEquals(replayedList[1], 3)
     }
 
     @Test
@@ -54,13 +56,13 @@ class MappedListTest {
 
         sourceList.sortBy { it.length }
 
-        require(sourceList[0] == "Bob")
-        require(sourceList[1] == "Alice")
-        require(sourceList[2] == "Charlie")
+        assertEquals(sourceList[0], "Bob")
+        assertEquals(sourceList[1], "Alice")
+        assertEquals(sourceList[2], "Charlie")
 
-        require(replayedList.size == 3)
-        require(replayedList[0] == 3)
-        require(replayedList[1] == 5)
-        require(replayedList[2] == 7)
+        assertEquals(replayedList.size, 3)
+        assertEquals(replayedList[0], 3)
+        assertEquals(replayedList[1], 5)
+        assertEquals(replayedList[2], 7)
     }
 }
