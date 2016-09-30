@@ -96,7 +96,7 @@ fun main(args: Array<String>) {
         val keyPassword = valueOf(ParamsSpec.caKeyPassword)
         val keystore = X509Utilities.loadKeyStore(Paths.get(valueOf(ParamsSpec.keystorePath)).normalize(), storePassword)
         val intermediateCACertAndKey = X509Utilities.loadCertificateAndKey(keystore, keyPassword, X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY)
-        val rootCA = keystore.getCertificate(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY)
+        val rootCA = keystore.getCertificateChain(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY).last()
 
         // TODO: Create a proper request storage using database or other storage technology.
         val service = CertificateSigningService(intermediateCACertAndKey, rootCA, InMemoryCertificationRequestStorage())
