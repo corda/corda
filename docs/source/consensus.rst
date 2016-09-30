@@ -42,7 +42,7 @@ will not be regarded as confirmed. After the signature is obtained, the parties 
 Hence it is the point at which we can say finality has occurred.
 
 Multiple notaries
------------------
+~~~~~~~~~~~~~~~~~
 
 More than one notary can exist in the network. This gives the following benefits:
 
@@ -55,6 +55,32 @@ In cases where a transaction involves states controlled by multiple notaries, th
 This is achieved by using a special type of transaction that doesn't modify anything but the notary pointer of the state.
 Ensuring that all input states point to the same notary is the responsibility of each involved party
 (it is another condition for an output state of the transaction to be **valid**)
+
+Changing notaries
+~~~~~~~~~~~~~~~~~
+
+To change the notary for an input state, use the ``NotaryChangeProtocol``. For example:
+
+.. sourcecode:: kotlin
+
+    @Suspendable
+    fun changeNotary(originalState: StateAndRef<ContractState>,
+                     newNotary: Party): StateAndRef<ContractState> {
+        val protocol = NotaryChangeProtocol.Instigator(originalState, newNotary)
+        return subProtocol(protocol)
+    }
+
+The protocol will:
+
+1. Construct a transaction with the old state as the input and the new state as the output
+
+2. Obtain signatures from all *participants* (a participant is any party that is able to consume this state in a valid transaction, as defined by the state itself)
+
+3. Obtain the *old* notary signature
+
+4. Record and distribute the final transaction to the participants so that everyone possesses the new state
+
+.. note:: Eventually this will be handled automatically on demand.
 
 Validation
 ----------
@@ -114,7 +140,7 @@ By creating a range that can be either closed or open at one end, we allow all o
 .. note:: It is assumed that the time feed for a notary is GPS/NaviStar time as defined by the atomic
    clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.
 
-Running a Notary Service
+Running a notary service
 ------------------------
 
 At present we have two basic implementations that store committed input states in memory:
@@ -167,28 +193,3 @@ On conflict the ``NotaryProtocol`` with throw a ``NotaryException`` containing t
     data class ConsumingTx(val id: SecureHash, val inputIndex: Int, val requestingParty: Party)
 
 Conflict handling and resolution is currently the responsibility of the protocol author.
-
-Changing notaries
------------------
-
-To change the notary for an input state, use the ``NotaryChangeProtocol``. For example:
-
-.. sourcecode:: kotlin
-
-    fun changeNotary(originalState: StateAndRef<ContractState>,
-                     newNotary: Party): StateAndRef<ContractState> {
-        val protocol = NotaryChangeProtocol.Instigator(originalState, newNotary)
-        return subProtocol(protocol)
-    }
-
-The protocol will:
-
-1. Construct a transaction with the old state as the input and the new state as the output
-
-2. Obtain signatures from all *participants* (a participant is any party that is able to consume this state in a valid transaction, as defined by the state itself)
-
-3. Obtain the *old* notary signature
-
-4. Record and distribute the final transaction to the participants so that everyone possesses the new state
-
-.. note:: Eventually this will be handled automatically on demand.
