@@ -97,7 +97,8 @@ interface CordaRPCOps : RPCOps {
     fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>>
 
     /**
-     * Returns a pair of state machine id - recorded transaction hash pairs
+     * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
+     * such mappings as well.
      */
     @RPCReturnsObservables
     fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>>

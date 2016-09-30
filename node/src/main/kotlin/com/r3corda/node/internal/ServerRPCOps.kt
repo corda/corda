@@ -63,14 +63,20 @@ class ServerRPCOps(
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         // TODO: Have some way of restricting this to states the caller controls
         try {
-            Cash().generateSpend(builder, req.amount.withoutIssuer(), req.recipient.owningKey,
-                    // TODO: Move cash state filtering by issuer down to the contract itself
-                    services.vaultService.currentVault.statesOfType<Cash.State>().filter { it.state.data.amount.token == req.amount.token },
-                    setOf(req.amount.token.issuer.party))
-                    .forEach {
-                        val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
-                        builder.signWith(KeyPair(it, key))
-                    }
+            val vaultCashStates = services.vaultService.currentVault.statesOfType<Cash.State>()
+            // TODO: Move cash state filtering by issuer down to the contract itself
+            val cashStatesOfRightCurrency = vaultCashStates.filter { it.state.data.amount.token == req.amount.token }
+            val keysForSigning = Cash().generateSpend(
+                    tx = builder,
+                    amount = req.amount.withoutIssuer(),
+                    to = req.recipient.owningKey,
+                    assetsStates = cashStatesOfRightCurrency,
+                    onlyFromParties = setOf(req.amount.token.issuer.party)
+            )
+            keysForSigning.forEach {
+                val key = services.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
+                builder.signWith(KeyPair(it, key))
+            }
             val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
             val protocol = FinalityProtocol(tx, setOf(req), setOf(req.recipient))
             return TransactionBuildResult.ProtocolStarted(
