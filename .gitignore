@@ -4,6 +4,7 @@
 .settings
 tags
 .DS_Store
+*.orig
 *.log
 *.orig
 

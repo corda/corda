@@ -1,0 +1,14 @@
+apply plugin: 'maven-publish'
+
+repositories {
+    mavenCentral()
+}
+
+publishing {
+    publications {
+        core(MavenPublication) {
+            from components.java
+            artifactId 'quasar'
+        }
+    }
+}
