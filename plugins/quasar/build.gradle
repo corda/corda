@@ -1,4 +1,10 @@
 apply plugin: 'maven-publish'
+apply plugin: 'groovy'
+
+dependencies {
+    compile gradleApi()
+    compile localGroovy()
+}
 
 repositories {
     mavenCentral()
