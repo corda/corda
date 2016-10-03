@@ -141,7 +141,7 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
  * @return Returns a [ListenableFuture] holding the single [ProtocolStateMachine] created by the request.
  */
 inline fun <R, reified P : ProtocolLogic<R>> AbstractNode.initiateSingleShotProtocol(
-        markerClass: KClass<*>,
+        markerClass: KClass<out ProtocolLogic<*>>,
         noinline protocolFactory: (Party) -> P): ListenableFuture<ProtocolStateMachine<R>> {
     services.registerProtocolInitiator(markerClass, protocolFactory)
 
