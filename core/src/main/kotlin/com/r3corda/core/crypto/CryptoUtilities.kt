@@ -101,6 +101,12 @@ fun PublicKey.toStringShort(): String {
 
 fun Iterable<PublicKey>.toStringsShort(): String = map { it.toStringShort() }.toString()
 
+/** Creates a [PublicKeyTree] with a single leaf node containing the public key */
+val PublicKey.tree: PublicKeyTree get() = PublicKeyTree.Leaf(this)
+
+/** Returns the set of all [PublicKey]s of the signatures */
+fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()
+
 // Allow Kotlin destructuring:    val (private, public) = keyPair
 operator fun KeyPair.component1() = this.private
 
