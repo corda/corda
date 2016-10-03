@@ -2,6 +2,7 @@ package com.r3corda.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.contracts.TransactionType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.seconds
 import com.r3corda.core.transactions.SignedTransaction
@@ -32,8 +33,7 @@ class NotaryServiceTests {
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(NetworkMapService.Type, SimpleNotaryService.Type)
-        )
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type)))
         clientNode = net.createNode(networkMapAddress = notaryNode.info.address, keyPair = MINI_CORP_KEY)
         net.runNetwork() // Clear network map registration messages
     }

@@ -2,6 +2,7 @@ package com.r3corda.node.driver
 
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.api.RegulatorService
 import com.r3corda.node.services.messaging.ArtemisMessagingComponent
 import com.r3corda.node.services.transactions.SimpleNotaryService
@@ -32,8 +33,8 @@ class DriverTests {
     @Test
     fun simpleNodeStartupShutdownWorks() {
         val (notary, regulator) = driver {
-            val notary = startNode("TestNotary", setOf(SimpleNotaryService.Type))
-            val regulator = startNode("Regulator", setOf(RegulatorService.Type))
+            val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.Type)))
+            val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.Type)))
 
             nodeMustBeUp(networkMapCache, notary.get(), "TestNotary")
             nodeMustBeUp(networkMapCache, regulator.get(), "Regulator")

@@ -1,6 +1,7 @@
 package com.r3corda.client
 
 import com.r3corda.core.contracts.*
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.serialization.OpaqueBytes
 import com.r3corda.node.driver.driver
 import com.r3corda.node.driver.startClient
@@ -22,7 +23,7 @@ class NodeMonitorClientTests {
     fun cashIssueWorksEndToEnd() {
         driver {
             val aliceNodeFuture = startNode("Alice")
-            val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(SimpleNotaryService.Type))
+            val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
 
             val aliceNode = aliceNodeFuture.get()
             val notaryNode = notaryNodeFuture.get()
@@ -65,7 +66,7 @@ class NodeMonitorClientTests {
     fun issueAndMoveWorks() {
         driver {
             val aliceNodeFuture = startNode("Alice")
-            val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(SimpleNotaryService.Type))
+            val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
 
             val aliceNode = aliceNodeFuture.get()
             val notaryNode = notaryNodeFuture.get()
@@ -173,7 +174,7 @@ class NodeMonitorClientTests {
     fun movingCashOfDifferentIssueRefsFails() {
         driver {
             val aliceNodeFuture = startNode("Alice")
-            val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(SimpleNotaryService.Type))
+            val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
 
             val aliceNode = aliceNodeFuture.get()
             val notaryNode = notaryNodeFuture.get()

@@ -6,6 +6,7 @@ import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.transactions.SignedTransaction
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.services.network.NetworkMapService
@@ -33,7 +34,7 @@ class ValidatingNotaryServiceTests {
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(NetworkMapService.Type, ValidatingNotaryService.Type)
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(ValidatingNotaryService.Type))
         )
         clientNode = net.createNode(networkMapAddress = notaryNode.info.address, keyPair = MINI_CORP_KEY)
         net.runNetwork() // Clear network map registration messages

@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.internal.Node
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.messaging.NodeMessagingClient
@@ -157,14 +157,14 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     val clock: Clock = NodeClock()
 
     fun createNode(): Node {
-        val advertisedServices = mutableSetOf<ServiceType>()
-        if (hostNotaryServiceLocally) advertisedServices.add(SimpleNotaryService.Type)
+        val advertisedServices = mutableSetOf<ServiceInfo>()
+        if (hostNotaryServiceLocally) advertisedServices.add(ServiceInfo(SimpleNotaryService.Type))
         if (!extraAdvertisedServiceIds.isNullOrEmpty()) {
             for (serviceId in extraAdvertisedServiceIds.split(",")) {
-                advertisedServices.add(object : ServiceType(serviceId) {})
+                advertisedServices.add(ServiceInfo.parse(serviceId))
             }
         }
-        if (networkMapAddress == null) advertisedServices.add(NetworkMapService.Type)
+        if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.Type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress)
         return Node(artemisAddress,
                 webAddress,

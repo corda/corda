@@ -8,6 +8,7 @@ import com.r3corda.client.model.Models
 import com.r3corda.client.model.NodeMonitorModel
 import com.r3corda.client.model.observer
 import com.r3corda.core.contracts.ClientToServiceCommand
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.explorer.model.IdentityModel
 import com.r3corda.node.driver.PortAllocation
 import com.r3corda.node.driver.driver
@@ -42,7 +43,7 @@ class Main : App() {
 
                 val aliceNodeFuture = startNode("Alice")
                 val bobNodeFuture = startNode("Bob")
-                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(SimpleNotaryService.Type))
+                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
 
                 val aliceNode = aliceNodeFuture.get()
                 val bobNode = bobNodeFuture.get()

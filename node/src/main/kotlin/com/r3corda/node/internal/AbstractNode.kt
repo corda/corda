@@ -71,7 +71,7 @@ import kotlin.reflect.KClass
 // In theory the NodeInfo for the node should be passed in, instead, however currently this is constructed by the
 // AbstractNode. It should be possible to generate the NodeInfo outside of AbstractNode, so it can be passed in.
 abstract class AbstractNode(val configuration: NodeConfiguration, val networkMapService: SingleMessageRecipient?,
-                            val advertisedServices: Set<ServiceType>, val platformClock: Clock) : SingletonSerializeAsToken() {
+                            val advertisedServices: Set<ServiceInfo>, val platformClock: Clock) : SingletonSerializeAsToken() {
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
@@ -211,7 +211,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
 
             // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
             //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
-            advertisedServices.singleOrNull { it.isSubTypeOf(NotaryService.Type) }?.let {
+            advertisedServices.singleOrNull { it.type.isSubTypeOf(NotaryService.Type) }?.let {
                 uniquenessProvider = makeUniquenessProvider()
                 tokenizableServices.add(uniquenessProvider!!)
             }
@@ -318,7 +318,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
     }
 
     private fun buildAdvertisedServices() {
-        val serviceTypes = info.advertisedServices
+        val serviceTypes = info.advertisedServices.map { it.type }
         if (NetworkMapService.Type in serviceTypes) makeNetworkMapService()
 
         val notaryServiceType = serviceTypes.singleOrNull { it.isSubTypeOf(NotaryService.Type) }
@@ -332,7 +332,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
      * updates) if one has been supplied.
      */
     private fun registerWithNetworkMap(): ListenableFuture<Unit> {
-        require(networkMapService != null || NetworkMapService.Type in advertisedServices) {
+        require(networkMapService != null || NetworkMapService.Type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
         services.networkMapCache.addNode(info)

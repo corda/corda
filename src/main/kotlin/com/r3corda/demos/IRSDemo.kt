@@ -8,11 +8,11 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.CordaPluginRegistry
-import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.demos.api.InterestRateSwapAPI
+import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.demos.protocols.AutoOfferProtocol
 import com.r3corda.demos.protocols.ExitServerProtocol
 import com.r3corda.demos.protocols.UpdateBusinessDayProtocol
@@ -21,7 +21,6 @@ import com.r3corda.demos.utilities.putJson
 import com.r3corda.demos.utilities.uploadFile
 import com.r3corda.node.internal.AbstractNode
 import com.r3corda.node.internal.Node
-import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
 import com.r3corda.node.services.messaging.NodeMessagingClient
@@ -393,15 +392,15 @@ private fun createRecipient(addr: String): SingleMessageRecipient {
 
 private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipient): Node {
     val config = getNodeConfig(params)
-    val advertisedServices: Set<ServiceType>
+    val advertisedServices: Set<ServiceInfo>
     val networkMapId =
             when (params.node) {
                 IRSDemoNode.NodeA -> {
-                    advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
+                    advertisedServices = setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
                     null
                 }
                 IRSDemoNode.NodeB -> {
-                    advertisedServices = setOf(NodeInterestRates.Type)
+                    advertisedServices = setOf(ServiceInfo(NodeInterestRates.Type))
                     networkMap
                 }
             }
@@ -461,7 +460,7 @@ private fun loadConfigFile(baseDir: Path, configFile: Path, defaultLegalName: St
 
 private fun createIdentities(nodeConf: NodeConfiguration) {
     val mockNetwork = MockNetwork(false)
-    val node = MockNetwork.MockNode(nodeConf, mockNetwork, null, setOf(NetworkMapService.Type, SimpleNotaryService.Type), 0, null)
+    val node = MockNetwork.MockNode(nodeConf, mockNetwork, null, setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type)), 0, null)
     node.start()
     node.stop()
 }

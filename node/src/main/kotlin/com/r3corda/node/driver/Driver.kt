@@ -6,7 +6,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.NetworkMapCache
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.config.NodeConfigurationFromConfig
@@ -56,7 +56,7 @@ interface DriverDSLExposedInterface {
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceType> = setOf()): Future<NodeInfo>
+    fun startNode(providedName: String? = null, advertisedServices: Set<ServiceInfo> = setOf()): Future<NodeInfo>
 
     /**
      * Starts an [NodeMessagingClient].
@@ -286,14 +286,14 @@ class DriverDSL(
         addressMustNotBeBound(networkMapAddress)
     }
 
-    override fun startNode(providedName: String?, advertisedServices: Set<ServiceType>): Future<NodeInfo> {
+    override fun startNode(providedName: String?, advertisedServices: Set<ServiceInfo>): Future<NodeInfo> {
         val messagingAddress = portAllocation.nextHostAndPort()
         val apiAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val name = providedName ?: "${pickA(name)}-${messagingAddress.port}"
 
         val nodeDirectory = "$baseDirectory/$name"
-        val useNotary = advertisedServices.any { it.isSubTypeOf(NotaryService.Type) }
+        val useNotary = advertisedServices.any { it.type.isSubTypeOf(NotaryService.Type) }
 
         val config = NodeConfiguration.loadConfig(
                 baseDirectoryPath = Paths.get(nodeDirectory),
@@ -304,7 +304,7 @@ class DriverDSL(
                         "artemisAddress" to messagingAddress.toString(),
                         "webAddress" to apiAddress.toString(),
                         "hostNotaryServiceLocally" to useNotary.toString(),
-                        "extraAdvertisedServiceIds" to advertisedServices.map { x -> x.id }.joinToString(","),
+                        "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
                         "networkMapAddress" to networkMapAddress.toString()
                 )
         )
@@ -446,7 +446,7 @@ class DriverDSL(
                 listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
             else
                 emptyList()
-            
+
             val javaArgs = listOf(path) +
                     listOf("-Dname=${nodeConf.myLegalName}", "-javaagent:$quasarJarPath") + debugPortArg +
                     listOf("-cp", classpath, className) +

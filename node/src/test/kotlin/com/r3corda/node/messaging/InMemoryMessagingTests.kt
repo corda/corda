@@ -6,6 +6,7 @@ import com.r3corda.core.messaging.Message
 import com.r3corda.core.messaging.TopicStringValidator
 import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.testing.node.MockNetwork
 import org.junit.Before
@@ -40,7 +41,7 @@ class InMemoryMessagingTests {
 
     @Test
     fun basics() {
-        val node1 = network.createNode(advertisedServices = NetworkMapService.Type)
+        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         val node3 = network.createNode(networkMapAddress = node1.info.address)
 
@@ -69,7 +70,7 @@ class InMemoryMessagingTests {
 
     @Test
     fun broadcast() {
-        val node1 = network.createNode(advertisedServices = NetworkMapService.Type)
+        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         val node3 = network.createNode(networkMapAddress = node1.info.address)
 
@@ -88,7 +89,7 @@ class InMemoryMessagingTests {
      */
     @Test
     fun `skip unhandled messages`() {
-        val node1 = network.createNode(advertisedServices = NetworkMapService.Type)
+        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         var received: Int = 0
 

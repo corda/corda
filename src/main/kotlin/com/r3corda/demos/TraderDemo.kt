@@ -14,7 +14,7 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.days
 import com.r3corda.core.logElapsedTime
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.seconds
 import com.r3corda.core.success
@@ -126,13 +126,13 @@ fun main(args: Array<String>) {
     }
 
     // Which services will this instance of the node provide to the network?
-    val advertisedServices: Set<ServiceType>
+    val advertisedServices: Set<ServiceInfo>
 
     // One of the two servers needs to run the network map and notary services. In such a trivial two-node network
     // the map is not very helpful, but we need one anyway. So just make the buyer side run the network map as it's
     // the side that sticks around waiting for the seller.
     val networkMapId = if (role == Role.BUYER) {
-        advertisedServices = setOf(NetworkMapService.Type, SimpleNotaryService.Type)
+        advertisedServices = setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
         null
     } else {
         advertisedServices = emptySet()

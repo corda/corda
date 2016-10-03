@@ -4,16 +4,15 @@ import com.r3corda.core.contracts.Attachment
 import com.r3corda.core.crypto.SecureHash
 import com.r3corda.core.crypto.sha256
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.serialization.OpaqueBytes
-import com.r3corda.testing.node.MockNetwork
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.protocols.FetchAttachmentsProtocol
 import com.r3corda.protocols.FetchDataProtocol
+import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.rootCauseExceptions
 import org.junit.Before
 import org.junit.Test
@@ -21,7 +20,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.security.KeyPair
 import java.util.jar.JarOutputStream
@@ -89,7 +87,7 @@ class AttachmentTests {
         // Make a node that doesn't do sanity checking at load time.
         val n0 = network.createNode(null, -1, object : MockNetwork.Factory {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                                advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+                                advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, keyPair) {
                     override fun start(): MockNetwork.MockNode {
                         super.start()
@@ -98,7 +96,7 @@ class AttachmentTests {
                     }
                 }
             }
-        }, true, null, null, NetworkMapService.Type, SimpleNotaryService.Type)
+        }, true, null, null, ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
         val n1 = network.createNode(n0.info.address)
 
         // Insert an attachment into node zero's store directly.

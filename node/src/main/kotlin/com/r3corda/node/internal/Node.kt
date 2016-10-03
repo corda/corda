@@ -4,7 +4,7 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.ServiceHub
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
@@ -61,7 +61,7 @@ class ConfigurationException(message: String) : Exception(message)
  */
 class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
            configuration: NodeConfiguration, networkMapAddress: SingleMessageRecipient?,
-           advertisedServices: Set<ServiceType>, clock: Clock = NodeClock(),
+           advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock(),
            val messagingServerAddr: HostAndPort? = null) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
         /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */

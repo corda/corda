@@ -7,7 +7,8 @@ import com.r3corda.core.crypto.generateKeyPair
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.PhysicalLocation
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
+import com.r3corda.core.node.services.containsType
 import com.r3corda.core.protocols.ProtocolLogic
 import com.r3corda.core.then
 import com.r3corda.core.utilities.ProgressTracker
@@ -45,7 +46,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     // This puts together a mock network of SimulatedNodes.
 
     open class SimulatedNode(config: NodeConfiguration, mockNet: MockNetwork, networkMapAddress: SingleMessageRecipient?,
-                             advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?) : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, keyPair) {
+                             advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?) : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, keyPair) {
         override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
     }
 
@@ -53,7 +54,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         var counter = 0
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+                            advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             val letter = 'A' + counter
             val city = bankLocations[counter++ % bankLocations.size]
 
@@ -85,8 +86,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object NetworkMapNodeFactory : MockNetwork.Factory {
         override fun create(config: NodeConfiguration, network: MockNetwork,
-                            networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(NetworkMapService.Type))
+                            networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+            require(advertisedServices.containsType(NetworkMapService.Type))
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
@@ -108,8 +109,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object NotaryNodeFactory : MockNetwork.Factory {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(SimpleNotaryService.Type))
+                            advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+            require(advertisedServices.containsType(SimpleNotaryService.Type))
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
@@ -130,8 +131,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RatesOracleFactory : MockNetwork.Factory {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
-            require(advertisedServices.contains(NodeInterestRates.Type))
+                            advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+            require(advertisedServices.containsType(NodeInterestRates.Type))
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
@@ -159,7 +160,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RegulatorFactory : MockNetwork.Factory {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+                            advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
 
             // TODO: create a base class that provides a default implementation
             val cfg = object : NodeConfiguration {
@@ -187,12 +188,12 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val network = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
     val networkMap: SimulatedNode
-            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = NetworkMapService.Type) as SimulatedNode
+            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.Type)) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = SimpleNotaryService.Type) as SimulatedNode
+            = network.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.Type)) as SimulatedNode
     val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info.address, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = network.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = NodeInterestRates.Type) as SimulatedNode
+            = network.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Type)) as SimulatedNode
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)

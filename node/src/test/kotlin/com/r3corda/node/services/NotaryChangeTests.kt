@@ -3,6 +3,7 @@ package com.r3corda.node.services
 import com.r3corda.core.contracts.*
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.seconds
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
@@ -35,10 +36,10 @@ class NotaryChangeTests {
         oldNotaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
                 keyPair = DUMMY_NOTARY_KEY,
-                advertisedServices = *arrayOf(NetworkMapService.Type, SimpleNotaryService.Type))
+                advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type)))
         clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
         clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
-        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = SimpleNotaryService.Type)
+        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.Type))
 
         net.runNetwork() // Clear network map registration messages
     }

@@ -5,7 +5,7 @@ import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
 import com.r3corda.core.logElapsedTime
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.demos.api.NodeInterestRates
@@ -57,7 +57,7 @@ fun main(args: Array<String>) {
     val rateTolerance = BigDecimal(options.valueOf(rateToleranceArg))
 
     // Bring up node.
-    val advertisedServices: Set<ServiceType> = emptySet()
+    val advertisedServices: Set<ServiceInfo> = emptySet()
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg))
 
     // TODO: create a base class that provides a default implementation
@@ -77,8 +77,10 @@ fun main(args: Array<String>) {
 
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
 
-    val node = logElapsedTime("Node startup") { Node(myNetAddr, apiAddr, config, networkMapAddr,
-            advertisedServices, DemoClock()).setup().start() }
+    val node = logElapsedTime("Node startup") {
+        Node(myNetAddr, apiAddr, config, networkMapAddr,
+                advertisedServices, DemoClock()).setup().start()
+    }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]
     val rateOracle = node.services.networkMapCache.get(InterestRateSwap.OracleType).first()

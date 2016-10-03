@@ -2,22 +2,18 @@ package com.r3corda.node.services
 
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.network.AbstractNetworkMapService
 import com.r3corda.node.services.network.InMemoryNetworkMapService
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.PersistentNetworkMapService
-import com.r3corda.node.utilities.configureDatabase
 import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.testing.node.MockNetwork
-import com.r3corda.testing.node.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
-import java.nio.file.Path
 import java.security.KeyPair
 
 /**
@@ -59,7 +55,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest() {
 
     private object NodeFactory : MockNetwork.Factory {
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
-                            advertisedServices: Set<ServiceType>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
+                            advertisedServices: Set<ServiceInfo>, id: Int, keyPair: KeyPair?): MockNetwork.MockNode {
             return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, keyPair) {
 
                 override fun makeNetworkMapService() {
