@@ -1,6 +1,5 @@
 package com.r3corda.node.utilities.certsigning
 
-import com.google.common.net.HostAndPort
 import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import java.io.IOException
@@ -11,7 +10,7 @@ import java.security.cert.CertificateFactory
 import java.util.*
 import java.util.zip.ZipInputStream
 
-class HTTPCertificateSigningService(val server: HostAndPort) : CertificateSigningService {
+class HTTPCertificateSigningService(val server: URL) : CertificateSigningService {
     companion object {
         // TODO: Propagate version information from gradle
         val clientVersion = "1.0"
@@ -19,7 +18,7 @@ class HTTPCertificateSigningService(val server: HostAndPort) : CertificateSignin
 
     override fun retrieveCertificates(requestId: String): Array<Certificate>? {
         // Poll server to download the signed certificate once request has been approved.
-        val url = URL("http://$server/api/certificate/$requestId")
+        val url = URL("$server/api/certificate/$requestId")
 
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
@@ -42,7 +41,7 @@ class HTTPCertificateSigningService(val server: HostAndPort) : CertificateSignin
 
     override fun submitRequest(request: PKCS10CertificationRequest): String {
         // Post request to certificate signing server via http.
-        val conn = URL("http://$server/api/certificate").openConnection() as HttpURLConnection
+        val conn = URL("$server/api/certificate").openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/octet-stream")

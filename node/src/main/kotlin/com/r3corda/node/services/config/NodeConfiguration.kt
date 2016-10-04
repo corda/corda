@@ -15,6 +15,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
 import org.slf4j.LoggerFactory
+import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -60,7 +61,6 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val exportJMXto: String
     val dataSourceProperties: Properties get() = Properties()
     val devMode: Boolean
-    val certificateSigningService: HostAndPort
 
     companion object {
         val log = LoggerFactory.getLogger("NodeConfiguration")
@@ -96,6 +96,7 @@ operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
         Instant::class.java -> Instant.parse(getString(metadata.name)) as T
         HostAndPort::class.java -> HostAndPort.fromString(getString(metadata.name)) as T
         Path::class.java -> Paths.get(getString(metadata.name)) as T
+        URL::class.java -> URL(getString(metadata.name)) as T
         Properties::class.java -> getProperties(metadata.name) as T
         else -> throw IllegalArgumentException("Unsupported type ${metadata.returnType}")
     }
@@ -133,7 +134,6 @@ class NodeConfigurationFromConfig(val config: Config = ConfigFactory.load()) : N
     override val trustStorePassword: String by config
     override val dataSourceProperties: Properties by config
     override val devMode: Boolean by config.getOrElse { false }
-    override val certificateSigningService: HostAndPort by config
 }
 
 class FullNodeConfiguration(conf: Config) : NodeConfiguration {
@@ -146,7 +146,6 @@ class FullNodeConfiguration(conf: Config) : NodeConfiguration {
     override val trustStorePassword: String by conf
     override val dataSourceProperties: Properties by conf
     override val devMode: Boolean by conf.getOrElse { false }
-    override val certificateSigningService: HostAndPort by conf
     val useHTTPS: Boolean by conf
     val artemisAddress: HostAndPort by conf
     val webAddress: HostAndPort by conf

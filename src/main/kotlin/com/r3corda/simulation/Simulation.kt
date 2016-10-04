@@ -1,6 +1,5 @@
 package com.r3corda.simulation
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.generateKeyPair
@@ -70,7 +69,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
-                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
                 override val dataSourceProperties = makeTestDataSourceProperties()
             }
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
@@ -100,7 +98,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
-                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
                 override val dataSourceProperties = makeTestDataSourceProperties()
             }
 
@@ -123,7 +120,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
-                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
                 override val dataSourceProperties = makeTestDataSourceProperties()
             }
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, keyPair)
@@ -145,7 +141,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
-                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
                 override val dataSourceProperties = makeTestDataSourceProperties()
             }
 
@@ -173,7 +168,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override val exportJMXto: String = ""
                 override val keyStorePassword: String = "dummy"
                 override val trustStorePassword: String = "trustpass"
-                override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
                 override val dataSourceProperties = makeTestDataSourceProperties()
             }
 

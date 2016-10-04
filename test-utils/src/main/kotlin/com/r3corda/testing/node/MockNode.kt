@@ -1,7 +1,6 @@
 package com.r3corda.testing.node
 
 import com.google.common.jimfs.Jimfs
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.Party
@@ -194,7 +193,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             override val keyStorePassword: String = "dummy"
             override val trustStorePassword: String = "trustpass"
             override val dataSourceProperties: Properties get() = makeTestDataSourceProperties("node_${id}_net_$networkId")
-            override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
         }
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, keyPair)
         if (start) {
