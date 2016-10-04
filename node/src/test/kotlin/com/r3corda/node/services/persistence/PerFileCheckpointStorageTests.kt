@@ -34,9 +34,9 @@ class PerFileCheckpointStorageTests {
     fun `add new checkpoint`() {
         val checkpoint = newCheckpoint()
         checkpointStorage.addCheckpoint(checkpoint)
-        assertThat(checkpointStorage.checkpoints).containsExactly(checkpoint)
+        assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint)
         newCheckpointStorage()
-        assertThat(checkpointStorage.checkpoints).containsExactly(checkpoint)
+        assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint)
     }
 
     @Test
@@ -44,9 +44,9 @@ class PerFileCheckpointStorageTests {
         val checkpoint = newCheckpoint()
         checkpointStorage.addCheckpoint(checkpoint)
         checkpointStorage.removeCheckpoint(checkpoint)
-        assertThat(checkpointStorage.checkpoints).isEmpty()
+        assertThat(checkpointStorage.checkpoints()).isEmpty()
         newCheckpointStorage()
-        assertThat(checkpointStorage.checkpoints).isEmpty()
+        assertThat(checkpointStorage.checkpoints()).isEmpty()
     }
 
     @Test
@@ -64,9 +64,9 @@ class PerFileCheckpointStorageTests {
         val secondCheckpoint = newCheckpoint()
         checkpointStorage.addCheckpoint(secondCheckpoint)
         checkpointStorage.removeCheckpoint(firstCheckpoint)
-        assertThat(checkpointStorage.checkpoints).containsExactly(secondCheckpoint)
+        assertThat(checkpointStorage.checkpoints()).containsExactly(secondCheckpoint)
         newCheckpointStorage()
-        assertThat(checkpointStorage.checkpoints).containsExactly(secondCheckpoint)
+        assertThat(checkpointStorage.checkpoints()).containsExactly(secondCheckpoint)
     }
 
     @Test
@@ -74,10 +74,10 @@ class PerFileCheckpointStorageTests {
         val originalCheckpoint = newCheckpoint()
         checkpointStorage.addCheckpoint(originalCheckpoint)
         newCheckpointStorage()
-        val reconstructedCheckpoint = checkpointStorage.checkpoints.single()
+        val reconstructedCheckpoint = checkpointStorage.checkpoints().single()
         assertThat(reconstructedCheckpoint).isEqualTo(originalCheckpoint).isNotSameAs(originalCheckpoint)
         checkpointStorage.removeCheckpoint(reconstructedCheckpoint)
-        assertThat(checkpointStorage.checkpoints).isEmpty()
+        assertThat(checkpointStorage.checkpoints()).isEmpty()
     }
 
     @Test
@@ -86,7 +86,7 @@ class PerFileCheckpointStorageTests {
         checkpointStorage.addCheckpoint(checkpoint)
         Files.write(storeDir.resolve("random-non-checkpoint-file"), "this is not a checkpoint!!".toByteArray())
         newCheckpointStorage()
-        assertThat(checkpointStorage.checkpoints).containsExactly(checkpoint)
+        assertThat(checkpointStorage.checkpoints()).containsExactly(checkpoint)
     }
 
     private fun newCheckpointStorage() {

@@ -17,8 +17,10 @@ import com.r3corda.core.utilities.UntrustworthyData
 import com.r3corda.core.utilities.trace
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.statemachine.StateMachineManager.*
+import com.r3corda.node.utilities.StrandLocalTransactionManager
 import com.r3corda.node.utilities.createDatabaseTransaction
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -62,6 +64,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal lateinit var actionOnEnd: () -> Unit
     @Transient internal lateinit var database: Database
     @Transient internal var fromCheckpoint: Boolean = false
+    @Transient internal var txTrampoline: Transaction? = null
 
     @Transient private var _logger: Logger? = null
     override val logger: Logger get() {
@@ -113,7 +116,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
         logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}." }
     }
 
-    private fun commitTransaction() {
+    internal fun commitTransaction() {
         val transaction = TransactionManager.current()
         try {
             logger.trace { "Commiting database transaction $transaction on ${Strand.currentStrand()}." }
@@ -210,7 +213,7 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
 
         if (receivedMessage is SessionEnd) {
             openSessions.values.remove(receiveRequest.session)
-            throw ProtocolSessionException("Counterparty on ${receiveRequest.session.otherParty} has prematurly ended")
+            throw ProtocolSessionException("Counterparty on ${receiveRequest.session.otherParty} has prematurely ended")
         } else if (receiveRequest.receiveType.isInstance(receivedMessage)) {
             return receiveRequest.receiveType.cast(receivedMessage)
         } else {
@@ -220,9 +223,14 @@ class ProtocolStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     private fun suspend(ioRequest: ProtocolIORequest) {
-        commitTransaction()
+        // we have to pass the Thread local Transaction across via a transient field as the Fiber Park swaps them out.
+        txTrampoline = TransactionManager.currentOrNull()
+        StrandLocalTransactionManager.setThreadLocalTx(null)
         parkAndSerialize { fiber, serializer ->
             logger.trace { "Suspended $id on $ioRequest" }
+            // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
+            StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
+            txTrampoline = null
             try {
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {

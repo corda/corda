@@ -22,11 +22,13 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.persistence.NodeAttachmentService
 import com.r3corda.node.services.persistence.PerFileTransactionStorage
 import com.r3corda.node.services.persistence.StorageServiceImpl
+import com.r3corda.node.utilities.databaseTransaction
 import com.r3corda.protocols.TwoPartyTradeProtocol.Buyer
 import com.r3corda.protocols.TwoPartyTradeProtocol.Seller
 import com.r3corda.testing.*
 import com.r3corda.testing.node.InMemoryMessagingNetwork
 import com.r3corda.testing.node.MockNetwork
+import com.r3corda.node.services.persistence.checkpoints
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -83,6 +85,9 @@ class TwoPartyTradeProtocolTests {
             aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name, ALICE_KEY)
             bobNode = net.createPartyNode(notaryNode.info.address, BOB.name, BOB_KEY)
 
+            aliceNode.disableDBCloseOnStop()
+            bobNode.disableDBCloseOnStop()
+
             bobNode.services.fillWithSomeTestCash(2000.DOLLARS)
             val alicesFakePaper = fillUpForSeller(false, aliceNode.storage.myLegalIdentity.owningKey,
                     1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null).second
@@ -98,8 +103,14 @@ class TwoPartyTradeProtocolTests {
             aliceNode.stop()
             bobNode.stop()
 
-            assertThat(aliceNode.checkpointStorage.checkpoints).isEmpty()
-            assertThat(bobNode.checkpointStorage.checkpoints).isEmpty()
+            databaseTransaction(aliceNode.database) {
+                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+            }
+            aliceNode.manuallyCloseDB()
+            databaseTransaction(bobNode.database) {
+                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            }
+            aliceNode.manuallyCloseDB()
         }
     }
 
@@ -135,7 +146,7 @@ class TwoPartyTradeProtocolTests {
             bobNode.pumpReceive(false)
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            assertThat(bobNode.checkpointStorage.checkpoints).hasSize(1)
+            assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
 
             val bobTransactionsBeforeCrash = (bobNode.storage.validatedTransactions as PerFileTransactionStorage).transactions
             assertThat(bobTransactionsBeforeCrash).isNotEmpty()
@@ -167,8 +178,8 @@ class TwoPartyTradeProtocolTests {
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
 
-            assertThat(bobNode.checkpointStorage.checkpoints).isEmpty()
-            assertThat(aliceNode.checkpointStorage.checkpoints).isEmpty()
+            assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
 
             val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
             assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)

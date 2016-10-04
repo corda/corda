@@ -28,6 +28,7 @@ import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.utilities.AddOrRemove
 import com.r3corda.node.utilities.AffinityExecutor
 import kotlinx.support.jdk8.collections.removeIf
+import com.r3corda.node.utilities.isolatedTransaction
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -157,13 +158,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun restoreFibersFromCheckpoints() {
         mutex.locked {
-            checkpointStorage.checkpoints.forEach {
+            checkpointStorage.forEach {
                 // If a protocol is added before start() then don't attempt to restore it
                 if (!stateMachines.containsValue(it)) {
                     val fiber = deserializeFiber(it.serialisedFiber)
                     initFiber(fiber)
                     stateMachines[fiber] = it
                 }
+                true
             }
         }
     }
@@ -276,6 +278,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         psm.serviceHub = serviceHub
         psm.actionOnSuspend = { ioRequest ->
             updateCheckpoint(psm)
+            // We commit on the fibers transaction that was copied across ThreadLocals during suspend
+            // This will free up the ThreadLocal so on return the caller can carry on with other transactions
+            psm.commitTransaction()
             processIORequest(ioRequest)
         }
         psm.actionOnEnd = {
@@ -334,7 +339,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      */
     fun <T> add(loggerName: String, logic: ProtocolLogic<T>): ProtocolStateMachine<T> {
         val fiber = createFiber(loggerName, logic)
-        updateCheckpoint(fiber)
+        // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
+        // on the protocol completion future inside that context. The problem is that any progress checkpoints are
+        // unable to acquire the table lock and move forward till the calling transaction finishes.
+        // Committing in line here on a fresh context ensure we can progress.
+        isolatedTransaction(database) {
+            updateCheckpoint(fiber)
+        }
         // If we are not started then our checkpoint will be picked up during start
         mutex.locked {
             if (started) {

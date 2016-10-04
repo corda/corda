@@ -12,6 +12,7 @@ import com.r3corda.core.serialization.deserialize
 import com.r3corda.node.services.statemachine.StateMachineManager.SessionData
 import com.r3corda.node.services.statemachine.StateMachineManager.SessionMessage
 import com.r3corda.testing.node.InMemoryMessagingNetwork
+import com.r3corda.node.services.persistence.checkpoints
 import com.r3corda.testing.node.MockNetwork
 import com.r3corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
@@ -135,13 +136,13 @@ class StateMachineManagerTests {
 
         // Kick off first send and receive
         node2.smm.add("test", PingPongProtocol(node3.info.identity, payload))
-        assertEquals(1, node2.checkpointStorage.checkpoints.count())
+        assertEquals(1, node2.checkpointStorage.checkpoints().count())
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         node2.stop()
         val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
         val (firstAgain, fut1) = node2b.getSingleProtocol<PingPongProtocol>()
         net.runNetwork()
-        assertEquals(1, node2.checkpointStorage.checkpoints.count())
+        assertEquals(1, node2.checkpointStorage.checkpoints().count())
         // Run the network which will also fire up the second protocol. First message should get deduped. So message data stays in sync.
         net.runNetwork()
         node2b.smm.executor.flush()
@@ -149,8 +150,8 @@ class StateMachineManagerTests {
         // Check protocols completed cleanly and didn't get out of phase
         assertEquals(4, receivedCount, "Protocol should have exchanged 4 unique messages")// Two messages each way
         assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages") // can't give a precise value as every addMessageHandler re-runs the undelivered messages
-        assertEquals(0, node2b.checkpointStorage.checkpoints.count(), "Checkpoints left after restored protocol should have ended")
-        assertEquals(0, node3.checkpointStorage.checkpoints.count(), "Checkpoints left after restored protocol should have ended")
+        assertEquals(0, node2b.checkpointStorage.checkpoints().count(), "Checkpoints left after restored protocol should have ended")
+        assertEquals(0, node3.checkpointStorage.checkpoints().count(), "Checkpoints left after restored protocol should have ended")
         assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
         assertEquals(payload2 + 1, firstAgain.receivedPayload2, "Received payload does not match the expected second value on Node 3")
         assertEquals(payload, secondProtocol!!.receivedPayload, "Received payload does not match the (restarted) first value on Node 2")
