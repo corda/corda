@@ -76,12 +76,12 @@ abstract class ServiceHubInternal : ServiceHub {
      * marker class has been registered then the corresponding factory will be used to create the protocol which will
      * communicate with the other side. If there is no mapping then the session attempt is rejected.
      * @param markerClass The marker [KClass] present in a session initiation attempt, which is a 1:1 mapping to a [Class]
-     * using the <pre>::class</pre> construct. Any marker class can be used, with the default being the class of the initiating
-     * protocol. This enables the registration to be of the form: registerProtocolInitiator(InitiatorProtocol::class, ::InitiatedProtocol)
+     * using the <pre>::class</pre> construct. Conventionally this is a [ProtocolLogic] subclass, however any class can
+     * be used, with the default being the class of the initiating protocol. This enables the registration to be of the
+     * form: registerProtocolInitiator(InitiatorProtocol::class, ::InitiatedProtocol)
      * @param protocolFactory The protocol factory generating the initiated protocol.
-     * @param R the return type of the protocol logic
      */
-    abstract fun <P : ProtocolLogic<*>> registerProtocolInitiator(markerClass: KClass<out P>, protocolFactory: (Party) -> ProtocolLogic<*>)
+    abstract fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>)
 
     /**
      * Return the protocol factory that has been registered with [markerClass], or null if no factory is found.
