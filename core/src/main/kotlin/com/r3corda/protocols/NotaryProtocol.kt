@@ -75,9 +75,6 @@ object NotaryProtocol {
     }
 
 
-    class ValidatingClient(stx: SignedTransaction) : Client(stx)
-
-
     /**
      * Checks that the timestamp command is valid (if present) and commits the input state, or returns a conflict
      * if any of the input states have been previously committed.

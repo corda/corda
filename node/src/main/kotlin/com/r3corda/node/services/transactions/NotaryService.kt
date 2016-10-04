@@ -5,7 +5,6 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.NotaryProtocol
-import kotlin.reflect.KClass
 
 /**
  * A Notary service acts as the final signer of a transaction ensuring two things:
@@ -16,15 +15,13 @@ import kotlin.reflect.KClass
  *
  * This is the base implementation that can be customised with specific Notary transaction commit protocol.
  */
-abstract class NotaryService(markerClass: KClass<out NotaryProtocol.Client>, services: ServiceHubInternal) : SingletonSerializeAsToken() {
+abstract class NotaryService(services: ServiceHubInternal) : SingletonSerializeAsToken() {
     // Do not specify this as an advertised service. Use a concrete implementation.
     // TODO: We do not want a service type that cannot be used. Fix the type system abuse here.
     object Type : ServiceType("corda.notary")
 
-    abstract val logger: org.slf4j.Logger
-
     init {
-        services.registerProtocolInitiator(markerClass) { createProtocol(it) }
+        services.registerProtocolInitiator(NotaryProtocol.Client::class) { createProtocol(it) }
     }
 
     /** Implement a factory that specifies the transaction commit protocol for the notary service to use */

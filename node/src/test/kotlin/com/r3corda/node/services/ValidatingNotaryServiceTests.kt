@@ -5,8 +5,8 @@ import com.r3corda.core.contracts.Command
 import com.r3corda.core.contracts.DummyContract
 import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.crypto.DigitalSignature
-import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.node.services.ServiceInfo
+import com.r3corda.core.transactions.SignedTransaction
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.node.services.network.NetworkMapService
@@ -48,7 +48,7 @@ class ValidatingNotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val future = runValidatingClient(stx)
+        val future = runClient(stx)
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
         val notaryError = (ex.cause as NotaryException).error
@@ -66,7 +66,7 @@ class ValidatingNotaryServiceTests {
             tx.toSignedTransaction(false)
         }
 
-        val future = runValidatingClient(stx)
+        val future = runClient(stx)
 
         val ex = assertFailsWith(ExecutionException::class) { future.get() }
         val notaryError = (ex.cause as NotaryException).error
@@ -76,8 +76,8 @@ class ValidatingNotaryServiceTests {
         assertEquals(setOf(expectedMissingKey), missingKeys)
     }
 
-    private fun runValidatingClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.LegallyIdentifiable> {
-        val protocol = NotaryProtocol.ValidatingClient(stx)
+    private fun runClient(stx: SignedTransaction): ListenableFuture<DigitalSignature.LegallyIdentifiable> {
+        val protocol = NotaryProtocol.Client(stx)
         val future = clientNode.services.startProtocol("notary", protocol)
         net.runNetwork()
         return future

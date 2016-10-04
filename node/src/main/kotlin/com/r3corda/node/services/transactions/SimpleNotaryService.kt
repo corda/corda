@@ -11,10 +11,8 @@ import com.r3corda.protocols.NotaryProtocol
 /** A simple Notary service that does not perform transaction validation */
 class SimpleNotaryService(services: ServiceHubInternal,
                           val timestampChecker: TimestampChecker,
-                          val uniquenessProvider: UniquenessProvider) : NotaryService(NotaryProtocol.Client::class, services) {
+                          val uniquenessProvider: UniquenessProvider) : NotaryService(services) {
     object Type : ServiceType("corda.notary.simple")
-
-    override val logger = loggerFor<SimpleNotaryService>()
 
     override fun createProtocol(otherParty: Party): NotaryProtocol.Service {
         return NotaryProtocol.Service(otherParty, timestampChecker, uniquenessProvider)
