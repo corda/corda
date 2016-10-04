@@ -41,7 +41,8 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
             val newState = state.withNotary(modification)
             val participants = state.data.participants
             val tx = TransactionType.NotaryChange.Builder(originalState.state.notary).withItems(originalState, newState)
-            tx.signWith(serviceHub.storageService.myLegalIdentityKey)
+            val myKey = serviceHub.legalIdentityKey
+            tx.signWith(myKey)
 
             val stx = tx.toSignedTransaction(false)
             return Pair(stx, participants)
@@ -63,7 +64,7 @@ object NotaryChangeProtocol: AbstractStateReplacementProtocol<Party>() {
         override fun verifyProposal(maybeProposal: UntrustworthyData<AbstractStateReplacementProtocol.Proposal<Party>>): AbstractStateReplacementProtocol.Proposal<Party> {
             return maybeProposal.unwrap { proposal ->
                 val newNotary = proposal.modification
-                val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.identity == newNotary }
+                val isNotary = serviceHub.networkMapCache.notaryNodes.any { it.notaryIdentity == newNotary }
                 require(isNotary) { "The proposed node $newNotary does not run a Notary service " }
 
                 val state = proposal.stateRef

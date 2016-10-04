@@ -8,7 +8,6 @@ import com.r3corda.core.crypto.toStringShort
 import com.r3corda.core.node.ServiceHub
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.transactions.TransactionBuilder
-import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.StateMachineInfo
 import com.r3corda.node.services.messaging.StateMachineUpdate
@@ -93,10 +92,11 @@ class ServerRPCOps(
     private fun exitCash(req: ClientToServiceCommand.ExitCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         try {
-            val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
+            val issuer = PartyAndReference(services.myInfo.legalIdentity, req.issueRef)
             Cash().generateExit(builder, req.amount.issuedBy(issuer),
                     services.vaultService.currentVault.statesOfType<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
-            builder.signWith(services.storageService.myLegalIdentityKey)
+            val myKey = services.legalIdentityKey
+            builder.signWith(myKey)
 
             // Work out who the owners of the burnt states were
             val inputStatesNullable = services.vaultService.statesForRefs(builder.inputStates())
@@ -126,9 +126,10 @@ class ServerRPCOps(
     // TODO: Make a lightweight protocol that manages this workflow, rather than embedding it directly in the service
     private fun issueCash(req: ClientToServiceCommand.IssueCash): TransactionBuildResult {
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
-        val issuer = PartyAndReference(services.storageService.myLegalIdentity, req.issueRef)
+        val issuer = PartyAndReference(services.myInfo.legalIdentity, req.issueRef)
         Cash().generateIssue(builder, req.amount.issuedBy(issuer), req.recipient.owningKey, req.notary)
-        builder.signWith(services.storageService.myLegalIdentityKey)
+        val myKey = services.legalIdentityKey
+        builder.signWith(myKey)
         val tx = builder.toSignedTransaction(checkSufficientSignatures = true)
         // Issuance transactions do not need to be notarised, so we can skip directly to broadcasting it
         val protocol = BroadcastTransactionProtocol(tx, setOf(req), setOf(req.recipient))

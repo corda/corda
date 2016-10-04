@@ -5,7 +5,7 @@ package com.r3corda.core.node.services
  * map advertisements. Services that are purely local and are not providing functionality to other parts of the network
  * don't need a declared service type.
  */
-abstract class ServiceType(val id: String) {
+sealed class ServiceType(val id: String) {
     init {
         // Enforce:
         //
@@ -14,14 +14,41 @@ abstract class ServiceType(val id: String) {
         require(id.matches(Regex("[a-z][a-zA-Z0-9._]+")))
     }
 
-    override operator fun equals(other: Any?): Boolean =
-            if (other is ServiceType) {
-                id == other.id
-            } else {
-                false
+    private class ServiceTypeImpl(baseId: String, subTypeId: String) : ServiceType("$baseId.$subTypeId") {
+        init {
+            // only allowed one level of subtype
+            require(subTypeId.matches(Regex("[a-z]\\w+")))
+        }
+    }
+
+    private class ServiceTypeDirect(id: String) : ServiceType(id)
+
+    companion object {
+        val corda: ServiceType
+            get() {
+                val stack = Throwable().stackTrace
+                val caller = stack.first().className
+                require(caller.startsWith("com.r3corda.")) { "Corda ServiceType namespace is reserved for Corda core components" }
+                return ServiceTypeDirect("corda")
             }
 
+        val notary: ServiceType = corda.getSubType("notary")
+        val regulator: ServiceType = corda.getSubType("regulator")
+
+        fun getServiceType(namespace: String, typeId: String): ServiceType {
+            require(!namespace.startsWith("corda")) { "Corda namespace is protected" }
+            return ServiceTypeImpl(namespace, typeId)
+        }
+
+        fun parse(id: String): ServiceType = ServiceTypeDirect(id)
+    }
+
+    fun getSubType(subTypeId: String): ServiceType = ServiceTypeImpl(id, subTypeId)
+
+    override operator fun equals(other: Any?): Boolean = (other is ServiceType) && (other.id == this.id)
+
     fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
+    fun isNotary() = isSubTypeOf(notary)
 
     override fun hashCode(): Int = id.hashCode()
     override fun toString(): String = id.toString()

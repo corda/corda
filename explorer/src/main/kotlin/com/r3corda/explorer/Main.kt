@@ -37,22 +37,22 @@ class Main : App() {
             driver(portAllocation = portAllocation) {
 
                 val aliceNodeFuture = startNode("Alice")
-                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
+                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
 
                 val aliceNode = aliceNodeFuture.get()
                 val notaryNode = notaryNodeFuture.get()
 
                 val aliceClient = startClient(aliceNode).get()
 
-                Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.identity)
+                Models.get<IdentityModel>(Main::class).myIdentity.set(aliceNode.legalIdentity)
                 Models.get<NodeMonitorModel>(Main::class).register(aliceNode, aliceClient.config.certificatesPath)
 
                 for (i in 0 .. 10000) {
                     Thread.sleep(500)
 
                     val eventGenerator = EventGenerator(
-                            parties = listOf(aliceNode.identity),
-                            notary = notaryNode.identity
+                            parties = listOf(aliceNode.legalIdentity),
+                            notary = notaryNode.notaryIdentity
                     )
 
                     eventGenerator.clientToServiceCommandGenerator.map { command ->

@@ -78,7 +78,7 @@ object TwoPartyDealProtocol {
         abstract val myKeyPair: KeyPair
 
         override fun getCounterpartyMarker(party: Party): Class<*> {
-            return if (serviceHub.networkMapCache.regulators.any { it.identity == party }) {
+            return if (serviceHub.networkMapCache.regulators.any { it.legalIdentity == party }) {
                 MarkerForBogusRegulatorProtocol::class.java
             } else {
                 super.getCounterpartyMarker(party)
@@ -104,7 +104,7 @@ object TwoPartyDealProtocol {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.identity.owningKey)
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)
@@ -155,7 +155,7 @@ object TwoPartyDealProtocol {
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
-                regulators.forEach { send(it.identity, fullySigned) }
+                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), fullySigned) }
             }
 
             return fullySigned
@@ -277,7 +277,7 @@ object TwoPartyDealProtocol {
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
 
         override val notaryNode: NodeInfo get() =
-            serviceHub.networkMapCache.notaryNodes.filter { it.identity == payload.notary }.single()
+            serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
     }
 
     /**
@@ -301,7 +301,7 @@ object TwoPartyDealProtocol {
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
             ptx.setTime(serviceHub.clock.instant(), 30.seconds)
-            return Pair(ptx, arrayListOf(deal.parties.single { it.name == serviceHub.storageService.myLegalIdentity.name }.owningKey))
+            return Pair(ptx, arrayListOf(deal.parties.single { it.name == serviceHub.myInfo.legalIdentity.name }.owningKey))
         }
     }
 
@@ -326,7 +326,7 @@ object TwoPartyDealProtocol {
 
             // validate the party that initiated is the one on the deal and that the recipient corresponds with it.
             // TODO: this is in no way secure and will be replaced by general session initiation logic in the future
-            val myName = serviceHub.storageService.myLegalIdentity.name
+            val myName = serviceHub.myInfo.legalIdentity.name
             // Also check we are one of the parties
             deal.parties.filter { it.name == myName }.single()
 
@@ -339,7 +339,7 @@ object TwoPartyDealProtocol {
             val fixOf = deal.nextFixingOf()!!
 
             // TODO Do we need/want to substitute in new public keys for the Parties?
-            val myName = serviceHub.storageService.myLegalIdentity.name
+            val myName = serviceHub.myInfo.legalIdentity.name
             val myOldParty = deal.parties.single { it.name == myName }
 
             val newDeal = deal
@@ -348,7 +348,7 @@ object TwoPartyDealProtocol {
 
             val oracle = serviceHub.networkMapCache.get(handshake.payload.oracleType).first()
 
-            val addFixing = object : RatesFixProtocol(ptx, oracle.identity, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
+            val addFixing = object : RatesFixProtocol(ptx, oracle.serviceIdentities(handshake.payload.oracleType).first(), fixOf, BigDecimal.ZERO, BigDecimal.ONE) {
                 @Suspendable
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
@@ -381,13 +381,13 @@ object TwoPartyDealProtocol {
         }
 
         override val myKeyPair: KeyPair get() {
-            val myName = serviceHub.storageService.myLegalIdentity.name
+            val myName = serviceHub.myInfo.legalIdentity.name
             val publicKey = dealToFix.state.data.parties.filter { it.name == myName }.single().owningKey
             return serviceHub.keyManagementService.toKeyPair(publicKey)
         }
 
         override val notaryNode: NodeInfo get() =
-            serviceHub.networkMapCache.notaryNodes.filter { it.identity == dealToFix.state.notary }.single()
+            serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == dealToFix.state.notary }.single()
     }
 
 
@@ -419,7 +419,7 @@ object TwoPartyDealProtocol {
             // TODO: this is not the eventual mechanism for identifying the parties
             val fixableDeal = (dealToFix.data as FixableDealState)
             val sortedParties = fixableDeal.parties.sortedBy { it.name }
-            if (sortedParties[0].name == serviceHub.storageService.myLegalIdentity.name) {
+            if (sortedParties[0].name == serviceHub.myInfo.legalIdentity.name) {
                 val fixing = FixingSession(ref, fixableDeal.oracleType)
                 // Start the Floater which will then kick-off the Fixer
                 subProtocol(Floater(sortedParties[1], fixing))

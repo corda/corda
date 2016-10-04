@@ -20,8 +20,8 @@ class MockNetworkMapCache() : com.r3corda.node.services.network.InMemoryNetworkM
     init {
         val mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")))
         val mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")))
-        registeredNodes[mockNodeA.identity] = mockNodeA
-        registeredNodes[mockNodeB.identity] = mockNodeB
+        registeredNodes[mockNodeA.legalIdentity] = mockNodeA
+        registeredNodes[mockNodeB.legalIdentity] = mockNodeB
         runWithoutMapService()
     }
 
@@ -31,7 +31,7 @@ class MockNetworkMapCache() : com.r3corda.node.services.network.InMemoryNetworkM
      */
     @VisibleForTesting
     fun addRegistration(node: NodeInfo) {
-        registeredNodes[node.identity] = node
+        registeredNodes[node.legalIdentity] = node
     }
 
     /**
@@ -39,7 +39,7 @@ class MockNetworkMapCache() : com.r3corda.node.services.network.InMemoryNetworkM
      * not a change being received.
      */
     @VisibleForTesting
-    fun deleteRegistration(identity: Party) : Boolean {
-        return registeredNodes.remove(identity) != null
+    fun deleteRegistration(legalIdentity: Party) : Boolean {
+        return registeredNodes.remove(legalIdentity) != null
     }
 }

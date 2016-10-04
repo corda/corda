@@ -49,7 +49,7 @@ object NotaryProtocol {
                 "Input states must have the same Notary"
             }
 
-            val request = SignRequest(stx, serviceHub.storageService.myLegalIdentity)
+            val request = SignRequest(stx, serviceHub.myInfo.legalIdentity)
             val response = sendAndReceive<Result>(notaryParty, request)
 
             return validateResponse(response)
@@ -141,8 +141,9 @@ object NotaryProtocol {
         }
 
         private fun <T : Any> sign(bits: SerializedBytes<T>): DigitalSignature.LegallyIdentifiable {
-            val mySigningKey = serviceHub.storageService.myLegalIdentityKey
-            val myIdentity = serviceHub.storageService.myLegalIdentity
+            val myNodeInfo = serviceHub.myInfo
+            val myIdentity = myNodeInfo.notaryIdentity
+            val mySigningKey = serviceHub.notaryIdentityKey
             return mySigningKey.signWithECDSA(bits, myIdentity)
         }
     }

@@ -16,7 +16,7 @@ class DriverTests {
             // Check that the node is registered in the network map
             poll("network map cache for $nodeName") {
                 networkMapCache.get().firstOrNull {
-                    it.identity.name == nodeName
+                    it.legalIdentity.name == nodeName
                 }
             }
             // Check that the port is bound
@@ -33,8 +33,8 @@ class DriverTests {
     @Test
     fun simpleNodeStartupShutdownWorks() {
         val (notary, regulator) = driver {
-            val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.Type)))
-            val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.Type)))
+            val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.type)))
+            val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
 
             nodeMustBeUp(networkMapCache, notary.get(), "TestNotary")
             nodeMustBeUp(networkMapCache, regulator.get(), "Regulator")

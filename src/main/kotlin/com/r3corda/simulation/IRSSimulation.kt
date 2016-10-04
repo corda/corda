@@ -108,15 +108,15 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
         val irs = om.readValue<InterestRateSwap.State>(javaClass.getResource("trade.json"))
-        irs.fixedLeg.fixedRatePayer = node1.info.identity
-        irs.floatingLeg.floatingRatePayer = node2.info.identity
+        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
+        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 
         val acceptorTx = node2.initiateSingleShotProtocol(Instigator::class) { Acceptor(it) }.flatMap { it.resultFuture }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
-        val instigator = Instigator(node2.info.identity, AutoOffer(notary.info.identity, irs), node1.keyPair!!)
+        val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.keyPair!!)
         val instigatorTx = node1.services.startProtocol("instigator", instigator)
 
         return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }

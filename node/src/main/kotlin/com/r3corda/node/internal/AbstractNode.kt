@@ -8,10 +8,7 @@ import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.node.CityDatabase
-import com.r3corda.core.node.CordaPluginRegistry
-import com.r3corda.core.node.NodeInfo
-import com.r3corda.core.node.PhysicalLocation
+import com.r3corda.core.node.*
 import com.r3corda.core.node.services.*
 import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.protocols.ProtocolLogic
@@ -96,6 +93,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     val servicesThatAcceptUploads: List<AcceptsFileUpload> = _servicesThatAcceptUploads
 
     private val protocolFactories = ConcurrentHashMap<Class<*>, (Party) -> ProtocolLogic<*>>()
+    protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
         override val networkService: MessagingServiceInternal get() = net
@@ -106,6 +104,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
         override val clock: Clock = platformClock
+        override val myInfo: NodeInfo get() = info
         override val schemaService: SchemaService get() = schemas
 
         // Internal only
@@ -130,7 +129,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     }
 
     val info: NodeInfo by lazy {
-        NodeInfo(net.myAddress, storage.myLegalIdentity, advertisedServices, findMyLocation())
+        val services = mutableListOf<ServiceEntry>()
+        for (service in advertisedServices) {
+            val identity = obtainKeyPair(configuration.basedir, service.type.id + "-private-key", service.type.id + "-public", service.type.id).first
+            services += ServiceEntry(service, identity)
+        }
+        val legalIdentity = obtainLegalIdentity()
+        NodeInfo(net.myAddress, legalIdentity, services, findMyLocation())
     }
 
     open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
@@ -214,7 +219,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
 
             // TODO: uniquenessProvider creation should be inside makeNotaryService(), but notary service initialisation
             //       depends on smm, while smm depends on tokenizableServices, which uniquenessProvider is part of
-            advertisedServices.singleOrNull { it.type.isSubTypeOf(NotaryService.Type) }?.let {
+            advertisedServices.singleOrNull { it.type.isNotary() }?.let {
                 uniquenessProvider = makeUniquenessProvider()
                 tokenizableServices.add(uniquenessProvider!!)
             }
@@ -321,10 +326,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     }
 
     private fun buildAdvertisedServices() {
-        val serviceTypes = info.advertisedServices.map { it.type }
-        if (NetworkMapService.Type in serviceTypes) makeNetworkMapService()
+        val serviceTypes = info.advertisedServices.map { it.info.type }
+        if (NetworkMapService.type in serviceTypes) makeNetworkMapService()
 
-        val notaryServiceType = serviceTypes.singleOrNull { it.isSubTypeOf(NotaryService.Type) }
+        val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
             inNodeNotaryService = makeNotaryService(notaryServiceType)
         }
@@ -335,7 +340,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
      * updates) if one has been supplied.
      */
     private fun registerWithNetworkMap(): ListenableFuture<Unit> {
-        require(networkMapService != null || NetworkMapService.Type in advertisedServices.map { it.type }) {
+        require(networkMapService != null || NetworkMapService.type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
         services.networkMapCache.addNode(info)
@@ -365,11 +370,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, instant.toEpochMilli(), type, expires)
-        val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress)
+        val legalIdentityKey = obtainLegalIdentityKey()
+        val request = NetworkMapService.RegistrationRequest(reg.toWire(legalIdentityKey.private), net.myAddress)
         return net.sendRequest(REGISTER_PROTOCOL_TOPIC, request, networkMapAddr, RunOnCallerThread)
     }
 
-    protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(setOf(storage.myLegalIdentityKey))
+    protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(partyKeys)
 
     open protected fun makeNetworkMapService() {
         inNodeNetworkMapService = PersistentNetworkMapService(services)
@@ -379,8 +385,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
 
         return when (type) {
-            SimpleNotaryService.Type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider!!)
-            ValidatingNotaryService.Type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider!!)
+            SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider!!)
+            ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider!!)
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
@@ -392,13 +398,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
     protected open fun makeIdentityService(): IdentityService {
         val service = InMemoryIdentityService()
 
-        service.registerIdentity(storage.myLegalIdentity)
+        service.registerIdentity(info.legalIdentity)
 
-        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.identity) }
+        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentity) }
 
         netMapCache.changed.subscribe { mapChange ->
+            // TODO how should we handle network map removal
             if (mapChange.type == MapChangeType.Added) {
-                service.registerIdentity(mapChange.node.identity)
+                service.registerIdentity(mapChange.node.legalIdentity)
             }
         }
 
@@ -437,35 +444,42 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
         val checkpointStorage = initialiseCheckpointService(dir)
         val transactionStorage = PerFileTransactionStorage(dir.resolve("transactions"))
         _servicesThatAcceptUploads += attachments
-        val (identity, keyPair) = obtainKeyPair(dir)
+        // Populate the partyKeys set.
+        obtainKeyPair(dir, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME)
+        for (service in advertisedServices) {
+            // Ensure all required keys exist.
+            obtainKeyPair(configuration.basedir, service.type.id + "-private-key", service.type.id + "-public", service.type.id)
+        }
         val stateMachineTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
         return Pair(
-                constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage, keyPair, identity),
+                constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage),
                 checkpointStorage
         )
     }
 
     protected open fun constructStorageService(attachments: NodeAttachmentService,
                                                transactionStorage: TransactionStorage,
-                                               stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage,
-                                               keyPair: KeyPair,
-                                               identity: Party) =
-            StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage, keyPair, identity)
+                                               stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
+            StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
 
-    private fun obtainKeyPair(dir: Path): Pair<Party, KeyPair> {
+    protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.basedir, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
+    protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.basedir, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
+
+    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: String? = null): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
         // the public key. Obviously in a real system this would need to be a certificate chain of some kind to ensure
         // the legal name is actually validated in some way.
-        val privKeyFile = dir.resolve(PRIVATE_KEY_FILE_NAME)
-        val pubIdentityFile = dir.resolve(PUBLIC_IDENTITY_FILE_NAME)
+        val privKeyFile = dir.resolve(privateKeyFileName)
+        val pubIdentityFile = dir.resolve(publicKeyFileName)
+        val identityName = if (serviceName == null) configuration.myLegalName else configuration.myLegalName + "|" + serviceName
 
-        return if (!Files.exists(privKeyFile)) {
+        val identityAndKey = if (!Files.exists(privKeyFile)) {
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             keyPair.serialize().writeToFile(privKeyFile)
-            val myIdentity = Party(configuration.myLegalName, keyPair.public)
+            val myIdentity = Party(identityName, keyPair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
             // wrong type by mistake.
             myIdentity.serialize().writeToFile(pubIdentityFile)
@@ -475,13 +489,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration, val netwo
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
             val myIdentity = Files.readAllBytes(pubIdentityFile).deserialize<Party>()
-            if (myIdentity.name != configuration.myLegalName)
+            if (myIdentity.name != identityName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "${configuration.myLegalName} vs ${myIdentity.name}")
+                        "${identityName} vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = Files.readAllBytes(privKeyFile).deserialize<KeyPair>()
             Pair(myIdentity, keyPair)
         }
+        partyKeys += identityAndKey.second
+        return identityAndKey
     }
 
     protected open fun generateKeyPair() = com.r3corda.core.crypto.generateKeyPair()

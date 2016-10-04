@@ -54,7 +54,7 @@ class FullNodeConfiguration(config: Config) : NodeConfiguration {
                 advertisedServices.add(ServiceInfo.parse(serviceId))
             }
         }
-        if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.Type))
+        if (networkMapAddress == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
         val networkMapMessageAddress: SingleMessageRecipient? = if (networkMapAddress == null) null else NodeMessagingClient.makeNetworkMapAddress(networkMapAddress!!)
         return Node(this, networkMapMessageAddress, advertisedServices)
     }

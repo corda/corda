@@ -11,7 +11,9 @@ import com.r3corda.protocols.ValidatingNotaryProtocol
 class ValidatingNotaryService(services: ServiceHubInternal,
                               val timestampChecker: TimestampChecker,
                               val uniquenessProvider: UniquenessProvider) : NotaryService(services) {
-    object Type : ServiceType("corda.notary.validating")
+    companion object {
+        val type = ServiceType.notary.getSubType("validating")
+    }
 
     override fun createProtocol(otherParty: Party): ValidatingNotaryProtocol {
         return ValidatingNotaryProtocol(otherParty, timestampChecker, uniquenessProvider)

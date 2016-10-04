@@ -38,9 +38,9 @@ class ServerRPCTest {
     @Before
     fun setup() {
         network = MockNetwork()
-        val networkMap = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
+        val networkMap = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
-        notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.Type), networkMapAddress = networkMap.info.address)
+        notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
         rpc = ServerRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database)
 
         stateMachineUpdates = rpc.stateMachinesAndUpdates().second
@@ -57,13 +57,13 @@ class ServerRPCTest {
         assertFalse(aliceNode.services.vaultService.currentVault.states.iterator().hasNext())
 
         // Tell the monitoring service node to issue some cash
-        val recipient = aliceNode.services.storageService.myLegalIdentity
-        val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, DUMMY_NOTARY)
+        val recipient = aliceNode.info.legalIdentity
+        val outEvent = ClientToServiceCommand.IssueCash(Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
         rpc.executeCommand(outEvent)
         network.runNetwork()
 
         val expectedState = Cash.State(Amount(quantity,
-                Issued(aliceNode.services.storageService.myLegalIdentity.ref(ref), GBP)),
+                Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
                 recipient.owningKey)
 
         var issueSmId: StateMachineRunId? = null
@@ -99,15 +99,15 @@ class ServerRPCTest {
         rpc.executeCommand(ClientToServiceCommand.IssueCash(
                 amount = Amount(100, USD),
                 issueRef = OpaqueBytes(ByteArray(1, { 1 })),
-                recipient = aliceNode.services.storageService.myLegalIdentity,
-                notary = notaryNode.services.storageService.myLegalIdentity
+                recipient = aliceNode.info.legalIdentity,
+                notary = notaryNode.info.notaryIdentity
         ))
 
         network.runNetwork()
 
         rpc.executeCommand(ClientToServiceCommand.PayCash(
-                amount = Amount(100, Issued(PartyAndReference(aliceNode.services.storageService.myLegalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
-                recipient = aliceNode.services.storageService.myLegalIdentity
+                amount = Amount(100, Issued(PartyAndReference(aliceNode.info.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
+                recipient = aliceNode.info.legalIdentity
         ))
 
         network.runNetwork()
@@ -142,7 +142,7 @@ class ServerRPCTest {
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Only Alice signed
                         require(signaturePubKeys.size == 1)
-                        require(signaturePubKeys.contains(aliceNode.services.storageService.myLegalIdentity.owningKey))
+                        require(signaturePubKeys.contains(aliceNode.info.legalIdentity.owningKey))
                     },
                     // MOVE
                     expect { tx ->
@@ -151,8 +151,8 @@ class ServerRPCTest {
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
                         require(signaturePubKeys.size == 2)
-                        require(signaturePubKeys.contains(aliceNode.services.storageService.myLegalIdentity.owningKey))
-                        require(signaturePubKeys.contains(notaryNode.services.storageService.myLegalIdentity.owningKey))
+                        require(signaturePubKeys.contains(aliceNode.info.legalIdentity.owningKey))
+                        require(signaturePubKeys.contains(notaryNode.info.notaryIdentity.owningKey))
                     }
             )
         }

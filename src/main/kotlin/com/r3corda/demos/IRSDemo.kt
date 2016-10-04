@@ -406,11 +406,11 @@ private fun startNode(params: CliParams.RunNode, networkMap: SingleMessageRecipi
     val networkMapId =
             when (params.node) {
                 IRSDemoNode.NodeA -> {
-                    advertisedServices = setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type))
+                    advertisedServices = setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
                     null
                 }
                 IRSDemoNode.NodeB -> {
-                    advertisedServices = setOf(ServiceInfo(NodeInterestRates.Type))
+                    advertisedServices = setOf(ServiceInfo(NodeInterestRates.type))
                     networkMap
                 }
             }
@@ -475,7 +475,7 @@ private fun loadConfigFile(baseDir: Path, configFile: Path, configOverrides: Map
 
 private fun createIdentities(nodeConf: NodeConfiguration) {
     val mockNetwork = MockNetwork(false)
-    val node = MockNetwork.MockNode(nodeConf, mockNetwork, null, setOf(ServiceInfo(NetworkMapService.Type), ServiceInfo(SimpleNotaryService.Type)), 0, null)
+    val node = MockNetwork.MockNode(nodeConf, mockNetwork, null, setOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)), 0, null)
     node.start()
     node.stop()
 }

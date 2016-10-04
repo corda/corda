@@ -117,7 +117,8 @@ class Node(override val configuration: FullNodeConfiguration, networkMapAddress:
                 artemisAddress
             }()
         }
-        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) services.storageService.myLegalIdentityKey.public else null
+        val legalIdentity = obtainLegalIdentity()
+        val myIdentityOrNullIfNetworkMapService = if (networkMapService != null) legalIdentity.owningKey else null
         return NodeMessagingClient(configuration, serverAddr, myIdentityOrNullIfNetworkMapService, serverThread,
                 persistenceTx = { body: () -> Unit -> databaseTransaction(database) { body() } })
     }

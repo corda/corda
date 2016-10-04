@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ServiceInfoTests {
-    val serviceType = object : ServiceType("corda.service.subservice") {}
+    val serviceType = ServiceType.getServiceType("test", "service").getSubType("subservice")
     val name = "service.name"
 
     @Test

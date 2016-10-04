@@ -11,6 +11,7 @@ import com.r3corda.core.contracts.TransactionType
 import com.r3corda.core.contracts.`with notary`
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.testing.node.MockNetwork
@@ -141,13 +142,14 @@ class NodeInterestRatesTest {
     @Test
     fun network() {
         val net = MockNetwork()
-        val (n1, n2) = net.createTwoNodes()
+        val n1 = net.createNotaryNode()
+        val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.type))
         databaseTransaction(n2.database) {
             n2.findService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
         }
         val tx = TransactionType.General.Builder(null)
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val protocol = RatesFixProtocol(tx, n2.info.identity, fixOf, "0.675".bd, "0.1".bd)
+        val protocol = RatesFixProtocol(tx, n2.info.serviceIdentities(NodeInterestRates.type).first(), fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()
         val future = n1.services.startProtocol("rates", protocol)

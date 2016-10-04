@@ -62,14 +62,15 @@ object AutoOfferProtocol {
         @Suspendable
         override fun call(): SignedTransaction {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
-            val notary = serviceHub.networkMapCache.notaryNodes.first().identity
+            val notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             // need to pick which ever party is not us
             val otherParty = notUs(dealToBeOffered.parties).single()
             progressTracker.currentStep = DEALING
+            val myKey = serviceHub.legalIdentityKey
             val instigator = Instigator(
                     otherParty,
                     AutoOffer(notary, dealToBeOffered),
-                    serviceHub.storageService.myLegalIdentityKey,
+                    myKey,
                     progressTracker.getChildProgressTracker(DEALING)!!
             )
             val stx = subProtocol(instigator)
@@ -79,7 +80,7 @@ object AutoOfferProtocol {
         private fun notUs(parties: List<Party>): List<Party> {
             val notUsParties: MutableList<Party> = arrayListOf()
             for (party in parties) {
-                if (serviceHub.storageService.myLegalIdentity != party) {
+                if (serviceHub.myInfo.legalIdentity != party) {
                     notUsParties.add(party)
                 }
             }

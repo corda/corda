@@ -5,6 +5,7 @@ import com.r3corda.core.node.services.ServiceType
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.node.services.api.ServiceHubInternal
 import com.r3corda.protocols.NotaryProtocol
+import kotlin.reflect.KClass
 
 /**
  * A Notary service acts as the final signer of a transaction ensuring two things:
@@ -16,9 +17,6 @@ import com.r3corda.protocols.NotaryProtocol
  * This is the base implementation that can be customised with specific Notary transaction commit protocol.
  */
 abstract class NotaryService(services: ServiceHubInternal) : SingletonSerializeAsToken() {
-    // Do not specify this as an advertised service. Use a concrete implementation.
-    // TODO: We do not want a service type that cannot be used. Fix the type system abuse here.
-    object Type : ServiceType("corda.notary")
 
     init {
         services.registerProtocolInitiator(NotaryProtocol.Client::class) { createProtocol(it) }

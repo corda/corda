@@ -33,8 +33,8 @@ class DataVendingServiceTests {
     @Test
     fun `notify of transaction`() {
         val (vaultServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = vaultServiceNode.services.storageService.myLegalIdentityKey.public
-        val deposit = registerNode.services.storageService.myLegalIdentity.ref(1)
+        val beneficiary = vaultServiceNode.info.legalIdentity.owningKey
+        val deposit = registerNode.info.legalIdentity.ref(1)
         network.runNetwork()
 
         // Generate an issuance transaction
@@ -42,7 +42,8 @@ class DataVendingServiceTests {
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // Complete the cash transaction, and then manually relay it
-        ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
+        val registerKey = registerNode.services.legalIdentityKey
+        ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction()
         assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
 
@@ -61,7 +62,7 @@ class DataVendingServiceTests {
     @Test
     fun `notify failure`() {
         val (vaultServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = vaultServiceNode.services.storageService.myLegalIdentityKey.public
+        val beneficiary = vaultServiceNode.info.legalIdentity.owningKey
         val deposit = MEGA_CORP.ref(1)
         network.runNetwork()
 
@@ -70,7 +71,8 @@ class DataVendingServiceTests {
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid
-        ptx.signWith(registerNode.services.storageService.myLegalIdentityKey)
+        val registerKey = registerNode.services.legalIdentityKey
+        ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction(false)
         assertEquals(0, vaultServiceNode.services.vaultService.currentVault.states.toList().size)
 
@@ -82,7 +84,7 @@ class DataVendingServiceTests {
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
         walletServiceNode.services.registerProtocolInitiator(NotifyTxProtocol::class, ::NotifyTransactionHandler)
-        services.startProtocol("notify-tx", NotifyTxProtocol(walletServiceNode.info.identity, tx))
+        services.startProtocol("notify-tx", NotifyTxProtocol(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }
 

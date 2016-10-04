@@ -52,7 +52,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
             progressTracker.currentStep = SIGNING
 
-            val myKey = serviceHub.storageService.myLegalIdentity.owningKey
+            val myKey = serviceHub.myInfo.legalIdentity.owningKey
             val me = listOf(myKey)
 
             val signatures = if (participants == me) {
@@ -74,7 +74,7 @@ abstract class AbstractStateReplacementProtocol<T> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByPublicKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
-                participantNode.identity
+                participantNode.legalIdentity
             }
 
             val participantSignatures = parties.map { getParticipantSignature(it, stx) }
@@ -134,7 +134,7 @@ abstract class AbstractStateReplacementProtocol<T> {
                 // TODO: catch only specific exceptions. However, there are numerous validation exceptions
                 //       that might occur (tx validation/resolution, invalid proposal). Need to rethink how
                 //       we manage exceptions and maybe introduce some platform exception hierarchy
-                val myIdentity = serviceHub.storageService.myLegalIdentity
+                val myIdentity = serviceHub.myInfo.legalIdentity
                 val state = maybeProposal.unwrap { it.stateRef }
                 val reason = StateReplacementRefused(myIdentity, state, e.message)
 
@@ -186,7 +186,7 @@ abstract class AbstractStateReplacementProtocol<T> {
 
         private fun checkMySignatureRequired(tx: WireTransaction) {
             // TODO: use keys from the keyManagementService instead
-            val myKey = serviceHub.storageService.myLegalIdentity.owningKey
+            val myKey = serviceHub.myInfo.legalIdentity.owningKey
             require(myKey in tx.mustSign) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
         }
 
@@ -195,7 +195,10 @@ abstract class AbstractStateReplacementProtocol<T> {
             subProtocol(ResolveTransactionsProtocol(stx.tx, otherSide))
         }
 
-        private fun sign(stx: SignedTransaction) = serviceHub.storageService.myLegalIdentityKey.signWithECDSA(stx.txBits)
+        private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
+            val myKey = serviceHub.legalIdentityKey
+            return myKey.signWithECDSA(stx.txBits)
+        }
     }
 
     // TODO: similar classes occur in other places (NotaryProtocol), need to consolidate

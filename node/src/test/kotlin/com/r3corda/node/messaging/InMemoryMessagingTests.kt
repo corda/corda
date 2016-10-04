@@ -41,7 +41,7 @@ class InMemoryMessagingTests {
 
     @Test
     fun basics() {
-        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
+        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         val node3 = network.createNode(networkMapAddress = node1.info.address)
 
@@ -70,7 +70,7 @@ class InMemoryMessagingTests {
 
     @Test
     fun broadcast() {
-        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
+        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         val node3 = network.createNode(networkMapAddress = node1.info.address)
 
@@ -89,7 +89,7 @@ class InMemoryMessagingTests {
      */
     @Test
     fun `skip unhandled messages`() {
-        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
+        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         var received: Int = 0
 

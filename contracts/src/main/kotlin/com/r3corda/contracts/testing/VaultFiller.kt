@@ -37,7 +37,7 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     ownedBy: PublicKey? = null): Vault {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myKey: PublicKey = ownedBy ?: storageService.myLegalIdentityKey.public
+    val myKey: PublicKey = ownedBy ?: myInfo.legalIdentity.owningKey
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()

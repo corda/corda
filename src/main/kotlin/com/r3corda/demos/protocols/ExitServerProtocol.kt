@@ -66,7 +66,7 @@ object ExitServerProtocol {
             if (recipient.address is MockNetworkMapCache.MockAddress) {
                 // Ignore
             } else {
-                send(recipient.identity, ExitMessage(exitCode))
+                send(recipient.legalIdentity, ExitMessage(exitCode))
             }
         }
     }
