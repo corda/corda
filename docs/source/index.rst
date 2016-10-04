@@ -47,6 +47,7 @@ Read on to learn:
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
+   tutorial-clientrpc-api
    protocol-state-machines
    oracles
    event-scheduling
@@ -74,4 +75,3 @@ Read on to learn:
    network-simulator
    codestyle
    building-the-docs
-

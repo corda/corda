@@ -1,0 +1,46 @@
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+dependencies {
+    compile project(':core')
+    compile project(':client')
+
+    compile "org.graphstream:gs-core:1.3"
+    compile("org.graphstream:gs-ui:1.3") {
+        exclude group: "bouncycastle"
+    }
+}
+
+mainClassName = "com.r3corda.docs.ClientRpcTutorialKt"
+
+task getClientRpcTutorial(type: CreateStartScripts) {
+    dependsOn(classes)
+    mainClassName = "com.r3corda.docs.ClientRpcTutorialKt"
+    applicationName = "client-rpc-tutorial"
+    defaultJvmOpts = []
+    outputDir = new File(project.buildDir, 'scripts')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(getClientRpcTutorial)
+    fileMode = 0755
+}
