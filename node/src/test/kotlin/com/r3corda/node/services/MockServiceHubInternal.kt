@@ -75,7 +75,7 @@ open class MockServiceHubInternal(
         return smm.add(loggerName, logic).resultFuture
     }
 
-    override fun <P : ProtocolLogic<*>> registerProtocolInitiator(markerClass: KClass<out P>, protocolFactory: (Party) -> ProtocolLogic<*>) {
+    override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
         protocolFactories[markerClass.java] = protocolFactory
     }
 

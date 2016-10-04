@@ -115,7 +115,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
             return smm.add(loggerName, logic).resultFuture
         }
 
-        override fun <P : ProtocolLogic<*>> registerProtocolInitiator(markerClass: KClass<out P>, protocolFactory: (Party) -> ProtocolLogic<*>) {
+        override fun registerProtocolInitiator(markerClass: KClass<*>, protocolFactory: (Party) -> ProtocolLogic<*>) {
             require(markerClass !in protocolFactories) { "${markerClass.java.name} has already been used to register a protocol" }
             log.debug { "Registering ${markerClass.java.name}" }
             protocolFactories[markerClass.java] = protocolFactory

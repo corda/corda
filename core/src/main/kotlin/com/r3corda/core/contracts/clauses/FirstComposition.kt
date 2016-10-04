@@ -24,8 +24,10 @@ class FirstComposition<S : ContractState, C : CommandData, K : Any>(val firstCla
         clauses.addAll(remainingClauses)
     }
 
-    override fun verify(tx: TransactionForContract, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C>
-        = matchedClauses(commands).single().verify(tx, inputs, outputs, commands, groupingKey)
+    override fun verify(tx: TransactionForContract, inputs: List<S>, outputs: List<S>, commands: List<AuthenticatedObject<C>>, groupingKey: K?): Set<C> {
+        val clause = matchedClauses(commands).singleOrNull() ?: throw IllegalStateException("No delegate clause matched in first composition")
+        return clause.verify(tx, inputs, outputs, commands, groupingKey)
+    }
 
     override fun toString() = "First: ${clauses.toList()}"
 }

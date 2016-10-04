@@ -1,6 +1,5 @@
 package com.r3corda.node.utilities.certsigning
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
@@ -46,7 +45,6 @@ class CertificateSignerTest {
             override val exportJMXto: String = ""
             override val keyStorePassword: String = "testpass"
             override val trustStorePassword: String = "trustpass"
-            override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
         }
 
         assertFalse(Files.exists(config.keyStorePath))

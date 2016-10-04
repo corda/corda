@@ -71,7 +71,6 @@ fun main(args: Array<String>) {
         override val keyStorePassword: String = "cordacadevpass"
         override val trustStorePassword: String = "trustpass"
         override val dataSourceProperties: Properties = makeTestDataSourceProperties()
-        override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
 
     }
 

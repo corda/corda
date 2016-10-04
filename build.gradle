@@ -198,7 +198,7 @@ applicationDistribution.into("bin") {
     fileMode = 0755
 }
 
-task buildCordaJAR(type: FatCapsule, dependsOn: 'quasarScan') {
+task buildCordaJAR(type: FatCapsule, dependsOn: ['quasarScan', 'buildCertSigningRequestUtilityJAR']) {
     applicationClass 'com.r3corda.node.MainKt'
     archiveName 'corda.jar'
     applicationSource = files(project.tasks.findByName('jar'), 'build/classes/main/CordaCaplet.class')
@@ -209,6 +209,15 @@ task buildCordaJAR(type: FatCapsule, dependsOn: 'quasarScan') {
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         minJavaVersion = '1.8.0'
         caplets = ['CordaCaplet']
+    }
+}
+
+task buildCertSigningRequestUtilityJAR(type: FatCapsule, dependsOn: project.jar) {
+    applicationClass 'com.r3corda.node.utilities.certsigning.CertificateSignerKt'
+    archiveName 'certSigningRequestUtility.jar'
+    capsuleManifest {
+        systemProperties['log4j.configuration'] = 'log4j2.xml'
+        minJavaVersion = '1.8.0'
     }
 }
 

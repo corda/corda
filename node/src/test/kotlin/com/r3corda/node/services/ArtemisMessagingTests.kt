@@ -51,8 +51,6 @@ class ArtemisMessagingTests {
             override val exportJMXto: String = ""
             override val keyStorePassword: String = "testpass"
             override val trustStorePassword: String = "trustpass"
-            override val certificateSigningService: HostAndPort = HostAndPort.fromParts("localhost", 0)
-
         }
     }
 

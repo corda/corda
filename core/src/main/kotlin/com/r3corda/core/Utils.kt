@@ -277,3 +277,20 @@ fun <T> Observable<T>.bufferUntilSubscribed(): Observable<T> {
     val subscription = subscribe(subject)
     return subject.doOnUnsubscribe { subscription.unsubscribe() }
 }
+
+/**
+ * Determine if an iterable data type's contents are ordered and unique, based on their [Comparable].compareTo
+ * function.
+ */
+fun <T, I: Comparable<I>> Iterable<T>.isOrderedAndUnique(extractId: T.() -> I): Boolean {
+    var last: I? = null
+    return all { it ->
+        val lastLast = last
+        last = extractId(it)
+        if (lastLast == null) {
+            true
+        } else {
+            lastLast.compareTo(extractId(it)) < 0
+        }
+    }
+}

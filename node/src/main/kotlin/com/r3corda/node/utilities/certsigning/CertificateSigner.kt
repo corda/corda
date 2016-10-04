@@ -9,9 +9,11 @@ import com.r3corda.core.crypto.X509Utilities.addOrReplaceKey
 import com.r3corda.core.div
 import com.r3corda.core.minutes
 import com.r3corda.core.utilities.loggerFor
-import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
+import com.r3corda.node.services.config.NodeConfigurationFromConfig
+import com.r3corda.node.services.config.getValue
 import joptsimple.OptionParser
+import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -113,8 +115,8 @@ class CertificateSigner(val config: NodeConfiguration, val certService: Certific
 
 object ParamsSpec {
     val parser = OptionParser()
-    val baseDirectoryArg = parser.accepts("base-dir", "The directory to put all key stores under").withRequiredArg()
-    val configFileArg = parser.accepts("config-file", "The path to the config file").withRequiredArg()
+    val baseDirectoryArg = parser.accepts("base-dir", "Working directory of Corda Node.").withRequiredArg().defaultsTo(".")
+    val configFileArg = parser.accepts("config-file", "The path to the config file.").withRequiredArg()
 }
 
 fun main(args: Array<String>) {
@@ -122,12 +124,19 @@ fun main(args: Array<String>) {
         ParamsSpec.parser.parse(*args)
     } catch (ex: Exception) {
         CertificateSigner.log.error("Unable to parse args", ex)
+        ParamsSpec.parser.printHelpOn(System.out)
         exitProcess(1)
     }
-    val baseDirectoryPath = Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg) ?: throw IllegalArgumentException("Please provide Corda node base directory path"))
+    val baseDirectoryPath = Paths.get(cmdlineOptions.valueOf(ParamsSpec.baseDirectoryArg))
     val configFile = if (cmdlineOptions.has(ParamsSpec.configFileArg)) Paths.get(cmdlineOptions.valueOf(ParamsSpec.configFileArg)) else null
-    val conf = FullNodeConfiguration(NodeConfiguration.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true))
+
+    val config = NodeConfiguration.loadConfig(baseDirectoryPath, configFile, allowMissingConfig = true).let { config ->
+        object : NodeConfiguration by NodeConfigurationFromConfig(config) {
+            val certificateSigningService: URL by config
+        }
+    }
+
     // TODO: Use HTTPS instead
-    CertificateSigner(conf, HTTPCertificateSigningService(conf.certificateSigningService)).buildKeyStore()
+    CertificateSigner(config, HTTPCertificateSigningService(config.certificateSigningService)).buildKeyStore()
 }
 
