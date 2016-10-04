@@ -80,7 +80,7 @@ fun main(args: Array<String>) {
     val theirNetworkAddress = parser.accepts("other-network-address").withRequiredArg().defaultsTo("localhost")
     val apiNetworkAddress = parser.accepts("api-address").withRequiredArg().defaultsTo("localhost")
     val baseDirectoryArg = parser.accepts("base-directory").withRequiredArg().defaultsTo(DEFAULT_BASE_DIRECTORY)
-
+    val h2PortArg = parser.accepts("h2-port").withRequiredArg().ofType(Int::class.java).defaultsTo(-1)
     val options = try {
         parser.parse(*args)
     } catch (e: Exception) {
@@ -104,6 +104,9 @@ fun main(args: Array<String>) {
             }
     )
     val apiNetAddr = HostAndPort.fromString(options.valueOf(apiNetworkAddress)).withDefaultPort(myNetAddr.port + 1)
+    val h2Port = if (options.valueOf(h2PortArg) < 0) {
+        myNetAddr.port + 2
+    } else options.valueOf(h2PortArg)
 
     val baseDirectory = options.valueOf(baseDirectoryArg)!!
 
@@ -125,7 +128,8 @@ fun main(args: Array<String>) {
         val configOverrides = mapOf(
                 "myLegalName" to myLegalName,
                 "artemisAddress" to myNetAddr.toString(),
-                "webAddress" to apiNetAddr.toString()
+                "webAddress" to apiNetAddr.toString(),
+                "h2port" to h2Port.toString()
         )
         FullNodeConfiguration(NodeConfiguration.loadConfig(directory, allowMissingConfig = true, configOverrides = configOverrides))
     }
