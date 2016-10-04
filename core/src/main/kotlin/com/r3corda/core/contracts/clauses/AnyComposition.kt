@@ -9,6 +9,7 @@ import java.util.*
 /**
  * Compose a number of clauses, such that any number of the clauses can run.
  */
+// TODO: Rename to AnyOf
 class AnyComposition<in S : ContractState, C : CommandData, in K : Any>(vararg rawClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     override val clauses: List<Clause<S, C, K>> = rawClauses.asList()
 
