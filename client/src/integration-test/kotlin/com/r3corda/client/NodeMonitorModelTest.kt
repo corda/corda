@@ -6,6 +6,7 @@ import com.r3corda.client.model.ProgressTrackingEvent
 import com.r3corda.core.bufferUntilSubscribed
 import com.r3corda.core.contracts.*
 import com.r3corda.core.node.NodeInfo
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.StateMachineTransactionMapping
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
@@ -43,7 +44,7 @@ class NodeMonitorModelTest {
         thread {
             driver {
                 val aliceNodeFuture = startNode("Alice")
-                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(SimpleNotaryService.Type))
+                val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.Type)))
 
                 aliceNode = aliceNodeFuture.get()
                 notaryNode = notaryNodeFuture.get()

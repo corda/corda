@@ -2,6 +2,7 @@ package com.r3corda.node
 
 import com.r3corda.contracts.asset.Cash
 import com.r3corda.core.contracts.*
+import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.Vault
 import com.r3corda.core.protocols.StateMachineRunId
 import com.r3corda.core.serialization.OpaqueBytes
@@ -10,7 +11,7 @@ import com.r3corda.core.utilities.DUMMY_NOTARY
 import com.r3corda.node.internal.ServerRPCOps
 import com.r3corda.node.services.messaging.StateMachineUpdate
 import com.r3corda.node.services.network.NetworkMapService
-import com.r3corda.node.services.transactions.ValidatingNotaryService
+import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.testing.expect
 import com.r3corda.testing.expectEvents
 import com.r3corda.testing.node.MockNetwork
@@ -37,9 +38,9 @@ class ServerRPCTest {
     @Before
     fun setup() {
         network = MockNetwork()
-        val networkMap = network.createNode(advertisedServices = NetworkMapService.Type)
+        val networkMap = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.Type))
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
-        notaryNode = network.createNode(advertisedServices = ValidatingNotaryService.Type, networkMapAddress = networkMap.info.address)
+        notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.Type), networkMapAddress = networkMap.info.address)
         rpc = ServerRPCOps(aliceNode.services, aliceNode.smm, aliceNode.database)
 
         stateMachineUpdates = rpc.stateMachinesAndUpdates().second
