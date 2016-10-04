@@ -11,8 +11,10 @@ data class ServiceInfo(val type: ServiceType, val name: String? = null) {
     companion object {
         fun parse(encoded: String): ServiceInfo {
             val parts = encoded.split("|")
-            require(parts.size > 0 && parts.size <= 2)
-            return ServiceInfo(object : ServiceType(parts[0]) {}, parts[1])
+            require(parts.size > 0 && parts.size <= 2) { "Invalid number of elements found" }
+            val type = object : ServiceType(parts[0]) {}
+            val name = parts.getOrNull(1)
+            return ServiceInfo(type, name)
         }
     }
 
