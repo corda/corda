@@ -2,13 +2,9 @@ package com.r3corda.testing.node
 
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
-import com.r3corda.core.messaging.TopicSession
-import com.r3corda.core.messaging.onNext
-import com.r3corda.core.messaging.send
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceInfo
@@ -23,13 +19,12 @@ import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.keys.E2ETestKeyManagementService
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.network.InMemoryNetworkMapService
+import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.persistence.DBCheckpointStorage
 import com.r3corda.node.services.persistence.PerFileCheckpointStorage
-import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.transactions.InMemoryUniquenessProvider
 import com.r3corda.node.services.transactions.SimpleNotaryService
 import com.r3corda.node.utilities.databaseTransaction
-import com.r3corda.protocols.ServiceRequestMessage
 import org.slf4j.Logger
 import java.nio.file.Files
 import java.nio.file.Path
@@ -144,21 +139,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         fun pumpReceive(block: Boolean): InMemoryMessagingNetwork.MessageTransfer? {
             return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
-        }
-
-        fun send(topic: String, target: MockNode, payload: Any) {
-            services.networkService.send(TopicSession(topic), payload, target.info.address)
-        }
-
-        fun <M : Any> receive(topic: String, sessionId: Long): ListenableFuture<M> {
-            return services.networkService.onNext<M>(topic, sessionId)
-        }
-
-        inline fun <reified T : Any> sendAndReceive(topic: String,
-                                                    target: MockNode,
-                                                    payload: ServiceRequestMessage): ListenableFuture<T> {
-            send(topic, target, payload)
-            return receive(topic, payload.sessionID)
         }
 
         fun disableDBCloseOnStop() {

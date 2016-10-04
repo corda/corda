@@ -7,7 +7,9 @@ import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.map
-import com.r3corda.core.messaging.*
+import com.r3corda.core.messaging.MessagingService
+import com.r3corda.core.messaging.SingleMessageRecipient
+import com.r3corda.core.messaging.createMessage
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkCacheError
@@ -15,7 +17,6 @@ import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.NetworkMapCache.MapChange
 import com.r3corda.core.node.services.NetworkMapCache.MapChangeType
 import com.r3corda.core.node.services.ServiceType
-import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
@@ -26,6 +27,7 @@ import com.r3corda.node.services.network.NetworkMapService.FetchMapResponse
 import com.r3corda.node.services.network.NetworkMapService.SubscribeResponse
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AddOrRemove
+import com.r3corda.protocols.sendRequest
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
@@ -82,17 +84,12 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         }
 
         // Fetch the network map and register for updates at the same time
-        val sessionID = random63BitValue()
-        val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, net.myAddress, sessionID)
-
-        // Add a message handler for the response, and prepare a future to put the data into.
-        // Note that the message handler will run on the network thread (not this one).
-        val future = net.onNext<FetchMapResponse>(FETCH_PROTOCOL_TOPIC, sessionID, RunOnCallerThread).map { resp ->
+        val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, net.myAddress)
+        val future = net.sendRequest<FetchMapResponse>(FETCH_PROTOCOL_TOPIC, req, networkMapAddress, RunOnCallerThread).map { resp ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             resp.nodes?.forEach { processRegistration(it) }
             Unit
         }
-        net.send(FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, networkMapAddress)
         _registrationFuture.setFuture(future)
 
         return future
@@ -119,19 +116,11 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
      */
     override fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
         // Fetch the network map and register for updates at the same time
-        val sessionID = random63BitValue()
-        val req = NetworkMapService.SubscribeRequest(false, net.myAddress, sessionID)
-
-        // Add a message handler for the response, and prepare a future to put the data into.
-        // Note that the message handler will run on the network thread (not this one).
-
-        val future = net.onNext<SubscribeResponse>(SUBSCRIPTION_PROTOCOL_TOPIC, sessionID, RunOnCallerThread).map {
+        val req = NetworkMapService.SubscribeRequest(false, net.myAddress)
+        val future = net.sendRequest<SubscribeResponse>(SUBSCRIPTION_PROTOCOL_TOPIC, req, service.address, RunOnCallerThread).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
         _registrationFuture.setFuture(future)
-
-        net.send(SUBSCRIPTION_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, service.address)
-
         return future
     }
 

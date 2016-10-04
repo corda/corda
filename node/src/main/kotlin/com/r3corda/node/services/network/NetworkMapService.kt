@@ -14,6 +14,7 @@ import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.node.services.NetworkMapCache
 import com.r3corda.core.node.services.ServiceType
+import com.r3corda.core.random63BitValue
 import com.r3corda.core.serialization.SerializedBytes
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
@@ -31,7 +32,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
-
 
 /**
  * A network map contains lists of nodes on the network along with information about their identity keys, services
@@ -67,18 +67,27 @@ interface NetworkMapService {
 
     val nodes: List<NodeInfo>
 
-    abstract class NetworkMapRequestMessage(val replyTo: MessageRecipients) : ServiceRequestMessage {
-        override fun getReplyTo(networkMapCache: NetworkMapCache): MessageRecipients = replyTo
-    }
-
-    class FetchMapRequest(val subscribe: Boolean, val ifChangedSinceVersion: Int?, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
+    class FetchMapRequest(val subscribe: Boolean,
+                          val ifChangedSinceVersion: Int?,
+                          override val replyTo: SingleMessageRecipient,
+                          override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
     data class FetchMapResponse(val nodes: Collection<NodeRegistration>?, val version: Int)
-    class QueryIdentityRequest(val identity: Party, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
+
+    class QueryIdentityRequest(val identity: Party,
+                               override val replyTo: SingleMessageRecipient,
+                               override val sessionID: Long) : ServiceRequestMessage
     data class QueryIdentityResponse(val node: NodeInfo?)
-    class RegistrationRequest(val wireReg: WireNodeRegistration, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
+
+    class RegistrationRequest(val wireReg: WireNodeRegistration,
+                              override val replyTo: SingleMessageRecipient,
+                              override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
     data class RegistrationResponse(val success: Boolean)
-    class SubscribeRequest(val subscribe: Boolean, replyTo: MessageRecipients, override val sessionID: Long) : NetworkMapRequestMessage(replyTo)
+
+    class SubscribeRequest(val subscribe: Boolean,
+                           override val replyTo: SingleMessageRecipient,
+                           override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
     data class SubscribeResponse(val confirmed: Boolean)
+
     data class Update(val wireReg: WireNodeRegistration, val mapVersion: Int, val replyTo: MessageRecipients)
     data class UpdateAcknowledge(val mapVersion: Int, val replyTo: MessageRecipients)
 }
