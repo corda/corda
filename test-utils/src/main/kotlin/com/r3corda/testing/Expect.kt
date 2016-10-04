@@ -1,6 +1,6 @@
 package com.r3corda.testing
 
-import co.paralleluniverse.strands.SettableFuture
+import com.google.common.util.concurrent.SettableFuture
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
@@ -131,7 +131,7 @@ fun <S, E : Any> S.genericExpectEvents(
         stream: S.((E) -> Unit) -> Unit,
         expectCompose: () -> ExpectCompose<E>
 ) {
-    val finishFuture = SettableFuture<Unit>()
+    val finishFuture = SettableFuture.create<Unit>()
     /**
      * Internally we create a "lazy" state automaton. The outgoing edges are state.getExpectedEvents() modulo additional
      * matching logic. When an event comes we extract the first edge that matches using state.nextState(event), which

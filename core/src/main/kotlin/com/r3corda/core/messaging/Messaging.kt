@@ -1,7 +1,11 @@
 package com.r3corda.core.messaging
 
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
+import com.r3corda.core.catch
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
 import com.r3corda.core.serialization.DeserializeAsKotlinObjectDef
+import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import java.time.Instant
 import java.util.*
@@ -117,7 +121,7 @@ fun MessagingService.runOnNextMessage(topic: String, sessionID: Long, executor: 
  *
  * @param topicSession identifier for the topic and session to listen for messages arriving on.
  */
-fun MessagingService.runOnNextMessage(topicSession: TopicSession, executor: Executor? = null, callback: (Message) -> Unit) {
+inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, executor: Executor? = null, crossinline callback: (Message) -> Unit) {
     val consumed = AtomicBoolean()
     addMessageHandler(topicSession, executor) { msg, reg ->
         removeMessageHandler(reg)
@@ -125,6 +129,20 @@ fun MessagingService.runOnNextMessage(topicSession: TopicSession, executor: Exec
         check(msg.topicSession == topicSession) { "Topic/session mismatch: ${msg.topicSession} vs $topicSession" }
         callback(msg)
     }
+}
+
+/**
+ * Returns a [ListenableFuture] of the next message payload ([Message.data]) which is received on the given topic and sessionId.
+ * The payload is deserilaized to an object of type [M]. Any exceptions thrown will be captured by the future.
+ */
+fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long, executor: Executor? = null): ListenableFuture<M> {
+    val messageFuture = SettableFuture.create<M>()
+    runOnNextMessage(topic, sessionId, executor) { message ->
+        messageFuture.catch {
+            message.data.deserialize<M>()
+        }
+    }
+    return messageFuture
 }
 
 fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())

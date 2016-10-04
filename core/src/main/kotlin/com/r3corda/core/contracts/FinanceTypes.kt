@@ -456,10 +456,5 @@ data class Commodity(val commodityCode: String,
  * Subsequent copies and evolutions of a state should just copy the externalId and Id fields unmodified.
  */
 data class UniqueIdentifier(val externalId: String? = null, val id: UUID = UUID.randomUUID()) {
-    override fun toString(): String {
-        if (externalId != null) {
-            return "${externalId}_${id.toString()}"
-        }
-        return id.toString()
-    }
+    override fun toString(): String = if (externalId != null) "${externalId}_$id" else id.toString()
 }

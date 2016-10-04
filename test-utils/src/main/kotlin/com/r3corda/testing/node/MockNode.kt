@@ -4,19 +4,17 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.Party
 import com.r3corda.core.div
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.TopicSession
-import com.r3corda.core.messaging.runOnNextMessage
+import com.r3corda.core.messaging.onNext
 import com.r3corda.core.messaging.send
 import com.r3corda.core.node.PhysicalLocation
 import com.r3corda.core.node.services.KeyManagementService
 import com.r3corda.core.node.services.ServiceInfo
 import com.r3corda.core.node.services.VaultService
 import com.r3corda.core.random63BitValue
-import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.testing.InMemoryVaultService
 import com.r3corda.core.utilities.DUMMY_NOTARY_KEY
 import com.r3corda.core.utilities.loggerFor
@@ -153,12 +151,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             services.networkService.send(TopicSession(topic), payload, target.info.address)
         }
 
-        inline fun <reified T : Any> receive(topic: String, sessionId: Long): ListenableFuture<T> {
-            val receive = SettableFuture.create<T>()
-            services.networkService.runOnNextMessage(topic, sessionId) {
-                receive.set(it.data.deserialize<T>())
-            }
-            return receive
+        fun <M : Any> receive(topic: String, sessionId: Long): ListenableFuture<M> {
+            return services.networkService.onNext<M>(topic, sessionId)
         }
 
         inline fun <reified T : Any> sendAndReceive(topic: String,

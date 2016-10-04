@@ -9,7 +9,7 @@ import com.r3corda.core.crypto.Party
 import com.r3corda.core.crypto.X509Utilities
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.messaging.createMessage
-import com.r3corda.core.messaging.runOnNextMessage
+import com.r3corda.core.messaging.onNext
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.CordaPluginRegistry
 import com.r3corda.core.node.NodeInfo
@@ -37,6 +37,7 @@ import com.r3corda.node.services.monitor.NodeMonitorService
 import com.r3corda.node.services.network.InMemoryNetworkMapCache
 import com.r3corda.node.services.network.NetworkMapService
 import com.r3corda.node.services.network.NetworkMapService.Companion.REGISTER_PROTOCOL_TOPIC
+import com.r3corda.node.services.network.NetworkMapService.RegistrationResponse
 import com.r3corda.node.services.network.NodeRegistration
 import com.r3corda.node.services.network.PersistentNetworkMapService
 import com.r3corda.node.services.persistence.*
@@ -357,7 +358,7 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
                 "has any other map node been configured.")
     }
 
-    private fun updateRegistration(networkMapAddr: SingleMessageRecipient, type: AddOrRemove): ListenableFuture<NetworkMapService.RegistrationResponse> {
+    private fun updateRegistration(networkMapAddr: SingleMessageRecipient, type: AddOrRemove): ListenableFuture<RegistrationResponse> {
         // Register this node against the network
         val instant = platformClock.instant()
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
@@ -365,13 +366,8 @@ abstract class AbstractNode(val configuration: NodeConfiguration, val networkMap
         val sessionID = random63BitValue()
         val request = NetworkMapService.RegistrationRequest(reg.toWire(storage.myLegalIdentityKey.private), net.myAddress, sessionID)
         val message = net.createMessage(REGISTER_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, request.serialize().bits)
-        val future = SettableFuture.create<NetworkMapService.RegistrationResponse>()
-
-        net.runOnNextMessage(REGISTER_PROTOCOL_TOPIC, sessionID, RunOnCallerThread) { message ->
-            future.set(message.data.deserialize())
-        }
+        val future = net.onNext<RegistrationResponse>(REGISTER_PROTOCOL_TOPIC, sessionID, RunOnCallerThread)
         net.send(message, networkMapAddr)
-
         return future
     }
 

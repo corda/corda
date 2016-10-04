@@ -28,22 +28,22 @@ import kotlin.reflect.KProperty
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 @Suppress("unused")   // It's here for completeness
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
-@Suppress("unused")   // It's here for completeness
 val Int.minutes: Duration get() = Duration.ofMinutes(this.toLong())
 val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
 
 
 // TODO: Review by EOY2016 if we ever found these utilities helpful.
-@Suppress("unused") val Int.bd: BigDecimal get() = BigDecimal(this)
-@Suppress("unused") val Double.bd: BigDecimal get() = BigDecimal(this)
-@Suppress("unused") val String.bd: BigDecimal get() = BigDecimal(this)
-@Suppress("unused") val Long.bd: BigDecimal get() = BigDecimal(this)
+val Int.bd: BigDecimal get() = BigDecimal(this)
+val Double.bd: BigDecimal get() = BigDecimal(this)
+val String.bd: BigDecimal get() = BigDecimal(this)
+val Long.bd: BigDecimal get() = BigDecimal(this)
 
 fun String.abbreviate(maxWidth: Int): String = if (length <= maxWidth) this else take(maxWidth - 1) + "…"
 
 /** Like the + operator but throws an exception in case of integer overflow. */
 infix fun Int.checkedAdd(b: Int) = Math.addExact(this, b)
 /** Like the + operator but throws an exception in case of integer overflow. */
+@Suppress("unused")
 infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
 
 /**
@@ -80,15 +80,12 @@ infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): Listenable
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, Function { mapper(it!!) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
-// TODO This is not used but there's existing code that can be replaced by this
-fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): SettableFuture<T> {
+inline fun <T> SettableFuture<T>.catch(block: () -> T) {
     try {
         set(block())
-    } catch (e: Exception) {
-        logger?.error("Caught exception", e)
-        setException(e)
+    } catch (t: Throwable) {
+        setException(t)
     }
-    return this
 }
 
 fun <R> Path.use(block: (InputStream) -> R): R = Files.newInputStream(this).use(block)

@@ -9,8 +9,8 @@ import com.r3corda.contracts.InterestRateSwap
 import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.StateAndRef
 import com.r3corda.core.contracts.UniqueIdentifier
-import com.r3corda.core.failure
 import com.r3corda.core.flatMap
+import com.r3corda.core.map
 import com.r3corda.core.node.services.linearHeadsOfType
 import com.r3corda.core.success
 import com.r3corda.core.transactions.SignedTransaction
@@ -83,15 +83,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         extraNodeLabels[node1] = "Fixing event on $nextFixingDate"
         extraNodeLabels[node2] = "Fixing event on $nextFixingDate"
 
-        val retFuture = SettableFuture.create<Unit>()
         // Complete the future when the state has been consumed on both nodes
         val futA = node1.services.vaultService.whenConsumed(theDealRef.ref)
         val futB = node2.services.vaultService.whenConsumed(theDealRef.ref)
-        Futures.allAsList(futA, futB) success {
-            retFuture.set(null)
-        } failure { throwable ->
-            retFuture.setException(throwable)
-        }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
@@ -100,7 +94,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         if (nextFixingDate > currentDateAndTime.toLocalDate())
             currentDateAndTime = nextFixingDate.atTime(15, 0)
 
-        return retFuture
+        return Futures.allAsList(futA, futB).map { Unit }
     }
 
     private fun startIRSDealBetween(i: Int, j: Int): ListenableFuture<SignedTransaction> {
@@ -125,7 +119,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val instigator = Instigator(node2.info.identity, AutoOffer(notary.info.identity, irs), node1.keyPair!!)
         val instigatorTx = node1.services.startProtocol("instigator", instigator)
 
-        return Futures.transformAsync(Futures.allAsList(instigatorTx, acceptorTx)) { instigatorTx }
+        return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }
     }
 
     override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {

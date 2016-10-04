@@ -2,10 +2,11 @@ package com.r3corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
+import com.r3corda.core.RunOnCallerThread
 import com.r3corda.core.contracts.Contract
 import com.r3corda.core.crypto.Party
+import com.r3corda.core.map
 import com.r3corda.core.messaging.*
 import com.r3corda.core.node.NodeInfo
 import com.r3corda.core.node.services.DEFAULT_SESSION_ID
@@ -19,6 +20,10 @@ import com.r3corda.core.serialization.SingletonSerializeAsToken
 import com.r3corda.core.serialization.deserialize
 import com.r3corda.core.serialization.serialize
 import com.r3corda.node.services.api.RegulatorService
+import com.r3corda.node.services.network.NetworkMapService.Companion.FETCH_PROTOCOL_TOPIC
+import com.r3corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_PROTOCOL_TOPIC
+import com.r3corda.node.services.network.NetworkMapService.FetchMapResponse
+import com.r3corda.node.services.network.NetworkMapService.SubscribeResponse
 import com.r3corda.node.services.transactions.NotaryService
 import com.r3corda.node.utilities.AddOrRemove
 import rx.Observable
@@ -82,15 +87,13 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
-        val future = SettableFuture.create<Unit>()
-        _registrationFuture.setFuture(future)
-        net.runOnNextMessage(NetworkMapService.FETCH_PROTOCOL_TOPIC, sessionID, MoreExecutors.directExecutor()) { message ->
-            val resp = message.data.deserialize<NetworkMapService.FetchMapResponse>()
+        val future = net.onNext<FetchMapResponse>(FETCH_PROTOCOL_TOPIC, sessionID, RunOnCallerThread).map { resp ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             resp.nodes?.forEach { processRegistration(it) }
-            future.set(Unit)
+            Unit
         }
-        net.send(NetworkMapService.FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, networkMapAddress)
+        net.send(FETCH_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, networkMapAddress)
+        _registrationFuture.setFuture(future)
 
         return future
     }
@@ -121,29 +124,24 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
         // Add a message handler for the response, and prepare a future to put the data into.
         // Note that the message handler will run on the network thread (not this one).
-        val future = SettableFuture.create<Unit>()
-        _registrationFuture.setFuture(future)
-        net.runOnNextMessage(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC, sessionID, MoreExecutors.directExecutor()) { message ->
-            val resp = message.data.deserialize<NetworkMapService.SubscribeResponse>()
-            if (resp.confirmed) {
-                future.set(Unit)
-            } else {
-                future.setException(NetworkCacheError.DeregistrationFailed())
-            }
+
+        val future = net.onNext<SubscribeResponse>(SUBSCRIPTION_PROTOCOL_TOPIC, sessionID, RunOnCallerThread).map {
+            if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
-        net.send(NetworkMapService.SUBSCRIPTION_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, service.address)
+        _registrationFuture.setFuture(future)
+
+        net.send(SUBSCRIPTION_PROTOCOL_TOPIC, DEFAULT_SESSION_ID, req, service.address)
 
         return future
     }
 
     fun processUpdatePush(req: NetworkMapService.Update) {
-        val reg: NodeRegistration
         try {
-            reg = req.wireReg.verified()
-        } catch(e: SignatureException) {
+            val reg = req.wireReg.verified()
+            processRegistration(reg)
+        } catch (e: SignatureException) {
             throw NodeMapError.InvalidSignature()
         }
-        processRegistration(reg)
     }
 
     private fun processRegistration(reg: NodeRegistration) {

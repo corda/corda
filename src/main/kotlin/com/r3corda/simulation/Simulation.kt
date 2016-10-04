@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.r3corda.core.crypto.generateKeyPair
+import com.r3corda.core.flatMap
 import com.r3corda.core.messaging.SingleMessageRecipient
 import com.r3corda.core.node.CityDatabase
 import com.r3corda.core.node.PhysicalLocation
@@ -300,15 +301,13 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    @Suppress("unused") // Used from the network visualiser tool.
     val networkInitialisationFinished: ListenableFuture<*> =
             Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
 
     fun start(): ListenableFuture<Unit> {
         network.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
-        val startup: ListenableFuture<List<Unit>> = Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
-        return Futures.transformAsync(startup) { l: List<Unit>? -> startMainSimulation() }
+        return networkInitialisationFinished.flatMap { startMainSimulation() }
     }
 
     /**

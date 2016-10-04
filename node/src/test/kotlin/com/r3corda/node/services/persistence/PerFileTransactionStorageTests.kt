@@ -1,25 +1,27 @@
 package com.r3corda.node.services.persistence
 
-import co.paralleluniverse.strands.SettableFuture
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.primitives.Ints
-import com.r3corda.core.transactions.SignedTransaction
+import com.google.common.util.concurrent.SettableFuture
 import com.r3corda.core.crypto.DigitalSignature
 import com.r3corda.core.crypto.NullPublicKey
 import com.r3corda.core.serialization.SerializedBytes
+import com.r3corda.core.transactions.SignedTransaction
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class PerFileTransactionStorageTests {
 
-    val fileSystem = Jimfs.newFileSystem(unix())
-    val storeDir = fileSystem.getPath("store")
+    val fileSystem: FileSystem = Jimfs.newFileSystem(unix())
+    val storeDir: Path = fileSystem.getPath("store")
     lateinit var transactionStorage: PerFileTransactionStorage
 
     @Before
@@ -74,7 +76,7 @@ class PerFileTransactionStorageTests {
 
     @Test
     fun `updates are fired`() {
-        val future = SettableFuture<SignedTransaction>()
+        val future = SettableFuture.create<SignedTransaction>()
         transactionStorage.updates.subscribe { tx -> future.set(tx) }
         val expected = newTransaction()
         transactionStorage.addTransaction(expected)
