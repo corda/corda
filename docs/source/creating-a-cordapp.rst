@@ -78,3 +78,35 @@ This command line will start the debugger on port 5005 and pause the process awa
 .. _CordaPluginRegistry: api/com.r3corda.core.node/-corda-plugin-registry/index.html
 .. _ServiceHubInternal: api/com.r3corda.node.services.api/-service-hub-internal/index.html
 .. _ServiceHub: api/com.r3corda.node.services.api/-service-hub/index.html
+
+Building Against Corda
+----------------------
+
+.. warning:: This feature is subject to rapid change
+
+Corda now supports publishing to Maven local to build against it. To publish to Maven local run the following in the
+root directory of Corda
+
+.. code-block:: shell
+
+    ./gradlew publishToMavenLocal
+
+This will publish corda-$version.jar, contracts-$version.jar, core-$version.jar and node-$version.jar to the
+group com.r3corda. You can now depend on these as you normally would a Maven dependency.
+
+In Gradle you can depend on these by adding/modifying your build.gradle file to contain the following:
+
+.. code-block:: groovy
+
+    repositories {
+        mavenLocal()
+        ... other repositories here ...
+    }
+
+    dependencies {
+        compile "com.r3corda:core:$corda_version"
+        compile "com.r3corda:contracts:$corda_version"
+        compile "com.r3corda:node:$corda_version"
+        compile "com.r3corda:corda:$corda_version"
+        ... other dependencies here ...
+    }
