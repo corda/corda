@@ -10,17 +10,15 @@ import com.r3corda.core.utilities.Emoji
 import com.r3corda.core.utilities.LogHelper
 import com.r3corda.demos.api.NodeInterestRates
 import com.r3corda.node.internal.Node
+import com.r3corda.node.services.config.FullNodeConfiguration
 import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.NodeMessagingClient
 import com.r3corda.protocols.RatesFixProtocol
-import com.r3corda.testing.node.makeTestDataSourceProperties
 import joptsimple.OptionParser
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import kotlin.system.exitProcess
 
 private val log: Logger = LoggerFactory.getLogger("RatesFixDemo")
@@ -60,25 +58,21 @@ fun main(args: Array<String>) {
     val advertisedServices: Set<ServiceInfo> = emptySet()
     val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg))
 
-    // TODO: create a base class that provides a default implementation
-    val config = object : NodeConfiguration {
-        override val basedir: Path = dir
-        override val myLegalName: String = "Rate fix demo node"
-        override val nearestCity: String = "Atlantis"
-        override val emailAddress: String = ""
-        override val devMode: Boolean = true
-        override val exportJMXto: String = "http"
-        override val keyStorePassword: String = "cordacadevpass"
-        override val trustStorePassword: String = "trustpass"
-        override val dataSourceProperties: Properties = makeTestDataSourceProperties()
-
-    }
-
     val apiAddr = HostAndPort.fromParts(myNetAddr.hostText, myNetAddr.port + 1)
 
+    val config = NodeConfiguration.loadConfig(
+            baseDirectoryPath = dir,
+            allowMissingConfig = true,
+            configOverrides = mapOf(
+                    "myLegalName" to "Rate fix demo node",
+                    "basedir" to dir.normalize().toString()
+            )
+    )
+
+    val nodeConfiguration = FullNodeConfiguration(config)
+
     val node = logElapsedTime("Node startup") {
-        Node(myNetAddr, apiAddr, config, networkMapAddr,
-                advertisedServices, DemoClock()).setup().start()
+        Node(myNetAddr, apiAddr, nodeConfiguration, networkMapAddr, advertisedServices, DemoClock()).setup().start()
     }
     node.networkMapRegistrationFuture.get()
     val notaryNode = node.services.networkMapCache.notaryNodes[0]

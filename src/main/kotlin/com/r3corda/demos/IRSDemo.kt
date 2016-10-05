@@ -437,7 +437,7 @@ private fun runUploadRates(host: HostAndPort): ListenableFuture<Int> {
     return result
 }
 
-private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
+private fun getNodeConfig(cliParams: CliParams.RunNode): FullNodeConfiguration {
     if (!Files.exists(cliParams.dir)) {
         throw NotSetupException("Missing config directory. Please run node setup before running the node")
     }
@@ -450,7 +450,7 @@ private fun getNodeConfig(cliParams: CliParams.RunNode): NodeConfiguration {
     return loadConfigFile(cliParams.dir, configFile, cliParams.defaultLegalName)
 }
 
-private fun loadConfigFile(baseDir: Path, configFile: Path, defaultLegalName: String): NodeConfiguration {
+private fun loadConfigFile(baseDir: Path, configFile: Path, defaultLegalName: String): FullNodeConfiguration {
     if (!Files.exists(configFile)) {
         createDefaultConfigFile(configFile, defaultLegalName)
         log.warn("Default config created at $configFile.")

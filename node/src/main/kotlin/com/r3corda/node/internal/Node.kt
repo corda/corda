@@ -9,7 +9,6 @@ import com.r3corda.core.utilities.loggerFor
 import com.r3corda.node.serialization.NodeClock
 import com.r3corda.node.services.api.MessagingServiceInternal
 import com.r3corda.node.services.config.FullNodeConfiguration
-import com.r3corda.node.services.config.NodeConfiguration
 import com.r3corda.node.services.messaging.ArtemisMessagingServer
 import com.r3corda.node.services.messaging.CordaRPCOps
 import com.r3corda.node.services.messaging.NodeMessagingClient
@@ -60,7 +59,7 @@ class ConfigurationException(message: String) : Exception(message)
  * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
 class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
-           configuration: NodeConfiguration, networkMapAddress: SingleMessageRecipient?,
+           override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock(),
            val messagingServerAddr: HostAndPort? = null) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {
     companion object {
@@ -163,7 +162,7 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
 
         val server = Server()
 
-        if (configuration is FullNodeConfiguration && configuration.useHTTPS) {
+        if (configuration.useHTTPS) {
             val httpsConfiguration = HttpConfiguration()
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
