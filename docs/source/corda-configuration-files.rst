@@ -91,7 +91,7 @@ Configuration File Fields
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative Names contained within the development certificates. This is addition to requiring the ``/config/dev/corda_dev_ca.cer`` root certificate be installed as a Trusted CA.
 
-:extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the
+:extraAdvertisedServiceIds: A list of ServiceType id strings to be advertised to the NetworkMapService and thus be available when other nodes query the NetworkMapCache for supporting nodes. This can also include plugin services loaded from .jar files in the plugins folder.
 
 :networkMapAddress: If `null`, or missing the node is declaring itself as the NetworkMapService host. Otherwise the configuration value is the remote HostAndPort string for the ArtemisMQ service on the hosting node.
 
