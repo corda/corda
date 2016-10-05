@@ -236,6 +236,7 @@ class Node(val p2pAddr: HostAndPort, val webServerAddr: HostAndPort,
             // Wrap all API calls in a database transaction.
             val filterHolder = FilterHolder(DatabaseTransactionFilter(database))
             addFilter(filterHolder, "/api/*", EnumSet.of(DispatcherType.REQUEST))
+            addFilter(filterHolder, "/upload/*", EnumSet.of(DispatcherType.REQUEST))
         }
     }
 
