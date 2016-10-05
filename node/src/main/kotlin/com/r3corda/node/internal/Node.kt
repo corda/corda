@@ -33,7 +33,6 @@ import org.jetbrains.exposed.sql.Database
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
-import java.nio.file.Path
 import java.time.Clock
 import java.util.*
 import javax.management.ObjectName
@@ -46,16 +45,12 @@ class ConfigurationException(message: String) : Exception(message)
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
  * loads important data off disk and starts listening for connections.
  *
- * @param dir A [Path] to a location on disk where working files can be found or stored.
- * @param p2pAddr The host and port that this server will use. It can't find out its own external hostname, so you
- *                have to specify that yourself.
  * @param configuration This is typically loaded from a .properties file.
  * @param networkMapAddress An external network map service to use. Should only ever be null when creating the first
  * network map service, while bootstrapping a network.
  * @param advertisedServices The services this node advertises. This must be a subset of the services it runs,
  * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all protocols etc.
- * @param messagingServerAddr The address of the Artemis broker instance. If not provided the node will run one locally.
  */
 class Node(override val configuration: FullNodeConfiguration, networkMapAddress: SingleMessageRecipient?,
            advertisedServices: Set<ServiceInfo>, clock: Clock = NodeClock()) : AbstractNode(configuration, networkMapAddress, advertisedServices, clock) {

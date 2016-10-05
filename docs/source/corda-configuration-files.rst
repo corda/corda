@@ -83,6 +83,9 @@ Configuration File Fields
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However, note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed here must be externally accessible when running nodes across a cluster of machines.
 
+:messagingServerAddress:
+    The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
+
 :webAddress:
     The host and port on which the node is available for web operations.
 
