@@ -111,10 +111,10 @@ class HibernateObserver(services: ServiceHubInternal) {
             return tx.connection
         }
 
-        override fun <T : Any?> unwrap(unwrapType: Class<T>?): T {
-            if (unwrapType == NodeDatabaseConnectionProvider::class.java) {
+        override fun <T : Any?> unwrap(unwrapType: Class<T>): T {
+            try {
                 return unwrapType.cast(this)
-            } else {
+            } catch(e: ClassCastException) {
                 throw UnknownUnwrapTypeException(unwrapType)
             }
         }
