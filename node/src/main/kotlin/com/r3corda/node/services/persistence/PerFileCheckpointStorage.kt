@@ -11,6 +11,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.*
+import java.util.Collections.synchronizedMap
 import javax.annotation.concurrent.ThreadSafe
 
 
@@ -25,7 +26,7 @@ class PerFileCheckpointStorage(val storeDir: Path) : CheckpointStorage {
         private val fileExtension = ".checkpoint"
     }
 
-    private val checkpointFiles = Collections.synchronizedMap(IdentityHashMap<Checkpoint, Path>())
+    private val checkpointFiles = synchronizedMap(IdentityHashMap<Checkpoint, Path>())
 
     init {
         logger.trace { "Initialising per file checkpoint storage on $storeDir" }
@@ -39,10 +40,9 @@ class PerFileCheckpointStorage(val storeDir: Path) : CheckpointStorage {
     }
 
     override fun addCheckpoint(checkpoint: Checkpoint) {
-        val serialisedCheckpoint = checkpoint.serialize()
-        val fileName = "${serialisedCheckpoint.hash.toString().toLowerCase()}$fileExtension"
+        val fileName = "${checkpoint.id.toString().toLowerCase()}$fileExtension"
         val checkpointFile = storeDir.resolve(fileName)
-        atomicWrite(checkpointFile, serialisedCheckpoint)
+        atomicWrite(checkpointFile, checkpoint.serialize())
         logger.trace { "Stored $checkpoint to $checkpointFile" }
         checkpointFiles[checkpoint] = checkpointFile
     }

@@ -161,7 +161,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             checkpointStorage.forEach {
                 // If a protocol is added before start() then don't attempt to restore it
                 if (!stateMachines.containsValue(it)) {
-                    val fiber = deserializeFiber(it.serialisedFiber)
+                    val fiber = deserializeFiber(it.serializedFiber)
                     initFiber(fiber)
                     stateMachines[fiber] = it
                 }
